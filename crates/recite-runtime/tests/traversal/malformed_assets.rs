@@ -6,7 +6,7 @@ fn unknown_explicit_block_is_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@ea7507c910e3e3902f7b\n",
+            "> @a55knry\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -26,7 +26,7 @@ fn asset_mismatch_is_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@b5b9123c411d69b90ff7\n",
+            "> @r4cte69\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -36,7 +36,7 @@ fn asset_mismatch_is_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@6491231b14c3294c494a\n",
+            "> @zcnvvar\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -56,7 +56,7 @@ fn malformed_default_block_index_is_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@787ab6f1aefc7f4b7a72\n",
+            "> @bmfqbdc\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -77,7 +77,7 @@ fn malformed_line_index_is_rejected_at_start_as_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@017500bc41caac76b441\n",
+            "> @p9ea6mp\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -97,7 +97,7 @@ fn malformed_effect_index_is_rejected_at_start_as_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@9392649cb4237964b770\n",
+            "> @cwx5f8f\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -117,11 +117,11 @@ fn mismatched_explicit_block_lookup_entry_is_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@c01207cf3dfcf4cb7f0c\n",
+            "> @gfpqf6p\n",
             "  Start.\n",
             "-> END\n",
             ":: work\n",
-            "> work_line@db8a69cc8b578ab41ec5\n",
+            "> @work_line\n",
             "  Work.\n",
             "-> END\n",
         ),
@@ -152,9 +152,9 @@ fn prompt_with_empty_choice_range_is_rejected_at_start_as_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line@d9fdc1b49573b701f0ba\n",
+            "> @scs9gae\n",
             "  What next?\n",
-            "  ? ask_work@5457fd1543128230ea43\n",
+            "  ? @ask_work\n",
             "    Ask about work.\n",
             "    -> END\n",
         ),
@@ -183,14 +183,15 @@ fn missing_availability_reason_reference_is_rejected_at_start_as_structured_erro
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line@d70cbd6bb0511ee9a77d\n",
+            "> @x8gw9t6\n",
             "  What next?\n",
-            "  ? ask_news@094b508364ab0b33473b requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "  ? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @ask_news\n",
             "    Ask for private news.\n",
             "    -> END\n",
         ),
         &schema,
-    ).into_payload();
+    )
+    .into_payload();
     asset.availability_reasons.clear();
     let asset = CompiledDialogue::new(asset);
     assert!(matches!(
@@ -205,7 +206,7 @@ fn malformed_match_arm_range_is_rejected_at_start_as_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@5402d0a3deb40729e273\n",
+            "> @rxkfe70\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -233,7 +234,7 @@ fn non_exhaustive_match_is_structured_error() {
             ":: start default\n",
             ":match mood()\n",
             "  :case tired\n",
-            "    > tired_line@bebaab6b6da928ffd9cd\n",
+            "    > @tired_line\n",
             "      Tired.\n",
             "-> END\n",
         ),

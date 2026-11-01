@@ -1,5 +1,5 @@
 :: capture default speaker="Archivist" enabled=true count=3 offset=-12.5 whole=+7 tags=[dock, "night watch"]
-> capture_line@0123456789abcdef0123 speaker=archivist bind=(name:string=$name)
+> speaker=archivist bind=(name:string=$name) @ez1fh09
   [quiet]Found {name}.[/quiet]
   Plain prose.
   Interpolated {name} prose.

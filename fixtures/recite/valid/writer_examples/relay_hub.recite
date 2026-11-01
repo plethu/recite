@@ -1,78 +1,78 @@
 # Original writer fixture: a recurring conversation hub with nested topics.
 # Effects are requests to the host; this file never changes game state itself.
 :: relay_desk default
-> desk_greeting@31000000000000000001 speaker=mara
+> speaker=mara @desk_greeting
   If you're here about the transmitter, take a number. If you're here about the smoke, take a bucket.
-? ask_work@31000000000000000002
+? @ask_work
   Anything I can do to help?
   -> missing_courier
-? ask_station@31000000000000000003
+? @ask_station
   What happened to this place?
   -> station_history
-? insult_station@31000000000000000004
+? @insult_station
   Quite an operation. Does anything here actually work?
   -> insult
-? leave_desk@31000000000000000005
+? @leave_desk
   I'll leave you to it.
   -> goodbye
 
 :: missing_courier
-> courier_problem@31000000000000000006 speaker=mara
+> speaker=mara @courier_problem
   Our courier is two days late. Everyone keeps asking about the battery she was carrying. I'd rather know where she is.
-? ask_route@31000000000000000007
+? @ask_route
   Where was she headed?
   -> courier_route
-? offer_search@31000000000000000008
+? @offer_search
   I'll look for her.
   -> accept_search
-? back_from_work@31000000000000000009
+? @back_from_work
   Let me ask about something else.
   -> relay_desk
 
 :: courier_route
-> route_warning@3100000000000000000a speaker=mara
+> speaker=mara @route_warning
   The old flood road. She knows it goes under at dusk, so don't tell me she simply got lost.
-? ask_shelter@3100000000000000000b
+? @ask_shelter
   Is there somewhere she could shelter?
   -> pump_house
-? back_to_courier@3100000000000000000c
+? @back_to_courier
   About the search...
   -> missing_courier
 
 :: pump_house
-> shelter_hint@3100000000000000000d speaker=mara
+> speaker=mara @shelter_hint
   A pump house, halfway out. Knock before you go in. She carries a flare pistol and she startles easily.
 -> courier_route
 
 :: accept_search
 ! immediate set_flag(courier_search, true)
 ! immediate change_disposition(mara, 1)
-> search_accepted@3100000000000000000e speaker=mara
+> speaker=mara @search_accepted
   Bring her home. The battery can walk back on its own, for all I care.
 -> relay_desk
 
 :: station_history
-> station_history_line@3100000000000000000f speaker=mara
+> speaker=mara @station_history_line
   We used to send weather reports. Now we send names. People listening for someone who hasn't come home.
-? ask_names@31000000000000000010
+? @ask_names
   Do you ever get an answer?
   -> station_answer
-? return_from_history@31000000000000000011
+? @return_from_history
   Something else I wanted to ask.
   -> relay_desk
 
 :: station_answer
-> answer_story@31000000000000000012 speaker=mara
+> speaker=mara @answer_story
   Last week. A woman up north recognised her brother's cough before he said a word.
 -> station_history
 
 :: insult
 ! immediate change_disposition(mara, -1)
-> insult_response@31000000000000000013 speaker=mara
+> speaker=mara @insult_response
   The door. Try it.
 -> relay_desk
 
 :: goodbye
-> farewell@31000000000000000014 speaker=mara
+> speaker=mara @farewell
   Keep off the flood road after dark.
 -> END

@@ -6,7 +6,7 @@ mod metadata_values;
 mod statement;
 
 use recite_core::{
-    BlockId, Diagnostic, SourceRecovery, SourceRecoveryClass, SourceSpan, SpeakerId,
+    BlockId, Diagnostic, SourceId, SourceRecovery, SourceRecoveryClass, SourceSpan, SpeakerId,
     ast::{SourceFile, SourceMetadata, Statement},
 };
 
@@ -154,17 +154,70 @@ pub(super) fn header_fields<'a>(
     fields_after_prefix(trimmed, marker.text(), line.number, base_column).collect()
 }
 
-pub(super) fn insertion_span_after_marker(
+/// The trailing stable-ID field of a line or choice header.
+pub(super) struct HeaderSourceId {
+    pub(super) source_id: SourceId,
+    pub(super) span: Option<SourceSpan>,
+    /// Point after the last non-ID field, where new fields or a missing
+    /// ` @id` are inserted.
+    pub(super) fields_end: SourceSpan,
+}
+
+/// Splits the stable ID from the other header fields.
+///
+/// Only the last field may be an `@id`. An `@` field anywhere else, or more than
+/// one, is malformed so that every header spells its identity in one place.
+pub(super) fn split_source_id<'a>(
+    path: &str,
+    line: LogicalLine<'_>,
+    marker: StatementMarker,
+    fields: &[HeaderField<'a>],
+) -> (HeaderSourceId, Vec<HeaderField<'a>>) {
+    let rest = fields
+        .iter()
+        .copied()
+        .filter(|field| !SourceId::is_field(field.text))
+        .collect::<Vec<_>>();
+    let fields_end = rest.last().map_or_else(
+        || insertion_span_after_marker(path, line, marker),
+        |last| {
+            crate::source::span_for_line(path, line.number, last.column + last.text.chars().count())
+        },
+    );
+    let mut id_fields = fields
+        .iter()
+        .enumerate()
+        .filter(|(_, field)| SourceId::is_field(field.text));
+    let (source_id, span) = match (id_fields.next(), id_fields.next()) {
+        (None, _) => (SourceId::Missing, None),
+        (Some((index, field)), None) if index + 1 == fields.len() => {
+            (SourceId::parse_field(field.text), Some(field.span(path)))
+        }
+        (Some((_, field)), _) => (
+            SourceId::Malformed {
+                raw: field.text.to_owned(),
+            },
+            Some(field.span(path)),
+        ),
+    };
+    (
+        HeaderSourceId {
+            source_id,
+            span,
+            fields_end,
+        },
+        rest,
+    )
+}
+
+fn insertion_span_after_marker(
     path: &str,
     line: LogicalLine<'_>,
     marker: StatementMarker,
 ) -> SourceSpan {
-    let trimmed = line.trimmed_content();
-    let rest = &trimmed[marker.text().len()..];
-    let whitespace_len = rest.len() - rest.trim_start_matches([' ', '\t']).len();
     crate::source::span_for_line(
         path,
         line.number,
-        line.indent_len() + 1 + marker.text().chars().count() + whitespace_len,
+        line.indent_len() + 1 + marker.text().chars().count(),
     )
 }

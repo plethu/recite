@@ -236,7 +236,7 @@ locale = "en-GB"
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@9ec4d9d645646f47c553\n",
+            "> @intro\n",
             "  Welcome.\n",
             "-> END\n"
         ),

@@ -1,4 +1,4 @@
-use recite_core::{BlockId, DocumentKey, SourcePosition, is_valid_source_label};
+use recite_core::{BlockId, DocumentKey, SourcePosition, is_valid_source_name};
 
 use super::helpers::{
     incomplete_from_query, make_plan, no_symbol, require_complete_block_references, source_range,
@@ -151,5 +151,5 @@ fn unique_navigation(
 fn valid_block_name(name: &str) -> bool {
     name != recite_core::ast::END_DIVERT_TARGET
         && !name.contains("::")
-        && is_valid_source_label(name)
+        && is_valid_source_name(name)
 }

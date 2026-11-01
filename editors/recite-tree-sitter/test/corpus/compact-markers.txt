@@ -97,7 +97,7 @@ Malformed markers retain following statement recovery
 !bogus play_sfx()
 ! immediate
 ! immediate ,
->following@0123456789abcdef0123
+>@ez1fh09
   Recovery prose.
 
 ---
@@ -116,11 +116,11 @@ Malformed markers retain following statement recovery
     (effect_marker)
     (ERROR
       (newline)
-      (draft_id)
+      (stable_id)
       (hspace)
-      (draft_id)
+      (stable_id)
       (newline)
-      (draft_id))
+      (stable_id))
     (hspace)
     (effect_mode))
   (blank_line
@@ -134,9 +134,8 @@ Malformed markers retain following statement recovery
     (newline))
   (line_statement
     (line_marker)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line
@@ -152,22 +151,23 @@ Punctuation and Unicode do not separate compact markers
 !;immediate play_sfx()
 :: unicode
 ! immediate play_sfx()
->following@0123456789abcdef0123
+>@ez1fh09
   Recovery prose.
 
 ---
+
 (source_file
   (ERROR
     (block_marker)
-    (draft_id))
+    (stable_id))
   (blank_line
     (newline))
   (ERROR
     (effect_marker)
     (ERROR
-      (draft_id))
+      (stable_id))
     (hspace)
-    (draft_id))
+    (stable_id))
   (blank_line
     (newline))
   (block_statement
@@ -179,16 +179,15 @@ Punctuation and Unicode do not separate compact markers
     (effect_marker)
     (ERROR
       (hspace)
-      (draft_id))
+      (stable_id))
     (hspace)
-    (draft_id))
+    (stable_id))
   (blank_line
     (newline))
   (line_statement
     (line_marker)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line

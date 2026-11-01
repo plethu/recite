@@ -36,7 +36,7 @@ fn request(root: &Path, assets: &str) -> ProjectBuildRequest {
     write(
         root,
         "dialogue/main.recite",
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default speaker=hazel\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     match require(ProjectBuildRequest::prepare(root), "preparation") {
         ProjectBuildPreparation::Ready(request) => *request,

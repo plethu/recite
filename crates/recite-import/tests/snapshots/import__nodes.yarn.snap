@@ -7,7 +7,7 @@ expression: report
   "family": "yarn",
   "file": "nodes.yarn",
   "status": "complete",
-  "source": ":: block_8a6a5e4aa00b3e0e8a22 default\n> imported_11111111111111111111@11111111111111111111 speaker=Operator\n  The station is quiet.\n-> block_84c6cba86edbf7cfebe3\n:: block_84c6cba86edbf7cfebe3\n> imported_b0768775af1954b32bad@b0768775af1954b32bad speaker=Operator\n  The signal returns.\n-> END\n",
+  "source": ":: block_8a6a5e4aa00b3e0e8a22 default\n> speaker=Operator @ffee6p8\n  The station is quiet.\n-> block_84c6cba86edbf7cfebe3\n:: block_84c6cba86edbf7cfebe3\n> speaker=Operator @b2kjsdc\n  The signal returns.\n-> END\n",
   "mappings": [
     {
       "provenance": {
@@ -46,15 +46,15 @@ expression: report
             },
             "end": {
               "line": 3,
-              "column": 59
+              "column": 46
             }
           }
         },
         "record_key": "3"
       },
       "construct": "line",
-      "original_id": "11111111111111111111",
-      "generated_id": "imported_11111111111111111111@11111111111111111111",
+      "original_id": "ffee6p8",
+      "generated_id": "ffee6p8",
       "generated_line": 2
     },
     {
@@ -126,7 +126,7 @@ expression: report
       },
       "construct": "line",
       "original_id": null,
-      "generated_id": "imported_b0768775af1954b32bad@b0768775af1954b32bad",
+      "generated_id": "b2kjsdc",
       "generated_line": 6
     }
   ],

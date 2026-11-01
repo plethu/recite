@@ -50,7 +50,7 @@ fn filtering_preserves_counts_order_attention_and_current_scene_caption_preceden
     for passage in passages.iter() {
         source.push_str(&format!("#. file: elsewhere.recite\n#. block: wrong_block\nmsgctxt {:?}\nmsgid {:?}\nmsgstr {:?}\n\n",passage.id,passage.text,passage.text));
     }
-    source.push_str("#, fuzzy\nmsgctxt \"33333333333333333333&formal\"\nmsgid \"{count} café\"\nmsgid_plural \"{count} cafés\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\n#~ msgctxt \"44444444444444444444\"\n#~ msgid \"gone\"\n#~ msgstr \"gone\"\n");
+    source.push_str("#, fuzzy\nmsgctxt \"bqyvpqq&formal\"\nmsgid \"{count} café\"\nmsgid_plural \"{count} cafés\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\n#~ msgctxt \"z0g6c80\"\n#~ msgid \"gone\"\n#~ msgstr \"gone\"\n");
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("fr.po");
     std::fs::write(&path, &source)?;
@@ -170,7 +170,7 @@ fn prepared_index_replaces_saved_words_and_follows_partial_save_and_reordered_re
     let path = dir.path().join("fr.po");
     std::fs::write(
         &path,
-        "msgctxt \"11111111111111111111\"\nmsgid \"İstanbul\"\nmsgstr \"Ancien\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Second\"\nmsgstr \"Old second\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"İstanbul\"\nmsgstr \"Ancien\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Second\"\nmsgstr \"Old second\"\n",
     )?;
     let mut catalogue = Catalogue::open(&path)?;
     let first = PoEntryId::new(0);
@@ -224,7 +224,7 @@ fn prepared_index_replaces_saved_words_and_follows_partial_save_and_reordered_re
     );
     std::fs::write(
         &path,
-        "msgctxt \"22222222222222222222\"\nmsgid \"Second\"\nmsgstr \"Unique\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"İstanbul\"\nmsgstr \"Nouveau\"\n",
+        "msgctxt \"rthh7ab\"\nmsgid \"Second\"\nmsgstr \"Unique\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"İstanbul\"\nmsgstr \"Nouveau\"\n",
     )?;
     catalogue.reload()?;
     let index = QueueIndex::new(&catalogue, &[]);

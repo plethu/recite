@@ -4,7 +4,7 @@ use recite_runtime::snapshot::DialogueSchemaFingerprintSnapshot;
 
 #[test]
 fn independent_equal_assets_accept_live_sessions_but_forged_sources_do_not() {
-    let source = ":: start default\n> line@11111111111111111111\n  Café.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Café.\n-> END\n";
     let first = compile_asset("dialogue/start.recite", source);
     let second = compile_asset("dialogue/start.recite", source);
     assert!(!std::ptr::eq(
@@ -34,7 +34,7 @@ fn independent_equal_assets_accept_live_sessions_but_forged_sources_do_not() {
 fn identity_checks_preserve_error_precedence_for_uncached_foreign_assets() {
     let asset = compile_asset(
         "dialogue/start.recite",
-        ":: start default\n> line@11111111111111111111\n  Start.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Start.\n-> END\n",
     );
     let session = start_scene(&asset, None).expect("session");
     let mut malformed = asset.clone().into_payload();
@@ -70,7 +70,7 @@ fn same_id_different_asset_content_is_rejected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@3a011ecfcf4c5ed87289\n",
+            "> @swec1vj\n",
             "  First.\n",
             "-> END\n",
         ),
@@ -80,7 +80,7 @@ fn same_id_different_asset_content_is_rejected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@8a5a460c1266a6c5f9df\n",
+            "> @xmyhfpm\n",
             "  Changed.\n",
             "-> END\n",
         ),
@@ -101,7 +101,7 @@ fn same_header_different_compiled_payload_is_rejected() {
         concat!(
             ":: start default\n",
             "! deferred grant_item(original_item)\n",
-            "> start_line@3a011ecfcf4c5ed87289\n",
+            "> @swec1vj\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -129,7 +129,7 @@ fn schema_fingerprint_mismatch_returns_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@3a011ecfcf4c5ed87289\n",
+            "> @swec1vj\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -169,7 +169,7 @@ fn mismatched_asset_identity_returns_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@0ee5f0964c10f6c097e2\n",
+            "> @b2bd2g0\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -179,7 +179,7 @@ fn mismatched_asset_identity_returns_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@98291b3b81e255db8d44\n",
+            "> @tfaegkh\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -199,7 +199,7 @@ fn mismatched_asset_version_returns_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@c358dff16d0753a90d8b\n",
+            "> @dsg2kyc\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -224,7 +224,7 @@ fn unsupported_session_snapshot_formats_are_rejected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@e9a0744c9109baec57e7\n",
+            "> @dezgqpr\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -249,7 +249,7 @@ fn unsupported_messagepack_snapshot_formats_are_rejected_before_shape_decode() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@8c7dafa16b4a172020b1\n",
+            "> @ne6f8tc\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -273,7 +273,7 @@ fn messagepack_snapshot_without_payload_fingerprint_is_rejected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@4ecb6bdcfbdc7a839198\n",
+            "> @kexm0g2\n",
             "  Start.\n",
             "-> END\n",
         ),

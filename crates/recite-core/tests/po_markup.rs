@@ -1,16 +1,15 @@
 use recite_core::po::{PoDiagnosticKind, PoDocument};
 
 fn catalogue(source_text: &str, translation: &str) -> String {
-    format!("msgctxt \"11111111111111111111\"\nmsgid \"{source_text}\"\nmsgstr \"{translation}\"\n")
+    format!("msgctxt \"ffee6p8\"\nmsgid \"{source_text}\"\nmsgstr \"{translation}\"\n")
 }
 
 #[test]
 fn translated_markup_allows_reordered_prose_and_round_trips_losslessly() {
     let source = concat!(
         "# translator note\n",
-        "#. source id: line@11111111111111111111\n",
         "x-editor \"kept\"\n",
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"[slow]Hello [em]world[/em][/slow]\"\n",
         "msgstr \"[slow]Monde [em]bonjour[/em][/slow]\"\n",
     );

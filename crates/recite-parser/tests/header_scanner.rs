@@ -3,18 +3,18 @@ use recite_parser::{metadata_assignments, parse};
 
 #[test]
 fn quoted_unicode_fields_preserve_byte_offsets_and_character_spans() {
-    let header = r#"> prompt@5e0925cd041f2f6df9e2 caption="火 \"é\"" tags=["日 本", "☕"] count=2"#;
+    let header = r#"> caption="火 \"é\"" tags=["日 本", "☕"] count=2 @mqbmky6"#;
     let assignments = metadata_assignments(header);
     assert_eq!(assignments.len(), 3);
     assert_eq!(assignments[0].key, "caption");
     assert_eq!(assignments[0].value, r#""火 \"é\"""#);
-    assert_eq!((assignments[0].value_start, assignments[0].end), (38, 50));
+    assert_eq!((assignments[0].value_start, assignments[0].end), (10, 22));
     assert_eq!(assignments[1].key, "tags");
     assert_eq!(assignments[1].value, r#"["日 本", "☕"]"#);
-    assert_eq!((assignments[1].value_start, assignments[1].end), (56, 74));
+    assert_eq!((assignments[1].value_start, assignments[1].end), (28, 46));
     assert_eq!(assignments[2].key, "count");
     assert_eq!(assignments[2].value, "2");
-    assert_eq!((assignments[2].value_start, assignments[2].end), (81, 82));
+    assert_eq!((assignments[2].value_start, assignments[2].end), (53, 54));
 
     let source = format!(":: start default\n{header}\n  Text.\n-> END\n");
     let lowered = parse("header.recite", source).lower_source_file();
@@ -28,9 +28,9 @@ fn quoted_unicode_fields_preserve_byte_offsets_and_character_spans() {
         SourceMetadataValue::Scalar(SourceMetadataScalar::StringLiteral("火 \"é\"".into()))
     );
     for (entry, start, end) in [
-        (&entries[0], 31, 47),
-        (&entries[1], 49, 65),
-        (&entries[2], 67, 73),
+        (&entries[0], 3, 19),
+        (&entries[1], 21, 37),
+        (&entries[2], 39, 45),
     ] {
         let span = entry.source_span.as_ref().expect("metadata field span");
         assert_eq!(span.start.line(), 2);
@@ -43,7 +43,7 @@ fn quoted_unicode_fields_preserve_byte_offsets_and_character_spans() {
 fn rejected_nested_arrays_preserve_the_following_unicode_field_span() {
     let source = concat!(
         ":: start default\n",
-        "> prompt@5e0925cd041f2f6df9e2 tags=[\"火\", [\"é\"]] count=2\n",
+        "> tags=[\"火\", [\"é\"]] count=2 @mqbmky6\n",
         "  Text.\n",
     );
     let lowered = parse("nested.recite", source).lower_source_file();
@@ -51,7 +51,7 @@ fn rejected_nested_arrays_preserve_the_following_unicode_field_span() {
     let diagnostic = &lowered.diagnostics[0];
     assert_eq!(diagnostic.code.as_str(), "RECITE_PARSE008");
     assert_eq!(diagnostic.span.start.line(), 2);
-    assert_eq!(diagnostic.span.start.column(), 36);
+    assert_eq!(diagnostic.span.start.column(), 8);
     let Statement::Line(line) = &lowered.source_file.blocks[0].statements[0] else {
         panic!("expected line");
     };
@@ -69,14 +69,14 @@ fn rejected_nested_arrays_preserve_the_following_unicode_field_span() {
             .expect("count span")
             .start
             .column(),
-        49
+        21
     );
 }
 
 #[test]
 fn unterminated_quoted_and_bracketed_fields_keep_recovery_spans() {
-    for (field, column) in [("caption=\"火 \\", 39), ("tags=[\"火\"", 36)] {
-        let source = format!(":: start default\n> prompt@5e0925cd041f2f6df9e2 {field}\n  Text.\n");
+    for (field, column) in [("caption=\"火 \\", 11), ("tags=[\"火\"", 8)] {
+        let source = format!(":: start default\n> {field} @mqbmky6\n  Text.\n");
         let lowered = parse("malformed.recite", source).lower_source_file();
         assert_eq!(lowered.diagnostics.len(), 1, "{field}");
         let diagnostic = &lowered.diagnostics[0];

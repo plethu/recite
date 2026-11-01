@@ -177,13 +177,13 @@ fn quick_fix_inserts_marker_only_line_and_choice_ids() {
 }
 
 #[test]
-fn quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers() {
-    super::code_action::quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers();
+fn quick_fix_appends_ids_after_metadata_and_clauses() {
+    super::code_action::quick_fix_appends_ids_after_metadata_and_clauses();
 }
 
 #[test]
-fn quick_fix_freezes_draft_and_plain_label_headers() {
-    super::code_action::quick_fix_freezes_draft_and_plain_label_headers();
+fn malformed_ids_receive_no_missing_id_action() {
+    super::code_action::malformed_ids_receive_no_missing_id_action();
 }
 
 #[test]
@@ -203,9 +203,8 @@ fn quick_fix_full_document_range_uses_bounded_candidates() {
 }
 
 #[test]
-fn generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions() {
-    super::code_action::generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions(
-    );
+fn generated_ids_are_new_to_the_project() {
+    super::code_action::generated_ids_are_new_to_the_project();
 }
 
 #[test]
@@ -214,8 +213,8 @@ fn code_actions_use_utf16_crlf_and_indented_ranges() {
 }
 
 #[test]
-fn existing_and_draft_stem_ids_do_not_receive_missing_id_actions() {
-    super::code_action::existing_and_draft_stem_ids_do_not_receive_missing_id_actions();
+fn existing_ids_do_not_receive_missing_id_actions() {
+    super::code_action::existing_ids_do_not_receive_missing_id_actions();
 }
 
 #[test]

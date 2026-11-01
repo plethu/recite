@@ -1,4 +1,4 @@
-use crate::{AvailabilityReasonId, ChoiceId, LineId, SourceAnchor, SourceId, SourceSpan};
+use crate::{AvailabilityReasonId, ChoiceId, LineId, SourceId, SourceSpan, StableId};
 
 use super::{
     ConditionExpression, DivertTarget, InterpolationBinding, SourceMetadata, SourceText, Statement,
@@ -11,7 +11,9 @@ use super::{
 pub struct Choice {
     pub source_id: SourceId,
     pub source_id_span: Option<SourceSpan>,
-    pub source_id_insertion_span: Option<SourceSpan>,
+    /// Point after the last header field other than the stable ID. Tooling
+    /// inserts new fields, or a missing ` @id`, here.
+    pub header_fields_end: Option<SourceSpan>,
     pub id: Option<ChoiceId>,
     pub source_text: SourceText,
     pub interpolation_bindings: Vec<InterpolationBinding>,
@@ -30,11 +32,10 @@ impl Choice {
         Self {
             source_id: id
                 .as_ref()
-                .and_then(|id| SourceAnchor::new(id.as_str()).ok())
-                .and_then(|anchor| SourceId::frozen("choice", anchor))
-                .unwrap_or(SourceId::Missing),
+                .and_then(|id| StableId::new(id.as_str()).ok())
+                .map_or(SourceId::Missing, SourceId::Frozen),
             source_id_span: None,
-            source_id_insertion_span: None,
+            header_fields_end: None,
             id,
             source_text,
             interpolation_bindings: Vec::new(),
@@ -59,10 +60,10 @@ impl Choice {
     pub fn with_source_id_spans(
         mut self,
         source_id_span: Option<SourceSpan>,
-        source_id_insertion_span: SourceSpan,
+        header_fields_end: SourceSpan,
     ) -> Self {
         self.source_id_span = source_id_span;
-        self.source_id_insertion_span = Some(source_id_insertion_span);
+        self.header_fields_end = Some(header_fields_end);
         self
     }
 

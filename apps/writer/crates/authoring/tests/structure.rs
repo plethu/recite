@@ -101,7 +101,7 @@ fn line_insertions_precede_branching_and_survive_source_roundtrip()
     let source = session.document().source();
     assert!(
         source.find("One more thing.").ok_or("new prose")?
-            < source.find("? ask_work").ok_or("choice")?
+            < source.find("? @ask_work").ok_or("choice")?
     );
     let inserted = source.to_owned();
     session.select(View::Source)?;
@@ -208,7 +208,7 @@ fn inserted_anchor_avoids_ids_in_other_documents() -> Result<(), Box<dyn std::er
     document.refresh_project(ProjectContext {
         documents: vec![SavedDocument::new(
             DocumentKey::new("other.recite")?,
-            format!(":: elsewhere\n> other@{first}\n  Existing.\n-> END\n"),
+            format!(":: elsewhere\n> @{first}\n  Existing.\n-> END\n"),
         )],
         schema: None,
     })?;
@@ -219,7 +219,5 @@ fn inserted_anchor_avoids_ids_in_other_documents() -> Result<(), Box<dyn std::er
         "{:?}",
         document.diagnostics()
     );
-    document.undo()?;
-    assert_eq!(document.add_line(document.revision(), "start")?, second);
     Ok(())
 }

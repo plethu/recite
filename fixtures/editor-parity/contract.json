@@ -895,7 +895,7 @@
         "commands": ["scripts/check-vscode.sh"],
         "assertions": [
           "the checked-in TextMate grammar covers canonical, malformed, and incomplete lexical fixtures",
-          "grammar scopes distinguish statement markers, names, anchors, references, values, calls, prose, markup, and placeholders",
+          "grammar scopes distinguish statement markers, names, stable IDs, references, values, calls, prose, markup, and placeholders",
           "the grammar does not perform semantic validation",
           "the generated VSIX includes the grammar with deterministic bytes"
         ],

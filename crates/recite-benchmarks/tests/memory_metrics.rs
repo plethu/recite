@@ -10,24 +10,19 @@ fn lsp_memory_report_counts_only_frozen_line_and_choice_ids()
         ":: start default\n",
         ">\n",
         "  Missing line.\n",
-        "> draft_line@\n",
-        "  Draft line.\n",
-        "> malformed_line@bad\n",
+        "> @Bad\n",
         "  Malformed line.\n",
-        "> frozen_line@11111111111111111111\n",
+        "> @ffee6p8\n",
         "  Frozen line.\n",
-        "> prompt\n",
+        ">\n",
         "  Prompt.\n",
         "  ?\n",
         "    Missing choice.\n",
         "    -> END\n",
-        "  ? draft_choice@\n",
-        "    Draft choice.\n",
-        "    -> END\n",
-        "  ? malformed_choice@bad\n",
+        "  ? @Bad\n",
         "    Malformed choice.\n",
         "    -> END\n",
-        "  ? frozen_choice@33333333333333333333\n",
+        "  ? @bqyvpqq\n",
         "    Frozen choice.\n",
         "    -> END\n",
     );
@@ -68,7 +63,7 @@ fn lsp_memory_and_probe_support_keep_identical_relative_keys_partitioned()
         )?;
         fs::write(
             root.join("src/main.recite"),
-            ":: main default\n> line@11111111111111111111\n  Hello.\n-> main\n",
+            ":: main default\n> @ffee6p8\n  Hello.\n-> main\n",
         )?;
     }
 

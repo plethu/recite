@@ -15,7 +15,9 @@ pub(crate) enum Command {
     Compile(CompileArgs),
     Extract(ExtractArgs),
     #[command(name = "check-ids")]
-    CheckIds(InputArgs),
+    CheckIds(CheckIdsArgs),
+    #[command(name = "assign-ids")]
+    AssignIds(InputArgs),
     #[command(name = "check-markup")]
     CheckMarkup(SchemaInputArgs),
     #[command(name = "check-metadata")]
@@ -44,6 +46,18 @@ pub(crate) enum Command {
 pub(crate) struct InputArgs {
     #[arg(required = true)]
     pub(crate) paths: Vec<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct CheckIdsArgs {
+    #[command(flatten)]
+    pub(crate) inputs: InputArgs,
+    /// Git revision whose stable IDs must still exist, such as the last release tag.
+    #[arg(long, value_name = "REF")]
+    pub(crate) since: Option<String>,
+    /// Stable ID intentionally removed since `--since`; repeat for each ID.
+    #[arg(long = "allow-removed", value_name = "ID", requires = "since")]
+    pub(crate) allow_removed: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]

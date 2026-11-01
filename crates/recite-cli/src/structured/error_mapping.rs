@@ -196,6 +196,11 @@ pub(crate) fn structured_error(
             ErrorOperation::CollectInputs,
             fallback_path,
         ),
+        CliError::StableIdBaseline { .. } => input(
+            ErrorCode::StableIdBaseline,
+            ErrorOperation::Validate,
+            fallback_path,
+        ),
         CliError::OutputOverwritesInput {
             output,
             input: related,

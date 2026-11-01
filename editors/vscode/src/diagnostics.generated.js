@@ -48,8 +48,6 @@ export default Object.freeze({
   "diagnostic-id-002": {"template":"choice header must include a stable choice id","arguments":[]},
   "diagnostic-id-003": {"template":"duplicate localisable id `{$id}` on line","arguments":[{"name":"id","type":"string"}]},
   "diagnostic-id-004": {"template":"duplicate localisable id `{$id}` on choice","arguments":[{"name":"id","type":"string"}]},
-  "diagnostic-id-005": {"template":"line header has an unfrozen draft source id","arguments":[]},
-  "diagnostic-id-006": {"template":"choice header has an unfrozen draft source id","arguments":[]},
   "diagnostic-id-007": {"template":"line header has malformed source id `{$id}`","arguments":[{"name":"id","type":"string"}]},
   "diagnostic-id-008": {"template":"choice header has malformed source id `{$id}`","arguments":[{"name":"id","type":"string"}]},
   "diagnostic-validate-005": {"template":"project must declare exactly one default block","arguments":[]},

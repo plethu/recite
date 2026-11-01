@@ -213,7 +213,7 @@ fn unsupported_format_producer_emits_exact_recordable_project007() {
             "dialogue.recite",
             concat!(
                 ":: start default speaker=hazel\n",
-                "> intro@11111111111111111111\n",
+                "> @ffee6p8\n",
                 "  Hello.\n",
                 "-> END\n",
             ),
@@ -252,7 +252,7 @@ fn stale_compatibility_producer_emits_exact_recordable_fresh003() {
             "dialogue.recite",
             concat!(
                 ":: start default speaker=hazel\n",
-                "> intro@11111111111111111111\n",
+                "> @ffee6p8\n",
                 "  Hello.\n",
                 "-> END\n",
             ),

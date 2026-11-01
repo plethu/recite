@@ -22,12 +22,12 @@ fn prepared_sources_preserve_complete_authoring_diagnostics()
             ),
         )?;
         for source in [
-            ":: start default\n> line@11111111111111111111\n  Café.\n-> END\n",
-            ":: start default\n> line@11111111111111111111\n  Café {name}.\n-> END\n",
-            ":: start default\r\n> line@11111111111111111111\r\n  Café.\r\n-> END\r\n",
+            ":: start default\n> @ffee6p8\n  Café.\n-> END\n",
+            ":: start default\n> @ffee6p8\n  Café {name}.\n-> END\n",
+            ":: start default\r\n> @ffee6p8\r\n  Café.\r\n-> END\r\n",
             ":: start default\n:if broken(\n  malformed\n",
             ":: start default\n-> absent.recite::missing\n",
-            ":: start default\n> one@11111111111111111111\n  One.\n> two@11111111111111111111\n  Two.\n-> END\n",
+            ":: start default\n> @ffee6p8\n  One.\n> @ffee6p8\n  Two.\n-> END\n",
             ":: start default\n! immediate entered_start()\n-> END\n",
         ] {
             std::fs::write(directory.path().join("dialogue/start.recite"), source)?;

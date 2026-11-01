@@ -5,9 +5,9 @@ use std::sync::Arc;
 #[test]
 fn closed_scene_rules_retire_even_when_the_worker_receipt_is_closed()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n? reply@11111111111111111111\n  Continue.\n  -> END\n";
+    let source = ":: start default\n? @ffee6p8\n  Continue.\n  -> END\n";
     let document = Document::new(source)?;
-    let rules = document.reply_rules("11111111111111111111")?;
+    let rules = document.reply_rules("ffee6p8")?;
     let owner = document.source_snapshot();
     let weak = Arc::downgrade(&owner);
     drop(owner);

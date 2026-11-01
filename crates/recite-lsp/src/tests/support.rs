@@ -3,8 +3,10 @@ use std::path::Path;
 
 mod config;
 mod harness;
+mod positions;
 
 pub(super) use harness::Harness;
+pub(crate) use positions::{position_after, position_after_in_header, position_inside};
 
 use lsp_types::TextDocumentContentChangeEvent;
 use recite_config::UiLocale;

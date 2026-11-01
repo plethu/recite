@@ -28,7 +28,7 @@ fn end_badge_changes_keep_the_previous_summary_and_share_unchanged_block_data() 
 
 #[test]
 fn reference_changes_share_all_unchanged_record_families() {
-    let source = ":: a default\n> a@11111111111111111111\n  One.\n-> b\n:: b\n> b@22222222222222222222\n  Two.\n-> END\n";
+    let source = ":: a default\n> @ffee6p8\n  One.\n-> b\n:: b\n> @rthh7ab\n  Two.\n-> END\n";
     let previous = summary(source);
     let original = previous.as_ref().clone();
     let reference_edit = summary(&source.replace("-> b", "-> a"));
@@ -54,11 +54,11 @@ fn reference_changes_share_all_unchanged_record_families() {
         &previous.block_references
     ));
     for edited in [
-        source.replace("11111111111111111111", "33333333333333333333"),
-        source.replace("> a@", "? a@"),
+        source.replace("ffee6p8", "bqyvpqq"),
+        source.replace("> @ffee6p8", "? @ffee6p8"),
         source.replace("One.", "One.\n  More."),
         source.replace(":: b", ":: c"),
-        source.replace("> b@", "> bb@"),
+        source.replace("> @rthh7ab", "> speaker=rhea @rthh7ab"),
     ] {
         let fresh = summary(&edited);
         let joined =
@@ -71,7 +71,7 @@ fn reference_changes_share_all_unchanged_record_families() {
 
 #[test]
 fn changing_one_family_preserves_the_others_and_relocation_separates_every_span_owner() {
-    let source = ":: a default tag=old tags=[one,two]\n> a@11111111111111111111\n  One.\n:if condition()\n  ! immediate effect()\n-> missing\n";
+    let source = ":: a default tag=old tags=[one,two]\n> @ffee6p8\n  One.\n:if condition()\n  ! immediate effect()\n-> missing\n";
     let previous = summary(source);
     assert!(!previous.metadata.is_empty());
     assert!(
@@ -137,7 +137,7 @@ fn changing_one_family_preserves_the_others_and_relocation_separates_every_span_
 
 #[test]
 fn relocation_of_a_shared_summary_preserves_old_coordinates() {
-    let previous = summary(":: a default\n> a@11111111111111111111\n  One.\n-> END\n");
+    let previous = summary(":: a default\n> @ffee6p8\n  One.\n-> END\n");
     let original = previous.as_ref().clone();
     let mut relocated = previous.as_ref().clone();
     let ranges = relocated.region_ranges();

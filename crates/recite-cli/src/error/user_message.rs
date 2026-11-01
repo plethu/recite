@@ -155,6 +155,10 @@ impl CliError {
                 [("prompt_keys", prompt_keys.join("|"))],
             ),
             Self::NoInputs => messages.text(MsgId::CliErrorNoInputs),
+            Self::StableIdBaseline { reference, detail } => messages.format(
+                MsgId::CliErrorStableIdBaseline,
+                [("reference", reference.clone()), ("detail", detail.clone())],
+            ),
             Self::OutputOverwritesInput { output, input } => messages.format(
                 MsgId::CliErrorOutputOverwritesInput,
                 [

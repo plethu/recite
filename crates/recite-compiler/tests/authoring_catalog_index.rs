@@ -6,11 +6,11 @@ fn indexed_matches_preserve_all_lossless_records_and_key_boundaries()
 -> Result<(), Box<dyn std::error::Error>> {
     let po = concat!(
         "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n",
-        "#, fuzzy\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Brouillon\"\n\n",
-        "#~ msgctxt \"11111111111111111111\"\n#~ msgid \"Hello\"\n#~ msgstr \"Ancien\"\n\n",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n\n",
-        "msgctxt \"11111111111111111111&formal\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
-        "msgctxt \"22222222222222222222\"\nmsgid \"Hello\"\nmsgid_plural \"Greetings\"\nmsgstr[0] \"Bonjour\"\nmsgstr[1] \"Salutations\"\n",
+        "#, fuzzy\nmsgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Brouillon\"\n\n",
+        "#~ msgctxt \"ffee6p8\"\n#~ msgid \"Hello\"\n#~ msgstr \"Ancien\"\n\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n\n",
+        "msgctxt \"ffee6p8&formal\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
+        "msgctxt \"rthh7ab\"\nmsgid \"Hello\"\nmsgid_plural \"Greetings\"\nmsgstr[0] \"Bonjour\"\nmsgstr[1] \"Salutations\"\n",
     );
     let input = CatalogInput::from_document(LocaleId::new("fr")?, PoDocument::parse(po)?)?;
     let retained = input.clone();
@@ -47,9 +47,7 @@ fn indexed_matches_preserve_all_lossless_records_and_key_boundaries()
     ))?;
     assert_ne!(edited, *retained.document());
     assert_eq!(
-        retained
-            .matching_entries("11111111111111111111", "Hello", None)
-            .count(),
+        retained.matching_entries("ffee6p8", "Hello", None).count(),
         3
     );
     Ok(())

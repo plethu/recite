@@ -61,10 +61,10 @@ fn plural_prompt_asset() -> recite_core::compiled::CompiledDialogue {
             "prompt.recite",
             concat!(
                 ":: start default\n",
-                "> prompt@12345678901234567890 bind=(count:int=$count)\n",
+                "> bind=(count:int=$count) @w3xnt5r\n",
                 "  One thing.\n",
                 "  | Many {count} things.\n",
-                "  ? keep@12345678901234567891\n",
+                "  ? @rbgkhpf\n",
                 "    Keep.\n",
                 "    -> END\n",
             ),

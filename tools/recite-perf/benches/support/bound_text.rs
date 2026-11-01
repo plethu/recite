@@ -75,7 +75,7 @@ fn validate_prompt(event: &DialogueEvent) {
     let line = line
         .as_ref()
         .unwrap_or_else(|| panic!("bound-text prompt retains its line"));
-    assert_eq!(line.id.as_str(), "55667788990011223344");
+    assert_eq!(line.id.as_str(), "bt20t3f");
     assert_eq!(
         line.source_text,
         "[slow]The tide is turning, {traveller_name}.[/slow]"
@@ -93,7 +93,7 @@ fn validate_prompt(event: &DialogueEvent) {
     }
     assert_eq!(choices.len(), 1);
     let choice = &choices[0];
-    assert_eq!(choice.id.as_str(), "66778899001122334455");
+    assert_eq!(choice.id.as_str(), "ask_news");
     assert_eq!(choice.source_text, "Tell me about {topic}.");
     assert_eq!(choice.text, "Tell me about la marée.");
     assert_eq!(choice.echo, ChoiceEchoMode::None);

@@ -14,12 +14,12 @@ use recite_runtime::{
     next_with, start_scene, start_scene_with_options,
 };
 
-const PLURAL_ID: &str = "8843fd6f53f020a12b31";
+const PLURAL_ID: &str = "ycxgk0k";
 
 fn plural_asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
-        "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @ycxgk0k\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",

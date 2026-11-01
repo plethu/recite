@@ -1,21 +1,21 @@
 :: start default speaker=narrator
-> intro@10000000000000000001
+> @s96sqwp
   The signal clears.
-> prompt@10000000000000000002
+> @prompt
   Where next?
-  ? inspect_relay@10000000000000000003
+  ? @inspect_relay
     Inspect the relay.
     -> relay
-  ? leave@10000000000000000004
+  ? @t55ekp5
     Leave.
     -> END
 
 :: relay
 ! immediate focus_camera(relay)
-> relay_line@10000000000000000005
+> @relay_line
   The relay is warm.
 ! blocking grant_item(relay_key)
-> after_key@10000000000000000006
+> @after_key
   The relay key clicks free.
 ! deferred mark_seen(relay)
 -> END

@@ -89,6 +89,7 @@ pub enum FixtureError {
     Json(serde_json::Error),
     UnknownProfile(String),
     InvalidProfile(&'static str),
+    InvalidStableId(recite_core::CoreValueError),
 }
 
 impl std::fmt::Display for FixtureError {
@@ -99,6 +100,9 @@ impl std::fmt::Display for FixtureError {
             Self::Json(error) => write!(formatter, "{error}"),
             Self::UnknownProfile(profile) => write!(formatter, "unknown profile `{profile}`"),
             Self::InvalidProfile(message) => write!(formatter, "invalid profile: {message}"),
+            Self::InvalidStableId(error) => {
+                write!(formatter, "invalid generated stable ID: {error}")
+            }
         }
     }
 }

@@ -33,8 +33,9 @@ Directive markers are boundary aware in indented bodies
   (line_statement
     (line_marker)
     (hspace)
-    (line_name
-      (identifier))
+    (ERROR
+      (metadata_key
+        (identifier)))
     (newline))
   (prose_line
     (indent)

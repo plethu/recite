@@ -1,6 +1,6 @@
 :: start default
-> prompt@a0000000000000000001
+> @prompt
   Choose a route.
-  ? continue@a0000000000000000002
+  ? @continue
     Continue.
     -> END

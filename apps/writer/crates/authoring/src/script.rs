@@ -150,11 +150,8 @@ fn entries(
 }
 
 fn find(id: &SourceId, passages: &std::collections::BTreeMap<&str, &Passage>) -> Option<Passage> {
-    let SourceId::Frozen { anchor, .. } = id else {
-        return None;
-    };
     passages
-        .get(anchor.as_str())
+        .get(id.stable_id()?.as_str())
         .map(|passage| (*passage).clone())
 }
 

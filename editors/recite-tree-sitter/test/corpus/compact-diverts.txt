@@ -21,11 +21,11 @@ Compact and spaced diverts preserve targets
 ==================
 Indented compact diverts and following statements
 ==================
-? choose@0123456789abcdef0123
+? @ez1fh09
   Choice prose.
   ->END
   ->target
-> following@fedcba98765432100123
+> @q5khbap
   Following prose.
 
 ---
@@ -33,10 +33,9 @@ Indented compact diverts and following statements
 (source_file
   (choice_statement
     (choice_marker)
-    (hspace)
-    (choice_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line
@@ -57,10 +56,9 @@ Indented compact diverts and following statements
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line
@@ -73,7 +71,7 @@ Indented compact diverts and following statements
 Malformed target retains following statement recovery
 ==================
 ->target,
-> following@0123456789abcdef0123
+> @ez1fh09
   Recovery prose.
 ->
 
@@ -86,10 +84,9 @@ Malformed target retains following statement recovery
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line

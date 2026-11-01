@@ -4,7 +4,7 @@ use recite_core::po::{PoDocument, PoEdit, PoEditError, PoEntryField, PoEntryId, 
 fn final_review_flags_preserve_lossless_source_and_allow_unreviewed_placeholders()
 -> Result<(), Box<dyn std::error::Error>> {
     for ending in ["\n", "\r\n"] {
-        let source = "# note\n#, fuzzy, custom-flag\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Old\"\n\n# untouched\nmsgctxt \"22222222222222222222\"\nmsgid \"Bye {name}\"\nmsgstr \"Bye {name}\"".replace('\n', ending);
+        let source = "# note\n#, fuzzy, custom-flag\nmsgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"Old\"\n\n# untouched\nmsgctxt \"rthh7ab\"\nmsgid \"Bye {name}\"\nmsgstr \"Bye {name}\"".replace('\n', ending);
         let mut document = PoDocument::parse(&source)?;
         document.apply_updates([
             PoUpdate::Fuzzy {
@@ -18,7 +18,7 @@ fn final_review_flags_preserve_lossless_source_and_allow_unreviewed_placeholders
                 fuzzy: true,
             },
         ])?;
-        let expected = "# note\n#, custom-flag\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Salut {name}\"\n\n#, fuzzy\n# untouched\nmsgctxt \"22222222222222222222\"\nmsgid \"Bye {name}\"\nmsgstr \"Incomplete\"".replace('\n', ending);
+        let expected = "# note\n#, custom-flag\nmsgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"Salut {name}\"\n\n#, fuzzy\n# untouched\nmsgctxt \"rthh7ab\"\nmsgid \"Bye {name}\"\nmsgstr \"Incomplete\"".replace('\n', ending);
         assert_eq!(document.source(), expected);
         assert_eq!(
             document
@@ -36,7 +36,7 @@ fn final_review_flags_preserve_lossless_source_and_allow_unreviewed_placeholders
 #[test]
 fn plural_batches_validate_every_final_arm_and_roll_back_together()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = "msgid \"\"\nmsgstr \"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n#, fuzzy\nmsgctxt \"33333333333333333333\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    let source = "msgid \"\"\nmsgstr \"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n#, fuzzy\nmsgctxt \"bqyvpqq\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
     let id = PoEntryId::new(1);
     let mut document = PoDocument::parse(source)?;
     assert!(
@@ -126,18 +126,18 @@ fn duplicate_fields_review_flags_and_same_offset_insertions_are_rejected_atomica
 #[test]
 fn batches_can_swap_keys_and_preserve_obsolete_multiline_entries()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Hello\"\nmsgstr \"Salut\"\n\n#~ , fuzzy, custom\n#~ msgctxt \"44444444444444444444\"\n#~ msgid \"Old\"\n#~ msgstr \"\"\n#~ \"Ancien\"\n";
+    let source = "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Hello\"\nmsgstr \"Salut\"\n\n#~ , fuzzy, custom\n#~ msgctxt \"z0g6c80\"\n#~ msgid \"Old\"\n#~ msgstr \"\"\n#~ \"Ancien\"\n";
     let mut document = PoDocument::parse(source)?;
     document.apply_updates([
         PoUpdate::Field(PoEdit::new(
             PoEntryId::new(0),
             PoEntryField::Context,
-            "22222222222222222222",
+            "rthh7ab",
         )),
         PoUpdate::Field(PoEdit::new(
             PoEntryId::new(1),
             PoEntryField::Context,
-            "11111111111111111111",
+            "ffee6p8",
         )),
         PoUpdate::Fuzzy {
             entry: PoEntryId::new(2),
@@ -145,14 +145,8 @@ fn batches_can_swap_keys_and_preserve_obsolete_multiline_entries()
         },
         PoUpdate::Field(PoEdit::translation(PoEntryId::new(2), "Révisé\nencore")),
     ])?;
-    assert_eq!(
-        document.entries()[0].context(),
-        Some("22222222222222222222")
-    );
-    assert_eq!(
-        document.entries()[1].context(),
-        Some("11111111111111111111")
-    );
+    assert_eq!(document.entries()[0].context(), Some("rthh7ab"));
+    assert_eq!(document.entries()[1].context(), Some("ffee6p8"));
     assert!(document.source().contains("#~ , custom\n"));
     assert!(document.source().contains("#~ \"Révisé\\nencore\""));
     assert!(document.entries()[2].is_obsolete());
@@ -163,8 +157,7 @@ fn batches_can_swap_keys_and_preserve_obsolete_multiline_entries()
 #[test]
 fn source_snapshots_share_owned_input_and_survive_document_edits()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source =
-        String::from("msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n");
+    let source = String::from("msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n");
     let pointer = source.as_ptr();
     let mut document = PoDocument::parse(source)?;
     let before = document.source_snapshot();

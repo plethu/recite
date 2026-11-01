@@ -11,7 +11,7 @@ use recite_core::{
 fn resolution_only_keeps_expected_catalogue_and_policy_error_precedence()
 -> Result<(), Box<dyn std::error::Error>> {
     let entry = PotEntry {
-        context: "11111111111111111111".into(),
+        context: "ffee6p8".into(),
         source_text: "Hello".into(),
         plural_source_text: None,
         comments: Vec::new(),

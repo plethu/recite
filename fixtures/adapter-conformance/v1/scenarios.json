@@ -313,18 +313,18 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "3f481d9991fa22e23b0c",
-              "8706986735003ec9aaec"
+              "mkkr74x",
+              "j12cqy0"
             ],
             "prompt_unavailable_choice_ids": [
-              "8706986735003ec9aaec"
+              "j12cqy0"
             ]
           }
         },
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "3f481d9991fa22e23b0c"
+            "choice_id": "mkkr74x"
           },
           "expect": {
             "status": "ok",
@@ -360,14 +360,14 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "ced14b8623bba2198c6d"
+              "t680psd"
             ]
           }
         },
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "ced14b8623bba2198c6d"
+            "choice_id": "t680psd"
           },
           "expect": {
             "status": "ok",
@@ -388,7 +388,7 @@
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "3f481d9991fa22e23b0c"
+            "choice_id": "mkkr74x"
           },
           "expect": {
             "status": "error",
@@ -639,13 +639,13 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_unavailable_choice_ids": [
-              "a94b83f2d8bd65101cc3",
-              "abd0c7bb22d0c75e6e6d",
-              "d8c8e35c29738f402acb"
+              "z58rq7p",
+              "group_all",
+              "group_any"
             ],
             "prompt_choice_availability": [
               {
-                "choice_id": "a94b83f2d8bd65101cc3",
+                "choice_id": "z58rq7p",
                 "is_available": false,
                 "primary_reason": {
                   "id": "innkeeper_trust_hint",
@@ -708,7 +708,7 @@
                 }
               },
               {
-                "choice_id": "abd0c7bb22d0c75e6e6d",
+                "choice_id": "group_all",
                 "is_available": false,
                 "reason_tree": {
                   "kind": "all",
@@ -815,7 +815,7 @@
                 }
               },
               {
-                "choice_id": "d8c8e35c29738f402acb",
+                "choice_id": "group_any",
                 "is_available": false,
                 "reason_tree": {
                   "kind": "any",
@@ -922,7 +922,7 @@
                 }
               },
               {
-                "choice_id": "d8a10a641d08d677e37c",
+                "choice_id": "available",
                 "is_available": true
               }
             ]
@@ -931,7 +931,7 @@
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "a94b83f2d8bd65101cc3"
+            "choice_id": "z58rq7p"
           },
           "expect": {
             "status": "error",
@@ -1015,8 +1015,8 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "3f481d9991fa22e23b0c",
-              "8706986735003ec9aaec"
+              "mkkr74x",
+              "j12cqy0"
             ]
           }
         },
@@ -1069,7 +1069,7 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "ced14b8623bba2198c6d"
+              "t680psd"
             ]
           }
         },
@@ -1395,7 +1395,7 @@
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "3f481d9991fa22e23b0c"
+            "choice_id": "mkkr74x"
           },
           "expect": {
             "status": "ok",
@@ -1794,15 +1794,15 @@
                 "attempts": [
                   {
                     "locale": "fr-FR",
-                    "context": "5fcf9a1f7b20211f4a92",
-                    "key": "5fcf9a1f7b20211f4a92",
+                    "context": "plural_line",
+                    "key": "plural_line",
                     "selected_arm": 1,
                     "outcome": "matched"
                   }
                 ],
                 "matched_locale": "fr-FR",
-                "matched_context": "5fcf9a1f7b20211f4a92",
-                "matched_key": "5fcf9a1f7b20211f4a92",
+                "matched_context": "plural_line",
+                "matched_key": "plural_line",
                 "matched_arm": 1,
                 "source_fallback_arm": null,
                 "outcome": "translated"

@@ -17,7 +17,7 @@ static func run(parent: Node) -> Array[String]:
 			emitted.append(data)
 			if emitted.size() == 1:
 				data["line"]["text"] = "changed by signal"
-				var nested = node.select_choice("10000000000000000003")
+				var nested = node.select_choice("inspect_relay")
 				nested_results.append(nested)
 				if nested.is_ok():
 					nested.outputs()[0]["effect"]["args"][0]["value"] = "changed by caller"

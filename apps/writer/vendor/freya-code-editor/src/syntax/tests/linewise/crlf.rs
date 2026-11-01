@@ -1,5 +1,5 @@
 use super::*;
-const SOURCE: &str = ":: start default\r\n\r\n> line@11111111111111111111\r\n  Café 🦊.\r\n-> END";
+const SOURCE: &str = ":: start default\r\n\r\n> @ffee6p8\r\n  Café 🦊.\r\n-> END";
 fn seeded(source: &str) -> (Rope, SyntaxHighlighter) {
     let rope = Rope::from_str(source);
     let mut highlighter = SyntaxHighlighter::new();
@@ -24,7 +24,7 @@ fn changed(source: &str, from: usize, to: usize, text: &str, fast: bool) {
 }
 #[test]
 fn crlf_and_mixed_sources_keep_unicode_spans_and_use_line_local_work() {
-    let structured = ":: start default\n> line@11111111111111111111\n  Café 🦊 {value}.\n? reply\n  Choice.\n  -> next\n:: next\n! immediate call()\n-> END";
+    let structured = ":: start default\n> @ffee6p8\n  Café 🦊 {value}.\n?\n  Choice.\n  -> next\n:: next\n! immediate call()\n-> END";
     for phase in 0..8 {
         for mixed in [false, true] {
             let mut source = "\r\n".repeat(phase);
@@ -58,7 +58,7 @@ fn complete_pairs_and_lf_conversion_remain_fast_but_pair_damage_falls_back() {
 #[test]
 fn offscreen_pair_damage_and_repair_require_a_new_full_parse_before_reuse() {
     let source = (0..40)
-        .map(|n| format!(":: block_{n}\r\n> line_{n}\r\n  Café 🦊.\r\n-> END\r\n"))
+        .map(|n| format!(":: block_{n}\r\n> @line_{n}\r\n  Café 🦊.\r\n-> END\r\n"))
         .collect::<String>();
     let (mut rope, mut highlighter) = seeded(&source);
     let cr = rope.line_to_char(100) + rope.line(100).len_chars() - 2;

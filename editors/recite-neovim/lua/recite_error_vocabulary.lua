@@ -45,6 +45,7 @@ return {
     ["invalid_project_root"] = true,
     ["missing_fixture_choice"] = true,
     ["no_inputs"] = true,
+    ["stable_id_baseline"] = true,
     ["output_overwrites_input"] = true,
     ["play_eof"] = true,
     ["play_invalid_input"] = true,

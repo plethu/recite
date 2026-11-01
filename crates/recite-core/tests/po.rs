@@ -10,7 +10,6 @@ mod plural_rule_validation;
 const REPRESENTATIVE: &str = concat!(
     "# translator note\n",
     "#. extracted context\n",
-    "#. source id: abc@11111111111111111111\n",
     "#: dialogue/start.recite:4\n",
     "#, fuzzy, c-format\n",
     "msgctxt \"abc12345678901234567&formal\"\n",
@@ -28,7 +27,7 @@ const REPRESENTATIVE: &str = concat!(
     "\"Language: fr-FR\\n\"\n",
     "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n",
     "\n",
-    "msgctxt \"22222222222222222222\"\n",
+    "msgctxt \"rthh7ab\"\n",
     "msgid \"One {count}\"\n",
     "msgid_plural \"Many {count}\"\n",
     "msgstr[0] \"Un {count}\"\n",
@@ -44,7 +43,6 @@ fn representative_po_round_trips_and_exposes_source_records() {
 
     let entry = &document.entries()[0];
     assert_eq!(entry.context(), Some("abc12345678901234567&formal"));
-    assert_eq!(entry.stable_id_metadata(), Some("abc@11111111111111111111"));
     assert_eq!(entry.variant(), Some("formal"));
     assert_eq!(entry.source_text(), "Hello {name}\nworld");
     assert_eq!(entry.translation(), Some("Bonjour {name}\nmonde"));
@@ -100,7 +98,7 @@ fn variants_and_plural_previous_values_are_structured_edits() {
         "msgid \"\"\n",
         "msgstr \"\"\n",
         "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n",
-        "msgctxt \"11111111111111111111&formal\"\n",
+        "msgctxt \"ffee6p8&formal\"\n",
         "msgid \"One {count}\"\n",
         "msgid_plural \"Many {count}\"\n",
         "#| msgid_plural \"Older {count}\"\n",
@@ -116,10 +114,7 @@ fn variants_and_plural_previous_values_are_structured_edits() {
     document
         .apply_edit(PoEdit::variant(document.entries()[1].id(), "casual"))
         .expect("variant edit succeeds");
-    assert_eq!(
-        document.entries()[1].context(),
-        Some("11111111111111111111&casual")
-    );
+    assert_eq!(document.entries()[1].context(), Some("ffee6p8&casual"));
 }
 
 #[test]
@@ -145,7 +140,7 @@ fn obsolete_previous_values_support_standard_multiline_records() {
 #[test]
 fn plural_placeholder_validation_uses_the_corresponding_source_arm() {
     let source = concat!(
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"{one}\"\n",
         "msgid_plural \"{many}\"\n",
         "msgstr[0] \"{many}\"\n",
@@ -175,7 +170,7 @@ fn stale_entries_are_preserved_without_semantic_validation() {
 #[test]
 fn active_plural_entries_require_header_and_matching_arms() {
     let missing = concat!(
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"one\"\n",
         "msgid_plural \"many\"\n",
         "msgstr[0] \"un\"\n",
@@ -188,7 +183,7 @@ fn active_plural_entries_require_header_and_matching_arms() {
     ));
     let partial = concat!(
         "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n",
-        "msgctxt \"11111111111111111111\"\nmsgid \"one\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"one\"\n",
         "msgid_plural \"many\"\nmsgstr[0] \"un\"\n",
     );
     assert!(matches!(
@@ -199,7 +194,7 @@ fn active_plural_entries_require_header_and_matching_arms() {
     ));
     let malformed = concat!(
         "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=2; plural=foo;\\n\"\n\n",
-        "msgctxt \"11111111111111111111\"\nmsgid \"one\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"one\"\n",
         "msgid_plural \"many\"\nmsgstr[0] \"un\"\n",
         "msgstr[1] \"many\"\n",
     );
@@ -232,7 +227,7 @@ fn active_plural_entries_support_two_three_and_more_locale_arms() {
             .map(|arm| format!("msgstr[{arm}] \"arm {arm}\"\n"))
             .collect::<String>();
         let source = format!(
-            "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals={nplurals}; plural=(n != 1);\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"one\"\nmsgid_plural \"many\"\n{translations}"
+            "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals={nplurals}; plural=(n != 1);\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"one\"\nmsgid_plural \"many\"\n{translations}"
         );
         let document = PoDocument::parse(&source).expect("locale plural arm count parses");
         assert_eq!(document.entries()[1].plural_translations().len(), arms);
@@ -278,7 +273,7 @@ fn plural_evaluator_rejects_identifier_prefixes_as_numbers() {
 #[test]
 fn locale_neutral_pot_plural_templates_do_not_require_locale_metadata() {
     let source = concat!(
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"one\"\n",
         "msgid_plural \"many\"\n",
         "msgstr[0] \"\"\n",
@@ -290,7 +285,7 @@ fn locale_neutral_pot_plural_templates_do_not_require_locale_metadata() {
     let translated = concat!(
         "msgid \"\"\nmsgstr \"\"\n",
         "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n",
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"one\"\n",
         "msgid_plural \"many\"\n",
         "msgstr[0] \"un\"\n",

@@ -4,7 +4,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, write_file};
 
-use super::support::{authoring_schema, position_after};
+use super::support::{authoring_schema, position_after, position_after_in_header};
 
 pub(super) fn completes_requires_conditions_and_parameterless_reasons() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -30,8 +30,8 @@ pub(super) fn completes_requires_conditions_and_parameterless_reasons() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default\n",
-        "? ask@3ec8745874ed3cde29ce requires=(tr\n",
-        "? ask_reason@116831dfd01a44eaedb1 requires=(trust_gte(hazel, rhea, 3)) reason=inn\n",
+        "? requires=(tr @ask\n",
+        "? requires=(trust_gte(hazel, rhea, 3)) reason=inn @ask_reason\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -74,12 +74,12 @@ pub(super) fn completes_project_and_schema_authoring_symbols() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default\n",
-        "> line@ff34745f262d15d5b4ce speaker=ha portrait=w\n",
+        "> speaker=ha portrait=w @qebdjj2\n",
         "  Hello.\n",
         "-> sav\n",
         ":if can_t\n",
         "! immediate play\n",
-        "> metadata_line@32a122c362c13a9fba4e por\n",
+        "> por @metadata_line\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -119,7 +119,7 @@ pub(super) fn completes_project_and_schema_authoring_symbols() {
         harness
             .completion(
                 source_uri,
-                position_after(source, "> metadata_line@32a122c362c13a9fba4e por"),
+                position_after_in_header(source, "metadata_line", "por"),
             )
             .expect("metadata key completion"),
     );
@@ -148,27 +148,27 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=rhea\n",
-        "> line@6932a28590a3e2589912 speaker=hazel portrait=\n",
+        "> speaker=hazel portrait= @hqb9g54\n",
         "  Hello.\n",
-        "> inherited@b5e6d41190a085e8e199 portrait=\n",
+        "> portrait= @inherited\n",
         "  Hi.\n",
-        "> by_tone@00986d119571fe502b6c mood=warm stage=\n",
+        "> mood=warm stage= @by_tone\n",
         "  Welcome.\n",
-        "> dotted@50114af655afb00259aa mood=warm.tone stage=\n",
+        "> mood=warm.tone stage= @dotted\n",
         "  Dotted.\n",
-        "> unmapped@4ca3cc23f3daf60b72ff mood=cold stage=\n",
+        "> mood=cold stage= @unmapped\n",
         "  Cold.\n",
-        "> fallback@6ee55288cd8572cabeba stage=\n",
+        "> stage= @j560qyt\n",
         "  There.\n",
-        "> empty@3f999d94c15264aff741 mood=\n",
+        "> mood= @empty\n",
         "  Quiet.\n",
-        "> repeated@cca0e492ff706239ae60 mood=warm mood=bright stage=\n",
+        "> mood=warm mood=bright stage= @repeated\n",
         "  Repeated.\n",
-        "> malformed@bd10c23e35161e49f8bd mood=\"warm\" stage=\n",
+        "> mood=\"warm\" stage= @malformed\n",
         "  Malformed.\n",
-        "> quoted_speaker@a1b2c3d4e5f60718293a speaker=\"rhea\" portrait=\n",
+        "> speaker=\"rhea\" portrait= @y0txed0\n",
         "  Quoted speaker.\n",
-        "> repeated_speaker@b1c2d3e4f5061728394a speaker=hazel speaker=rhea portrait=\n",
+        "> speaker=hazel speaker=rhea portrait= @fm637hb\n",
         "  Repeated speaker.\n",
         ":: block speaker=hazel portrait=\n",
     );
@@ -189,7 +189,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
         harness
             .completion(
                 source_uri.clone(),
-                position_after(source, "> inherited@b5e6d41190a085e8e199 portrait="),
+                position_after_in_header(source, "inherited", "portrait="),
             )
             .expect("inherited speaker contextual metadata completion"),
     );
@@ -229,7 +229,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
         harness
             .completion(
                 source_uri.clone(),
-                position_after(source, "> fallback@6ee55288cd8572cabeba stage="),
+                position_after_in_header(source, "j560qyt", "stage="),
             )
             .expect("fallback contextual metadata completion"),
     );
@@ -239,7 +239,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
         harness
             .completion(
                 source_uri.clone(),
-                position_after(source, "> empty@3f999d94c15264aff741 mood="),
+                position_after_in_header(source, "empty", "mood="),
             )
             .expect("empty contextual metadata completion"),
     );
@@ -318,10 +318,10 @@ pub(super) fn ignores_non_metadata_authoring_positions() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default\n",
-        "> li@cc29a2bf4d2fcbf3ce96\n",
+        "> @li\n",
         "  prose por\n",
         "  \"function\": \"act\n",
-        "? ch@d5b763017bd6c66a9a53\n",
+        "? @ch\n",
         ":else por\n",
         ":: start def\n",
     );
@@ -330,7 +330,7 @@ pub(super) fn ignores_non_metadata_authoring_positions() {
 
     assert!(
         harness
-            .completion(source_uri.clone(), position_after(source, "> li"))
+            .completion(source_uri.clone(), position_after(source, "> @li"))
             .is_none()
     );
     assert!(
@@ -348,7 +348,7 @@ pub(super) fn ignores_non_metadata_authoring_positions() {
     );
     assert!(
         harness
-            .completion(source_uri.clone(), position_after(source, "? ch"))
+            .completion(source_uri.clone(), position_after(source, "? @ch"))
             .is_none()
     );
     assert!(

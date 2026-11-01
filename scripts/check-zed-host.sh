@@ -52,7 +52,7 @@ fi
 extension_dir="$repo_root/editors/zed"
 fixture="$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite"
 capability_fixture="$repo_root/fixtures/recite/valid/core_language_spike.recite"
-grammar_revision="65afc5933d71ac8af40037232bf755f823608536"
+grammar_revision="61b432daa897d62cf0c641204174ada0a08793dc"
 timeout_seconds="${RECITE_ZED_TIMEOUT:-90}"
 keep_probe="${RECITE_ZED_KEEP:-}"
 if ! [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then
@@ -708,7 +708,7 @@ assert ":: work\n" not in after
 assert "    -> work\n" not in after
 PY
 echo "lsp_rename_edit=non_empty_workspace_edit_applied_and_saved"
-wait_for_file_match "$project_dir/code-action.recite" '^> line@56d52d8cd8619971011f([[:space:]]*)$' || {
+wait_for_file_match "$project_dir/code-action.recite" '^> @ca4w7az([[:space:]]*)$' || {
   echo "Zed did not apply the canonical missing-ID workspace edit" >&2
   sed -n '1,12p' "$project_dir/code-action.recite" >&2
   exit 1

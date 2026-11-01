@@ -17,9 +17,19 @@ trap 'rm -rf "$scratch"' EXIT
 git archive "$base" | tar -x -C "$scratch"
 cargo build --locked --release -p recite-lsp -p recite-fixturegen
 cp target/release/recite-lsp "$output/candidate-lsp"
-CARGO_TARGET_DIR="$output/base-target" cargo build --locked --release \
-  --manifest-path "$scratch/Cargo.toml" -p recite-lsp
-cp "$output/base-target/release/recite-lsp" "$output/control-lsp"
+# A control that predates trailing stable IDs (#234) cannot read the current
+# fixtures. This waiver expires once every comparison base has the new format.
+compare_with_base=true
+if [[ ! -f "$scratch/crates/recite-core/src/statement_header.rs" ]]; then
+  compare_with_base=false
+  echo "Base $base predates the trailing stable-ID source format; skipping the base comparison."
+  printf '{"status":"waived","reason":"control predates the trailing stable-ID source format (#234)","control":"%s"}\n' \
+    "$base" >"$output/comparison.json"
+else
+  CARGO_TARGET_DIR="$output/base-target" cargo build --locked --release \
+    --manifest-path "$scratch/Cargo.toml" -p recite-lsp
+  cp "$output/base-target/release/recite-lsp" "$output/control-lsp"
+fi
 python3 - "$base" "$output/revisions.json" <<'PY'
 import json, subprocess, sys
 from pathlib import Path
@@ -28,9 +38,11 @@ Path(sys.argv[2]).write_text(json.dumps({"control": sys.argv[1],
 PY
 target/release/recite-fixturegen --profile large \
   --output "$output/large" --summaries "$output/fixture.json"
-mise -E lsp exec -- uv run --locked python scripts/lsp.py compare --control "$output/control-lsp" \
-  --candidate "$output/candidate-lsp" --project "$output/large" \
-  --output "$output/comparison.json"
+if [[ "$compare_with_base" == true ]]; then
+  mise -E lsp exec -- uv run --locked python scripts/lsp.py compare --control "$output/control-lsp" \
+    --candidate "$output/candidate-lsp" --project "$output/large" \
+    --output "$output/comparison.json"
+fi
 mise -E lsp exec -- uv run --locked python scripts/lsp.py session "$output/large" --edits 300 \
   --output "$output/session.json"
 mise -E lsp exec -- uv run --locked python scripts/lsp.py session "$output/large" --edits 300 --ranged \

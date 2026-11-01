@@ -165,7 +165,6 @@ fn extract_statement_entries(
                 entries.push(source_entry(
                     PotEntryInput {
                         context: id.as_str(),
-                        source_id_display: line.source_id.display_text().as_deref(),
                         source_text: &line.source_text.text,
                         plural_source_text: line
                             .plural_source_text
@@ -190,7 +189,6 @@ fn extract_statement_entries(
                 entries.push(source_entry(
                     PotEntryInput {
                         context: id.as_str(),
-                        source_id_display: choice.source_id.display_text().as_deref(),
                         source_text: &choice.source_text.text,
                         plural_source_text: None,
                     },
@@ -234,7 +232,6 @@ fn extract_statement_entries(
 
 struct PotEntryInput<'a> {
     context: &'a str,
-    source_id_display: Option<&'a str>,
     source_text: &'a str,
     plural_source_text: Option<&'a str>,
 }
@@ -253,9 +250,6 @@ fn source_entry(input: PotEntryInput<'_>, context: PotEntryContext<'_>) -> PotEn
     ];
     if let Some(speaker) = context.speaker {
         comments.push(format!("speaker: {speaker}"));
-    }
-    if let Some(source_id_display) = input.source_id_display {
-        comments.push(format!("source id: {source_id_display}"));
     }
 
     PotEntry {

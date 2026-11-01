@@ -1149,7 +1149,7 @@ local output, extract, fixture =
   root .. "/neovim-command-test.fixture.toml"
 local fixture_handle = assert(io.open(fixture, "wb"))
 fixture_handle:write(
-  '[conditions]\n"trusts(player)" = true\n\n[choices]\n637b1854a7f3ed42f045 = "b84cc9fa241a33bcdf05"\n\n[effects]\nauto_ack_blocking = true\n'
+  '[conditions]\n"trusts(player)" = true\n\n[choices]\ncm3myr8 = "ask_work"\n\n[effects]\nauto_ack_blocking = true\n'
 )
 fixture_handle:close()
 local results = {}

@@ -56,6 +56,7 @@ const COMMAND_GROUPS: [(MsgId, &[&str]); 6] = [
         &[
             "validate",
             "check-ids",
+            "assign-ids",
             "check-markup",
             "check-metadata",
             "import",

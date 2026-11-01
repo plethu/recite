@@ -106,22 +106,22 @@ fn restart_boundaries_preserve_recovery_and_nested_bodies() {
         ":: a default\n",
         ":: b speaker=Test\n",
         "  :: indented\n",
-        "> line@11111111111111111111\n  Café 🦀\n",
-        "> malformed@\n",
-        "? choice\n  Choice\n  -> b\n",
-        ":if ready()\n  > nested\n    Nested\n",
+        "> @ffee6p8\n  Café 🦀\n",
+        ">\n",
+        "?\n  Choice\n  -> b\n",
+        ":if ready()\n  >\n    Nested\n",
         ":else\n  -> END\n",
         ":match state()\n  :case yes\n    -> END\n",
         "\todd indent\n",
         "-> missing\n",
         "! effect(\n",
-        "> x\n  [bad]markup\n\n",
+        ">\n  [bad]markup\n\n",
         ":: c",
         "> no body\n",
     ];
     for left in fragments {
         for middle in fragments {
-            for right in [":: end\n-> END\n", "  :: nested\n", "::\n> x\n", ""] {
+            for right in [":: end\n-> END\n", "  :: nested\n", "::\n>\n", ""] {
                 let source = format!("{left}{middle}{right}");
                 assert_equivalent(&source);
                 assert_equivalent(&source.replace('\n', "\r\n"));
@@ -157,7 +157,7 @@ fn all_recite_fixtures_match_whole_file_lowering() {
 
 #[test]
 fn root_visitor_stops_at_the_requested_boundary() {
-    let source = ":: start default\n> first\n  Hello.\n> second\n  Goodbye.\n";
+    let source = ":: start default\n>\n  Hello.\n>\n  Goodbye.\n";
     let mut visited = 0;
     let result = source_regions(source)[0].try_visit_statements("scene.recite", |_, _| {
         visited += 1;

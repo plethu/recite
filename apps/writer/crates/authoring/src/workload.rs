@@ -20,7 +20,7 @@ pub fn source(passages: usize, first_id: usize, per_beat: usize) -> String {
             ));
         }
         let id = first_id + passage;
-        source.push_str(&format!("> line_{id}@{id:020x} speaker=mara\n  The courier waits beside the café. Beacon{} remains unanswered.\n\n", id % 4096));
+        source.push_str(&format!("> speaker=mara @line_{id}\n  The courier waits beside the café. Beacon{} remains unanswered.\n\n", id % 4096));
     }
     source.push_str("-> END\n");
     source

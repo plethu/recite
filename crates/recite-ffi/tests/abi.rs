@@ -7,7 +7,7 @@ use support::*;
 fn asset_load_and_free_round_trip() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> hello@10000000000000000001\n",
+        "> @s96sqwp\n",
         "  Hello.\n",
         "-> END\n",
     ));
@@ -100,7 +100,7 @@ fn asset_load_rejects_a_slice_larger_than_isize() {
 fn restore_rejects_a_snapshot_slice_larger_than_isize() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> hello@99990000000000000001\n",
+        "> @hello\n",
         "  Hello.\n",
         "-> END\n",
     ));

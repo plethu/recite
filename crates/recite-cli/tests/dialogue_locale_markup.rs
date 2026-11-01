@@ -13,7 +13,7 @@ fn runtime_delivers_lossless_translated_inline_markup() {
         "dialogue-markup.recite",
         concat!(
             ":: start default\n",
-            "> intro@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  [slow]Hello [em]world[/em][/slow]\n",
             "-> END\n",
         ),
@@ -23,7 +23,7 @@ fn runtime_delivers_lossless_translated_inline_markup() {
         temp.path(),
         "locale/fr.po",
         concat!(
-            "msgctxt \"11111111111111111111\"\n",
+            "msgctxt \"ffee6p8\"\n",
             "msgid \"[slow]Hello [em]world[/em][/slow]\"\n",
             "msgstr \"[slow]Monde [em]bonjour[/em][/slow]\"\n",
         ),
@@ -47,5 +47,5 @@ fr = ["locale/fr.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line 11111111111111111111: [slow]Monde [em]bonjour[/em][/slow]");
+    output.assert_stdout_contains("line ffee6p8: [slow]Monde [em]bonjour[/em][/slow]");
 }

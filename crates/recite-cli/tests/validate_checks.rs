@@ -11,7 +11,7 @@ fn validate_reports_diagnostics_and_success() {
     let valid = write_recite(
         temp.path(),
         "valid.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     recite()
         .arg("validate")
@@ -36,7 +36,7 @@ fn validate_preserves_structured_parser_help_in_cli_output() {
     let source = write_recite(
         temp.path(),
         "trailing-choice-if.recite",
-        ":: tavern\n? ask_news@a74221348f0e47548c59 if trust_gte(hazel, rhea, 3)\n  What's the news?\n",
+        ":: tavern\n? if trust_gte(hazel, rhea, 3) @hcpcvvy\n  What's the news?\n",
     );
 
     let output = run(recite().arg("validate").arg(&source));
@@ -55,9 +55,9 @@ fn validate_renders_structured_compiler_related_diagnostics() {
         "duplicate.recite",
         concat!(
             ":: start default\n",
-            "> first@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  First.\n",
-            "> second@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Second.\n",
         ),
     );
@@ -88,7 +88,7 @@ fn check_ids_reports_only_id_diagnostics() {
     let source = write_recite(
         temp.path(),
         "ids.recite",
-        ":: start\n>\n  Missing id and missing default.\n> repeated\n  Plain IDs are malformed.\n> first@22222222222222222222\n  First.\n> second@22222222222222222222\n  Duplicate anchor.\n",
+        ":: start\n>\n  Missing id and missing default.\n> @Repeated\n  Uppercase IDs are malformed.\n> @rthh7ab\n  First.\n> @rthh7ab\n  Duplicate anchor.\n",
     );
 
     let output = run(recite().arg("check-ids").arg(&source));
@@ -101,7 +101,7 @@ fn check_ids_reports_only_id_diagnostics() {
     let unrelated = write_recite(
         temp.path(),
         "unrelated.recite",
-        ":: start\n> intro@11111111111111111111\n  IDs are present, but no default block.\n",
+        ":: start\n> @ffee6p8\n  IDs are present, but no default block.\n",
     );
     recite()
         .arg("check-ids")
@@ -116,7 +116,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
     let source = write_recite(
         temp.path(),
         "markup.recite",
-        ":: start default\n> intro@11111111111111111111\n  [ghost]Hello[/ghost]\n-> END\n",
+        ":: start default\n> @ffee6p8\n  [ghost]Hello[/ghost]\n-> END\n",
     );
 
     recite()
@@ -128,7 +128,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
     let malformed = write_recite(
         temp.path(),
         "malformed.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n    Mixed indent.\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n    Mixed indent.\n",
     );
     let output = run(recite().arg("check-markup").arg(malformed));
     assert_diagnostic_failure(&output);
@@ -154,7 +154,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
     let source = write_recite(
         temp.path(),
         "metadata.recite",
-        ":: start default\n> intro@11111111111111111111 mood=\"angry\"\n  Hello.\n-> END\n",
+        ":: start default\n> mood=\"angry\" @ffee6p8\n  Hello.\n-> END\n",
     );
     let schema = write_file(
         temp.path(),
@@ -172,7 +172,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
     let invalid_metadata = write_recite(
         temp.path(),
         "invalid-metadata.recite",
-        ":: start default\n> intro@11111111111111111111 unknown=flat\n  Hello.\n-> END\n",
+        ":: start default\n> unknown=flat @ffee6p8\n  Hello.\n-> END\n",
     );
     let output = run(recite()
         .arg("check-metadata")
@@ -202,7 +202,7 @@ fn check_metadata_reports_domain_diagnostics_without_unrelated_validation() {
     let source = write_recite(
         temp.path(),
         "metadata-domain.recite",
-        ":: start\n> intro@11111111111111111111 portrait=missing\n  Hello.\n",
+        ":: start\n> portrait=missing @ffee6p8\n  Hello.\n",
     );
     let schema = write_file(
         temp.path(),
@@ -241,7 +241,7 @@ fn check_metadata_reports_projection_schema_diagnostics_with_spans() {
     let source = write_recite(
         temp.path(),
         "metadata.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let schema = write_file(
         temp.path(),

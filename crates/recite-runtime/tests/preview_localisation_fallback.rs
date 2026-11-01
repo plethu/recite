@@ -99,9 +99,8 @@ impl LocaleProvider for FallbackProvider {
 
 #[test]
 fn singular_fallback_preserves_real_ordered_attempts() {
-    let asset = asset(
-        ":: start default\n> hello@12345678901234567890 bind=(name:string=$name)\n  Hello, {name}.\n-> END\n",
-    );
+    let asset =
+        asset(":: start default\n> bind=(name:string=$name) @w3xnt5r\n  Hello, {name}.\n-> END\n");
     let locale = LocaleId::new("fr-FR").expect("locale");
     let provider = FallbackProvider {
         calls: Cell::new(0),
@@ -140,7 +139,7 @@ fn singular_fallback_preserves_real_ordered_attempts() {
 fn plural_source_fallback_preserves_repeated_attempt_occurrences() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> letters@12345678901234567890 bind=(count:int=$count)\n",
+        "> bind=(count:int=$count) @w3xnt5r\n",
         "  One letter.\n",
         "  | {count} letters.\n",
         "-> END\n",
@@ -174,9 +173,8 @@ fn plural_source_fallback_preserves_repeated_attempt_occurrences() {
 
 #[test]
 fn malformed_successful_provider_output_rolls_back() {
-    let asset = asset(
-        ":: start default\n> hello@12345678901234567890 bind=(name:string=$name)\n  Hello, {name}.\n-> END\n",
-    );
+    let asset =
+        asset(":: start default\n> bind=(name:string=$name) @w3xnt5r\n  Hello, {name}.\n-> END\n");
     let provider = FallbackProvider {
         calls: Cell::new(0),
         malformed: true,

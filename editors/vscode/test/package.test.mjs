@@ -66,9 +66,9 @@ test("TextMate fixtures reuse canonical source and include incomplete recovery i
     path.join(packageRoot, "..", "..", fixtureManifest.incomplete_fixture),
     "utf8",
   );
-  assert.match(incomplete, /> unfinished@/);
+  assert.match(incomplete, /> speaker=archivist @$/m);
   assert.match(incomplete, /\{traveller_name$/m);
-  assert.match(incomplete, /\? ask_more@/);
+  assert.match(incomplete, /\? @ask_mo$/m);
   assert.match(incomplete, /->$/m);
 });
 

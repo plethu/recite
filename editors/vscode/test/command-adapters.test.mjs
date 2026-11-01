@@ -311,10 +311,7 @@ test.skipIf(process.platform !== "linux" || process.env.RECITE_CLI_BIN === undef
   async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-cli-"));
     const sourcePath = path.join(root, "dialogue.recite");
-    await writeFile(
-      sourcePath,
-      ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n",
-    );
+    await writeFile(sourcePath, ":: start default\n> @ffee6p8\n  Hello.\n-> END\n");
     const messages = [];
     const document = {
       languageId: "recite",

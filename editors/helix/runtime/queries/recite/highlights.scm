@@ -18,10 +18,7 @@
 
 ; Author-visible identities and targets.
 ((block_name) @label)
-((line_name (identifier) @label))
-((choice_name (identifier) @label))
-((stable_id) @label)
-((draft_id) @label)
+((stable_id_field) @label)
 ((target) @variable
   (#not-eq? @variable "END"))
 ((end_target) @constant.builtin)

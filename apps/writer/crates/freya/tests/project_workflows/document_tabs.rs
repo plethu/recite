@@ -171,7 +171,7 @@ fn source_deep_links_preserve_new_scene_preferences_and_closed_tab_source()
                     .iter()
                     .map(|span| span.text.as_ref())
                     .collect::<String>()
-                    .contains("> line@11111111111111111111")
+                    .contains("> @ffee6p8")
             })
         })
         .is_some(),
@@ -238,7 +238,7 @@ fn cancelling_a_submitted_tab_close_keeps_the_tab_while_its_save_finishes()
 fn closing_a_saved_sibling_restores_applicable_staged_rules()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = fixture()?;
-    let original = ":: start default speaker=mara\n? reply@22222222222222222222 requires=(ready())\n  Continue through.\n  -> END\n";
+    let original = ":: start default speaker=mara\n? requires=(ready()) @rthh7ab\n  Continue through.\n  -> END\n";
     std::fs::write(dir.path().join("a.recite"), original)?;
     let mut test = open(dir.path())?;
     let field = test

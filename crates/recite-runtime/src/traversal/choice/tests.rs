@@ -98,7 +98,7 @@ fn compiled_asset() -> CompiledDialogue {
     compile_inputs(
         [CompileInput::new(
             "dialogue/start.recite",
-            ":: start default\n> line@12345678901234567890\n  Line.\n-> END\n",
+            ":: start default\n> @w3xnt5r\n  Line.\n-> END\n",
         )],
         CompileOptions::new(
             CompilerVersion::new("0.0.1").expect("valid compiler version"),

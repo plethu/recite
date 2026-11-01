@@ -48,16 +48,6 @@ pub const META_GAP: f32 = 24.;
 pub fn script_margin() -> f32 {
     96. * ui_scale()
 }
-/// Shorten a stable ID for meta text: the first and last four characters.
-pub fn short_id(id: &str) -> String {
-    let chars: Vec<char> = id.chars().collect();
-    if chars.len() <= 10 {
-        return id.to_owned();
-    }
-    let head: String = chars[..4].iter().collect();
-    let tail: String = chars[chars.len() - 4..].iter().collect();
-    format!("{head}…{tail}")
-}
 pub const SPLITTER_WIDTH: f32 = 6.;
 pub fn collapsed_drawer_width() -> f32 {
     control_height() + 8.

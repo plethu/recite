@@ -19,9 +19,21 @@ a CLI error message.
 
 Validates dialogue source without writing compiled output: syntax, structure, and references.
 
-### `recite check-ids <PATHS>...`
+### `recite check-ids [--since <REF>] [--allow-removed <ID>]... <PATHS>...`
 
-Reports stable line and choice ID diagnostics: missing, draft, malformed, or duplicate anchors.
+Reports stable line and choice ID diagnostics: missing, malformed, or duplicate IDs.
+
+With `--since`, it also fails for every ID that existed under the same paths at that git revision
+but is now gone, because translations and saves keyed on a shipped ID no longer match. Use your last
+release tag, and pass `--allow-removed <ID>` for each line you removed on purpose. Moving a line to
+another file keeps its ID. If the revision is not available, for example in a shallow CI clone
+without tags, the command fails instead of comparing against nothing.
+
+### `recite assign-ids <PATHS>...`
+
+Appends a generated stable ID to every line and choice header that has none, after the header's last
+field. Existing IDs are never rewritten. If a file has syntax errors or a malformed ID, it reports
+those diagnostics and leaves every file unchanged.
 
 ### `recite check-markup [--schema <SCHEMA>] <PATHS>...`
 
@@ -79,8 +91,8 @@ to editor diagnostics.
 
 ### `recite extract [--output <OUTPUT>] [--schema <SCHEMA>] <PATHS>...`
 
-Extracts gettext POT entries. Each entry's `msgctxt` is the stable anchor, and comments carry file,
-block, speaker, and source-ID context for translators.
+Extracts gettext POT entries. Each entry's `msgctxt` is the stable ID, and comments carry file,
+block and speaker context for translators.
 
 ## Running
 

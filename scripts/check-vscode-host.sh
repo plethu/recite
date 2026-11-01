@@ -261,7 +261,7 @@ node - "$workspace/dialogue/main.recite" "$workspace/dialogue/repair.recite" <<'
 const fs = require("node:fs");
 const [source, destination] = process.argv.slice(2);
 fs.writeFileSync(destination, fs.readFileSync(source, "utf8").replace(
-  "> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert", ">"
+  "> speaker=hazel mood=calm mood=alert @cm3myr8", ">"
 ));
 EOF
 cat >"$workspace/scratch/runtime-fixture.toml" <<'EOF'

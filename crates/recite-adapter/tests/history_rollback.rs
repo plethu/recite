@@ -14,11 +14,11 @@ fn history_appends_roll_back_on_encoding_failure_and_retry_preserves_effect_orde
 -> Result<(), Box<dyn std::error::Error>> {
     let asset = asset(concat!(
         ":: start default\n! deferred first()\n",
-        "? continue@11111111111111111111\n  Continue.\n  -> later\n",
+        "? @ffee6p8\n  Continue.\n  -> later\n",
         ":: later\n! deferred second()\n! immediate notice()\n",
         "! blocking wait()\n! deferred third()\n-> END\n",
     ))?;
-    let choice = ChoiceId::new("11111111111111111111")?;
+    let choice = ChoiceId::new("ffee6p8")?;
     let mut driver = SessionDriver::new();
     driver.start(
         request(&asset),
@@ -51,7 +51,7 @@ fn history_appends_roll_back_on_encoding_failure_and_retry_preserves_effect_orde
     let session = decode_session_messagepack(asset.dialogue(), &blocked)?;
     assert_eq!(
         session.selected_choice_history(),
-        [ChoiceId::new("11111111111111111111")?]
+        [ChoiceId::new("ffee6p8")?]
     );
     assert_eq!(
         session

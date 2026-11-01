@@ -27,9 +27,9 @@ fn exercise_history(buffers: Buffers) -> Result<(), Box<dyn std::error::Error>> 
     for (before, after, view) in [
         ("", ":: one default\n-> END\n", View::Block("one".into())),
         (
-            ":: one default\n> first@11111111111111111111\n  Before.\n-> END\n",
-            ":: one default\n> first@11111111111111111111\n  After.\n-> END\n",
-            View::Passage("11111111111111111111".into()),
+            ":: one default\n> @ffee6p8\n  Before.\n-> END\n",
+            ":: one default\n> @ffee6p8\n  After.\n-> END\n",
+            View::Passage("ffee6p8".into()),
         ),
     ] {
         let mut model = Workbench::from_document(Document::new(before)?, Some(View::Source))?;

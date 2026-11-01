@@ -25,13 +25,13 @@ fn add_po(catalog: u64, po: &str) -> ReciteStatus {
 fn catalogue_revision_is_retained_after_add_and_free() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> prompt@11111111111111111111\n",
+        "> @ffee6p8\n",
         "  Pick.\n",
-        "  ? go@22222222222222222222\n",
+        "  ? @rthh7ab\n",
         "    Go.\n",
         "    -> after\n",
         ":: after\n",
-        "> line@33333333333333333333\n",
+        "> @bqyvpqq\n",
         "  After.\n",
         "-> END\n",
     ));
@@ -48,7 +48,7 @@ fn catalogue_revision_is_retained_after_add_and_free() {
     assert_eq!(
         add_po(
             catalog,
-            "msgctxt \"11111111111111111111\"\nmsgid \"Pick.\"\nmsgstr \"Choisir.\"\n"
+            "msgctxt \"ffee6p8\"\nmsgid \"Pick.\"\nmsgstr \"Choisir.\"\n"
         ),
         ReciteStatus::Ok
     );
@@ -77,7 +77,7 @@ fn catalogue_revision_is_retained_after_add_and_free() {
     assert_eq!(
         add_po(
             catalog,
-            "msgctxt \"33333333333333333333\"\nmsgid \"After.\"\nmsgstr \"Après.\"\n"
+            "msgctxt \"bqyvpqq\"\nmsgid \"After.\"\nmsgstr \"Après.\"\n"
         ),
         ReciteStatus::Ok
     );
@@ -86,8 +86,8 @@ fn catalogue_revision_is_retained_after_add_and_free() {
         add_po(
             catalog,
             concat!(
-                "msgctxt \"44444444444444444444\"\nmsgid \"New.\"\nmsgstr \"Nouveau.\"\n\n",
-                "msgctxt \"33333333333333333333\"\nmsgid \"After.\"\nmsgstr \"Autre.\"\n",
+                "msgctxt \"z0g6c80\"\nmsgid \"New.\"\nmsgstr \"Nouveau.\"\n\n",
+                "msgctxt \"bqyvpqq\"\nmsgid \"After.\"\nmsgstr \"Autre.\"\n",
             )
         ),
         ReciteStatus::Localisation
@@ -110,7 +110,7 @@ fn catalogue_revision_is_retained_after_add_and_free() {
     );
     unsafe { recite_buffer_free(&raw mut initial_second) };
 
-    let choice = CString::new("22222222222222222222").ok();
+    let choice = CString::new("rthh7ab").ok();
     let choice = match choice {
         Some(choice) => choice,
         None => panic!("valid choice"),
@@ -136,8 +136,7 @@ fn catalogue_revision_is_retained_after_add_and_free() {
 
 #[test]
 fn restore_with_catalog_localises_first_drain() {
-    let bytes =
-        compile_to_bytes(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n");
+    let bytes = compile_to_bytes(":: start default\n> @ffee6p8\n  Hello.\n-> END\n");
     let mut asset = 0;
     assert_eq!(
         unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) },
@@ -151,7 +150,7 @@ fn restore_with_catalog_localises_first_drain() {
     assert_eq!(
         add_po(
             catalog,
-            "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n"
+            "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n"
         ),
         ReciteStatus::Ok
     );
@@ -241,13 +240,12 @@ fn catalogue_bad_inputs_do_not_replace_attached_provider() {
     assert_eq!(
         add_po(
             catalog,
-            "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n"
+            "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n"
         ),
         ReciteStatus::Ok
     );
 
-    let bytes =
-        compile_to_bytes(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n");
+    let bytes = compile_to_bytes(":: start default\n> @ffee6p8\n  Hello.\n-> END\n");
     let mut asset = 0;
     assert_eq!(
         unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) },

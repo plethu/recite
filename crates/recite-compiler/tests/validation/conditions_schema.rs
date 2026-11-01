@@ -18,7 +18,7 @@ fn validates_choice_requires_and_reason_against_generated_manifest_schema() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "? ask_news@3b4e90e832dca4523ff1 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @b34jwqm\n",
             "  What's the news?\n",
             "  -> END\n",
         ),
@@ -42,7 +42,7 @@ fn reports_unknown_condition_function_on_function_span() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "? ask_news@69708df132b882043039 requires=(missing_condition(hazel))\n",
+            "? requires=(missing_condition(hazel)) @ybtdmgg\n",
             "  What's the news?\n",
             "  -> END\n",
         ),
@@ -57,7 +57,7 @@ fn reports_unknown_condition_function_on_function_span() {
     );
 
     assert_codes(&report, ["RECITE_VALIDATE034"]);
-    assert_spans(&report, [(2, 43)]);
+    assert_spans(&report, [(2, 13)]);
 }
 
 #[test]
@@ -67,13 +67,13 @@ fn reports_condition_arity_type_and_value_errors_on_argument_spans() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "? ask_short@22eba876e73e3a583ec7 requires=(trust_gte(hazel, rhea))\n",
+            "? requires=(trust_gte(hazel, rhea)) @ask_short\n",
             "  Short?\n",
             "  -> END\n",
-            "? ask_type@a5a3c39f0d18fab3472c requires=(trust_gte(hazel, rhea, \"three\"))\n",
+            "? requires=(trust_gte(hazel, rhea, \"three\")) @ask_type\n",
             "  Type?\n",
             "  -> END\n",
-            "? ask_value@9968a9c829c382415c71 requires=(trust_gte(ghost, rhea, 3))\n",
+            "? requires=(trust_gte(ghost, rhea, 3)) @ask_value\n",
             "  Value?\n",
             "  -> END\n",
         ),
@@ -95,7 +95,7 @@ fn reports_condition_arity_type_and_value_errors_on_argument_spans() {
             "RECITE_VALIDATE037",
         ],
     );
-    assert_spans(&report, [(2, 44), (5, 66), (8, 54)]);
+    assert_spans(&report, [(2, 13), (5, 36), (8, 23)]);
 }
 
 #[test]
@@ -106,14 +106,14 @@ fn reports_non_bool_conditions_for_if_and_requires_and_bool_scrutinee_for_match(
         concat!(
             ":: start default\n",
             ":if thread_stage(hazel_intro)\n",
-            "  > gated@9ccb225ac6eedef131f1\n",
+            "  > @gated\n",
             "    Gated.\n",
-            "? ask_stage@23cc94798fac47d3d1a3 requires=(thread_stage(hazel_intro))\n",
+            "? requires=(thread_stage(hazel_intro)) @ask_stage\n",
             "  Stage?\n",
             "  -> END\n",
             ":match trust_gte(hazel, rhea, 3)\n",
             "  :case _\n",
-            "    > fallback@3d6c861f03fb7bd905ac\n",
+            "    > @fallback\n",
             "      Fallback.\n",
         ),
     )];
@@ -134,7 +134,7 @@ fn reports_non_bool_conditions_for_if_and_requires_and_bool_scrutinee_for_match(
             "RECITE_VALIDATE038",
         ],
     );
-    assert_spans(&report, [(2, 5), (5, 44), (8, 8)]);
+    assert_spans(&report, [(2, 5), (5, 13), (8, 8)]);
 }
 
 #[test]
@@ -144,16 +144,16 @@ fn reports_availability_reason_override_errors() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "? unknown@6eda530ac11847c6b361 requires=(trust_gte(hazel, rhea, 3)) reason=missing_reason\n",
+            "? requires=(trust_gte(hazel, rhea, 3)) reason=missing_reason @unknown\n",
             "  Unknown?\n",
             "  -> END\n",
-            "? parameterized_definition@8a3fc7995329e0e3e5af requires=(trust_gte(hazel, rhea, 3)) reason=trust_too_low\n",
+            "? requires=(trust_gte(hazel, rhea, 3)) reason=trust_too_low @parameterized_definition\n",
             "  Definition?\n",
             "  -> END\n",
-            "? parameterized_syntax@778d2573084e8e8ff33d requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint(hazel)\n",
+            "? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint(hazel) @parameterized_syntax\n",
             "  Syntax?\n",
             "  -> END\n",
-            "? no_requires@c6ce98af99068a6fda55 reason=innkeeper_trust_hint\n",
+            "? reason=innkeeper_trust_hint @no_requires\n",
             "  No requires?\n",
             "  -> END\n",
         ),
@@ -176,5 +176,5 @@ fn reports_availability_reason_override_errors() {
             "RECITE_VALIDATE041",
         ],
     );
-    assert_spans(&report, [(2, 76), (5, 93), (8, 109), (11, 36)]);
+    assert_spans(&report, [(2, 47), (5, 47), (8, 67), (11, 3)]);
 }

@@ -50,7 +50,7 @@ fn assert_caret_visible(test: &TestingRunner) -> TestResult {
 #[test]
 fn clicking_an_offscreen_diagnostic_reveals_its_source() -> TestResult {
     let source = format!(
-        ":: start default\n> line@11111111111111111111\n  Hello.\n{}-> {}missing\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n{}-> {}missing\n",
         "\n".repeat(160),
         " ".repeat(200)
     );

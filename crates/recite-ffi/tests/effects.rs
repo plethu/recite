@@ -7,10 +7,10 @@ use support::*;
 fn blocking_effect_acknowledge() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> before@60000000000000000001\n",
+        "> @before\n",
         "  Before.\n",
         "! blocking play_sound(chime)\n",
-        "> after@60000000000000000002\n",
+        "> @mj689gm\n",
         "  After.\n",
         "-> END\n",
     ));
@@ -69,7 +69,7 @@ fn effect_acknowledge_rejects_invalid_utf8_failure_reason() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         "! blocking play_sound(chime)\n",
-        "> after@6a000000000000000001\n",
+        "> @eppdqs9\n",
         "  After.\n",
         "-> END\n",
     ));

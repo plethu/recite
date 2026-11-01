@@ -42,8 +42,13 @@ critical_mutation_files = [
 ]
 
 [workspace.metadata.typos.default]
-# Stable dialogue IDs are hexadecimal data, including in JSON and PO strings.
-extend-ignore-re = ["[0-9a-f]{20}"]
+# Generated stable dialogue IDs are random base32 data: as `@id` header fields
+# and as bare IDs in import mappings. Content fingerprints are hexadecimal.
+extend-ignore-re = [
+    "@[a-z_][a-z0-9_.-]*",
+    "\"(?:generated|original)_id\": \"[^\"]*\"",
+    "[0-9a-f]{20}",
+]
 
 [workspace.metadata.typos.default.extend-words]
 ratatui = "ratatui"

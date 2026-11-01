@@ -14,8 +14,8 @@ use recite_runtime::{
 fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> prompt@12345678901234567890\n  Choose.\n",
-        "  ? work@12345678901234567891\n    Work.\n    -> work\n",
+        "> @w3xnt5r\n  Choose.\n",
+        "  ? @rbgkhpf\n    Work.\n    -> work\n",
         ":: work\n",
         "! deferred record(work)\n",
         "! immediate sound(work)\n",

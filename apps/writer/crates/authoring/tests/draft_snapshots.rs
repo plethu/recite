@@ -127,7 +127,7 @@ fn explicit_source_apply_preserves_revision_and_history_rules()
 fn invalid_source_remains_applicable_and_recoverable() -> Result<(), Box<dyn std::error::Error>> {
     let mut model = Workbench::new(FIXTURE)?;
     model.select(View::Source)?;
-    let invalid = ":: bad\n> bad@bad\n  Keep me.\n";
+    let invalid = ":: bad\n> @Bad\n  Keep me.\n";
     model.set_draft_snapshot(DraftSnapshot::from_rope(Rope::from_str(invalid)));
     assert!(model.has_draft());
     model.apply()?;

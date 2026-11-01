@@ -59,9 +59,7 @@ fn validate(expression: &str) -> Result<(ExitStatus, Vec<Value>, String), Box<dy
     let source = temp.path().join("conditions.recite");
     fs::write(
         &source,
-        format!(
-            ":: start default\n:if {expression}\n  > line@11111111111111111111\n    Hello.\n-> END\n"
-        ),
+        format!(":: start default\n:if {expression}\n  > @ffee6p8\n    Hello.\n-> END\n"),
     )?;
     let stdout = tempfile::tempfile()?;
     let stderr = tempfile::tempfile()?;

@@ -54,9 +54,8 @@ fn assert_markup_presentation(
     replacement: &str,
     expected: &str,
 ) {
-    let source = format!(
-        "msgctxt \"11111111111111111111\"\nmsgid \"{source_text}\"\nmsgstr \"{translation}\"\n"
-    );
+    let source =
+        format!("msgctxt \"ffee6p8\"\nmsgid \"{source_text}\"\nmsgstr \"{translation}\"\n");
     let error = match super::po::parse_po_catalog(std::path::Path::new("catalog.po"), &source) {
         Ok(_) => panic!("markup mismatch must reject the catalogue"),
         Err(error) => error,
@@ -116,14 +115,14 @@ fn plural_lookup_uses_variant_then_locale_fallback_and_base_priority() {
             "\"Language: fr\\n\"\n",
             "\"Plural-Forms: nplurals=3; plural=(n == 0 ? 0 : n == 1 ? 1 : 2);\\n\"\n",
             "\n",
-            "msgctxt \"22222222222222222222&formal\"\n",
+            "msgctxt \"rthh7ab&formal\"\n",
             "msgid \"one\"\n",
             "msgid_plural \"many {count}\"\n",
             "msgstr[0] \"variant one\"\n",
             "msgstr[1] \"variant one {count}\"\n",
             "msgstr[2] \"variant many {count}\"\n",
             "\n",
-            "msgctxt \"22222222222222222222\"\n",
+            "msgctxt \"rthh7ab\"\n",
             "msgid \"one\"\n",
             "msgid_plural \"many {count}\"\n",
             "msgstr[0] \"base one\"\n",
@@ -140,7 +139,7 @@ fn plural_lookup_uses_variant_then_locale_fallback_and_base_priority() {
     let locale = LocaleId::new("fr-CA").expect("locale");
     let resolution = provider
         .resolve_plural(
-            "22222222222222222222",
+            "rthh7ab",
             "one",
             "many {count}",
             2,
@@ -154,12 +153,12 @@ fn plural_lookup_uses_variant_then_locale_fallback_and_base_priority() {
     assert_eq!(resolution.matched_locale.as_deref(), Some("fr"));
     assert_eq!(
         resolution.matched_context.as_deref(),
-        Some("22222222222222222222&formal")
+        Some("rthh7ab&formal")
     );
     assert_eq!(
         provider
             .resolve_plural(
-                "22222222222222222222",
+                "rthh7ab",
                 "one",
                 "many {count}",
                 2,
@@ -193,7 +192,7 @@ fn plural_resolution_uses_the_matching_catalogues_rule_only() {
             "msgid \"\"\n",
             "msgstr \"\"\n",
             "\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n",
-            "msgctxt \"22222222222222222222\"\n",
+            "msgctxt \"rthh7ab\"\n",
             "msgid \"one\"\n",
             "msgid_plural \"many\"\n",
             "msgstr[0] \"base singular\"\n",
@@ -214,7 +213,7 @@ fn plural_resolution_uses_the_matching_catalogues_rule_only() {
     .expect("catalogues load");
     let resolution = provider
         .resolve_plural(
-            "22222222222222222222",
+            "rthh7ab",
             "one",
             "many",
             0,

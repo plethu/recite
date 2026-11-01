@@ -43,7 +43,7 @@ fn map_geometry_reconstruction_timing() -> Result<(), Box<dyn std::error::Error>
     let mut source = String::from(":: hub default\n");
     for index in 0..1000 {
         source.push_str(&format!(
-            "? reply_{index}@{index:020x}\n  Choose {index}.\n  -> beat_{index}\n"
+            "? @reply_{index}\n  Choose {index}.\n  -> beat_{index}\n"
         ));
     }
     for index in 0..1000 {

@@ -14,7 +14,7 @@ fn missing_preview_condition_keeps_legacy_runtime_error_text() {
         concat!(
             ":: start default\n",
             ":if relationship(player)\n",
-            "  > line@11111111111111111111\n",
+            "  > @ffee6p8\n",
             "    Visible.\n",
             "-> END\n",
         ),
@@ -43,7 +43,7 @@ fn preview_condition_wrong_type_keeps_legacy_runtime_error_text() {
             ":: start default\n",
             ":match relationship(player)\n",
             "  :case trusted\n",
-            "    > line@22222222222222222222\n",
+            "    > @rthh7ab\n",
             "      Trusted.\n",
             "-> END\n",
         ),

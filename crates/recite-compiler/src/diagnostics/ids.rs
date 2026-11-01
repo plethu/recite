@@ -9,8 +9,6 @@ const MISSING_LINE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID001
 const MISSING_CHOICE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID002");
 const DUPLICATE_LINE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID003");
 const DUPLICATE_CHOICE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID004");
-const DRAFT_LINE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID005");
-const DRAFT_CHOICE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID006");
 const MALFORMED_LINE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID007");
 const MALFORMED_CHOICE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID008");
 
@@ -32,26 +30,6 @@ pub(crate) fn missing_choice_id(choice: &Choice) -> Diagnostic {
         [],
     )
     .with_help_presentation(super::auxiliary_presentation("diagnostic-id-002-help", []))
-}
-
-pub(crate) fn draft_line_id(line: &Line) -> Diagnostic {
-    compiler_diagnostic(
-        diagnostic_contract(&DRAFT_LINE_ID, "diagnostic-id-005"),
-        "line header has an unfrozen draft source id",
-        line.span.clone(),
-        [],
-    )
-    .with_help_presentation(super::auxiliary_presentation("diagnostic-id-005-help", []))
-}
-
-pub(crate) fn draft_choice_id(choice: &Choice) -> Diagnostic {
-    compiler_diagnostic(
-        diagnostic_contract(&DRAFT_CHOICE_ID, "diagnostic-id-006"),
-        "choice header has an unfrozen draft source id",
-        choice.span.clone(),
-        [],
-    )
-    .with_help_presentation(super::auxiliary_presentation("diagnostic-id-006-help", []))
 }
 
 pub(crate) fn malformed_line_id(line: &Line, source_id: &SourceId) -> Diagnostic {

@@ -8,13 +8,13 @@ fn rules() -> Result<ReplyRules, Box<dyn std::error::Error>> {
     );
     let document = Document::in_project(
         recite_core::DocumentKey::new("reply.recite")?,
-        ":: start default\n? reply@22222222222222222222\n  Enter.\n  -> accepted\n:: accepted\n-> END\n",
+        ":: start default\n? @rthh7ab\n  Enter.\n  -> accepted\n:: accepted\n-> END\n",
         ProjectContext {
             schema: schema.schema,
             documents: vec![],
         },
     )?;
-    Ok(document.reply_rules("22222222222222222222")?)
+    Ok(document.reply_rules("rthh7ab")?)
 }
 
 #[test]
@@ -81,6 +81,6 @@ fn nested_addition_changes_only_the_selected_group_and_effect_append_keeps_order
     add_available_rule(&mut rules, true, None, 0);
     add_available_rule(&mut rules, true, None, usize::MAX);
     assert_eq!(rules.effects, vec![second, first]);
-    assert!(rules.source()?.contains("22222222222222222222"));
+    assert!(rules.source()?.contains("rthh7ab"));
     Ok(())
 }

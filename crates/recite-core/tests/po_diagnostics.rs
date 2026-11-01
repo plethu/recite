@@ -99,7 +99,7 @@ fn every_finite_po_diagnostic_selector_is_emitted_with_typed_arguments() {
         map([("escape", string("\\q"))]),
     );
     assert_diagnostic(
-        "msgid \"x\"\nmsgctxt \"11111111111111111111\"\n",
+        "msgid \"x\"\nmsgctxt \"ffee6p8\"\n",
         "RECITE_PARSE034",
         "diagnostic-parse-034-invalid-field-order",
         map([("value", string("unexpected Context"))]),
@@ -111,19 +111,13 @@ fn every_finite_po_diagnostic_selector_is_emitted_with_typed_arguments() {
         map([("field", string("msgstr"))]),
     );
     assert_diagnostic(
-        "msgctxt \"bad\"\nmsgid \"x\"\nmsgstr \"x\"\n",
+        "msgctxt \"Bad\"\nmsgid \"x\"\nmsgstr \"x\"\n",
         "RECITE_ID034",
         "diagnostic-id-034",
-        map([("context", string("bad"))]),
+        map([("context", string("Bad"))]),
     );
     assert_diagnostic(
-        "#. source id: invalid\nmsgctxt \"11111111111111111111\"\nmsgid \"x\"\nmsgstr \"x\"\n",
-        "RECITE_ID034",
-        "diagnostic-id-034",
-        map([("context", string("invalid"))]),
-    );
-    assert_diagnostic(
-        "msgctxt \"11111111111111111111\"\nmsgid \"{one}\"\nmsgstr \"{other}\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"{one}\"\nmsgstr \"{other}\"\n",
         "RECITE_VALIDATE042",
         "diagnostic-validate-042",
         map([(
@@ -152,7 +146,7 @@ fn every_finite_po_diagnostic_selector_is_emitted_with_typed_arguments() {
         map([("keyword", string("msgstr[a]"))]),
     );
     assert_diagnostic(
-        "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"x\"\nmsgid_plural \"xs\"\nmsgstr[0] \"x\"\n",
+        "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"x\"\nmsgid_plural \"xs\"\nmsgstr[0] \"x\"\n",
         "RECITE_VALIDATE043",
         "diagnostic-validate-043-count",
         map([("expected", integer(2)), ("actual", integer(1))]),
@@ -182,19 +176,16 @@ fn every_finite_po_diagnostic_selector_is_emitted_with_typed_arguments() {
         map([]),
     );
     assert_diagnostic(
-        "msgctxt \"11111111111111111111\"\nmsgid \"x\"\nmsgid_plural \"xs\"\nmsgstr[0] \"x\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"x\"\nmsgid_plural \"xs\"\nmsgstr[0] \"x\"\n",
         "RECITE_VALIDATE044",
         "diagnostic-validate-044-plural-header-required",
         map([]),
     );
     assert_diagnostic(
-        "msgctxt \"11111111111111111111\"\nmsgid \"x\"\nmsgstr \"x\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"x\"\nmsgstr \"different\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"x\"\nmsgstr \"x\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"x\"\nmsgstr \"different\"\n",
         "RECITE_ID035",
         "diagnostic-id-035",
-        map([
-            ("context", string("11111111111111111111")),
-            ("source_text", string("x")),
-        ]),
+        map([("context", string("ffee6p8")), ("source_text", string("x"))]),
     );
 }
 
@@ -224,7 +215,7 @@ fn po_diagnostic_spans_preserve_raw_fields_comments_crlf_and_scalar_columns() {
     );
     assert_recordable(duplicate_error.diagnostic());
 
-    let invalid_order = "msgid \"x\"\nmsgctxt \"11111111111111111111\"\n";
+    let invalid_order = "msgid \"x\"\nmsgctxt \"ffee6p8\"\n";
     let order_error = PoDocument::parse(invalid_order).expect_err("invalid field order");
     assert_eq!(order_error.diagnostic().span.start.line(), 2);
     assert_eq!(order_error.diagnostic().span.start.column(), 1);
@@ -238,21 +229,6 @@ fn po_diagnostic_spans_preserve_raw_fields_comments_crlf_and_scalar_columns() {
         Some(2)
     );
     assert_recordable(order_error.diagnostic());
-
-    let source_id = "#. source id: invalid\r\nmsgctxt \"11111111111111111111\"\r\nmsgid \"x\"\r\nmsgstr \"x\"\r\n";
-    let source_id_error = PoDocument::parse(source_id).expect_err("invalid extracted source ID");
-    assert_eq!(source_id_error.diagnostic().span.start.line(), 1);
-    assert_eq!(source_id_error.diagnostic().span.start.column(), 1);
-    assert_eq!(
-        source_id_error
-            .diagnostic()
-            .span
-            .end
-            .as_ref()
-            .map(|position| position.line()),
-        Some(1)
-    );
-    assert_recordable(source_id_error.diagnostic());
 
     let scalar = "msgctxt \"é\"\r\nmsgid \"x\"\r\nmsgstr \"x\"\r\n";
     let scalar_error = PoDocument::parse(scalar).expect_err("invalid scalar context");

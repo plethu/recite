@@ -8,10 +8,10 @@ fn session_begin_from_non_owner_thread_is_rejected() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if ready()\n",
-        "  > yes@52000000000000000001\n",
+        "  > @y2e1mn4\n",
         "    Ready.\n",
         ":else\n",
-        "  > no@52000000000000000002\n",
+        "  > @no\n",
         "    Not ready.\n",
         "-> END\n",
     ));
@@ -69,7 +69,7 @@ fn session_begin_from_non_owner_thread_is_rejected() {
 fn session_register_condition_from_non_owner_thread_is_rejected() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> line@53000000000000000001\n",
+        "> @zaepd79\n",
         "  Hi.\n",
         "-> END\n",
     ));
@@ -115,13 +115,13 @@ fn session_register_condition_from_non_owner_thread_is_rejected() {
 fn session_choose_from_non_owner_thread_is_rejected() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> prompt@54000000000000000001\n",
+        "> @fjbm111\n",
         "  Pick.\n",
-        "  ? go@54000000000000000002\n",
+        "  ? @ckhq7b7\n",
         "    Go.\n",
         "    -> after\n",
         ":: after\n",
-        "> done@54000000000000000003\n",
+        "> @pa5bfaj\n",
         "  Done.\n",
         "-> END\n",
     ));
@@ -165,7 +165,7 @@ fn session_acknowledge_effect_from_non_owner_thread_is_rejected() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         "! blocking play_sound(chime)\n",
-        "> after@55000000000000000001\n",
+        "> @after\n",
         "  After.\n",
         "-> END\n",
     ));
@@ -213,13 +213,13 @@ fn session_acknowledge_effect_from_non_owner_thread_is_rejected() {
 fn session_snapshot_from_non_owner_thread_is_rejected() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> prompt@56000000000000000001\n",
+        "> @r0frjyh\n",
         "  Pick.\n",
-        "  ? go@56000000000000000002\n",
+        "  ? @jfgjv0e\n",
         "    Go.\n",
         "    -> after\n",
         ":: after\n",
-        "> done@56000000000000000003\n",
+        "> @qqh8xf0\n",
         "  Done.\n",
         "-> END\n",
     ));

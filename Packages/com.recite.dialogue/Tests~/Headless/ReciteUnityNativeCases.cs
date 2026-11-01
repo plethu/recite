@@ -25,7 +25,7 @@ internal static class ReciteUnityNativeCases
         Assert(!string.IsNullOrEmpty(path) && File.Exists(path), "plural fixture path was not configured");
         var poText = "msgid \"\"\nmsgstr \"\"\n\"Language: fr-FR\\n\"\n" +
             "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n" +
-            "msgctxt \"5fcf9a1f7b20211f4a92\"\n" +
+            "msgctxt \"plural_line\"\n" +
             "msgid \"You have one letter.\"\n" +
             "msgid_plural \"You have {count} letters.\"\n" +
             "msgstr[0] \"Vous avez une lettre.\"\n" +
@@ -40,7 +40,7 @@ internal static class ReciteUnityNativeCases
             Assert(line.Plural != null && line.Plural.SingularSourceText == "You have one letter." &&
                 line.Plural.PluralSourceText == "You have {count} letters." && line.Plural.Count == 2 &&
                 line.Plural.SelectedArm == 1, "plural source forms/count/selected arm were lost");
-            const string context = "5fcf9a1f7b20211f4a92";
+            const string context = "plural_line";
             var resolution = line.Plural.Resolution;
             Assert(resolution.MatchedLocale == "fr-FR" &&
                 resolution.MatchedContext == context && resolution.MatchedKey == context &&
@@ -74,13 +74,13 @@ internal static class ReciteUnityNativeCases
         var asset = new ReciteDialogueAsset(File.ReadAllBytes(
             Environment.GetEnvironmentVariable("RECITE_UNITY_SAMPLE_ASSET")));
         var poText = "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\n" +
-            "msgctxt \"10000000000000000001\"\n" +
+            "msgctxt \"s96sqwp\"\n" +
             "msgid \"The relay wakes.\"\n" +
             "msgstr \"Le relais s'éveille.\"\n\n" +
-            "msgctxt \"10000000000000000001&formal\"\n" +
+            "msgctxt \"s96sqwp&formal\"\n" +
             "msgid \"The relay wakes.\"\n" +
             "msgstr \"Le relais vous parle.\"\n\n" +
-            "msgctxt \"10000000000000000006\"\n" +
+            "msgctxt \"after_key\"\n" +
             "msgid \"The relay key clicks free.\"\n" +
             "msgstr \"La clé du relais se libère.\"\n";
         var poBytes = System.Text.Encoding.UTF8.GetBytes(poText);

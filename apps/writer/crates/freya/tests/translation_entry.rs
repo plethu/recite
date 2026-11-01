@@ -15,11 +15,11 @@ fn plural_entry_keeps_variant_drafts_and_submits_all_forms()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("fr.po");
-    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n#, fuzzy\nmsgctxt \"22222222222222222222\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n\n#, fuzzy\nmsgctxt \"22222222222222222222&formal\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} titre\"\nmsgstr[1] \"{count} titres\"\n";
+    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n#, fuzzy\nmsgctxt \"rthh7ab\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n\n#, fuzzy\nmsgctxt \"rthh7ab&formal\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} titre\"\nmsgstr[1] \"{count} titres\"\n";
     std::fs::write(&path, source)?;
     let query = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("catalogue", &path.to_string_lossy())
-        .append_pair("entry", "22222222222222222222")
+        .append_pair("entry", "rthh7ab")
         .finish();
     let route = format!("/translation?{query}");
     let mut test = TestingRunner::new(
@@ -56,7 +56,7 @@ fn plural_entry_keeps_variant_drafts_and_submits_all_forms()
     let entry = saved
         .entries()
         .iter()
-        .find(|entry| entry.context() == Some("22222222222222222222"))
+        .find(|entry| entry.context() == Some("rthh7ab"))
         .ok_or("entry")?;
     assert_eq!(entry.plural_translations()[1].text(), "{count} billets !");
     assert!(
@@ -75,7 +75,7 @@ fn entry_context_shows_neighbours_and_notes_and_returns_from_localized_preview()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("fr.po");
-    let source = ":: start default\n> before@11111111111111111111\n  Before the translated line.\n> middle@22222222222222222222\n  Translate this line.\n> after@33333333333333333333\n  After the translated line.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Before the translated line.\n> @rthh7ab\n  Translate this line.\n> @bqyvpqq\n  After the translated line.\n-> END\n";
     let model = recite_writer_model::Document::new(source)?;
     let template = model
         .extract_catalogue()
@@ -94,7 +94,7 @@ fn entry_context_shows_neighbours_and_notes_and_returns_from_localized_preview()
     std::fs::write(&path, document)?;
     let query = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("catalogue", &path.to_string_lossy())
-        .append_pair("entry", "22222222222222222222")
+        .append_pair("entry", "rthh7ab")
         .finish();
     let route = format!("/translation?{query}");
     let mut test = TestingRunner::new(

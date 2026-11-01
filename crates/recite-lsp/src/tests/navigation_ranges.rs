@@ -1,3 +1,4 @@
+use crate::tests::support::{position_after, position_after_in_header, position_inside};
 use lsp_types::Position;
 use tempfile::TempDir;
 
@@ -23,7 +24,7 @@ pub(super) fn typed_clause_and_schema_ranges_exclude_delimiters() {
     let source_uri = file_uri(&temp.path().join("dialogue/ranges.recite"));
     let source = concat!(
         ":: start default speaker=hazel\r\n",
-        "? ask@a1b2c3d4e5f60718293a requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\r\n",
+        "? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @y0txed0\r\n",
         "  😀 innkeeper_trust_hint, ordinary prose\r\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
@@ -35,11 +36,8 @@ pub(super) fn typed_clause_and_schema_ranges_exclude_delimiters() {
     assert_eq!(
         clause.range,
         Some(lsp_types::Range::new(
-            position_after(source, "? ask@a1b2c3d4e5f60718293a "),
-            position_after(
-                source,
-                "? ask@a1b2c3d4e5f60718293a requires=(trust_gte(hazel, rhea, 3))"
-            ),
+            position_after_in_header(source, "y0txed0", "? "),
+            position_after_in_header(source, "y0txed0", "requires=(trust_gte(hazel, rhea, 3))"),
         )),
         "requires range must stop before the following metadata field",
     );
@@ -140,39 +138,6 @@ pub(super) fn condition_marker_completion_and_hover_follow_parser_boundaries() {
         "ordinary prose must not receive marker hover"
     );
     harness.finish();
-}
-
-fn position_after(source: &str, needle: &str) -> Position {
-    let byte_index = source
-        .find(needle)
-        .expect("range needle")
-        .saturating_add(needle.len());
-    let mut line = 0_u32;
-    let mut character = 0_u32;
-    for value in source[..byte_index].chars() {
-        if value == '\n' {
-            line = line.saturating_add(1);
-            character = 0;
-        } else {
-            character = character.saturating_add(value.len_utf16() as u32);
-        }
-    }
-    Position::new(line, character)
-}
-
-fn position_inside(source: &str, needle: &str) -> Position {
-    let byte_index = source.find(needle).expect("hover needle").saturating_add(1);
-    let mut line = 0_u32;
-    let mut character = 0_u32;
-    for value in source[..byte_index].chars() {
-        if value == '\n' {
-            line = line.saturating_add(1);
-            character = 0;
-        } else {
-            character = character.saturating_add(value.len_utf16() as u32);
-        }
-    }
-    Position::new(line, character)
 }
 
 fn completion_labels(response: lsp_types::CompletionResponse) -> Vec<String> {

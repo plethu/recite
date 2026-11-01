@@ -11,13 +11,13 @@ fn snapshots_restore_pending_prompt_without_reemitting_prompt() {
         "dialogue/snapshot.recitec",
         concat!(
             ":: start default\n",
-            "> prompt@88888888888888888881\n",
+            "> @prompt\n",
             "  Save?\n",
-            "  ? continue@88888888888888888882\n",
+            "  ? @continue\n",
             "    Continue.\n",
             "    -> after\n",
             ":: after\n",
-            "> after@88888888888888888883\n",
+            "> @after\n",
             "  Restored.\n",
             "-> END\n",
         ),
@@ -34,7 +34,7 @@ fn snapshots_restore_pending_prompt_without_reemitting_prompt() {
     let restored_outputs = must_ok(driver.restore(&asset, &snapshot));
     assert!(restored_outputs.is_empty());
 
-    let outputs = must_ok(driver.select_choice("88888888888888888882"));
+    let outputs = must_ok(driver.select_choice("continue"));
     assert_eq!(output_kinds(&outputs), ["line", "end"]);
-    assert_line(&outputs[0], "88888888888888888883", "Restored.");
+    assert_line(&outputs[0], "after", "Restored.");
 }

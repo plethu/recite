@@ -66,11 +66,11 @@ fn plural_rule_entries_and_provenance_use_canonical_locale()
 fn po_import_canonicalizes_locale_and_rejects_malformed_tags()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut catalog = ReciteDialogueCatalog::new();
-    let po = "msgctxt \"12345678901234567890\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+    let po = "msgctxt \"w3xnt5r\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
     catalog.import_po("fr-fr", "dialogue.po", po)?;
     assert_eq!(
         catalog.lookup(
-            "12345678901234567890",
+            "w3xnt5r",
             "Hello.",
             TextDomain::Line,
             &locale("fr-FR")?,

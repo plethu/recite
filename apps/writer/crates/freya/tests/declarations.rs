@@ -18,7 +18,7 @@ fn project() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     std::fs::write(dir.path().join("schema.json"), schema.export_json())?;
     std::fs::write(
         dir.path().join("scene.recite"),
-        ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     )?;
     Ok(dir)
 }

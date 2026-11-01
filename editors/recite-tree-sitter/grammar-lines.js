@@ -29,18 +29,18 @@ const lineStatement = ($, terminator) =>
   terminated($, terminator, [
     optional($.indent),
     field("marker", $.line_marker),
+    optional(seq(optional($.hspace), $.metadata_field, repeat($.header_attribute))),
+    optional($.stable_id_attribute),
     optional($.hspace),
-    field("name", optional($.line_name)),
-    repeat($.header_attribute),
     optional($.inline_comment),
   ]);
 const choiceStatement = ($, terminator) =>
   terminated($, terminator, [
     optional($.indent),
     field("marker", $.choice_marker),
+    optional(seq(optional($.hspace), $._choice_field, repeat($.choice_attribute))),
+    optional($.stable_id_attribute),
     optional($.hspace),
-    field("name", optional($.choice_name)),
-    repeat($.choice_attribute),
     optional($.inline_comment),
   ]);
 const effectStatement = ($, terminator) =>

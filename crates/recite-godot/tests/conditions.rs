@@ -17,7 +17,7 @@ fn condition_handlers_receive_structured_arguments() {
         concat!(
             ":: start default\n",
             ":if trusts(player, \"hazel\", 3, true)\n",
-            "  > trusted@66666666666666666661\n",
+            "  > @n5e277g\n",
             "    Trusted.\n",
             "-> END\n",
         ),
@@ -35,7 +35,7 @@ fn condition_handlers_receive_structured_arguments() {
 
     let outputs = must_ok(driver.start(&asset, None, None));
     assert_eq!(output_kinds(&outputs), ["line", "end"]);
-    assert_line(&outputs[0], "66666666666666666661", "Trusted.");
+    assert_line(&outputs[0], "n5e277g", "Trusted.");
     assert_eq!(
         calls.borrow().as_slice(),
         [(
@@ -59,10 +59,10 @@ fn enum_condition_result_selects_matching_match_arm() {
             ":: start default\n",
             ":match mood()\n",
             "  :case calm\n",
-            "    > calm@66666666666666666662\n",
+            "    > @calm\n",
             "      Calm.\n",
             "  :case _\n",
-            "    > other@66666666666666666663\n",
+            "    > @other\n",
             "      Other.\n",
             "-> END\n",
         ),
@@ -75,7 +75,7 @@ fn enum_condition_result_selects_matching_match_arm() {
 
     let outputs = must_ok(driver.start(&asset, None, None));
     assert_eq!(output_kinds(&outputs), ["line", "end"]);
-    assert_line(&outputs[0], "66666666666666666662", "Calm.");
+    assert_line(&outputs[0], "calm", "Calm.");
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn missing_condition_handler_uses_stable_adapter_error() {
         concat!(
             ":: start default\n",
             ":if trusts(player)\n",
-            "  > trusted@77777777777777777771\n",
+            "  > @z7g09z2\n",
             "    Trusted.\n",
             "-> END\n",
         ),
@@ -107,7 +107,7 @@ fn condition_reason_with_recognized_prefix_stays_condition_evaluation_error() {
         concat!(
             ":: start default\n",
             ":if ready()\n",
-            "  > ready@77777777777777777776\n",
+            "  > @ready\n",
             "    Ready.\n",
             "-> END\n",
         ),
@@ -133,16 +133,16 @@ fn later_condition_error_rolls_back_outputs_emitted_by_choice() {
         "dialogue/choice-condition-rollback.recitec",
         concat!(
             ":: start default\n",
-            "> prompt@77777777777777777772\n",
+            "> @prompt\n",
             "  Enter?\n",
-            "  ? enter@77777777777777777773\n",
+            "  ? @enter\n",
             "    Enter.\n",
             "    -> guarded\n",
             ":: guarded\n",
-            "> before@77777777777777777774\n",
+            "> @before\n",
             "  Before condition.\n",
             ":if can_continue(player)\n",
-            "  > after@77777777777777777775\n",
+            "  > @after\n",
             "    After condition.\n",
             "-> END\n",
         ),
@@ -152,13 +152,13 @@ fn later_condition_error_rolls_back_outputs_emitted_by_choice() {
     assert_eq!(output_kinds(&outputs), ["prompt"]);
 
     assert_error_code(
-        driver.select_choice("77777777777777777773"),
+        driver.select_choice("enter"),
         "missing_condition_handler_error",
     );
 
     driver.register_condition("can_continue", |_| Ok(ConditionValue::Bool(true)));
-    let outputs = must_ok(driver.select_choice("77777777777777777773"));
+    let outputs = must_ok(driver.select_choice("enter"));
     assert_eq!(output_kinds(&outputs), ["line", "line", "end"]);
-    assert_line(&outputs[0], "77777777777777777774", "Before condition.");
-    assert_line(&outputs[1], "77777777777777777775", "After condition.");
+    assert_line(&outputs[0], "before", "Before condition.");
+    assert_line(&outputs[1], "after", "After condition.");
 }

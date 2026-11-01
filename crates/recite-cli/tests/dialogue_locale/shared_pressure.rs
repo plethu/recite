@@ -18,11 +18,11 @@ fn shared_language_pressure_fixture_exercises_locale_fallback_and_interpolation(
             "\"Language: fr-CA\\n\"\n",
             "\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\n",
             "\n",
-            "msgctxt \"55667788990011223344\"\n",
+            "msgctxt \"bt20t3f\"\n",
             "msgid \"[slow]The tide is turning, {traveller_name}.[/slow]\"\n",
             "msgstr \"[slow]La marée tourne, {traveller_name}.[/slow]\"\n",
             "\n",
-            "msgctxt \"66778899001122334455\"\n",
+            "msgctxt \"ask_news\"\n",
             "msgid \"Tell me about {topic}.\"\n",
             "msgstr \"Parle-moi de {topic}.\"\n",
         ),
@@ -36,7 +36,7 @@ fn shared_language_pressure_fixture_exercises_locale_fallback_and_interpolation(
             "\"Language: fr\\n\"\n",
             "\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\n",
             "\n",
-            "msgctxt \"0a1b2c3d4e5f60718293\"\n",
+            "msgctxt \"atcf38h\"\n",
             "msgid \"You have one letter.\"\n",
             "msgid_plural \"You have {count} letters.\"\n",
             "msgstr[0] \"Vous avez une lettre.\"\n",
@@ -54,7 +54,7 @@ locale = "fr-CA"
 fr = ["locale/fr.po"]
 
 [choices]
-"55667788990011223344" = "66778899001122334455"
+"bt20t3f" = "ask_news"
 
 [interpolation_values]
 traveller_name = { string = "Mara" }
@@ -94,7 +94,7 @@ letters_remaining = { int = 2 }
 
     let plural = events
         .iter()
-        .find(|event| event["line"]["id"] == "0a1b2c3d4e5f60718293")
+        .find(|event| event["line"]["id"] == "atcf38h")
         .expect("plural line event");
     assert_eq!(plural["line"]["text"], "Vous avez 2 lettres.");
     assert_eq!(plural["line"]["plural"]["count"], 2);
@@ -107,7 +107,7 @@ letters_remaining = { int = 2 }
 
     let fallback = events
         .iter()
-        .find(|event| event["line"]["id"] == "77889900112233445566")
+        .find(|event| event["line"]["id"] == "letters.close")
         .expect("source fallback line event");
     assert_eq!(fallback["line"]["text"], "The ledger closes.");
 }

@@ -180,8 +180,8 @@ pub(super) fn render_prompt<'a>(
     }
 }
 
-/// The choice ID trails the text in the muted ink. It is shortened and right-aligned when the
-/// row has room; otherwise the full ID follows the text and may wrap.
+/// The choice ID trails the text in the muted ink, right-aligned when the row has room;
+/// otherwise it follows the text and may wrap.
 fn choice_id_suffix<'a>(
     row: &[Span<'_>],
     id: &str,
@@ -189,13 +189,12 @@ fn choice_id_suffix<'a>(
     palette: TuiPalette,
 ) -> Vec<Span<'a>> {
     let used: usize = row.iter().map(Span::width).sum();
-    let short = short_choice_id(id);
-    let short_width = short.chars().count();
-    let gap = (width as usize).saturating_sub(used + short_width);
+    let id_width = id.chars().count();
+    let gap = (width as usize).saturating_sub(used + id_width);
     if gap >= 2 {
         vec![
             Span::raw(" ".repeat(gap)),
-            Span::styled(short, palette.muted()),
+            Span::styled(id.to_owned(), palette.muted()),
         ]
     } else {
         vec![
@@ -203,18 +202,6 @@ fn choice_id_suffix<'a>(
             Span::styled(id.to_owned(), palette.muted()),
         ]
     }
-}
-
-/// A stable ID such as `31000000000000000002` becomes `3100…0002`; labels, queries and other
-/// IDs stay whole.
-pub(super) fn short_choice_id(id: &str) -> String {
-    let chars: Vec<char> = id.chars().collect();
-    if chars.len() != 20 || !chars.iter().all(char::is_ascii_hexdigit) {
-        return id.to_owned();
-    }
-    let head: String = chars[..4].iter().collect();
-    let tail: String = chars[chars.len() - 4..].iter().collect();
-    format!("{head}…{tail}")
 }
 
 pub(super) fn render_deferred_queue<'a>(

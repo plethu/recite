@@ -6,25 +6,21 @@ fn messagepack_round_trip_resumes_line_progress_without_asset_payload() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> first@88b5fdc745112f7b578a\n",
+            "> @first\n",
             "  First.\n",
-            "> second@896425f97b4669797f92\n",
+            "> @second\n",
             "  Second.\n",
             "-> END\n",
         ),
     );
     let mut session = start_scene(&asset, None).expect("starts");
 
-    assert_line(next(&asset, &mut session), "88b5fdc745112f7b578a", "First.");
+    assert_line(next(&asset, &mut session), "first", "First.");
     let bytes = encode_session_messagepack(&session).expect("encodes session");
     let mut restored =
         decode_session_messagepack(&asset, &bytes).expect("restores from messagepack");
 
-    assert_line(
-        next(&asset, &mut restored),
-        "896425f97b4669797f92",
-        "Second.",
-    );
+    assert_line(next(&asset, &mut restored), "second", "Second.");
     assert_eq!(next(&asset, &mut restored), Ok(empty_end()));
 }
 
@@ -34,7 +30,7 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@bfe6f9b87b58303a0a8b\n",
+            "> @start_line\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -46,7 +42,7 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
         DialogueSessionOptions::new().with_locale(locale.clone()),
     )
     .expect("starts with options");
-    assert_line(next(&asset, &mut session), "bfe6f9b87b58303a0a8b", "Start.");
+    assert_line(next(&asset, &mut session), "start_line", "Start.");
 
     let snapshot = snapshot_session(&session);
     assert_snapshot_encoding(&session);
@@ -71,7 +67,7 @@ fn messagepack_decoder_rejects_trailing_bytes_as_typed_failure() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> line@cfe6f9b87b58303a0a8b\n",
+            "> @k9hcxgc\n",
             "  Start.\n",
             "-> END\n",
         ),

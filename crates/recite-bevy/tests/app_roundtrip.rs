@@ -31,7 +31,7 @@ fn compiled(source: &str, asset_id: &str) -> Result<Vec<u8>, Box<dyn std::error:
 
 #[test]
 fn accepted_refresh_only_affects_next_session() -> Result<(), Box<dyn std::error::Error>> {
-    let old = ":: start default\n? go@11111111111111111111\n  Go.\n  -> later\n:: later\n> result@22222222222222222222\n  Old text.\n-> END\n";
+    let old = ":: start default\n? @ffee6p8\n  Go.\n  -> later\n:: later\n> @rthh7ab\n  Old text.\n-> END\n";
     let new = old.replace("Old text.", "New text.");
     let mut app = app();
     let handle = add_asset(&mut app, &compiled(old, "dialogue/refresh.recitec")?)?;
@@ -76,7 +76,7 @@ fn accepted_refresh_only_affects_next_session() -> Result<(), Box<dyn std::error
 
     request(
         &mut app,
-        ReciteRequest::SelectChoice(ChoiceId::new("11111111111111111111").expect("choice")),
+        ReciteRequest::SelectChoice(ChoiceId::new("ffee6p8").expect("choice")),
     );
     let active = outputs(&app, &mut cursor);
     assert!(
@@ -100,7 +100,7 @@ fn accepted_refresh_only_affects_next_session() -> Result<(), Box<dyn std::error
     );
     request(
         &mut app,
-        ReciteRequest::SelectChoice(ChoiceId::new("11111111111111111111").expect("choice")),
+        ReciteRequest::SelectChoice(ChoiceId::new("ffee6p8").expect("choice")),
     );
     let next = outputs(&app, &mut cursor);
     assert!(
@@ -127,7 +127,7 @@ fn app_handles_conditions_effects_locale_and_snapshot_boundaries()
         .insert_for_domain(
             "fr-FR",
             TextDomain::Line,
-            "e0053a232c1bc1128c47",
+            "ndccqx1",
             "Intro line.",
             "Bonjour.",
             Some("formal"),
@@ -180,7 +180,7 @@ fn app_handles_conditions_effects_locale_and_snapshot_boundaries()
     outputs(&app, &mut cursor);
     request(
         &mut app,
-        ReciteRequest::SelectChoice(ChoiceId::new("3f481d9991fa22e23b0c").expect("work choice")),
+        ReciteRequest::SelectChoice(ChoiceId::new("mkkr74x").expect("work choice")),
     );
     let work = outputs(&app, &mut cursor);
     let ReciteOutputValue::Dialogue(events) = &work[0].value else {
@@ -224,7 +224,7 @@ fn app_handles_conditions_effects_locale_and_snapshot_boundaries()
     );
     request(
         &mut app,
-        ReciteRequest::SelectChoice(ChoiceId::new("ced14b8623bba2198c6d").expect("end choice")),
+        ReciteRequest::SelectChoice(ChoiceId::new("t680psd").expect("end choice")),
     );
     let ending = outputs(&app, &mut cursor);
     assert!(
@@ -268,7 +268,7 @@ fn outputs(app: &App, cursor: &mut MessageCursor<ReciteOutput>) -> Vec<ReciteOut
 
 #[test]
 fn app_delivers_ordered_dialogue_and_stable_choice() -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> intro@11111111111111111111\n  Hello.\n? yes@22222222222222222222\n  Yes.\n  -> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n? @rthh7ab\n  Yes.\n  -> END\n";
     let mut app = app();
     let handle = add_asset(&mut app, &compiled(source, "dialogue/first.recitec")?)?;
     let mut cursor = MessageCursor::<ReciteOutput>::default();
@@ -290,12 +290,12 @@ fn app_delivers_ordered_dialogue_and_stable_choice() -> Result<(), Box<dyn std::
     };
     assert!(matches!(&events[0], DialogueEvent::Line(line) if line.text == "Hello."));
     assert!(
-        matches!(&events[1], DialogueEvent::Prompt { choices, .. } if choices[0].id.as_str() == "22222222222222222222")
+        matches!(&events[1], DialogueEvent::Prompt { choices, .. } if choices[0].id.as_str() == "rthh7ab")
     );
 
     request(
         &mut app,
-        ReciteRequest::SelectChoice(ChoiceId::new("22222222222222222222").expect("choice ID")),
+        ReciteRequest::SelectChoice(ChoiceId::new("rthh7ab").expect("choice ID")),
     );
     let selected = outputs(&app, &mut cursor);
     assert_eq!(selected[0].sequence, 1);
@@ -315,7 +315,7 @@ fn app_delivers_ordered_dialogue_and_stable_choice() -> Result<(), Box<dyn std::
 #[test]
 fn active_session_borrows_replaced_catalogue_on_next_operation()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> opening@11111111111111111111\n  Hello.\n? proceed@22222222222222222222\n  Continue.\n  -> later\n:: later\n> closing@33333333333333333333\n  Goodbye.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n? @rthh7ab\n  Continue.\n  -> later\n:: later\n> @bqyvpqq\n  Goodbye.\n-> END\n";
     let mut app = app();
     let handle = add_asset(&mut app, &compiled(source, "dialogue/catalog.recitec")?)?;
     let mut old = ReciteCatalog::default();
@@ -323,7 +323,7 @@ fn active_session_borrows_replaced_catalogue_on_next_operation()
         .insert_for_domain(
             "fr-FR",
             TextDomain::Line,
-            "11111111111111111111",
+            "ffee6p8",
             "Hello.",
             "Bonjour.",
             None,
@@ -333,7 +333,7 @@ fn active_session_borrows_replaced_catalogue_on_next_operation()
         .insert_for_domain(
             "fr-FR",
             TextDomain::Line,
-            "33333333333333333333",
+            "bqyvpqq",
             "Goodbye.",
             "Au revoir.",
             None,
@@ -361,7 +361,7 @@ fn active_session_borrows_replaced_catalogue_on_next_operation()
         .import_po(
             "fr-FR",
             "fr-FR.po",
-            "msgctxt \"33333333333333333333\"\nmsgid \"Goodbye.\"\nmsgstr \"Adieu.\"\n",
+            "msgctxt \"bqyvpqq\"\nmsgid \"Goodbye.\"\nmsgstr \"Adieu.\"\n",
         )
         .expect("canonical PO import");
     let malformed = new
@@ -371,7 +371,7 @@ fn active_session_borrows_replaced_catalogue_on_next_operation()
     app.insert_resource(new);
     request(
         &mut app,
-        ReciteRequest::SelectChoice(ChoiceId::new("22222222222222222222").expect("choice")),
+        ReciteRequest::SelectChoice(ChoiceId::new("rthh7ab").expect("choice")),
     );
     let resumed = outputs(&app, &mut cursor);
     assert!(

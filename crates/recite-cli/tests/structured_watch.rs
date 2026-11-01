@@ -121,7 +121,7 @@ participants = ["hazel"]
     write_file(
         root,
         "dialogue/main.recite",
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default speaker=hazel\n> @ffee6p8\n  Hello.\n-> END\n",
     );
 }
 
@@ -249,7 +249,7 @@ fn structured_watch_eof_is_not_cancellation() {
     write_file(
         temp.path(),
         "dialogue/main.recite",
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Still live.\n-> END\n",
+        ":: start default speaker=hazel\n> @ffee6p8\n  Still live.\n-> END\n",
     );
     assert_eq!(
         event(&receive_until(&process, "watch.build.completed")),
@@ -302,7 +302,7 @@ fn structured_watch_rebuilds_relevant_sources_and_ignores_generated_outputs() {
     write_file(
         temp.path(),
         "dialogue/main.recite",
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Changed.\n-> END\n",
+        ":: start default speaker=hazel\n> @ffee6p8\n  Changed.\n-> END\n",
     );
     let build_started = receive_until(&process, "watch.build.started");
     assert_eq!(build_started["data"]["trigger"], "input_changed");
@@ -390,7 +390,7 @@ participants = ["hazel"]
     write_file(
         temp.path(),
         "dialogue/main.recite",
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default speaker=hazel\n> @ffee6p8\n  Hello.\n-> END\n",
     );
 
     let process = WatchProcess::start(temp.path(), None);

@@ -126,11 +126,11 @@ fn plural_adapter_scenario_declares_structured_line_metadata() {
     assert_eq!(plural.resolution.matched_locale.as_deref(), Some("fr-FR"));
     assert_eq!(
         plural.resolution.matched_context.as_deref(),
-        Some("5fcf9a1f7b20211f4a92")
+        Some("plural_line")
     );
     assert_eq!(
         plural.resolution.matched_key.as_deref(),
-        Some("5fcf9a1f7b20211f4a92")
+        Some("plural_line")
     );
     assert_eq!(plural.resolution.matched_arm, Some(1));
     assert_eq!(plural.resolution.source_fallback_arm, None);
@@ -141,8 +141,8 @@ fn plural_adapter_scenario_declares_structured_line_metadata() {
     assert_eq!(plural.resolution.attempts.len(), 1);
     let attempt = &plural.resolution.attempts[0];
     assert_eq!(attempt.locale, "fr-FR");
-    assert_eq!(attempt.context, "5fcf9a1f7b20211f4a92");
-    assert_eq!(attempt.key, "5fcf9a1f7b20211f4a92");
+    assert_eq!(attempt.context, "plural_line");
+    assert_eq!(attempt.key, "plural_line");
     assert_eq!(attempt.selected_arm, Some(1));
     assert_eq!(attempt.outcome, PluralAttemptOutcomeExpectation::Matched);
 }

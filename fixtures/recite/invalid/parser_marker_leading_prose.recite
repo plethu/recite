@@ -1,8 +1,8 @@
 :: marker_probe default
-> sign@88990011223344556677
+> @sign
   -> East, if you can read it.
   :if this is a sentence, not a branch.
   # ash marks the lintel.
-  ? ask@99aabbccddeeff001122
+  ? @ask
     Ask what the sign means.
     -> END

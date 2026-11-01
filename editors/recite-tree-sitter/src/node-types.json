@@ -308,25 +308,6 @@
     }
   },
   {
-    "type": "choice_name",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "id_suffix",
-          "named": true
-        },
-        {
-          "type": "identifier",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "choice_statement",
     "named": true,
     "fields": {
@@ -336,16 +317,6 @@
         "types": [
           {
             "type": "choice_marker",
-            "named": true
-          }
-        ]
-      },
-      "name": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "choice_name",
             "named": true
           }
         ]
@@ -372,7 +343,23 @@
           "named": true
         },
         {
+          "type": "metadata_field",
+          "named": true
+        },
+        {
           "type": "newline",
+          "named": true
+        },
+        {
+          "type": "reason_clause",
+          "named": true
+        },
+        {
+          "type": "requires_clause",
+          "named": true
+        },
+        {
+          "type": "stable_id_attribute",
           "named": true
         }
       ]
@@ -690,25 +677,6 @@
     "fields": {}
   },
   {
-    "type": "id_suffix",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "draft_id",
-          "named": true
-        },
-        {
-          "type": "stable_id",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "if_statement",
     "named": true,
     "fields": {
@@ -808,25 +776,6 @@
     }
   },
   {
-    "type": "line_name",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "id_suffix",
-          "named": true
-        },
-        {
-          "type": "identifier",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "line_statement",
     "named": true,
     "fields": {
@@ -836,16 +785,6 @@
         "types": [
           {
             "type": "line_marker",
-            "named": true
-          }
-        ]
-      },
-      "name": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "line_name",
             "named": true
           }
         ]
@@ -872,7 +811,15 @@
           "named": true
         },
         {
+          "type": "metadata_field",
+          "named": true
+        },
+        {
           "type": "newline",
+          "named": true
+        },
+        {
+          "type": "stable_id_attribute",
           "named": true
         }
       ]
@@ -1289,6 +1236,47 @@
     }
   },
   {
+    "type": "stable_id_attribute",
+    "named": true,
+    "fields": {
+      "id": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "stable_id_field",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "hspace",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "stable_id_field",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "stable_id",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "symbol",
     "named": true,
     "fields": {},
@@ -1458,10 +1446,6 @@
   },
   {
     "type": "divert_marker",
-    "named": true
-  },
-  {
-    "type": "draft_id",
     "named": true
   },
   {

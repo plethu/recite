@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
   const char count_name[] = "count";
   const char locale[] = "fr-CA";
   const char plural_header[] = "nplurals=2; plural=(n != 1);";
-  const char choice_id[] = "81000000000000000003";
+  const char choice_id[] = "continue";
   char effect_id[512];
   ReciteInterpolationValue value;
   size_t nplurals = 0;

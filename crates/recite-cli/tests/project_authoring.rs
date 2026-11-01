@@ -32,7 +32,7 @@ fn validate_project_reports_deterministic_cross_file_diagnostics() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> line@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Start.\n",
             "-> target.recite::missing\n",
         ),
@@ -59,7 +59,7 @@ fn validate_project_stops_project_checks_after_non_utf8_source_discovery() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> line@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Start.\n",
             "-> target.recite::missing\n",
         ),
@@ -126,7 +126,7 @@ fn validate_project_ignores_malformed_excluded_source() {
     write_recite(
         temp.path(),
         "included.recite",
-        ":: start default\n> line@11111111111111111111\n  Included.\n",
+        ":: start default\n> @ffee6p8\n  Included.\n",
     );
     write_recite(
         temp.path(),

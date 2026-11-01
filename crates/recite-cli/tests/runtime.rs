@@ -18,26 +18,26 @@ fn run_and_trace_execute_fixture_choices_conditions_and_effect_acknowledgement()
         "dialogue.recite",
         concat!(
             ":: start default speaker=hazel\n",
-            "> intro@1fae7e4dcc2f49dda604\n",
+            "> @h3nt0d7\n",
             "  Welcome.\n",
-            "  ? help@b2c08cc280c726da34bf requires=(trusts(player))\n",
+            "  ? requires=(trusts(player)) @rkj778k\n",
             "    Help.\n",
             "    -> help\n",
-            "  ? leave@94f6053553c00b4d01f0\n",
+            "  ? @wdpx2ys\n",
             "    Leave.\n",
             "    -> leave\n",
             ":: help\n",
             "! blocking grant_item(map)\n",
             ":if has_bonus(player)\n",
-            "  > bonus@88dd946ec2db5dcad0f5\n",
+            "  > @bonus\n",
             "    Bonus.\n",
             ":else\n",
-            "  > helped@471993b01dc658723ed5\n",
+            "  > @ntz2ny0\n",
             "    Helped.\n",
             "! deferred finish(help)\n",
             "-> END\n",
             ":: leave\n",
-            "> left@363b6e1d1f5b8cf263ad\n",
+            "> @left\n",
             "  Left.\n",
             "-> END\n",
         ),
@@ -51,7 +51,7 @@ fn run_and_trace_execute_fixture_choices_conditions_and_effect_acknowledgement()
 "has_bonus(player)" = false
 
 [choices]
-1fae7e4dcc2f49dda604 = "b2c08cc280c726da34bf"
+h3nt0d7 = "rkj778k"
 
 [effects]
 auto_ack_blocking = true
@@ -66,13 +66,13 @@ auto_ack_blocking = true
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("prompt 1fae7e4dcc2f49dda604: Welcome.");
+    run_output.assert_stdout_contains("prompt h3nt0d7: Welcome.");
     run_output.assert_stdout_contains("condition trusts(player) = true");
-    run_output.assert_stdout_contains("selected choice b2c08cc280c726da34bf");
+    run_output.assert_stdout_contains("selected choice rkj778k");
     run_output.assert_stdout_contains("effect blocking grant_item (map)");
     run_output.assert_stdout_contains("acknowledged effect");
     run_output.assert_stdout_contains("condition has_bonus(player) = false");
-    run_output.assert_stdout_contains("line 471993b01dc658723ed5: Helped.");
+    run_output.assert_stdout_contains("line ntz2ny0: Helped.");
     run_output.assert_stdout_contains("deferred effects:");
     run_output.assert_stdout_contains("finish (help)");
 
@@ -98,8 +98,8 @@ auto_ack_blocking = true
         .arg("--fixture")
         .arg(&index_fixture));
     index_output.assert_success().assert_stderr("");
-    index_output.assert_stdout_contains("selected choice b2c08cc280c726da34bf");
-    index_output.assert_stdout_contains("line 471993b01dc658723ed5: Helped.");
+    index_output.assert_stdout_contains("selected choice rkj778k");
+    index_output.assert_stdout_contains("line ntz2ny0: Helped.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -139,7 +139,7 @@ auto_ack_blocking = true
     }));
     assert!(events.iter().any(|event| {
         event["type"] == "line"
-            && event["line"]["id"] == "471993b01dc658723ed5"
+            && event["line"]["id"] == "ntz2ny0"
             && event["line"]["text"] == "Helped."
     }));
     assert!(events.iter().any(|event| {
@@ -148,19 +148,17 @@ auto_ack_blocking = true
                 .as_array()
                 .expect("fixture keys")
                 .iter()
-                .any(|key| key == "1fae7e4dcc2f49dda604")
+                .any(|key| key == "h3nt0d7")
             && event["prompt"]["choices"]
                 .as_array()
                 .expect("prompt choices")
                 .iter()
-                .any(|choice| {
-                    choice["id"] == "b2c08cc280c726da34bf" && choice["is_available"] == true
-                })
+                .any(|choice| choice["id"] == "rkj778k" && choice["is_available"] == true)
     }));
     assert!(events.iter().any(|event| {
         event["type"] == "choice_selected"
-            && event["prompt"]["line"] == "1fae7e4dcc2f49dda604"
-            && event["choice"] == "b2c08cc280c726da34bf"
+            && event["prompt"]["line"] == "h3nt0d7"
+            && event["choice"] == "rkj778k"
     }));
     assert!(events.iter().any(|event| {
         event["type"] == "effect"
@@ -182,9 +180,9 @@ fn run_reports_fixture_and_blocking_acknowledgement_failures() {
         "dialogue.recite",
         concat!(
             ":: start default speaker=hazel\n",
-            "> intro@f78dbc7fa0ad21e93077\n",
+            "> @h7btn6w\n",
             "  Welcome.\n",
-            "  ? help@008b6b090df272e74e52\n",
+            "  ? @kg216b7\n",
             "    Help.\n",
             "    -> help\n",
             ":: help\n",
@@ -197,7 +195,7 @@ fn run_reports_fixture_and_blocking_acknowledgement_failures() {
         temp.path(),
         "no-ack.toml",
         r#"[choices]
-f78dbc7fa0ad21e93077 = "008b6b090df272e74e52"
+h7btn6w = "kg216b7"
 "#,
     );
 
@@ -215,7 +213,7 @@ f78dbc7fa0ad21e93077 = "008b6b090df272e74e52"
         temp.path(),
         "unknown-field.toml",
         r#"[choices]
-f78dbc7fa0ad21e93077 = "008b6b090df272e74e52"
+h7btn6w = "kg216b7"
 
 [effects]
 auto_ack_blocking = true
@@ -241,12 +239,12 @@ fn trace_preserves_typed_literal_availability_reason_args() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@48c0e5d8b1edd6d2d1da\n",
+            "> @h0hekng\n",
             "  Welcome.\n",
-            "  ? answer@c2d3dd8f18b4cb15ac82 requires=(can_answer())\n",
+            "  ? requires=(can_answer()) @answer\n",
             "    Answer.\n",
             "    -> END\n",
-            "  ? leave@333bc0a0040231b83f37\n",
+            "  ? @vs56zr5\n",
             "    Leave.\n",
             "    -> END\n",
         ),
@@ -303,7 +301,7 @@ fn trace_preserves_typed_literal_availability_reason_args() {
 "can_answer()" = false
 
 [choices]
-48c0e5d8b1edd6d2d1da = "333bc0a0040231b83f37"
+h0hekng = "vs56zr5"
 "#,
     );
 
@@ -322,7 +320,7 @@ fn trace_preserves_typed_literal_availability_reason_args() {
         .expect("prompt choices");
     let answer = choices
         .iter()
-        .find(|choice| choice["id"] == "c2d3dd8f18b4cb15ac82")
+        .find(|choice| choice["id"] == "answer")
         .expect("answer choice");
 
     assert_eq!(
@@ -352,13 +350,13 @@ fn run_trace_and_play_plain_execute_match_conditions() {
             ":: start default\n",
             ":match thread_stage(thread)\n",
             "  :case tired\n",
-            "    > tired_line@4759aff334455e7312d6\n",
+            "    > @tired_line\n",
             "      Tired.\n",
-            "      ? rest@7dff78fde4c935ba8fd1\n",
+            "      ? @rest\n",
             "        Rest.\n",
             "        -> END\n",
             "  :case _\n",
-            "    > fallback_line@f7e50b399ad62f291e2e\n",
+            "    > @fallback_line\n",
             "      Fallback.\n",
             "-> END\n",
         ),
@@ -371,7 +369,7 @@ fn run_trace_and_play_plain_execute_match_conditions() {
 "thread_stage(thread)" = { enum = "tired" }
 
 [choices]
-4759aff334455e7312d6 = "7dff78fde4c935ba8fd1"
+tired_line = "rest"
 "#,
     );
 
@@ -384,8 +382,8 @@ fn run_trace_and_play_plain_execute_match_conditions() {
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
     run_output.assert_stdout_contains("condition thread_stage(thread) = enum tired");
-    run_output.assert_stdout_contains("prompt 4759aff334455e7312d6: Tired.");
-    run_output.assert_stdout_contains("selected choice 7dff78fde4c935ba8fd1");
+    run_output.assert_stdout_contains("prompt tired_line: Tired.");
+    run_output.assert_stdout_contains("selected choice rest");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -414,8 +412,8 @@ fn run_trace_and_play_plain_execute_match_conditions() {
     }));
     assert!(events.iter().any(|event| {
         event["type"] == "prompt"
-            && event["prompt"]["identity"]["line"] == "4759aff334455e7312d6"
-            && event["prompt"]["identity"]["fixture_keys"][0] == "4759aff334455e7312d6"
+            && event["prompt"]["identity"]["line"] == "tired_line"
+            && event["prompt"]["identity"]["fixture_keys"][0] == "tired_line"
     }));
 
     let missing_fixture = write_file(temp.path(), "missing.toml", "");
@@ -446,14 +444,14 @@ fn run_trace_and_play_plain_execute_match_conditions() {
         .stdin
         .as_mut()
         .expect("stdin")
-        .write_all(b"tired\n7dff78fde4c935ba8fd1\n")
+        .write_all(b"tired\nrest\n")
         .expect("write stdin");
     let output = child.wait_with_output().expect("wait");
 
     output.assert_success().assert_stderr("");
     output.assert_stdout_contains("condition thread_stage(thread) = tired");
-    output.assert_stdout_contains("prompt 4759aff334455e7312d6: Tired.");
-    output.assert_stdout_contains("selected choice 7dff78fde4c935ba8fd1");
+    output.assert_stdout_contains("prompt tired_line: Tired.");
+    output.assert_stdout_contains("selected choice rest");
 }
 
 #[test]
@@ -464,17 +462,17 @@ fn play_plain_accepts_piped_input_and_keeps_run_trace_stable() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@b9be382cc070fa4ffa18\n",
+            "> @spaamtv\n",
             "  Welcome.\n",
-            "  ? help@bc8fdb2ff18171b53d0a requires=(trusts(player))\n",
+            "  ? requires=(trusts(player)) @c6c3pxx\n",
             "    Help.\n",
             "    -> help\n",
-            "  ? leave@175f47f391468d580eeb\n",
+            "  ? @xag6ece\n",
             "    Leave.\n",
             "    -> END\n",
             ":: help\n",
             "! blocking grant_item(map)\n",
-            "> helped@97b6222c6841cf9b4788\n",
+            "> @aqp0m89\n",
             "  Helped.\n",
             "! deferred finish(help)\n",
             "-> END\n",
@@ -498,28 +496,28 @@ fn play_plain_accepts_piped_input_and_keeps_run_trace_stable() {
         .stdin
         .as_mut()
         .expect("stdin")
-        .write_all(b"y\nbc8fdb2ff18171b53d0a\n\n")
+        .write_all(b"y\nc6c3pxx\n\n")
         .expect("write stdin");
     let output = child.wait_with_output().expect("wait");
 
     output.assert_success().assert_stderr("");
     output.assert_stdout_contains("play asset=");
     output.assert_stdout_contains("condition trusts(player) = true");
-    output.assert_stdout_contains("selected choice bc8fdb2ff18171b53d0a");
+    output.assert_stdout_contains("selected choice c6c3pxx");
     output.assert_stdout_contains("effect blocking id=");
     output.assert_stdout_contains("acknowledged effect");
-    output.assert_stdout_contains("line 97b6222c6841cf9b4788: Helped.");
+    output.assert_stdout_contains("line aqp0m89: Helped.");
     output.assert_stdout_contains("deferred effects:");
     assert_stdout_sequence(
         &output,
         [
             "play asset=",
             "condition trusts(player) = true",
-            "prompt b9be382cc070fa4ffa18: Welcome.",
-            "selected choice bc8fdb2ff18171b53d0a",
+            "prompt spaamtv: Welcome.",
+            "selected choice c6c3pxx",
             "effect blocking id=",
             "acknowledged effect",
-            "line 97b6222c6841cf9b4788: Helped.",
+            "line aqp0m89: Helped.",
             "end",
             "deferred effects:",
         ],
@@ -539,13 +537,13 @@ fn play_plain_accepts_piped_input_and_keeps_run_trace_stable() {
         .stdin
         .as_mut()
         .expect("stdin")
-        .write_all(b"n\n175f47f391468d580eeb\n")
+        .write_all(b"n\nxag6ece\n")
         .expect("write stdin");
     let output = child.wait_with_output().expect("wait");
 
     output.assert_success().assert_stderr("");
     output.assert_stdout_contains("condition trusts(player) = false");
-    output.assert_stdout_contains("selected choice 175f47f391468d580eeb");
+    output.assert_stdout_contains("selected choice xag6ece");
     output.assert_stdout_contains("end");
 
     let output = run(recite()
@@ -578,9 +576,9 @@ fn play_ui_locale_config_falls_back_to_default_catalog_and_rejects_bad_locale() 
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@c8cced2046cf8ac8f7b0\n",
+            "> @dqqhcve\n",
             "  Welcome.\n",
-            "  ? leave@1cf4c868fe680ee4bb4c\n",
+            "  ? @g2mnzyz\n",
             "    Leave.\n",
             "    -> END\n",
         ),
@@ -611,13 +609,13 @@ locale = "en-GB"
         .stdin
         .as_mut()
         .expect("stdin")
-        .write_all(b"1cf4c868fe680ee4bb4c\n")
+        .write_all(b"g2mnzyz\n")
         .expect("write stdin");
     let output = child.wait_with_output().expect("wait");
 
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("prompt c8cced2046cf8ac8f7b0: Welcome.");
-    output.assert_stdout_contains("selected choice 1cf4c868fe680ee4bb4c");
+    output.assert_stdout_contains("prompt dqqhcve: Welcome.");
+    output.assert_stdout_contains("selected choice g2mnzyz");
 
     let bad_config = write_file(
         temp.path(),
@@ -642,7 +640,7 @@ locale = "not a locale"
         temp.path(),
         "fixture.toml",
         r#"[choices]
-c8cced2046cf8ac8f7b0 = "1cf4c868fe680ee4bb4c"
+dqqhcve = "g2mnzyz"
 "#,
     );
     let output = run(recite()
@@ -655,5 +653,5 @@ c8cced2046cf8ac8f7b0 = "1cf4c868fe680ee4bb4c"
         .env("RECITE_CONFIG", &bad_config));
 
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("selected choice 1cf4c868fe680ee4bb4c");
+    output.assert_stdout_contains("selected choice g2mnzyz");
 }

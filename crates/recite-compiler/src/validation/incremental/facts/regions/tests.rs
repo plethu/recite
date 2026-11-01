@@ -3,7 +3,7 @@ use crate::validation::{ValidationInput, ValidationParticipation};
 use recite_core::ast::ChoiceEcho;
 use std::sync::Arc;
 
-const SOURCE: &str = ":: a default\n> line@11111111111111111111\n  First.\n? reply@22222222222222222222 echo=line(11111111111111111111)\n  Reply.\n  -> a\n:: b\n-> END\n";
+const SOURCE: &str = ":: a default\n> @ffee6p8\n  First.\n? echo=line(ffee6p8) @rthh7ab\n  Reply.\n  -> a\n:: b\n-> END\n";
 
 fn facts(source: &str) -> Arc<ProjectFacts> {
     let lowered = recite_parser::parse("a.recite", source).lower_source_file();
@@ -60,7 +60,7 @@ fn changed_identity_echo_frozen_state_and_coordinates_require_new_passages() {
         Arc::new(frozen),
         Arc::new(missing_id),
         Arc::new(echo),
-        facts(&SOURCE.replace("11111111111111111111", "33333333333333333333")),
+        facts(&SOURCE.replace("ffee6p8", "bqyvpqq")),
         facts(&SOURCE.replace("First.", "First.\n  More.")),
     ] {
         let joined = join(&fresh, &previous);

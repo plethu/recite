@@ -48,16 +48,16 @@ fn combined_outputs_match_separate_compilation_extraction_and_failures()
 -> Result<(), Box<dyn std::error::Error>> {
     for source in [
         include_str!("../../../fixtures/recite/valid/core_language_spike.recite"),
-        ":: start default speaker=Mara\n> a@11111111111111111111 bind=(count:int=$remaining)\n  One letter.\n  | {count} letters.\n  ? b@22222222222222222222\n    Yes.\n    -> END\n",
-        ":: start default\n> missing_id\n  Text.\n-> END\n",
+        ":: start default speaker=Mara\n> bind=(count:int=$remaining) @ffee6p8\n  One letter.\n  | {count} letters.\n  ? @rthh7ab\n    Yes.\n    -> END\n",
+        ":: start default\n>\n  Text.\n-> END\n",
         ":: start default\n-> missing\n",
         "::\n! effect(\n",
-        ":: start default\n> a@11111111111111111111\n  [bad]markup\n",
+        ":: start default\n> @ffee6p8\n  [bad]markup\n",
     ] {
         parity(vec![CompileInput::new("scene.recite", source)], None)?;
     }
-    let a = ":: a default\n> a@11111111111111111111\n  Café 🦀.\n-> b.recite::b\n";
-    let b = ":: b\n> b@22222222222222222222\n  Goodbye.\n-> END\n";
+    let a = ":: a default\n> @ffee6p8\n  Café 🦀.\n-> b.recite::b\n";
+    let b = ":: b\n> @rthh7ab\n  Goodbye.\n-> END\n";
     parity(
         vec![
             CompileInput::new("b.recite", b),
@@ -83,7 +83,7 @@ fn combined_outputs_match_separate_compilation_extraction_and_failures()
     parity(
         vec![CompileInput::new(
             "scene.recite",
-            ":: start default speaker=Mara\n> hello@11111111111111111111\n  Café 🦀.\n-> END\n",
+            ":: start default speaker=Mara\n> @ffee6p8\n  Café 🦀.\n-> END\n",
         )],
         Some(&schema),
     )?;

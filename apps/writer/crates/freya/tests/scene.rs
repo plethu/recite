@@ -162,7 +162,7 @@ fn project_open_save_and_conflict_keep_the_authored_text() -> Result<(), Box<dyn
     )?;
     std::fs::write(
         dir.path().join("second.recite"),
-        ":: other\n> other@33333333333333333333\n  Other scene.\n-> END\n",
+        ":: other\n> @bqyvpqq\n  Other scene.\n-> END\n",
     )?;
     let source_path = dir.path().join("scene.recite");
     std::fs::write(&source_path, recite_writer_model::FIXTURE)?;
@@ -254,7 +254,7 @@ fn project_open_save_and_conflict_keep_the_authored_text() -> Result<(), Box<dyn
     test.poll_n(std::time::Duration::from_millis(16), 15);
     click_label(&mut test, "Keep editing")?;
     assert!(std::fs::read_to_string(&source_path)?.contains("A saved question."));
-    assert!(std::fs::read_to_string(&source_path)?.contains("7701ceab59d2adfa057a"));
+    assert!(std::fs::read_to_string(&source_path)?.contains("alice_way_001"));
     std::fs::write(&source_path, "external edit")?;
     click_label(&mut test, "Save")?;
     assert_eq!(std::fs::read_to_string(&source_path)?, "external edit");
@@ -294,18 +294,11 @@ fn line_details_can_be_opened_and_closed_without_panicking()
     click_label(&mut test, "Line actions ▾")?;
     click_label(&mut test, "Line details")?;
     capture(&mut test, "passage-inspector.png")?;
-    assert!(
-        test.find(|_, element| Label::try_downcast(element)
-            .filter(|label| label.text.contains("7701ceab59d2adfa057a")))
-            .is_some()
-    );
+    // The selected line's meta row and its details panel both show the ID.
+    assert_eq!(id_labels(&test), 2);
     click_label(&mut test, "Line actions ▾")?;
     click_label(&mut test, "Line details")?;
-    assert!(
-        test.find(|_, element| Label::try_downcast(element)
-            .filter(|label| label.text.contains("7701ceab59d2adfa057a")))
-            .is_none()
-    );
+    assert_eq!(id_labels(&test), 1);
     Ok(())
 }
 
@@ -389,4 +382,11 @@ fn sidebar_and_menu_dismissal_preserve_the_draft() -> Result<(), Box<dyn std::er
     );
     click_label(&mut test, "Show scenes")?;
     Ok(())
+}
+
+fn id_labels(test: &TestingRunner) -> usize {
+    test.find_many(|_, element| {
+        Label::try_downcast(element).filter(|label| label.text.contains("@alice_way_001"))
+    })
+    .len()
 }

@@ -70,11 +70,7 @@ fn stdio_static_only_client_does_not_receive_dynamic_registration() {
 fn silence_assertions_reject_notifications_already_queued_with_a_response() {
     let mut harness = StdioHarness::start(json!({ "capabilities": {} }));
     let uri = test_uri();
-    harness.did_open(
-        &uri,
-        1,
-        ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n",
-    );
+    harness.did_open(&uri, 1, ":: start default\n> @ffee6p8\n  Hello.\n-> END\n");
     let _completion = harness.request_result(
         "textDocument/completion",
         json!({

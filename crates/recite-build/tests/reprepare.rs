@@ -59,10 +59,7 @@ fn source_and_discovery_changes_match_full_preparation() -> Result<(), Box<dyn s
             assert_current_matches(&request);
         }
         let added = directory.path().join("dialogue/new.recite");
-        std::fs::write(
-            &added,
-            ":: new\n> new@33333333333333333333\n  New.\n-> END\n",
-        )?;
+        std::fs::write(&added, ":: new\n> @bqyvpqq\n  New.\n-> END\n")?;
         assert_current_matches(&request);
         std::fs::remove_file(&added)?;
         std::fs::remove_file(&other)?;

@@ -95,7 +95,7 @@ func _run_catalog_persistence_checks() -> void:
 	_require(refreshed.is_ok(), "mutating after persisted reload should use persisted fields")
 
 	var fixture_line = resource.add_translation(
-		"fr", "10000000000000000001", "The signal clears.", "Le signal se libère.", ""
+		"fr", "s96sqwp", "The signal clears.", "Le signal se libère.", ""
 	)
 	_require(fixture_line.is_ok(), "fixture line should be accepted before save")
 	var fixture_plural = resource.add_plural_translation(
@@ -118,7 +118,7 @@ func _run_catalog_persistence_checks() -> void:
 			if value is Dictionary:
 				var loaded_record: Dictionary = value
 				if (
-					loaded_record.get("id", "") == "10000000000000000001"
+					loaded_record.get("id", "") == "s96sqwp"
 					and loaded_record.get("translation", "") == "Le signal se libère."
 				):
 					found_fixture_line = true
@@ -341,12 +341,12 @@ func _run_node_error_conformance_checks() -> void:
 		not unknown.is_ok() and unknown.error().get("code") == "invalid_choice_error",
 		"unknown choice should carry stable category"
 	)
-	var unavailable = node.select_choice("8706986735003ec9aaec")
+	var unavailable = node.select_choice("j12cqy0")
 	_require(
 		not unavailable.is_ok() and unavailable.error().get("code") == "unavailable_choice_error",
 		"conditioned choice should be unavailable"
 	)
-	var work = node.select_choice("3f481d9991fa22e23b0c")
+	var work = node.select_choice("mkkr74x")
 	_require(
 		work.is_ok() and work.outputs().size() == 1 and work.outputs()[0].get("kind") == "effect",
 		"work route should request blocking effect"
@@ -366,13 +366,13 @@ func _run_node_error_conformance_checks() -> void:
 			acknowledged.is_ok() and acknowledged.outputs()[0].get("kind") == "prompt",
 			"correct effect acknowledgement should reach later prompt"
 		)
-		var stale = node.select_choice("3f481d9991fa22e23b0c")
+		var stale = node.select_choice("mkkr74x")
 		_require(
 			not stale.is_ok() and stale.error().get("code") == "stale_choice_error",
 			"previously observed ID should be stale after later prompt"
 		)
 	_require(node.end_session().is_ok(), "error scenario should end")
-	var no_active = node.select_choice("ced14b8623bba2198c6d")
+	var no_active = node.select_choice("t680psd")
 	_require(
 		not no_active.is_ok() and no_active.error().get("code") == "no_active_session_error",
 		"operation after end should identify missing session"
@@ -462,7 +462,7 @@ func _run_plural_conformance_checks() -> void:
 			catalog
 			. add_plural_translation(
 				"fr-FR",
-				"5fcf9a1f7b20211f4a92",
+				"plural_line",
 				"You have one letter.",
 				"You have {count} letters.",
 				["Vous avez une lettre.", "Vous avez {count} lettres."],
@@ -505,15 +505,12 @@ func _run_plural_conformance_checks() -> void:
 			_require(
 				(
 					resolution["matched_locale"] == "fr-FR"
-					and resolution["matched_context"] == "5fcf9a1f7b20211f4a92"
+					and resolution["matched_context"] == "plural_line"
 				),
 				"matched locale and context should be structured"
 			)
 			_require(
-				(
-					resolution["matched_key"] == "5fcf9a1f7b20211f4a92"
-					and resolution["matched_arm"] == 1
-				),
+				resolution["matched_key"] == "plural_line" and resolution["matched_arm"] == 1,
 				"matched key and arm should be structured"
 			)
 			_require(
@@ -528,8 +525,8 @@ func _run_plural_conformance_checks() -> void:
 						attempts[0]
 						== {
 							"locale": "fr-FR",
-							"context": "5fcf9a1f7b20211f4a92",
-							"key": "5fcf9a1f7b20211f4a92",
+							"context": "plural_line",
+							"key": "plural_line",
 							"selected_arm": 1,
 							"outcome": "matched"
 						}
@@ -577,9 +574,7 @@ func _run_localisation_error_conformance_check() -> void:
 func _run_po_persistence_check() -> void:
 	var catalog := ReciteDialogueCatalogResource.new()
 	var po := (
-		'msgctxt "10000000000000000001"\n'
-		+ 'msgid "The signal clears."\n'
-		+ 'msgstr "Le signal se libère."\n'
+		'msgctxt "s96sqwp"\n' + 'msgid "The signal clears."\n' + 'msgstr "Le signal se libère."\n'
 	)
 	var imported = catalog.load_po_from_bytes("fr-FR", "demo.po", po.to_utf8_buffer())
 	_require(imported.is_ok(), "valid PO should load through catalogue Resource")
@@ -635,7 +630,7 @@ func _on_reentrant_output(output: ReciteOutput) -> void:
 	var kind: String = output.kind()
 	reentrant_kinds.append(kind)
 	if reentrant_kinds.size() == 1:
-		reentrant_result = reentrant_node.select_choice("10000000000000000003")
+		reentrant_result = reentrant_node.select_choice("inspect_relay")
 
 
 func _run_schema_export_checks() -> void:
@@ -736,7 +731,7 @@ func _run_information_profile() -> void:
 	start_us = Time.get_ticks_usec()
 	for _index in SAMPLES:
 		node.start(asset, "start", "")
-		node.select_choice("3f481d9991fa22e23b0c")
+		node.select_choice("mkkr74x")
 		node.end_session()
 	var condition_effect_us := Time.get_ticks_usec() - start_us
 	start_us = Time.get_ticks_usec()

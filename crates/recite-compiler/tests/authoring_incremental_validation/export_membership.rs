@@ -2,14 +2,14 @@ use super::*;
 
 #[test]
 fn unchanged_exports_still_replace_echo_and_reference_dependencies() {
-    let a = ":: a default\n> a@11111111111111111111\n  A.\n-> END\n";
-    let b = ":: b\n? b@22222222222222222222 echo=line(11111111111111111111)\n  Reply.\n  -> a.recite::a\n";
-    let c = ":: c\n> c@33333333333333333333\n  C.\n-> END\n";
+    let a = ":: a default\n> @ffee6p8\n  A.\n-> END\n";
+    let b = ":: b\n? echo=line(ffee6p8) @rthh7ab\n  Reply.\n  -> a.recite::a\n";
+    let c = ":: c\n> @bqyvpqq\n  C.\n-> END\n";
     let retargeted = b
-        .replace("11111111111111111111", "33333333333333333333")
+        .replace("ffee6p8", "bqyvpqq")
         .replace("a.recite::a", "c.recite::c");
     let changed_provider = c
-        .replace("33333333333333333333", "44444444444444444444")
+        .replace("bqyvpqq", "z0g6c80")
         .replace(":: c", ":: renamed");
     let mut kernel = AuthoringKernel::new();
     for (consumer, provider, has_error) in [

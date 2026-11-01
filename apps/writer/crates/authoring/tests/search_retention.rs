@@ -5,8 +5,7 @@ use std::sync::Arc;
 
 #[test]
 fn retained_search_hits_release_replaced_source_bytes() -> Result<(), Box<dyn std::error::Error>> {
-    let source: Arc<str> =
-        ":: start default\n> line@11111111111111111111\n  Original courier.\n-> END\n".into();
+    let source: Arc<str> = ":: start default\n> @ffee6p8\n  Original courier.\n-> END\n".into();
     let old_source = Arc::downgrade(&source);
     let key = DocumentKey::new("scene.recite")?;
     let mut index = SearchIndex::build(&[SavedDocument::from_shared(key.clone(), source)]);
@@ -14,7 +13,7 @@ fn retained_search_hits_release_replaced_source_bytes() -> Result<(), Box<dyn st
     assert!(old_source.upgrade().is_some());
     index.replace_document(SavedDocument::new(
         key,
-        ":: start default\n> line@11111111111111111111\n  Current zeppelin.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Current zeppelin.\n-> END\n",
     ));
     assert!(old_source.upgrade().is_none());
     assert_eq!(

@@ -55,8 +55,6 @@ pub enum AuthoringEditError {
     UnmappableRange { document: DocumentKey },
     #[error("stable-ID source in {document} is malformed or ambiguous")]
     UnsupportedStableId { document: DocumentKey },
-    #[error("stable-ID anchor namespace is exhausted in {document}")]
-    AnchorNamespaceExhausted { document: DocumentKey },
     #[error("authoring edit plan has no edits")]
     NoEdits,
     #[error("expected snapshot generation {expected}, but current generation is {actual}")]

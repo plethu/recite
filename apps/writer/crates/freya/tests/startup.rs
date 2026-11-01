@@ -211,7 +211,7 @@ fn cold_project_route_opens_the_linked_scene() -> Result<(), Box<dyn std::error:
     project(&root)?;
     fs::write(
         root.join("second.recite"),
-        ":: other default\n> other@33333333333333333333\n  Other scene.\n-> END\n",
+        ":: other default\n> @bqyvpqq\n  Other scene.\n-> END\n",
     )?;
     let query = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("project", &root.to_string_lossy())

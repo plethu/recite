@@ -187,9 +187,9 @@ exact_captures=(
   ' - string, start: (0, 27), end: (0, 38), text: `"Archivist"`'
   ' - number, start: (0, 67), end: (0, 72), text: `-12.5`'
   ' - number, start: (0, 79), end: (0, 81), text: `+7`'
-  ' - operator, start: (1, 58), end: (1, 59), text: `=`'
+  ' - operator, start: (1, 24), end: (1, 25), text: `=`'
   ' - punctuation.delimiter, start: (0, 92), end: (0, 93), text: `,`'
-  ' - punctuation.delimiter, start: (1, 64), end: (1, 65), text: `:`'
+  ' - punctuation.delimiter, start: (1, 30), end: (1, 31), text: `:`'
   ' - string.special, start: (3, 2), end: (3, 14), text: `Plain prose.`'
   ' - string.special, start: (4, 2), end: (4, 15), text: `Interpolated `'
   ' - variable.parameter, start: (4, 16), end: (4, 20), text: `name`'
@@ -245,7 +245,7 @@ for node in line_statement choice_statement; do
     exit 1
   fi
 done
-for node in draft_id stable_id; do
+for node in stable_id_field stable_id; do
   if ! grep -Fq "($node" "$id_recovery_output"; then
     echo "ID recovery probe did not retain $node classification" >&2
     exit 1
@@ -258,24 +258,20 @@ done
     test/fixtures/id-recovery.recite
 ) >"$id_query_output"
 for expectation in \
-  ' - label, start: (5, 12), end: (5, 15), text: `bad`' \
-  ' - label, start: (7, 9), end: (7, 22), text: `NOT_AN_ANCHOR`' \
-  ' - label, start: (12, 7), end: (12, 28), text: `0123456789abcdef01234`' \
-  ' - label, start: (14, 14), end: (14, 38), text: `0123456789abcdef0123junk`' \
-  ' - label, start: (16, 8), end: (16, 28), text: `0123456789abcdef0123`'; do
+  ' - label, start: (3, 16), end: (3, 17), text: `@`' \
+  ' - label, start: (5, 2), end: (5, 12), text: `@Malformed`' \
+  ' - label, start: (7, 28), end: (7, 38), text: `@NOT_AN_ID`' \
+  ' - label, start: (12, 2), end: (12, 27), text: `@0123456789abcdef0123junk`' \
+  ' - label, start: (14, 12), end: (14, 20), text: `@ez1fh09`'; do
   if ! grep -Fq "$expectation" "$id_query_output"; then
     echo "ID recovery capture expectation is missing: $expectation" >&2
     exit 1
   fi
 done
-for unexpected in \
-  ' - label, start: (12, 7), end: (12, 27), text: `0123456789abcdef0123`' \
-  ' - label, start: (14, 14), end: (14, 34), text: `0123456789abcdef0123`'; do
-  if grep -Fq "$unexpected" "$id_query_output"; then
-    echo "malformed ID retained an accidental stable-ID prefix capture: $unexpected" >&2
-    exit 1
-  fi
-done
+if grep -Fq ' - label, start: (12, 2), end: (12, 23),' "$id_query_output"; then
+  echo "malformed ID was split into an accidental valid-looking prefix capture" >&2
+  exit 1
+fi
 
 semantic_output="$scratch/id-recovery-semantic.txt"
 semantic_rc=0
@@ -370,7 +366,7 @@ punctuation_fixture="$scratch/unexpected-punctuation.recite"
 printf '%s\n' \
   ':: recovery' \
   ':if stage("open") == 2' \
-  '> later@0123456789abcdef0123' \
+  '> @ez1fh09' \
   '  Later prose.' \
   '-> END' >"$punctuation_fixture"
 punctuation_output="$scratch/unexpected-punctuation.tree"

@@ -9,15 +9,14 @@ use std::collections::btree_map::Entry;
 
 impl<'a> Validator<'a> {
     pub(crate) fn validate_line_localisable_id(&mut self, line: &'a Line) {
-        let SourceId::Frozen { .. } = &line.source_id else {
+        let SourceId::Frozen(_) = &line.source_id else {
             if self.phase == ValidationPhase::Project {
                 return;
             }
             self.diagnostics.push(match &line.source_id {
                 SourceId::Missing => diagnostics::missing_line_id(line),
-                SourceId::Draft { .. } => diagnostics::draft_line_id(line),
                 SourceId::Malformed { .. } => diagnostics::malformed_line_id(line, &line.source_id),
-                SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
+                SourceId::Frozen(_) => unreachable!("frozen ID matched earlier"),
             });
             return;
         };
@@ -31,7 +30,7 @@ impl<'a> Validator<'a> {
         self.validate_project_line_id(id, &line.span);
     }
     pub(crate) fn validate_choice_localisable_id(&mut self, choice: &'a Choice) {
-        if let SourceId::Frozen { .. } = &choice.source_id {
+        if let SourceId::Frozen(_) = &choice.source_id {
             if self.phase == ValidationPhase::Local {
                 return;
             }
@@ -42,11 +41,10 @@ impl<'a> Validator<'a> {
         } else if self.phase != ValidationPhase::Project {
             self.diagnostics.push(match &choice.source_id {
                 SourceId::Missing => diagnostics::missing_choice_id(choice),
-                SourceId::Draft { .. } => diagnostics::draft_choice_id(choice),
                 SourceId::Malformed { .. } => {
                     diagnostics::malformed_choice_id(choice, &choice.source_id)
                 }
-                SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
+                SourceId::Frozen(_) => unreachable!("frozen ID matched earlier"),
             });
         }
     }

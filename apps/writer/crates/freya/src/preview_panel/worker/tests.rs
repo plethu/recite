@@ -5,7 +5,7 @@ use std::{sync::Barrier, time::Duration};
 
 fn request(number: usize) -> Arc<Request> {
     let model = Workbench::new(&format!(
-        ":: start default\n> guide@12345678901234567890\n  Hello {number}.\n-> END\n"
+        ":: start default\n> @w3xnt5r\n  Hello {number}.\n-> END\n"
     ))
     .unwrap();
     Arc::new(Request {

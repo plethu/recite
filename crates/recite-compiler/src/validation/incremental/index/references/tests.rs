@@ -3,7 +3,7 @@ use crate::authoring::{
     SavedDocument, WorkControl,
 };
 use crate::validation::incremental::VALIDATED_DOCUMENTS;
-use recite_core::DocumentKey;
+use recite_core::{DocumentKey, StableIdGenerator, StatementHeader};
 use std::cell::Cell;
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -29,9 +29,13 @@ fn request(kernel: &AuthoringKernel, source: &str) -> AuthoringRequest {
 
 #[test]
 fn reference_edits_do_not_repeat_ten_thousand_unchanged_identity_checks() {
+    let mut ids = StableIdGenerator::seeded(0);
     let mut source = ":: start default\n".to_owned();
-    for id in 0..10_000 {
-        source.push_str(&format!("> line@{id:020x}\n  Hello.\n"));
+    for _ in 0..10_000 {
+        source.push_str(&format!(
+            "{}\n  Hello.\n",
+            StatementHeader::line().id(&ids.next_id())
+        ));
     }
     source.push_str("-> missing\n");
     let mut kernel = AuthoringKernel::new();
@@ -61,7 +65,7 @@ fn reference_edits_do_not_repeat_ten_thousand_unchanged_identity_checks() {
 
 #[test]
 fn every_reference_checkpoint_cancels_without_publishing_and_retries_exactly() {
-    let source = ":: start default\n> line@11111111111111111111\n  Hello.\n-> missing\n";
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n-> missing\n";
     for target in ["start", "absent", "other.recite::missing"] {
         let mut kernel = AuthoringKernel::new();
         kernel.apply(request(&kernel, source)).unwrap();
@@ -111,12 +115,12 @@ fn reference_edit_shares_a_thousand_structural_errors_and_untouched_reports() {
     let other = DocumentKey::new("other.recite").unwrap();
     let mut source = ":: start default\n".to_owned();
     for _ in 0..1_001 {
-        source.push_str("> line@11111111111111111111\n  Duplicate.\n");
+        source.push_str("> @ffee6p8\n  Duplicate.\n");
     }
     source.push_str("-> missing\n");
     let sibling = facts(
         other.as_str(),
-        ":: sibling\n> line@22222222222222222222\n  First.\n> line@22222222222222222222\n  Duplicate.\n-> missing\n",
+        ":: sibling\n> @rthh7ab\n  First.\n> @rthh7ab\n  Duplicate.\n-> missing\n",
     );
     let control = CancellationToken::new();
     let mut index = ProjectIndex::default();

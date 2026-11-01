@@ -17,9 +17,9 @@ use recite_runtime::{
     },
 };
 
-const SHARED_ID: &str = "aaaaaaaaaaaaaaaaaaaa";
-const LOCKED_ID: &str = "bbbbbbbbbbbbbbbbbbbb";
-const LEAVE_ID: &str = "cccccccccccccccccccc";
+const SHARED_ID: &str = "m3ffvrt";
+const LOCKED_ID: &str = "qdjf739";
+const LEAVE_ID: &str = "z1pshhd";
 
 struct SwitchingProvider {
     translated: Cell<bool>,
@@ -66,7 +66,7 @@ fn asset() -> Result<CompiledDialogue, String> {
             "schema_version": 1,
             "conditions": {"ready": {"params": [], "returns": "bool"}},
             "availability_reasons": {
-                "aaaaaaaaaaaaaaaaaaaa": {"template": "Not ready.", "params": []}
+                "m3ffvrt": {"template": "Not ready.", "params": []}
             }
         }"#,
     );
@@ -79,10 +79,10 @@ fn asset() -> Result<CompiledDialogue, String> {
             "dialogue/lookup-history.recite",
             concat!(
                 ":: start default\n",
-                "> prompt@aaaaaaaaaaaaaaaaaaaa\n  Prompt.\n",
-                "  ? locked@bbbbbbbbbbbbbbbbbbbb requires=(ready()) reason=aaaaaaaaaaaaaaaaaaaa\n",
+                "> @m3ffvrt\n  Prompt.\n",
+                "  ? requires=(ready()) reason=m3ffvrt @qdjf739\n",
                 "    Locked.\n    -> END\n",
-                "  ? leave@cccccccccccccccccccc\n    Leave.\n    -> END\n",
+                "  ? @z1pshhd\n    Leave.\n    -> END\n",
             ),
         )],
         CompileOptions::new(

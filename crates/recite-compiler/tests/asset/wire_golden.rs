@@ -141,7 +141,7 @@ fn compile_escaping_and_numeric_edges() -> CompiledAssetOutput {
             "dialogue/échapper.recite",
             concat!(
                 ":: escaped default label=\"héllo\\n\\\"quote\\\"\\\\slash\\tend\"\n",
-                "> edge@11111111111111111111 fraction=-1.25 negative_zero=-0.0 huge=1e30 tiny=1e-20 min=-9223372036854775808 max=9223372036854775807 empty=[]\n",
+                "> fraction=-1.25 negative_zero=-0.0 huge=1e30 tiny=1e-20 min=-9223372036854775808 max=9223372036854775807 empty=[] @ffee6p8\n",
                 "  😀\"À bientôt\" \\path.\n",
                 "-> END\n",
             ),

@@ -121,9 +121,9 @@ fn boundary_edits_match_cold_trees_fields_spans_and_ordered_captures() {
     let fixtures = [
         include_str!("../../../../../fixtures/recite/valid/language_pressure.recite"),
         include_str!("../../../../../fixtures/recite/invalid/parser_recoverable_malformed.recite"),
-        ":: root default\r\n> first\r\n  🦊 prose.\r\n  \r\n  :: next\r\n> last\r\n  Last prose.",
-        ":: root\n! immediate call(\"\n\n> later\n  Later text.\n-> END",
-        ":: root\n> first\n  Two slashes \\\\{name}\n> next\n  Later text.\n-> END\n",
+        ":: root default\r\n>\r\n  🦊 prose.\r\n  \r\n  :: next\r\n>\r\n  Last prose.",
+        ":: root\n! immediate call(\"\n\n>\n  Later text.\n-> END",
+        ":: root\n>\n  Two slashes \\\\{name}\n>\n  Later text.\n-> END\n",
     ];
     for phase in 0..8 {
         for fixture in fixtures {

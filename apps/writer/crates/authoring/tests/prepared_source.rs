@@ -2,7 +2,7 @@ use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{Document, DraftSnapshot, EditOperation, View, Workbench};
 
 fn source() -> &'static str {
-    ":: start default\n> line@11111111111111111111\n  Hello, 世界.\n-> END\n"
+    ":: start default\n> @ffee6p8\n  Hello, 世界.\n-> END\n"
 }
 fn model() -> Workbench {
     Workbench::from_document(
@@ -49,7 +49,7 @@ fn acceptance_preserves_newer_typing_including_a_return_to_the_old_baseline() {
 fn preparation_accepts_invalid_source_and_history_matches_synchronous_editing() {
     for source in [
         ":: malformed\n? incomplete(\n",
-        ":: start default\r\n> line@11111111111111111111\r\n  café!\r\n-> END\r\n",
+        ":: start default\r\n> @ffee6p8\r\n  café!\r\n-> END\r\n",
         "",
     ] {
         let mut actual = model();
@@ -144,9 +144,9 @@ fn interrupted_preparation_does_not_publish_text_or_history() {
 
 #[test]
 fn rules_requests_freeze_analysis_and_only_validate_the_matching_rules_draft() {
-    let source = ":: start default\n? reply@22222222222222222222 requires=(standing(3))\n  Continue.\n  -> END\n";
+    let source = ":: start default\n? requires=(standing(3)) @rthh7ab\n  Continue.\n  -> END\n";
     let document = Document::new(source).unwrap();
-    let request = document.reply_rules_request("22222222222222222222");
+    let request = document.reply_rules_request("rthh7ab");
     let mut model = Workbench::from_document(document, Some(View::Source)).unwrap();
     assert!(request.is_current(model.document()));
     let mut rules = std::thread::spawn(move || request.prepare())
@@ -198,11 +198,11 @@ fn rules_requests_freeze_analysis_and_only_validate_the_matching_rules_draft() {
 
 #[test]
 fn queued_rules_requests_do_not_retain_old_passages_and_can_prepare_after_expiry() {
-    let source = ":: start default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+    let source = ":: start default\n? @rthh7ab\n  Continue.\n  -> END\n";
     let document = Document::new(source).unwrap();
     let passages = document.passage_snapshot().unwrap();
     let old = std::sync::Arc::downgrade(&passages);
-    let request = document.reply_rules_request("22222222222222222222");
+    let request = document.reply_rules_request("rthh7ab");
     drop(passages);
     drop(document);
     assert!(old.upgrade().is_none());

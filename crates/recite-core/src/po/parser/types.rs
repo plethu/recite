@@ -215,7 +215,6 @@ pub(super) struct EntryBuilder {
     pub(super) translation: Option<PoTranslation>,
     pub(super) plural_translations: Vec<PoTranslation>,
     pub(super) comments: Vec<PoComment>,
-    pub(super) source_id_comments: Vec<(String, Range<usize>)>,
     pub(super) flags: Vec<String>,
     pub(super) previous: Vec<PoPreviousValue>,
     pub(super) unknown_fields: Vec<PoUnknownField>,

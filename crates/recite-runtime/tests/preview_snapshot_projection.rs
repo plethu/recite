@@ -12,9 +12,9 @@ use recite_runtime::{
 fn prompt_projection_mutations_are_refused_without_asset_wide_lookup() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> prompt@12345678901234567890 speaker=hazel mood=calm bind=(count:int=$count)\n",
+        "> speaker=hazel mood=calm bind=(count:int=$count) @w3xnt5r\n",
         "  One item.\n  | {count} items.\n",
-        "  ? keep@12345678901234567891 echo=selected_text tone=plain\n",
+        "  ? echo=selected_text tone=plain @rbgkhpf\n",
         "    Keep.\n    -> END\n",
     ));
     let mut values = InterpolationValues::new();
@@ -51,9 +51,9 @@ fn prompt_projection_mutations_are_refused_without_asset_wide_lookup() {
 fn provider_rendered_projection_restores_without_provider_replay() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> prompt@12345678901234567890 bind=(count:int=$count)\n",
+        "> bind=(count:int=$count) @w3xnt5r\n",
         "  One item.\n  | {count} items.\n",
-        "  ? keep@12345678901234567891\n    Keep.\n    -> END\n",
+        "  ? @rbgkhpf\n    Keep.\n    -> END\n",
     ));
     let mut values = InterpolationValues::new();
     values.insert("count".to_owned(), ScalarValue::from(2_i64));
@@ -91,8 +91,8 @@ fn provider_rendered_projection_restores_without_provider_replay() {
 fn asset_derived_mismatch_rejects_even_with_a_consistent_projection() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> prompt@12345678901234567890\n  Prompt.\n",
-        "  ? keep@12345678901234567891\n    Keep.\n    -> END\n",
+        "> @w3xnt5r\n  Prompt.\n",
+        "  ? @rbgkhpf\n    Keep.\n    -> END\n",
     ));
     let mut source = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("source");
     source.step(PreviewInputs::new());
@@ -115,9 +115,9 @@ fn asset_derived_mismatch_rejects_even_with_a_consistent_projection() {
 fn stale_ready_snapshot_rejects_revision_change_without_restart_requirement() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> first@12345678901234567890\n",
+        "> @w3xnt5r\n",
         "  First.\n",
-        "> future@12345678901234567891\n",
+        "> @rbgkhpf\n",
         "  Original future.\n",
         "-> END\n",
     ));

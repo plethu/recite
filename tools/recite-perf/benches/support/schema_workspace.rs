@@ -19,7 +19,7 @@ pub(super) fn prepare(count: usize) -> Input {
     let path = directory.path().join("source.recite");
     std::fs::write(
         &path,
-        ":: start default\n:if gate_()\n  > line@11111111111111111111\n    Hello.\n-> END\n",
+        ":: start default\n:if gate_()\n  > @ffee6p8\n    Hello.\n-> END\n",
     )
     .unwrap_or_else(|error| panic!("source: {error}"));
     let uri = format!("file://{}", path.display())

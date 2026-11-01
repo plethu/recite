@@ -2,7 +2,7 @@ mod support;
 use freya::prelude::*;
 use freya_testing::prelude::*;
 type TestResult = Result<(), Box<dyn std::error::Error>>;
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n? reply@22222222222222222222 requires=(standing(3) and has_key(gate))\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n! blocking mark_map(floodgate)\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n? requires=(standing(3) and has_key(gate)) @rthh7ab\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n! blocking mark_map(floodgate)\n-> END\n";
 
 #[test]
 fn reloading_rules_keeps_back_and_forward_on_valid_completed_locations() -> TestResult {
@@ -251,7 +251,8 @@ fn schema_picker_adds_a_condition_and_effect_as_one_recoverable_draft() -> TestR
         dir.path().join("schema.json"),
         r#"{"schema_version":1,"conditions":{"ready":{"params":[{"name":"enabled","type":"bool"}]}},"effects":{"notify":{"params":[{"name":"announce","type":"bool"}],"modes":["immediate"]}}}"#,
     )?;
-    let source = ":: start default\n? reply@22222222222222222222\n  Let me through.\n  -> accepted\n:: accepted\n-> END\n";
+    let source =
+        ":: start default\n? @rthh7ab\n  Let me through.\n  -> accepted\n:: accepted\n-> END\n";
     std::fs::write(dir.path().join("scene.recite"), source)?;
     let root = dir.path().to_owned();
     let mut test = TestingRunner::new(

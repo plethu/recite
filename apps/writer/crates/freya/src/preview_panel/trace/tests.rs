@@ -11,7 +11,7 @@ fn trace_app() -> impl IntoElement {
 #[test]
 fn runtime_trace_keeps_typed_arguments_choice_identity_and_deferred_requests_visible()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n:if accepts(actor, \"spoken\", 7, 2.5, true, false)\n  > line@11111111111111111111\n    Accepted.\n? reply@22222222222222222222\n  Go.\n  -> chosen\n:: chosen\n! immediate notify(actor, \"spoken\", 7, 2.5, true, false)\n! deferred mark()\n-> END\n";
+    let source = ":: start default\n:if accepts(actor, \"spoken\", 7, 2.5, true, false)\n  > @ffee6p8\n    Accepted.\n? @rthh7ab\n  Go.\n  -> chosen\n:: chosen\n! immediate notify(actor, \"spoken\", 7, 2.5, true, false)\n! deferred mark()\n-> END\n";
     let mut model = Workbench::new(source)?;
     model.start_preview_with(PreviewSetup {
         policy: recite_compiler::authoring::CatalogResolutionPolicy::new(Some(
@@ -50,7 +50,7 @@ fn runtime_trace_keeps_typed_arguments_choice_identity_and_deferred_requests_vis
         "accepts(actor, spoken, 7, 2.5, True, False) → True",
         "notify",
         "mark",
-        "22222222222222222222",
+        "rthh7ab",
     ] {
         assert!(
             test.find(|_, e| Label::try_downcast(e).filter(|label| label.text.contains(expected)))

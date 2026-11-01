@@ -8,7 +8,7 @@ fn catalogue(rule: &str, arms: usize) -> String {
         .map(|arm| format!("msgstr[{arm}] \"arm {arm}\"\n"))
         .collect::<String>();
     format!(
-        "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: {rule}\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"one\"\nmsgid_plural \"many\"\n{translations}"
+        "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: {rule}\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"one\"\nmsgid_plural \"many\"\n{translations}"
     )
 }
 

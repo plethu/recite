@@ -17,7 +17,7 @@ fn changed(
 
 #[test]
 fn restart_requirement_is_orthogonal_to_ready_choice_condition_and_end() {
-    let ready_asset = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
+    let ready_asset = asset(":: start default\n> @w3xnt5r\n  Line.\n-> END\n");
     let mut ready = PreviewSession::new(&ready_asset, None, PreviewOptions::new()).expect("ready");
     let output = ready
         .assess_asset(&changed(ready_asset.clone()))
@@ -29,9 +29,8 @@ fn restart_requirement_is_orthogonal_to_ready_choice_condition_and_end() {
     assert!(matches!(ready.state().status(), PreviewStatus::Ready));
     assert!(ready.state().restart_required().is_some());
 
-    let choice_asset = asset(
-        ":: start default\n> prompt@12345678901234567890\n  Prompt.\n  ? go@12345678901234567891\n    Go.\n    -> END\n",
-    );
+    let choice_asset =
+        asset(":: start default\n> @w3xnt5r\n  Prompt.\n  ? @rbgkhpf\n    Go.\n    -> END\n");
     let mut choice =
         PreviewSession::new(&choice_asset, None, PreviewOptions::new()).expect("choice");
     choice.step(PreviewInputs::new());
@@ -44,9 +43,8 @@ fn restart_requirement_is_orthogonal_to_ready_choice_condition_and_end() {
     ));
     assert!(choice.state().restart_required().is_some());
 
-    let condition_asset = asset(
-        ":: start default\n:if trusts(player)\n  > yes@12345678901234567890\n    Yes.\n-> END\n",
-    );
+    let condition_asset =
+        asset(":: start default\n:if trusts(player)\n  > @w3xnt5r\n    Yes.\n-> END\n");
     let mut condition =
         PreviewSession::new(&condition_asset, None, PreviewOptions::new()).expect("condition");
     condition.step(PreviewInputs::new());
@@ -59,7 +57,7 @@ fn restart_requirement_is_orthogonal_to_ready_choice_condition_and_end() {
     ));
     assert!(condition.state().restart_required().is_some());
 
-    let end_asset = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
+    let end_asset = asset(":: start default\n> @w3xnt5r\n  Line.\n-> END\n");
     let mut ended = PreviewSession::new(&end_asset, None, PreviewOptions::new()).expect("ended");
     ended.step(PreviewInputs::new());
     ended.step(PreviewInputs::new());
@@ -72,7 +70,7 @@ fn restart_requirement_is_orthogonal_to_ready_choice_condition_and_end() {
 
 #[test]
 fn restarting_old_asset_does_not_clear_replacement_requirement() {
-    let active = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
+    let active = asset(":: start default\n> @w3xnt5r\n  Line.\n-> END\n");
     let mut preview = PreviewSession::new(&active, None, PreviewOptions::new()).expect("start");
     let candidate = changed(active.clone());
     preview.assess_asset(&candidate).expect("assess");
@@ -87,7 +85,7 @@ fn restarting_old_asset_does_not_clear_replacement_requirement() {
 
 #[test]
 fn malformed_candidate_revision_fails_without_mutating_restart_state() {
-    let active = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
+    let active = asset(":: start default\n> @w3xnt5r\n  Line.\n-> END\n");
     let mut malformed = active.clone().into_payload();
     malformed
         .metadata
@@ -114,7 +112,7 @@ fn malformed_candidate_revision_fails_without_mutating_restart_state() {
 
 #[test]
 fn malformed_candidate_index_fails_without_mutating_restart_state() {
-    let active = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
+    let active = asset(":: start default\n> @w3xnt5r\n  Line.\n-> END\n");
     let mut malformed = active.clone().into_payload();
     malformed.default_block = recite_core::compiled::BlockIndex::new(99);
     let malformed = recite_core::compiled::CompiledDialogue::new(malformed);
@@ -135,9 +133,8 @@ fn malformed_candidate_index_fails_without_mutating_restart_state() {
 
 #[test]
 fn mutable_candidate_interpolation_and_reason_invariants_are_transactional() {
-    let active = asset(
-        ":: start default\n> prompt@12345678901234567890\n  Prompt.\n  ? go@12345678901234567891\n    Go.\n    -> END\n",
-    );
+    let active =
+        asset(":: start default\n> @w3xnt5r\n  Prompt.\n  ? @rbgkhpf\n    Go.\n    -> END\n");
 
     let mut mismatched_choice = active.clone().into_payload();
     mismatched_choice.choices[0]

@@ -174,7 +174,7 @@ Rules:
 Example choice and schema pairing:
 
 ```text
-? ask_news@c2bdeae1465bfa65bcf4 requires=(trust_gte(innkeeper, player, 3)) reason=innkeeper_trust_hint
+? requires=(trust_gte(innkeeper, player, 3)) reason=innkeeper_trust_hint @ask_news
   What's the real news?
   -> local_news_private
 ```

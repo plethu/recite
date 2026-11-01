@@ -8,9 +8,9 @@ fn next_rejects_changed_executable_tables_with_unchanged_metadata() {
         concat!(
             ":: start default\n",
             "! deferred grant_item(original_item)\n",
-            "> prompt@12345678901234567890\n",
+            "> @w3xnt5r\n",
             "  Prompt.\n",
-            "  ? go@12345678901234567891\n",
+            "  ? @rbgkhpf\n",
             "    Go.\n",
             "    -> END\n",
         ),
@@ -55,9 +55,9 @@ fn choose_rejects_a_changed_choice_before_advancing() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt@12345678901234567890\n",
+            "> @w3xnt5r\n",
             "  Prompt.\n",
-            "  ? go@12345678901234567891\n",
+            "  ? @rbgkhpf\n",
             "    Go.\n",
             "    -> END\n",
         ),

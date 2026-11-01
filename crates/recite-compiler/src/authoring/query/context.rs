@@ -124,11 +124,19 @@ pub(super) fn at(
     }
     let token = prefix.split_whitespace().last().unwrap_or_default();
     let token_start = cursor.saturating_sub(token.len());
+    // Block headers name the block before any metadata; line and choice
+    // headers start metadata straight after the marker.
+    let first_metadata_token = if trimmed.starts_with(['>', '?']) {
+        2
+    } else {
+        3
+    };
     if !(token.is_empty()
         || token.contains('=')
+        || recite_core::SourceId::is_field(token)
         || (trimmed.starts_with("::") && "default".starts_with(token)))
         && matches!(trimmed.as_bytes().first(), Some(b':' | b'>' | b'?'))
-        && prefix.split_whitespace().count() >= 3
+        && prefix.split_whitespace().count() >= first_metadata_token
     {
         return Some(Site::MetadataKey {
             span: span(key, source, token_start, cursor),

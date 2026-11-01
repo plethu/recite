@@ -133,7 +133,7 @@ fn search_cancellation_never_returns_a_partial_index() -> Result<(), Box<dyn std
 fn large_document_search_stops_between_roots() -> Result<(), Box<dyn std::error::Error>> {
     let source = (0..128)
         .map(|index| {
-            format!(":: block_{index}\n> line@{index:020}\n  Indexed prose {index}.\n-> END\n")
+            format!(":: block_{index}\n> @line_{index}\n  Indexed prose {index}.\n-> END\n")
         })
         .collect::<String>();
     let documents = [SavedDocument::new(
@@ -157,8 +157,8 @@ fn initial_selection_preserves_passage_block_and_source_fallbacks()
 -> Result<(), Box<dyn std::error::Error>> {
     for (source, expected) in [
         (
-            ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n",
-            recite_writer_model::View::Passage("11111111111111111111".into()),
+            ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
+            recite_writer_model::View::Passage("ffee6p8".into()),
         ),
         (
             ":: start default\n-> END\n",
@@ -167,7 +167,7 @@ fn initial_selection_preserves_passage_block_and_source_fallbacks()
         ("", recite_writer_model::View::Source),
         ("malformed syntax", recite_writer_model::View::Source),
         (
-            ":: start default\n> line\n  Unfrozen.\n-> END\n",
+            ":: start default\n>\n  Unfrozen.\n-> END\n",
             recite_writer_model::View::Source,
         ),
     ] {

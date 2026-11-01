@@ -3,7 +3,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, write_file};
 
-use super::support::{authoring_schema, position_after};
+use super::support::{authoring_schema, position_after_in_header};
 
 pub(super) fn filters_registry_metadata_completion_to_source_symbols() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -37,10 +37,7 @@ pub(super) fn filters_registry_metadata_completion_to_source_symbols() {
     }))
     .0;
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
-    let source = concat!(
-        ":: start default speaker=hazel\n",
-        "? mixed@e1f2031425364758697a mixed=\n",
-    );
+    let source = concat!(":: start default speaker=hazel\n", "? mixed= @szcdxz6\n",);
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
 
@@ -48,7 +45,7 @@ pub(super) fn filters_registry_metadata_completion_to_source_symbols() {
         harness
             .completion(
                 source_uri,
-                position_after(source, "mixed@e1f2031425364758697a mixed="),
+                position_after_in_header(source, "szcdxz6", "mixed="),
             )
             .expect("mixed registry metadata completion"),
     );
@@ -96,7 +93,7 @@ pub(super) fn filters_enum_metadata_completion_to_source_symbols() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "? mixed@e1f2031425364758697a mixed_kind=\n",
+        "? mixed_kind= @szcdxz6\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -105,7 +102,7 @@ pub(super) fn filters_enum_metadata_completion_to_source_symbols() {
         harness
             .completion(
                 source_uri,
-                position_after(source, "mixed@e1f2031425364758697a mixed_kind="),
+                position_after_in_header(source, "szcdxz6", "mixed_kind="),
             )
             .expect("mixed enum metadata completion"),
     );
@@ -157,7 +154,7 @@ pub(super) fn filters_contextual_domain_completion_to_source_symbols() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "> mixed@e1f2031425364758697a mixed_domain=\n",
+        "> mixed_domain= @szcdxz6\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -166,7 +163,7 @@ pub(super) fn filters_contextual_domain_completion_to_source_symbols() {
         harness
             .completion(
                 source_uri,
-                position_after(source, "mixed@e1f2031425364758697a mixed_domain="),
+                position_after_in_header(source, "szcdxz6", "mixed_domain="),
             )
             .expect("mixed contextual domain completion"),
     );

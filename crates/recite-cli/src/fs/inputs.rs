@@ -96,6 +96,43 @@ pub(crate) fn read_compile_inputs_for_output(
     read_compile_inputs_with_root(files, project_root.as_deref())
 }
 
+/// An input file keyed by its path relative to the inputs' common directory,
+/// as authoring documents and cross-file references expect.
+pub(crate) struct RelativeInput {
+    pub(crate) path: PathBuf,
+    pub(crate) key: String,
+    pub(crate) source: String,
+}
+
+pub(crate) fn read_relative_inputs(paths: &[PathBuf]) -> Result<Vec<RelativeInput>, CliError> {
+    let files = collect_input_files(paths)?;
+    let canonical = files
+        .iter()
+        .map(|path| {
+            fs::canonicalize(path).map_err(|source| CliError::Read {
+                path: path.clone(),
+                source,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let root = canonical
+        .iter()
+        .filter_map(|path| path.parent().map(Path::to_owned))
+        .reduce(|left, right| common_path_prefix(&left, &right).unwrap_or_default())
+        .unwrap_or_default();
+    files
+        .into_iter()
+        .map(|path| {
+            let source = fs::read_to_string(&path).map_err(|source| CliError::Read {
+                path: path.clone(),
+                source,
+            })?;
+            let key = project_relative_path(&root, &path).unwrap_or_else(|| display_path(&path));
+            Ok(RelativeInput { path, key, source })
+        })
+        .collect()
+}
+
 fn read_compile_inputs_with_root(
     files: Vec<PathBuf>,
     project_root: Option<&Path>,

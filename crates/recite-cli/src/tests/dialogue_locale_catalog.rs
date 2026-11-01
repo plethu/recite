@@ -14,23 +14,18 @@ pub(super) fn lookup_exhausts_variant_locale_fallback_before_base_context() {
         catalog(
             header("fr-CA", None),
             [
-                singular_entry(None, "11111111111111111111&formal", "Line source", ""),
+                singular_entry(None, "ffee6p8&formal", "Line source", ""),
                 singular_entry(
                     Some("fuzzy"),
-                    "22222222222222222222&formal",
+                    "rthh7ab&formal",
                     "Choice source",
                     "Fuzzy Canadian choice",
                 ),
-                singular_entry(None, "11111111111111111111", "Line source", "Canadian line"),
+                singular_entry(None, "ffee6p8", "Line source", "Canadian line"),
+                singular_entry(None, "rthh7ab", "Choice source", "Canadian choice"),
                 singular_entry(
                     None,
-                    "22222222222222222222",
-                    "Choice source",
-                    "Canadian choice",
-                ),
-                singular_entry(
-                    None,
-                    "availability_reason:33333333333333333333",
+                    "availability_reason:bqyvpqq",
                     "Availability source",
                     "Canadian availability",
                 ),
@@ -42,21 +37,16 @@ pub(super) fn lookup_exhausts_variant_locale_fallback_before_base_context() {
         catalog(
             header("fr", None),
             [
+                singular_entry(None, "ffee6p8&formal", "Line source", "French formal line"),
                 singular_entry(
                     None,
-                    "11111111111111111111&formal",
-                    "Line source",
-                    "French formal line",
-                ),
-                singular_entry(
-                    None,
-                    "22222222222222222222&formal",
+                    "rthh7ab&formal",
                     "Choice source",
                     "French formal choice",
                 ),
                 singular_entry(
                     None,
-                    "availability_reason:33333333333333333333&formal",
+                    "availability_reason:bqyvpqq&formal",
                     "Availability source",
                     "French formal availability",
                 ),
@@ -73,7 +63,7 @@ pub(super) fn lookup_exhausts_variant_locale_fallback_before_base_context() {
     assert_eq!(
         provider
             .lookup(
-                "11111111111111111111",
+                "ffee6p8",
                 "Line source",
                 TextDomain::Line,
                 &locale,
@@ -86,7 +76,7 @@ pub(super) fn lookup_exhausts_variant_locale_fallback_before_base_context() {
     assert_eq!(
         provider
             .lookup(
-                "22222222222222222222",
+                "rthh7ab",
                 "Choice source",
                 TextDomain::Choice,
                 &locale,
@@ -99,7 +89,7 @@ pub(super) fn lookup_exhausts_variant_locale_fallback_before_base_context() {
     assert_eq!(
         provider
             .lookup(
-                "33333333333333333333",
+                "bqyvpqq",
                 "Availability source",
                 TextDomain::AvailabilityReason,
                 &locale,
@@ -118,37 +108,31 @@ pub(super) fn plural_resolution_exhausts_variant_locale_fallback_before_base_con
         catalog(
             header("fr-CA", Some("nplurals=2; plural=(n != 1);")),
             [
+                plural_entry(None, "m3ffvrt&formal", "one", "many", &["", ""]),
                 plural_entry(
                     None,
-                    "aaaaaaaaaaaaaaaaaaaa&formal",
-                    "one",
-                    "many",
-                    &["", ""],
-                ),
-                plural_entry(
-                    None,
-                    "aaaaaaaaaaaaaaaaaaaa",
+                    "m3ffvrt",
                     "one",
                     "many",
                     &["Canadian a one", "Canadian a many"],
                 ),
                 plural_entry(
                     Some("fuzzy"),
-                    "bbbbbbbbbbbbbbbbbbbb&formal",
+                    "qdjf739&formal",
                     "one",
                     "many",
                     &["Fuzzy Canadian b one", "Fuzzy Canadian b many"],
                 ),
                 plural_entry(
                     None,
-                    "bbbbbbbbbbbbbbbbbbbb",
+                    "qdjf739",
                     "one",
                     "many",
                     &["Canadian b one", "Canadian b many"],
                 ),
                 plural_entry(
                     None,
-                    "cccccccccccccccccccc",
+                    "z1pshhd",
                     "one",
                     "many",
                     &["Canadian c one", "Canadian c many"],
@@ -166,21 +150,21 @@ pub(super) fn plural_resolution_exhausts_variant_locale_fallback_before_base_con
             [
                 plural_entry(
                     None,
-                    "aaaaaaaaaaaaaaaaaaaa&formal",
+                    "m3ffvrt&formal",
                     "one",
                     "many",
                     &["French a zero", "French a one", "French a many"],
                 ),
                 plural_entry(
                     None,
-                    "bbbbbbbbbbbbbbbbbbbb&formal",
+                    "qdjf739&formal",
                     "one",
                     "many",
                     &["French b zero", "French b one", "French b many"],
                 ),
                 plural_entry(
                     None,
-                    "cccccccccccccccccccc&formal",
+                    "z1pshhd&formal",
                     "one",
                     "many",
                     &["French c zero", "French c one", "French c many"],
@@ -198,21 +182,21 @@ pub(super) fn plural_resolution_exhausts_variant_locale_fallback_before_base_con
     assert_plural_variant(
         &provider,
         &locale,
-        "aaaaaaaaaaaaaaaaaaaa",
+        "m3ffvrt",
         "French a many",
         PluralResolutionOutcome::MissingTranslation,
     );
     assert_plural_variant(
         &provider,
         &locale,
-        "bbbbbbbbbbbbbbbbbbbb",
+        "qdjf739",
         "French b many",
         PluralResolutionOutcome::MissingEntry,
     );
     assert_plural_variant(
         &provider,
         &locale,
-        "cccccccccccccccccccc",
+        "z1pshhd",
         "French c many",
         PluralResolutionOutcome::MissingEntry,
     );

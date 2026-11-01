@@ -4,7 +4,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, write_file};
 
-use super::support::{authoring_schema, position_after, position_inside};
+use super::support::{authoring_schema, position_after, position_after_in_header, position_inside};
 
 pub(super) fn hover_prioritizes_contextual_metadata_values() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -26,25 +26,25 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "> collision@9f4a1b2c3d4e5f607182 speaker=hazel portrait=hazel\n",
+        "> speaker=hazel portrait=hazel @collision\n",
         "  Same-name metadata value.\n",
-        "> invalid@0a1b2c3d4e5f60718293 speaker=rhea portrait=hazel\n",
+        "> speaker=rhea portrait=hazel @atcf38h\n",
         "  Same-name invalid metadata value.\n",
-        "> dotted@1a2b3c4d5e6f708192a3 speaker=rhea portrait=rhea.face\n",
+        "> speaker=rhea portrait=rhea.face @qmv6hgp\n",
         "  Dotted metadata value.\n",
-        "> typed@5a6b7c8d9e0f123b4c5d speaker=rhea talker=hazel\n",
+        "> speaker=rhea talker=hazel @typed\n",
         "  Speaker-typed metadata value.\n",
-        "> target_comma@6a7b8c9d0e1f234c5d6e speaker=rhea portrait=flat,\n",
+        "> speaker=rhea portrait=flat, @target_comma\n",
         "  Trailing comma is not a metadata value.\n",
-        "> target_paren@7a8b9c0d1e2f345d6e7f speaker=rhea portrait=flat)\n",
+        "> speaker=rhea portrait=flat) @target_paren\n",
         "  Trailing parenthesis is not a metadata value.\n",
-        "> target_bracket@8a9b0c1d2e3f456e7f80 speaker=rhea portrait=flat]\n",
+        "> speaker=rhea portrait=flat] @target_bracket\n",
         "  Trailing bracket is not a metadata value.\n",
-        "> comma@2a3b4c5d6e7f8091a2b3 mood=warm, stage=hazel\n",
+        "> mood=warm, stage=hazel @comma\n",
         "  Trailing comma is not a selector value.\n",
-        "> paren@3a4b5c6d7e8f901a2b3c mood=warm) stage=hazel\n",
+        "> mood=warm) stage=hazel @paren\n",
         "  Trailing parenthesis is not a selector value.\n",
-        "> bracket@4a5b6c7d8e9f012a3b4c mood=warm] stage=hazel\n",
+        "> mood=warm] stage=hazel @bracket\n",
         "  Trailing bracket is not a selector value.\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
@@ -65,10 +65,7 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(
-                    source,
-                    "collision@9f4a1b2c3d4e5f607182 speaker=hazel portrait=",
-                ),
+                position_after_in_header(source, "collision", "speaker=hazel portrait="),
             )
             .expect("same-name contextual metadata value hover"),
     );
@@ -88,10 +85,7 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
     let typed_hover = harness
         .hover(
             source_uri.clone(),
-            position_after(
-                source,
-                "typed@5a6b7c8d9e0f123b4c5d speaker=rhea talker=hazel",
-            ),
+            position_after_in_header(source, "typed", "speaker=rhea talker=hazel"),
         )
         .expect("speaker-typed metadata value hover");
     assert!(hover_text(typed_hover).contains("Recite speaker `hazel`"));
@@ -106,25 +100,18 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
     assert_eq!(
         dotted_hover.range,
         Some(Range::new(
-            position_after(source, "dotted@1a2b3c4d5e6f708192a3 speaker=rhea portrait="),
-            position_after(
-                source,
-                "dotted@1a2b3c4d5e6f708192a3 speaker=rhea portrait=rhea.face",
-            ),
+            position_after_in_header(source, "qmv6hgp", "speaker=rhea portrait="),
+            position_after_in_header(source, "qmv6hgp", "speaker=rhea portrait=rhea.face"),
         )),
         "hover range must cover the complete dotted symbol",
     );
 
-    for target in [
-        "target_comma@6a7b8c9d0e1f234c5d6e speaker=rhea portrait=",
-        "target_paren@7a8b9c0d1e2f345d6e7f speaker=rhea portrait=",
-        "target_bracket@8a9b0c1d2e3f456e7f80 speaker=rhea portrait=",
-    ] {
+    for target in ["target_comma", "target_paren", "target_bracket"] {
         assert!(
             harness
                 .hover(
                     source_uri.clone(),
-                    position_after(source, &format!("{target}fl")),
+                    position_after_in_header(source, target, "speaker=rhea portrait=fl"),
                 )
                 .is_none(),
             "metadata value with trailing punctuation must not resolve: {target:?}",
@@ -132,7 +119,10 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
         assert_eq!(
             completion_labels(
                 harness
-                    .completion(source_uri.clone(), position_after(source, target))
+                    .completion(
+                        source_uri.clone(),
+                        position_after_in_header(source, target, "speaker=rhea portrait="),
+                    )
                     .expect("metadata value completion response"),
             ),
             ["flat", "rhea.face"],
@@ -167,10 +157,7 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
         harness
             .completion(
                 source_uri,
-                position_after(
-                    source,
-                    "collision@9f4a1b2c3d4e5f607182 speaker=hazel portrait=",
-                ),
+                position_after_in_header(source, "collision", "speaker=hazel portrait="),
             )
             .expect("same-name contextual metadata value completion"),
     );
@@ -203,9 +190,9 @@ pub(super) fn hover_preserves_choice_reason_clause_resolution() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "? explicit_reason@a1b2c3d4e5f60718293a requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
-        "? collision_reason@b1c2d3e4f5061728394a requires=(trust_gte(hazel, rhea, 3)) reason=hazel\n",
-        "? punctuation_reason@c1d2e3f405162738495a requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint,\n",
+        "? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @y0txed0\n",
+        "? requires=(trust_gte(hazel, rhea, 3)) reason=hazel @fm637hb\n",
+        "? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint, @punctuation_reason\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -244,9 +231,10 @@ pub(super) fn hover_preserves_choice_reason_clause_resolution() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(
+                position_after_in_header(
                     source,
-                    "punctuation_reason@c1d2e3f405162738495a requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust",
+                    "punctuation_reason",
+                    "requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust"
                 ),
             )
             .is_none(),

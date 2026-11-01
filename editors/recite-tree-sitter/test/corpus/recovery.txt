@@ -3,9 +3,9 @@ Line-bounded match recovery
 ==================
 :match relationship(player
 :case open
-> later@0123456789abcdef0123
+> @ez1fh09
   Plain recovery prose.
-? choose@fedcba98765432100123
+? @q5khbap
   Later choice prose.
   -> END
 
@@ -33,10 +33,9 @@ Line-bounded match recovery
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line
@@ -46,10 +45,9 @@ Line-bounded match recovery
     (newline))
   (choice_statement
     (choice_marker)
-    (hspace)
-    (choice_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line
@@ -69,14 +67,15 @@ Line-bounded match recovery
 Hyphen prose preserves adjacent statements
 ==================
 :: hyphen_recovery default
-> first@0123456789abcdef0123
+> @ez1fh09
   - Not yet.
   -> target
-> after@fedcba98765432100123
+> @q5khbap
   Statement recovery remains visible.
 -> END
 
 ---
+
 (source_file
   (block_statement
     (block_marker)
@@ -89,10 +88,9 @@ Hyphen prose preserves adjacent statements
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line
@@ -108,10 +106,9 @@ Hyphen prose preserves adjacent statements
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line

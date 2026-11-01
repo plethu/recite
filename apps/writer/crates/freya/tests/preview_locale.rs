@@ -26,7 +26,7 @@ fn trial_language_count_and_fallback_are_native_controls() -> Result<(), Box<dyn
     let path = dir.path().join("fr.po");
     std::fs::write(
         &path,
-        "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"12345678901234567890\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n",
+        "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"w3xnt5r\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n",
     )?;
     let query = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("catalogue", &path.to_string_lossy())
@@ -34,7 +34,7 @@ fn trial_language_count_and_fallback_are_native_controls() -> Result<(), Box<dyn
     let route = format!("/preview?{query}");
     let mut test = TestingRunner::new(recite_writer::regression_app, Size2D::new(1400., 1200.), |runner| {
         runner.provide_root_context(move || recite_writer::InitialRoute(route));
-        runner.provide_root_context(|| recite_writer::InitialSource(":: start default\n> tickets@12345678901234567890 bind=(count:int=$tickets)\n  {count} ticket\n  | {count} tickets\n-> END\n".into()));
+        runner.provide_root_context(|| recite_writer::InitialSource(":: start default\n> bind=(count:int=$tickets) @w3xnt5r\n  {count} ticket\n  | {count} tickets\n-> END\n".into()));
     }, 1.).0;
     test.poll_n(std::time::Duration::from_millis(16), 15);
     support::click(&mut test, "Inputs for the next run")?;

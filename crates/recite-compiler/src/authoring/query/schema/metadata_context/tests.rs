@@ -11,11 +11,11 @@ fn indexed_selector_lookup_preserves_nearest_header_and_explicit_override() {
         for body in [
             ":: first speaker=mara\n> line tone=calm\n",
             ":: first speaker=mara\n:: nearest\n> line tone=calm",
-            ":: first speaker=mara\n:: nearest speaker=\n> line",
+            ":: first speaker=mara\n:: nearest speaker=\n>",
             ":: first speaker=mara\n> line speaker= tone=calm",
             ":: first speaker=mara\n> line speaker=[mara] tone=calm",
             ":: first speaker=mara\n> line speaker=other speaker=mara",
-            ":: first speaker=mara\n  :: not_a_header speaker=other\n> line",
+            ":: first speaker=mara\n  :: not_a_header speaker=other\n>",
             "أهلاً😀\n:: first speaker=mara\n> line tone=é\n",
             "",
         ] {

@@ -7,7 +7,7 @@ expression: report
   "family": "twee",
   "file": "input",
   "status": "partial",
-  "source": ":: block_a04d85288af0982a4cec default\n> imported_0c42a6e664fd26b4bd5a@0c42a6e664fd26b4bd5a\n  Hello.\n-> END\n",
+  "source": ":: block_a04d85288af0982a4cec default\n> @s25s8wk\n  Hello.\n-> END\n",
   "mappings": [
     {
       "provenance": {
@@ -54,7 +54,7 @@ expression: report
       },
       "construct": "line",
       "original_id": null,
-      "generated_id": "imported_0c42a6e664fd26b4bd5a@0c42a6e664fd26b4bd5a",
+      "generated_id": "s25s8wk",
       "generated_line": 2
     }
   ],

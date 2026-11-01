@@ -57,12 +57,9 @@ fn messagepack_only_matches_full_output_for_unicode_forms_and_project_order() {
     let inputs = [
         CompileInput::new(
             "z.recite",
-            ":: start default\n> hello@11111111111111111111\n  Hello.\n-> a.recite::other\n",
+            ":: start default\n> @ffee6p8\n  Hello.\n-> a.recite::other\n",
         ),
-        CompileInput::new(
-            "a.recite",
-            ":: other\n> end@22222222222222222222\n  Goodbye.\n-> END\n",
-        ),
+        CompileInput::new("a.recite", ":: other\n> @rthh7ab\n  Goodbye.\n-> END\n"),
     ];
     let full = compile_inputs(inputs.clone(), options(None))
         .unwrap()
@@ -100,7 +97,7 @@ fn messagepack_only_with_schema_preserves_reasons_and_canonical_schema_identity(
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "? ask@a94b83f2d8bd65101cc3 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @z58rq7p\n",
             "  What's the news?\n  -> END\n",
         ),
     )];
@@ -138,8 +135,8 @@ fn messagepack_only_preserves_parse_and_validation_diagnostics_without_output() 
         vec![CompileInput::new(
             "duplicate.recite",
             concat!(
-                ":: start default\n> first@11111111111111111111\n  First.\n",
-                "> second@11111111111111111111\n  Second.\n-> END\n",
+                ":: start default\n> @ffee6p8\n  First.\n",
+                "> @ffee6p8\n  Second.\n-> END\n",
             ),
         )],
     ] {
@@ -169,10 +166,7 @@ fn messagepack_only_checks_schema_uses_and_unused_invalid_declarations() {
         },
     );
     for (schema, source) in [
-        (
-            invalid,
-            ":: start default\n> hello@11111111111111111111\n  Hello.\n-> END\n",
-        ),
+        (invalid, ":: start default\n> @ffee6p8\n  Hello.\n-> END\n"),
         (
             ProjectSchema::empty_v1(),
             ":: start default\n! immediate missing_effect(snap)\n",

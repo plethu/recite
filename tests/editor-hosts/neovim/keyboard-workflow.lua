@@ -206,11 +206,10 @@ assert_true(
 )
 local work_line = run_trace.events[1]
 local work_end = run_trace.events[#run_trace.events]
--- Source IDs retain the author label, while runtime trace line IDs use the
--- canonical anchor.  Keep the authored ID here and assert that the host's
--- structured projection preserves its exact anchor identity.
-local expected_work_id = "work_001@2119548317bb586e3865"
-local expected_work_anchor = expected_work_id:match("@(.+)$")
+-- Source spells the ID as a trailing `@id` field; runtime trace line IDs carry
+-- the bare ID.  Assert that the host's structured projection preserves it.
+local expected_work_id = "@work_001"
+local expected_work_anchor = expected_work_id:match("^@(.+)$")
 assert_true(
   work_line.type == "line"
     and expected_work_anchor ~= nil

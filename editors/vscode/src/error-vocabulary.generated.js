@@ -44,6 +44,7 @@ export const errorCodes = new Set([
   "invalid_project_root",
   "missing_fixture_choice",
   "no_inputs",
+  "stable_id_baseline",
   "output_overwrites_input",
   "play_eof",
   "play_invalid_input",

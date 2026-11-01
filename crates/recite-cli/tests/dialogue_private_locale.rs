@@ -9,10 +9,10 @@ fn private_locale_prefers_its_catalogue_and_falls_back_to_welsh() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
-    let po = "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Base translation\"\n";
+    let po = "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Base translation\"\n";
     write_file(temp.path(), "locale/cy.po", po);
     write_file(
         temp.path(),

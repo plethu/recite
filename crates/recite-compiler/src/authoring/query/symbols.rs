@@ -84,7 +84,7 @@ fn matching_symbol_locations(
             .filter(|stable| stable.source_id_span().is_some_and(&matches))
             .filter_map(|stable| {
                 if !options.include_declarations()
-                    && matches!(stable.source_id(), SourceId::Frozen { .. })
+                    && matches!(stable.source_id(), SourceId::Frozen(_))
                 {
                     return None;
                 }
@@ -92,7 +92,7 @@ fn matching_symbol_locations(
                     document: key.clone(),
                     identity: SymbolIdentity::Source(stable.source_id().clone()),
                     kind: SymbolKind::StableId,
-                    role: if matches!(stable.source_id(), SourceId::Frozen { .. }) {
+                    role: if matches!(stable.source_id(), SourceId::Frozen(_)) {
                         SymbolRole::Definition
                     } else {
                         SymbolRole::Annotation
@@ -210,13 +210,12 @@ fn identity_order(left: &SymbolIdentity) -> (u8, &str, &str) {
     match left {
         SymbolIdentity::Block(id) => (0, id.as_str(), ""),
         SymbolIdentity::Source(SourceId::Missing) => (1, "", ""),
-        SymbolIdentity::Source(SourceId::Draft { label }) => (2, label, ""),
-        SymbolIdentity::Source(SourceId::Frozen { label, anchor }) => (3, label, anchor.as_str()),
-        SymbolIdentity::Source(SourceId::Malformed { raw }) => (4, raw, ""),
-        SymbolIdentity::MetadataKey(key) => (5, key, ""),
-        SymbolIdentity::Function(name) => (6, name, ""),
-        SymbolIdentity::Schema(name) => (7, name, ""),
-        SymbolIdentity::Clause(kind) => (8, clause_name(*kind), ""),
+        SymbolIdentity::Source(SourceId::Frozen(id)) => (2, id.as_str(), ""),
+        SymbolIdentity::Source(SourceId::Malformed { raw }) => (3, raw, ""),
+        SymbolIdentity::MetadataKey(key) => (4, key, ""),
+        SymbolIdentity::Function(name) => (5, name, ""),
+        SymbolIdentity::Schema(name) => (6, name, ""),
+        SymbolIdentity::Clause(kind) => (7, clause_name(*kind), ""),
     }
 }
 

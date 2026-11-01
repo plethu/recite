@@ -4,9 +4,9 @@ use super::*;
 fn parser_retains_definition_and_source_id_spans() {
     let source = concat!(
         ":: tavern_arrival default speaker=innkeeper\n",
-        "> prompt@5e0925cd041f2f6df9e2 speaker=innkeeper\n",
+        "> speaker=innkeeper @mqbmky6\n",
         "  What do you need?\n",
-        "  ? ask_news@8d398d18dbde0d7303c2\n",
+        "  ? @txkzs21\n",
         "    What's the news?\n",
         "    -> local_news\n",
     );
@@ -25,7 +25,7 @@ fn parser_retains_definition_and_source_id_spans() {
         line.source_id_span
             .as_ref()
             .map(|span| (span.start.line(), span.start.column())),
-        Some((2, 3))
+        Some((2, 21))
     );
     let choice = nested_choice(line, 0);
     assert_eq!(
@@ -45,9 +45,9 @@ fn parser_retains_exact_divert_target_spans() {
         "-> dialogue/market.recite::market_intro\n",
         "-> local_news extra\n",
         "-> dialogue/market.recite::\n",
-        "> prompt@5e0925cd041f2f6df9e2\n",
+        "> @mqbmky6\n",
         "  Prompt\n",
-        "  ? ask@8d398d18dbde0d7303c2\n",
+        "  ? @txkzs21\n",
         "    Choice\n",
         "    -> choice_target\n",
     );

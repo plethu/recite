@@ -5,7 +5,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, uri, write_file};
 
-use super::support::{authoring_schema, position_after, position_inside};
+use super::support::{authoring_schema, position_after, position_after_in_header, position_inside};
 
 pub(super) fn initialize_advertises_completion_and_hover() {
     let (harness, result) = Harness::start_with_result(json!({
@@ -30,7 +30,7 @@ pub(super) fn hover_distinguishes_unavailable_and_hidden_choices() {
     let source_uri = uri("file:///workspace/dialogue/hover.recite");
     let source = concat!(
         ":: start default\n",
-        "? ask@72caea2ada317fd50c3e requires=(trust_gte(hazel, rhea, 3))\n",
+        "? requires=(trust_gte(hazel, rhea, 3)) @drkpvxp\n",
         ":if trust_gte(hazel, rhea, 3)\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
@@ -58,7 +58,7 @@ pub(super) fn hover_uses_utf16_positions_after_non_ascii_prefix() {
     let source_uri = uri("file:///workspace/dialogue/hover-utf16.recite");
     let source = concat!(
         ":: start default\n",
-        "? ask@12a62353a44a4b0f77d4 accent=é requires=(trust_gte(hazel, rhea, 3))\n",
+        "? accent=é requires=(trust_gte(hazel, rhea, 3)) @x9grb2e\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -96,20 +96,20 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "> line@186493315915b423ae7a speaker=hazel portrait=wry\n",
-        "> inherited@5c2f4a0a59d5b8f4d9e1 portrait=smile\n",
-        "> line-choice-site@1a2b3c4d5e6f708192a3 speaker=hazel portrait=hazel_only\n",
-        "? choice@0a1b2c3d4e5f60718293 portrait=hazel_only\n",
-        "> malformed-mood@b8ddf7c38a39af4d9be2 mood=\"warm\" stage=fallback_stage\n",
-        "> repeated-mood@47c4b31a79f6e8d0c2a1 mood=warm mood=cold stage=fallback_stage\n",
-        "> unmapped-mood@6ee55288cd8572cabeba mood=cold stage=fallback_stage\n",
-        "> quoted-speaker@0d3a9c5e7f1b2d4a6c8e speaker=\"rhea\" portrait=flat\n",
+        "> speaker=hazel portrait=wry @xf710p5\n",
+        "> portrait=smile @inherited\n",
+        "> speaker=hazel portrait=hazel_only @qmv6hgp\n",
+        "? portrait=hazel_only @atcf38h\n",
+        "> mood=\"warm\" stage=fallback_stage @malformed-mood\n",
+        "> mood=warm mood=cold stage=fallback_stage @repeated-mood\n",
+        "> mood=cold stage=fallback_stage @j560qyt\n",
+        "> speaker=\"rhea\" portrait=flat @quoted-speaker\n",
         "  Hello.\n",
         "  smile in prose.\n",
         "-> saved_block\n",
         ":if can_talk\n",
         "! immediate play_sfx\n",
-        "> projection_terms@06a9ba6082698e2a3a77\n",
+        "> @projection_terms\n",
         "  actor_skill choice_skill_prefix prefix skill_check_prefix item portrait_by_speaker\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
@@ -166,10 +166,7 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(
-                    source,
-                    "line-choice-site@1a2b3c4d5e6f708192a3 speaker=hazel portrait=haz",
-                ),
+                position_after_in_header(source, "qmv6hgp", "speaker=hazel portrait=haz"),
             )
             .expect("line selector contextual metadata value hover"),
     );
@@ -179,7 +176,7 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(source, "choice@0a1b2c3d4e5f60718293 portrait=haz",),
+                position_after_in_header(source, "atcf38h", "portrait=haz"),
             )
             .is_none(),
         "choice selector must not inherit the block speaker context"
@@ -189,10 +186,7 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(
-                    source,
-                    "unmapped-mood@6ee55288cd8572cabeba mood=cold stage=",
-                ),
+                position_after_in_header(source, "j560qyt", "mood=cold stage="),
             )
             .expect("fallback contextual metadata value hover"),
     );
@@ -201,10 +195,7 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
         harness
             .completion(
                 source_uri.clone(),
-                position_after(
-                    source,
-                    "unmapped-mood@6ee55288cd8572cabeba mood=cold stage=",
-                ),
+                position_after_in_header(source, "j560qyt", "mood=cold stage="),
             )
             .expect("fallback contextual metadata completion"),
     );

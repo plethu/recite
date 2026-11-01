@@ -1,17 +1,17 @@
 :: start default
-> welcome@11111111111111111111
+> @ffee6p8
   Welcome.
 ! immediate play_chime()
-? enter@22222222222222222222 requires=(has_clearance())
+? requires=(has_clearance()) @rthh7ab
   Enter.
   -> work
-? leave@33333333333333333333
+? @bqyvpqq
   Leave.
   -> END
 
 :: work
 ! deferred mark_seen()
 ! blocking grant_key()
-> result@44444444444444444444
+> @z0g6c80
   The key is yours.
 -> END

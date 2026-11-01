@@ -11,7 +11,7 @@ fn giant_block_search_bounds_peak_and_preserves_replaced_snapshots()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut source = String::from(":: giant default\n");
     for n in 0..20_000 {
-        source.push_str(&format!("> line_{n}@{n:020x} speaker=mara\n  The courier waits beside the café. Beacon{} remains unanswered.\n\n", n % 4096));
+        source.push_str(&format!("> speaker=mara @line_{n}\n  The courier waits beside the café. Beacon{} remains unanswered.\n\n", n % 4096));
     }
     source.push_str("-> END\n");
     let key = DocumentKey::new("scene.recite")?;

@@ -93,6 +93,7 @@ mod source_id;
 mod source_line_index;
 mod source_location;
 mod source_recovery;
+mod statement_header;
 mod text;
 mod toml_spans;
 mod value;
@@ -121,12 +122,13 @@ pub use document_key::{DocumentKey, DocumentKeyError};
 pub use error::CoreValueError;
 pub use ids::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
 pub use source_id::{
-    SOURCE_ID_ANCHOR_HEX_LEN, SourceAnchor, SourceId, SourceIdKind, is_valid_source_anchor,
-    is_valid_source_label,
+    GENERATED_STABLE_ID_LEN, SourceId, StableId, StableIdGenerator, is_valid_source_name,
+    is_valid_stable_id,
 };
 pub use source_line_index::SourceLineIndex;
 pub use source_location::{SourcePosition, SourceSpan, byte_offset_for_position, source_lines};
 pub use source_recovery::{SourceRecovery, SourceRecoveryClass};
+pub use statement_header::{STABLE_ID_FIELD_PREFIX, StableIdField, StatementHeader};
 pub use text::{
     PlaceholderSyntaxError, PlaceholderSyntaxKind, PlaceholderValidationError,
     decode_interpolation_text, extract_placeholder_names, extract_placeholder_occurrences,

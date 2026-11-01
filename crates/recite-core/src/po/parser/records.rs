@@ -84,19 +84,11 @@ pub(super) fn comment(
         Some(_) => (PoCommentKind::Translator, body),
         None => (PoCommentKind::Other, ""),
     };
-    let is_source_id =
-        kind == PoCommentKind::Extracted && text.strip_prefix("source id:").is_some();
     builder.comments.push(PoComment {
         kind,
         text: text.to_owned(),
         obsolete,
     });
-    if is_source_id {
-        builder.source_id_comments.push((
-            text["source id:".len()..].trim().to_owned(),
-            line.start..line.content_end,
-        ));
-    }
     Ok(())
 }
 

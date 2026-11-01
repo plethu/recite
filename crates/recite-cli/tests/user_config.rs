@@ -51,7 +51,7 @@ fn versioned_and_legacy_configs_are_consumed_by_cli_play() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     let config_root = temp.path().join("empty-config-root");
@@ -66,7 +66,7 @@ fn versioned_and_legacy_configs_are_consumed_by_cli_play() {
         let path = write_file(temp.path(), name, config);
         let output = play_with_config(&asset, &path.to_string_lossy(), &config_root);
         output.assert_success().assert_stderr("");
-        output.assert_stdout_contains("line 11111111111111111111: Hello.");
+        output.assert_stdout_contains("line ffee6p8: Hello.");
     }
 }
 
@@ -76,7 +76,7 @@ fn explicit_config_failures_remain_typed_cli_errors() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     let config_root = temp.path().join("empty-config-root");
@@ -130,12 +130,12 @@ fn malformed_user_config_does_not_change_compile_run_trace_or_dialogue_locale() 
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Welcome.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Welcome.\n-> END\n",
     );
     write_file(
         temp.path(),
         "locale/fr-FR.po",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Welcome.\"\nmsgstr \"Bienvenue.\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Welcome.\"\nmsgstr \"Bienvenue.\"\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -193,7 +193,7 @@ fn malformed_user_config_does_not_change_compile_run_trace_or_dialogue_locale() 
     let configured_run = run(&mut configured_run);
     configured_run.assert_success().assert_stderr("");
     assert_eq!(baseline_run.stdout, configured_run.stdout);
-    assert!(stdout(&configured_run).contains("line 11111111111111111111: Bienvenue."));
+    assert!(stdout(&configured_run).contains("line ffee6p8: Bienvenue."));
 
     let mut baseline_trace = recite();
     baseline_trace

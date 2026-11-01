@@ -1,12 +1,13 @@
-use recite_core::{SourceId, SourceIdKind};
+use recite_core::{StableId, StatementHeader};
 
 use super::{FixtureGenerator, append_line};
+use crate::config::FixtureError;
 use crate::content::GeneratedText;
 
 const END_TARGET: &str = recite_core::ast::END_DIVERT_TARGET;
 
 impl FixtureGenerator {
-    pub(super) fn emit_sources(&mut self) {
+    pub(super) fn emit_sources(&mut self) -> Result<(), FixtureError> {
         let blocks_per_shard = self.profile.blocks.div_ceil(self.profile.shards);
         for shard in 0..self.profile.shards {
             let start = shard * blocks_per_shard;
@@ -16,13 +17,14 @@ impl FixtureGenerator {
             }
             let mut source = String::new();
             for block in start..end {
-                self.emit_block(block, &mut source);
+                self.emit_block(block, &mut source)?;
             }
             self.insert_text(format!("src/shard-{shard:03}.recite"), source);
         }
+        Ok(())
     }
 
-    fn emit_block(&mut self, block: u32, source: &mut String) {
+    fn emit_block(&mut self, block: u32, source: &mut String) -> Result<(), FixtureError> {
         let default = if block == 0 { " default" } else { "" };
         let speaker = block % 8;
         append_line(
@@ -56,61 +58,71 @@ impl FixtureGenerator {
                     format_args!(":match relationship(speaker_00, speaker_01)"),
                 );
                 append_line(source, format_args!("  :case active"));
-                self.emit_line(block, line, speaker, 4, source);
+                self.emit_line(block, line, speaker, 4, source)?;
             } else {
-                self.emit_line(block, line, speaker, 0, source);
+                self.emit_line(block, line, speaker, 0, source)?;
             }
         }
         append_line(
             source,
             format_args!("-> {}\n", self.block_fallthrough_target(block)),
         );
+        Ok(())
     }
-    fn emit_line(&self, block: u32, line: u32, speaker: u32, indent: usize, source: &mut String) {
+    fn emit_line(
+        &self,
+        block: u32,
+        line: u32,
+        speaker: u32,
+        indent: usize,
+        source: &mut String,
+    ) -> Result<(), FixtureError> {
         let prefix = " ".repeat(indent);
         let body_prefix = " ".repeat(indent + 2);
-        append_line(
-            source,
-            format_args!(
-                "{prefix}> {} speaker=speaker_{speaker:02} portrait=\"portrait_{speaker:02}\"",
-                self.entry_source_id(SourceIdKind::Line, block, line)
-            ),
-        );
+        let header = StatementHeader::line()
+            .field("speaker", format_args!("speaker_{speaker:02}"))
+            .field("portrait", format_args!("\"portrait_{speaker:02}\""))
+            .id(&self.entry_id(EntryKind::Line, block, line)?);
+        append_line(source, format_args!("{prefix}{header}"));
         append_line(
             source,
             format_args!("{body_prefix}{}", self.entry_text("line", block, line)),
         );
         if line == 0 && self.block_has_choices(block) {
-            self.emit_choices(block, indent + 2, source);
+            self.emit_choices(block, indent + 2, source)?;
         }
+        Ok(())
     }
-    fn emit_choices(&self, block: u32, indent: usize, source: &mut String) {
+    fn emit_choices(
+        &self,
+        block: u32,
+        indent: usize,
+        source: &mut String,
+    ) -> Result<(), FixtureError> {
         let choice_prefix = " ".repeat(indent);
         let body_prefix = " ".repeat(indent + 2);
         for choice in 0..self.choices_in_block(block) {
             let target = self.choice_target(block, choice);
-            let condition = if self.choice_conditions_enabled(block) {
-                if choice % 2 == 0 {
-                    format!(" requires=(flag(\"flag_{:02}\"))", block % 64)
+            let mut header = StatementHeader::choice().field("sfx", "chime");
+            if self.choice_conditions_enabled(block) {
+                header = if choice % 2 == 0 {
+                    header.field(
+                        "requires",
+                        format_args!("(flag(\"flag_{:02}\"))", block % 64),
+                    )
                 } else {
-                    " requires=(counter_gte(\"counter_00\", 2))".to_owned()
-                }
-            } else {
-                String::new()
-            };
-            append_line(
-                source,
-                format_args!(
-                    "{choice_prefix}? {} sfx=chime{condition}",
-                    self.entry_source_id(SourceIdKind::Choice, block, choice)
-                ),
-            );
+                    header.field("requires", "(counter_gte(\"counter_00\", 2))")
+                };
+            }
+            let header = header.id(&self.entry_id(EntryKind::Choice, block, choice)?);
+            append_line(source, format_args!("{choice_prefix}{header}"));
             append_line(
                 source,
                 format_args!("{body_prefix}{}", self.entry_text("choice", block, choice)),
             );
             append_line(source, format_args!("{body_prefix}-> {target}"));
         }
+        Ok(())
     }
     pub(super) fn lines_in_block(&self, block: u32) -> u32 {
         distributed_count(self.profile.lines, self.profile.blocks, block)
@@ -195,52 +207,50 @@ impl FixtureGenerator {
             .entry(kind, block, index)
     }
 
-    pub(super) fn for_each_entry(&self, mut emit: impl FnMut(&str, String, String)) {
+    pub(super) fn for_each_entry(
+        &self,
+        mut emit: impl FnMut(&str, StableId, String),
+    ) -> Result<(), FixtureError> {
         for block in 0..self.profile.blocks {
             for line in 0..self.lines_in_block(block) {
                 emit(
                     "line",
-                    self.entry_id(SourceIdKind::Line, block, line),
+                    self.entry_id(EntryKind::Line, block, line)?,
                     self.entry_text("line", block, line),
                 );
                 if line == 0 && self.block_has_choices(block) {
                     for choice in 0..self.choices_in_block(block) {
                         emit(
                             "choice",
-                            self.entry_id(SourceIdKind::Choice, block, choice),
+                            self.entry_id(EntryKind::Choice, block, choice)?,
                             self.entry_text("choice", block, choice),
                         );
                     }
                 }
             }
         }
+        Ok(())
     }
 
-    fn entry_source_id(&self, kind: SourceIdKind, block: u32, index: u32) -> String {
-        let label = self.entry_label(kind, block, index);
-        format!("{label}@{}", self.entry_id(kind, block, index))
+    /// Generated corpora use their readable entry names as stable IDs.
+    pub(super) fn entry_id(
+        &self,
+        kind: EntryKind,
+        block: u32,
+        index: u32,
+    ) -> Result<StableId, FixtureError> {
+        let name = match kind {
+            EntryKind::Line => format!("line_{block:05}_{index:03}"),
+            EntryKind::Choice => format!("choice_{block:05}_{index:03}"),
+        };
+        StableId::new(name).map_err(FixtureError::InvalidStableId)
     }
+}
 
-    pub(super) fn entry_id(&self, kind: SourceIdKind, block: u32, index: u32) -> String {
-        let label = self.entry_label(kind, block, index);
-        let path = format!("src/shard-{:03}.recite", self.shard_for_block(block));
-        SourceId::generated_anchor(
-            &path,
-            kind,
-            block.saturating_add(1),
-            index.saturating_add(1),
-            &label,
-            0,
-        )
-        .to_string()
-    }
-
-    fn entry_label(&self, kind: SourceIdKind, block: u32, index: u32) -> String {
-        match kind {
-            SourceIdKind::Line => format!("line_{block:05}_{index:03}"),
-            SourceIdKind::Choice => format!("choice_{block:05}_{index:03}"),
-        }
-    }
+#[derive(Clone, Copy)]
+pub(super) enum EntryKind {
+    Line,
+    Choice,
 }
 
 fn distributed_count(total: u32, buckets: u32, index: u32) -> u32 {

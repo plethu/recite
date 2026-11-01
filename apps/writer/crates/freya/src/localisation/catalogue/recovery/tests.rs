@@ -2,7 +2,7 @@ use super::*;
 
 #[path = "../performance/tests.rs"]
 mod performance;
-const SOURCE: &str = "msgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Bye {name}\"\nmsgstr \"Adieu {name}\"\n";
+const SOURCE: &str = "msgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Bye {name}\"\nmsgstr \"Adieu {name}\"\n";
 
 #[test]
 fn snapshots_share_baseline_and_drafts_but_keep_old_values_after_editing()

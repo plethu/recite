@@ -49,9 +49,7 @@ fn mixed_condition(groups: usize) -> String {
 }
 
 fn condition_source(expression: &str) -> String {
-    format!(
-        ":: start default\n:if {expression}\n  > line@11111111111111111111\n    Hello.\n-> END\n"
-    )
+    format!(":: start default\n:if {expression}\n  > @ffee6p8\n    Hello.\n-> END\n")
 }
 
 fn compile_condition(expression: &str) -> Result<CompileReport, Box<dyn std::error::Error>> {

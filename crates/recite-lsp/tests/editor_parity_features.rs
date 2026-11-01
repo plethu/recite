@@ -19,10 +19,7 @@ const PRESSURE_FIXTURE: &str = include_str!(concat!(
 #[test]
 fn code_actions_project_stable_id_repairs_from_the_shared_kernel() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("temporary project: {error}"));
-    let source_text = CORE_FIXTURE.replace(
-        "> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert",
-        ">",
-    );
+    let source_text = CORE_FIXTURE.replace("> speaker=hazel mood=calm mood=alert @cm3myr8", ">");
     let source = write_source(temp.path(), "dialogue.recite", &source_text);
     let uri = file_uri(&source);
     let mut harness = start_harness(temp.path());
@@ -76,22 +73,30 @@ fn code_actions_project_stable_id_repairs_from_the_shared_kernel() {
         changes[0]["textDocument"],
         json!({ "uri": uri, "version": 2 })
     );
+    let [edit] = changes[0]["edits"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+    else {
+        panic!("expected one stable ID insertion: {changes:?}");
+    };
     assert_eq!(
-        changes[0]["edits"],
-        json!([
-            {
-                "range": {
-                    "start": { "line": 2, "character": 1 },
-                    "end": { "line": 2, "character": 1 }
-                },
-                "newText": " line@fca25e3a4f53bebbc182"
-            }
-        ])
+        edit["range"],
+        json!({
+            "start": { "line": 2, "character": 1 },
+            "end": { "line": 2, "character": 1 }
+        })
     );
+    let inserted = edit["newText"].as_str().unwrap_or_default();
+    let id = inserted
+        .strip_prefix(" @")
+        .unwrap_or_else(|| panic!("insertion is not a trailing ID field: {inserted:?}"));
+    assert!(recite_core::is_valid_stable_id(id), "{id}");
+    assert_eq!(id.len(), recite_core::GENERATED_STABLE_ID_LEN);
     let applied = apply_text_edits(&source_text, &changes[0]["edits"]);
     assert_eq!(
         applied,
-        source_text.replacen(">\n", "> line@fca25e3a4f53bebbc182\n", 1)
+        source_text.replacen(">\n", &format!(">{inserted}\n"), 1)
     );
     harness.finish();
 }

@@ -1,24 +1,22 @@
 ==================
-Draft and malformed IDs remain recoverable
+Missing, empty and malformed IDs remain recoverable
 ==================
 :: recovery default
 >
-  A bare line header remains available while its label is being drafted.
-> missing@
-  A draft header without an anchor remains visible.
-> malformed@bad
-  A malformed anchor remains attached to its line.
-? choice@NOT_AN_ANCHOR
-  A malformed choice anchor remains attached to its choice.
+  A header without an ID remains available while its ID is missing.
+> speaker=hazel @
+  An empty ID field remains visible while it is being typed.
+> @Malformed
+  A malformed ID remains attached to its line.
+? requires=(trusts(player)) @NOT_AN_ID
+  A malformed choice ID remains attached to its choice.
   -> END
 ?
-  A bare choice header remains available while its label is being drafted.
-> long@0123456789abcdef01234
-  An overlong hexadecimal suffix remains one malformed fragment.
-> prefix_junk@0123456789abcdef0123junk
-  A valid-looking prefix followed by junk remains one malformed fragment.
-> valid@0123456789abcdef0123
-  A valid anchor remains separately classified.
+  A bare choice header remains available while its ID is missing.
+> @0123456789abcdef0123junk
+  A digit-led ID with trailing junk remains one fragment.
+> mood=calm @ez1fh09
+  A generated ID follows the metadata.
   -> END
 
 ---
@@ -44,8 +42,15 @@ Draft and malformed IDs remain recoverable
   (line_statement
     (line_marker)
     (hspace)
-    (line_name
-      (identifier))
+    (metadata_field
+      (metadata_key
+        (identifier))
+      (value
+        (symbol
+          (identifier))))
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field))
     (newline))
   (prose_line
     (indent)
@@ -54,11 +59,10 @@ Draft and malformed IDs remain recoverable
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
-        (draft_id)))
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
+        (stable_id)))
     (newline))
   (prose_line
     (indent)
@@ -68,10 +72,22 @@ Draft and malformed IDs remain recoverable
   (choice_statement
     (choice_marker)
     (hspace)
-    (choice_name
-      (identifier)
-      (id_suffix
-        (draft_id)))
+    (requires_clause
+      (requires_key)
+      (grouped_value
+        (expression_part
+          (call
+            (function_name
+              (identifier))
+            (arguments
+              (argument
+                (value
+                  (symbol
+                    (identifier)))))))))
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
+        (stable_id)))
     (newline))
   (prose_line
     (indent)
@@ -95,11 +111,10 @@ Draft and malformed IDs remain recoverable
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
-        (draft_id)))
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
+        (stable_id)))
     (newline))
   (prose_line
     (indent)
@@ -109,22 +124,15 @@ Draft and malformed IDs remain recoverable
   (line_statement
     (line_marker)
     (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
-        (draft_id)))
-    (newline))
-  (prose_line
-    (indent)
-    (prose_text
-      (prose_start))
-    (newline))
-  (line_statement
-    (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
+    (metadata_field
+      (metadata_key
+        (identifier))
+      (value
+        (symbol
+          (identifier))))
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line

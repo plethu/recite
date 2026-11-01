@@ -15,7 +15,7 @@ fn text_whitespace_loss_keeps_provenance_and_requires_review() {
         ),
         (
             SourceFamily::Yarn,
-            "title: Start\n---\nÉlodie: Hello.   #line:11111111111111111111  \n===\n",
+            "title: Start\n---\nÉlodie: Hello.   #line:ffee6p8  \n===\n",
             3,
         ),
         (
@@ -54,7 +54,7 @@ fn text_whitespace_loss_keeps_provenance_and_requires_review() {
         assert!(report.native_diagnostics.is_empty());
         assert!(report.source.contains("\n  Hello.\n"));
         if source.contains("#line:") {
-            assert!(report.source.contains("@11111111111111111111"));
+            assert!(report.source.contains("@ffee6p8"));
         }
     }
 }
@@ -94,7 +94,7 @@ fn speaker_ids_survive_yarn_and_record_imports_as_structured_data() {
             })
             .expect("report");
             assert_eq!(report.status, ImportStatus::Complete, "{report:#?}");
-            assert!(report.source.contains(&format!(" speaker={speaker}\n")));
+            assert!(report.source.contains(&format!(" speaker={speaker} @")));
             assert!(report.source.contains("\n  Bonjour.\n"));
             assert!(!report.source.contains(&format!("{speaker}: Bonjour.")));
             assert!(report.native_diagnostics.is_empty());
@@ -223,7 +223,7 @@ fn schema_backed_import_preserves_native_speaker_policy() {
 fn accepted_source_ids_are_preserved_and_other_ids_have_explicit_mappings() {
     let mapping: FieldMapping =
         serde_json::from_str(r#"{"block":"node","text":"text","id":"id"}"#).expect("mapping");
-    let source = r#"[{"node":"a","text":"First.","id":"authored@11111111111111111111"},{"node":"a","text":"Second.","id":"legacy-key"}]"#;
+    let source = r#"[{"node":"a","text":"First.","id":"ffee6p8"},{"node":"a","text":"Second.","id":"Legacy Key"}]"#;
     let report = import(ImportRequest {
         family: SourceFamily::Json,
         file: "input.json",
@@ -235,12 +235,20 @@ fn accepted_source_ids_are_preserved_and_other_ids_have_explicit_mappings() {
     })
     .expect("report");
     assert_eq!(report.status, ImportStatus::Complete);
-    assert!(report.source.contains("> authored@11111111111111111111"));
+    assert!(report.source.contains("> @ffee6p8"));
     let generated = report
         .mappings
         .iter()
-        .find(|mapping| mapping.original_id.as_deref() == Some("legacy-key"))
+        .find(|mapping| mapping.original_id.as_deref() == Some("Legacy Key"))
         .expect("mapping");
-    assert!(report.source.contains(&generated.generated_id));
-    assert!(generated.generated_id.contains('@'));
+    assert!(
+        report
+            .source
+            .contains(&format!("@{}", generated.generated_id))
+    );
+    assert!(recite_core::is_valid_stable_id(&generated.generated_id));
+    assert_eq!(
+        generated.generated_id.len(),
+        recite_core::GENERATED_STABLE_ID_LEN
+    );
 }

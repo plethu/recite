@@ -18,9 +18,8 @@ use recite_runtime::{
 fn asset() -> CompiledDialogue {
     let source = concat!(
         ":: start default\n",
-        "> render_001@8843fd6f53f020a12b31 ",
-        "bind=(word:string=$display) bind=(number:int=$integer) ",
-        "bind=(decimal:float=$fraction) bind=(flag:bool=$enabled)\n",
+        "> bind=(word:string=$display) bind=(number:int=$integer) ",
+        "bind=(decimal:float=$fraction) bind=(flag:bool=$enabled) @ycxgk0k\n",
         "  Départ \\字 \\{brace\\} {word} / {number} / {decimal} / {flag} / {word} \\\n",
         "-> END\n",
     );

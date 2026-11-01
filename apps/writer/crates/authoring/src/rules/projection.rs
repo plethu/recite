@@ -25,7 +25,7 @@ impl Document {
             for statement in &block.statements {
                 statement.visit_depth_first(&mut |statement| {
                     if let Statement::Choice(choice) = statement
-                        && matches!(&choice.source_id, SourceId::Frozen { anchor, .. } if anchor.as_str() == id) {
+                        && matches!(&choice.source_id, SourceId::Frozen(stable_id) if stable_id.as_str() == id) {
                         found.push(choice);
                     }
                 });
@@ -185,14 +185,13 @@ impl Document {
                     .collect()
             })
             .unwrap_or_default();
-        let header = self
-            .source()
-            .lines()
-            .nth((choice.span.start.line() - 1) as usize)
-            .ok_or(EditError::Position)?;
-        let header_start = offset(
+        let header_fields_end = offset(
             self.source(),
-            recite_core::SourcePosition::new(choice.span.start.line(), 1)?,
+            choice
+                .header_fields_end
+                .as_ref()
+                .ok_or(EditError::Position)?
+                .start,
         )?;
         let text = self
             .find_passage(id)?
@@ -216,7 +215,7 @@ impl Document {
             revision: self.revision(),
             source: self.source_snapshot(),
             condition_range,
-            header_end: header_start + header.trim_end_matches('\r').len(),
+            header_fields_end,
             effect_ranges: ranges,
         })
     }

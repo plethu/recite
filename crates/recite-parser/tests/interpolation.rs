@@ -5,7 +5,7 @@ use recite_parser::parse;
 fn grouped_bindings_are_lowered_with_declared_types() {
     let source = concat!(
         ":: start default\n",
-        "> hello_001@8843fd6f53f020a12b31 bind=(name:string=$display)\n",
+        "> bind=(name:string=$display) @ycxgk0k\n",
         "  Hello, {name}!\n",
         "-> END\n",
     );
@@ -26,7 +26,7 @@ fn grouped_bindings_are_lowered_with_declared_types() {
 fn malformed_grouped_binding_is_a_parse_diagnostic() {
     let source = concat!(
         ":: start default\n",
-        "> hello_001@8843fd6f53f020a12b31 bind=name=$display\n",
+        "> bind=name=$display @ycxgk0k\n",
         "  Hello.\n",
         "-> END\n",
     );
@@ -38,7 +38,7 @@ fn malformed_grouped_binding_is_a_parse_diagnostic() {
 fn unsupported_interpolation_type_aliases_are_rejected_at_the_type_span() {
     for value_type in ["integer", "boolean"] {
         let source = format!(
-            ":: start default\n> hello_001@8843fd6f53f020a12b31 bind=(name:{value_type}=$display)\n  Hello.\n-> END\n"
+            ":: start default\n> bind=(name:{value_type}=$display) @ycxgk0k\n  Hello.\n-> END\n"
         );
         let lowered = parse("dialogue/interpolation.recite", &source).lower_source_file();
 
@@ -46,10 +46,10 @@ fn unsupported_interpolation_type_aliases_are_rejected_at_the_type_span() {
         let diagnostic = &lowered.diagnostics[0];
         assert_eq!(diagnostic.code.as_str(), "RECITE_PARSE008");
         assert_eq!(diagnostic.span.start.line(), 2);
-        assert_eq!(diagnostic.span.start.column(), 45);
+        assert_eq!(diagnostic.span.start.column(), 14);
         assert_eq!(
             diagnostic.span.end.map(|position| position.column()),
-            Some(44 + value_type.chars().count() as u32)
+            Some(13 + value_type.chars().count() as u32)
         );
     }
 }
@@ -63,7 +63,7 @@ fn canonical_interpolation_types_are_lowered_without_aliasing() {
         ("bool", InterpolationType::Boolean),
     ] {
         let source = format!(
-            ":: start default\n> hello_001@8843fd6f53f020a12b31 bind=(value:{value_type}=$provided)\n  Hello, {{value}}.\n-> END\n"
+            ":: start default\n> bind=(value:{value_type}=$provided) @ycxgk0k\n  Hello, {{value}}.\n-> END\n"
         );
         let lowered = parse("dialogue/interpolation.recite", &source).lower_source_file();
 
@@ -79,7 +79,7 @@ fn canonical_interpolation_types_are_lowered_without_aliasing() {
 fn plural_continuation_is_lowered_as_its_own_source_text() {
     let source = concat!(
         ":: start default\n",
-        "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @ycxgk0k\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",
@@ -114,11 +114,11 @@ fn plural_continuation_is_lowered_as_its_own_source_text() {
 fn pipe_on_a_choice_or_non_immediate_line_remains_prose() {
     let source = concat!(
         ":: start default\n",
-        "> line_001@8843fd6f53f020a12b31\n",
+        "> @ycxgk0k\n",
         "  A line.\n",
         "  Another line.\n",
         "  | A literal pipe.\n",
-        "  ? choice@bc0a5874483fd8a329fd\n",
+        "  ? @va0w2vn\n",
         "    | A choice starting with a pipe.\n",
         "    -> END\n",
         "-> END\n",
@@ -139,7 +139,7 @@ fn pipe_on_a_choice_or_non_immediate_line_remains_prose() {
 fn plural_body_without_a_singular_form_remains_prose() {
     let source = concat!(
         ":: start default\n",
-        "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @ycxgk0k\n",
         "  | You have {count} letters.\n",
         "-> END\n",
     );
@@ -156,7 +156,7 @@ fn plural_body_without_a_singular_form_remains_prose() {
 fn plural_body_with_an_extra_arm_preserves_it_for_validation() {
     let source = concat!(
         ":: start default\n",
-        "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @ycxgk0k\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
         "  | You have many letters.\n",

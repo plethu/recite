@@ -1,68 +1,68 @@
 # Original writer fixture: split, converge, split again, and finish.
 :: alarm default
-> alarm_line@32000000000000000001 speaker=ivo
+> speaker=ivo @alarm_line
   The lower gate is stuck open, and the market is still full of people.
-? take_rooftops@32000000000000000002
+? @take_rooftops
   I'll ring the roof bell. You clear the stairs.
   -> rooftops
-? take_market@32000000000000000003
+? @take_market
   Come with me. We'll clear the stalls together.
   -> market
 
 :: rooftops
-> rooftops_line@32000000000000000004 speaker=lea
+> speaker=lea @rooftops_line
   From up here I can see the water crossing the square.
-> bell_line@32000000000000000005 speaker=ivo
+> speaker=ivo @bell_line
   They heard you. The stairs are moving.
 -> gatehouse
 
 :: market
-> market_line@32000000000000000006 speaker=lea
+> speaker=lea @market_line
   Leave the carts! The upper street is still dry.
-> market_reply@32000000000000000007 speaker=ivo
+> speaker=ivo @market_reply
   That's the last stallholder. She wouldn't leave without her cat.
 -> gatehouse
 
 :: gatehouse
-> gatehouse_line@32000000000000000008 speaker=ivo
+> speaker=ivo @gatehouse_line
   Everyone's out. Now we either cut the gate loose or turn the water through the workshops.
-? cut_chain@32000000000000000009
+? @cut_chain
   Cut the chain. We'll rebuild the gate.
   -> broken_gate
-? open_sluice@3200000000000000000a
+? @open_sluice
   Open the side sluice. Save the foundations.
   -> flooded_workshops
 
 :: broken_gate
-> chain_line@3200000000000000000b speaker=lea
+> speaker=lea @chain_line
   Stand back. When it falls, nothing holds it.
-> gate_falls@3200000000000000000c speaker=ivo
+> speaker=ivo @gate_falls
   There it goes. A year's repairs in one splash.
 -> high_ground
 
 :: flooded_workshops
-> sluice_line@3200000000000000000d speaker=lea
+> speaker=lea @sluice_line
   Help me with the wheel. Don't look at the windows.
-> workshop_loss@3200000000000000000e speaker=ivo
+> speaker=ivo @workshop_loss
   My sister works down there. I'll tell her myself.
 -> high_ground
 
 :: high_ground
-> high_ground_line@3200000000000000000f speaker=ivo
+> speaker=ivo @high_ground_line
   Everyone's accounted for. They're waiting to hear what happened.
-? tell_truth@32000000000000000010
+? @tell_truth
   Then we tell them together.
   -> together
-? take_blame@32000000000000000011
+? @take_blame
   I'll speak. It was my decision.
   -> alone
 
 :: together
-> together_line@32000000000000000012 speaker=lea
+> speaker=lea @together_line
   Give us a moment, everyone. We owe you the whole story.
 -> END
 
 :: alone
-> alone_line@32000000000000000013 speaker=lea
+> speaker=lea @alone_line
   I made a choice down there. You deserve to know why.
 -> END

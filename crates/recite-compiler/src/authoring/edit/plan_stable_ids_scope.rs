@@ -1,22 +1,23 @@
-use recite_core::SourcePosition;
+use recite_core::{SourcePosition, StableIdGenerator};
 
 use super::helpers::document;
 use super::plan_stable_ids::plan_insert;
 use super::{AuthoringEditError, AuthoringEditPlan};
 use crate::authoring::{AuthoringQuery, StableIdSummary};
 
-/// Plans insertion of every missing or draft stable ID in one document.
+/// Plans insertion of every missing stable ID in one document.
 ///
 /// The edits stay file-scoped, while the plan retains project-wide
-/// preconditions so generated anchors and namespace collision checks remain
+/// preconditions so generated IDs and namespace collision checks remain
 /// conditional on the complete snapshot used to plan them.
 pub(super) fn plan_insert_missing_ids_for_document(
     snapshot: &AuthoringQuery<'_>,
     key: &recite_core::DocumentKey,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot.checkpoint()?;
     document(snapshot, key)?;
-    plan_insert(snapshot, |candidate, _| candidate == key)
+    plan_insert(snapshot, ids, |candidate, _| candidate == key)
 }
 
 /// Plans insertion of stable IDs intersecting one source range in one
@@ -26,6 +27,7 @@ pub(super) fn plan_insert_missing_ids_in_range(
     snapshot: &AuthoringQuery<'_>,
     key: &recite_core::DocumentKey,
     range: super::SourceRange,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot.checkpoint()?;
     document(snapshot, key)?;
@@ -34,7 +36,7 @@ pub(super) fn plan_insert_missing_ids_in_range(
             document: key.clone(),
         });
     }
-    plan_insert(snapshot, |candidate, stable| {
+    plan_insert(snapshot, ids, |candidate, stable| {
         candidate == key && stable_selected_by_range(stable, range)
     })
 }
@@ -44,8 +46,9 @@ impl AuthoringQuery<'_> {
     pub fn plan_insert_missing_ids_for_document(
         &self,
         key: &recite_core::DocumentKey,
+        ids: &mut StableIdGenerator,
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_ids_for_document(self, key)
+        plan_insert_missing_ids_for_document(self, key, ids)
     }
 
     /// Plans insertion of stable IDs intersecting one source range.
@@ -53,8 +56,9 @@ impl AuthoringQuery<'_> {
         &self,
         key: &recite_core::DocumentKey,
         range: super::SourceRange,
+        ids: &mut StableIdGenerator,
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_ids_in_range(self, key, range)
+        plan_insert_missing_ids_in_range(self, key, range, ids)
     }
 }
 

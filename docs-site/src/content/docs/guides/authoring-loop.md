@@ -8,7 +8,7 @@ Compiled assets and generated schema manifests are outputs; edit their owning so
 
 ## Source and schema
 
-Use the [source reference](/reference/source-format/) for syntax. Preserve anchors when editing
+Use the [source reference](/reference/source-format/) for syntax. Preserve stable IDs when editing
 text. When the game API changes, update the schema producer, regenerate its manifest and compile
 against it.
 

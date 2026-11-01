@@ -46,7 +46,7 @@ fn thousands_of_errors_mount_only_visible_rows_and_last_diagnostic_remains_keybo
                 format!("missing_{n}")
             };
             format!(
-                ":: block_{n}{}\n> line@{n:020x}\n  Prose.\n-> {target}\n",
+                ":: block_{n}{}\n> @line_{n:x}\n  Prose.\n-> {target}\n",
                 if n == 0 { " default" } else { "" }
             )
         })

@@ -1,122 +1,79 @@
 #![cfg(test)]
 
+use std::collections::BTreeSet;
+
 use recite_core::{
-    SOURCE_ID_ANCHOR_HEX_LEN, SourceAnchor, SourceId, SourceIdKind, is_valid_source_anchor,
+    GENERATED_STABLE_ID_LEN, SourceId, StableId, StableIdGenerator, is_valid_stable_id,
 };
 
 #[test]
-fn source_id_parse_classifies_missing_draft_and_frozen_headers() {
-    assert_eq!(SourceId::parse(None), SourceId::Missing);
-
-    assert_eq!(
-        SourceId::parse(Some("line_label@")),
-        SourceId::Draft {
-            label: "line_label".to_owned()
-        }
-    );
-
-    let parsed = SourceId::parse(Some("choice.label-1@7f3a9c2e4b6d8f019a2b"));
+fn trailing_id_fields_parse_as_frozen_ids() {
+    let parsed = SourceId::parse_field("@desk_greeting");
     assert_eq!(
         parsed,
-        SourceId::Frozen {
-            label: "choice.label-1".to_owned(),
-            anchor: SourceAnchor::new("7f3a9c2e4b6d8f019a2b").expect("valid source anchor")
-        }
+        SourceId::Frozen(StableId::new("desk_greeting").expect("valid stable ID"))
     );
-    assert_eq!(
-        parsed.canonical_choice_id().as_ref().map(|id| id.as_str()),
-        Some("7f3a9c2e4b6d8f019a2b")
-    );
-    assert_eq!(
-        parsed.display_text().as_deref(),
-        Some("choice.label-1@7f3a9c2e4b6d8f019a2b")
-    );
-}
-
-#[test]
-fn source_id_parse_accepts_unicode_identifier_labels() {
-    let parsed = SourceId::parse(Some("café_返答@0123456789abcdef0123"));
-
-    assert_eq!(
-        parsed,
-        SourceId::Frozen {
-            label: "café_返答".to_owned(),
-            anchor: SourceAnchor::new("0123456789abcdef0123").expect("valid source anchor")
-        }
-    );
-    assert_eq!(parsed.label(), Some("café_返答"));
     assert_eq!(
         parsed.canonical_line_id().as_ref().map(|id| id.as_str()),
-        Some("0123456789abcdef0123")
+        Some("desk_greeting")
     );
+    assert_eq!(parsed.display_text().as_deref(), Some("@desk_greeting"));
+    assert_eq!(SourceId::Missing.display_text(), None);
 }
 
 #[test]
-fn source_id_parse_rejects_plain_extra_at_and_malformed_label_headers() {
+fn stable_ids_are_lowercase_ascii_without_reserved_separators() {
+    for valid in ["k7q3m9x", "_0e3dc4b", "relay.desk-greeting_2"] {
+        assert!(is_valid_stable_id(valid), "{valid}");
+    }
+    for invalid in [
+        "", "Desk", "1abc", "café", "a&b", "a:b", "a/b", "a@b", "a b", "-a", ".a",
+    ] {
+        assert!(!is_valid_stable_id(invalid), "{invalid}");
+    }
+}
+
+#[test]
+fn malformed_id_fields_keep_their_source_text() {
     for raw in [
-        "",
-        "plain_label",
-        "line@@0123456789abcdef0123",
-        "@0123456789abcdef0123",
-        "line label@0123456789abcdef0123",
-        "1line@0123456789abcdef0123",
+        "@", "@Desk", "@1abc", "@a&b", "@a:b", "@a/b", "@a@b", "desk",
     ] {
         assert_eq!(
-            SourceId::parse(Some(raw)),
+            SourceId::parse_field(raw),
             SourceId::Malformed {
                 raw: raw.to_owned()
-            }
+            },
+            "{raw}"
         );
     }
 }
 
 #[test]
-fn source_id_parse_rejects_malformed_anchors() {
-    for raw in [
-        "line@0123456789abcdef012",
-        "line@0123456789abcdef01234",
-        "line@0123456789abcdef012g",
-        "line@0123456789ABCDEF0123",
-        "line@0123456789abcdef012-",
-    ] {
-        assert_eq!(
-            SourceId::parse(Some(raw)),
-            SourceId::Malformed {
-                raw: raw.to_owned()
-            }
-        );
+fn generated_ids_follow_the_authored_grammar_without_ambiguous_letters() {
+    let mut generator = StableIdGenerator::seeded(7);
+    let ids = (0..10_000)
+        .map(|_| generator.next_id())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(ids.len(), 10_000);
+    for id in &ids {
+        assert_eq!(id.as_str().len(), GENERATED_STABLE_ID_LEN);
+        assert!(is_valid_stable_id(id.as_str()), "{id}");
+        assert!(id.as_str().as_bytes()[0].is_ascii_lowercase(), "{id}");
+        assert!(!id.as_str().contains(['i', 'l', 'o', 'u']), "{id}");
     }
 }
 
 #[test]
-fn generated_anchors_are_fixed_width_lowercase_hex_and_deterministic() {
-    let first = SourceId::generated_anchor(
-        "dialogue/start.recite",
-        SourceIdKind::Line,
-        12,
-        1,
-        "line",
-        0,
-    );
-    let second = SourceId::generated_anchor(
-        "dialogue/start.recite",
-        SourceIdKind::Line,
-        12,
-        1,
-        "line",
-        0,
-    );
-    let salted = SourceId::generated_anchor(
-        "dialogue/start.recite",
-        SourceIdKind::Line,
-        12,
-        1,
-        "line",
-        1,
-    );
+fn seeded_generation_is_reproducible_and_system_generation_varies() {
+    let mut first = StableIdGenerator::seeded(42);
+    let mut second = StableIdGenerator::seeded(42);
+    assert_eq!(first.next_id(), second.next_id());
 
-    assert_eq!(first, second);
-    assert_ne!(first, salted);
-    assert_eq!(first.as_str().len(), SOURCE_ID_ANCHOR_HEX_LEN);
-    assert!(is_valid_source_anchor(first.as_str()));
+    let system = (0..8)
+        .map(|_| StableIdGenerator::from_system().next_id())
+        .collect::<BTreeSet<_>>();
+    assert!(
+        system.len() > 1,
+        "system-seeded generators repeat: {system:?}"
+    );
 }

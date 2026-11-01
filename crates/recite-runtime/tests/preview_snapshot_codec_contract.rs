@@ -16,9 +16,9 @@ use serde_value::Value;
 fn prompt_wire() -> Result<Value, Box<dyn std::error::Error>> {
     let asset = preview_support::asset(concat!(
         ":: start default\n",
-        "> prompt@12345678901234567890 speaker=hero label=\"A\" amount=3 ratio=1.5 enabled=true items=[\"x\",2,3.5,false] bind=(count:int=$count)\n",
+        "> speaker=hero label=\"A\" amount=3 ratio=1.5 enabled=true items=[\"x\",2,3.5,false] bind=(count:int=$count) @w3xnt5r\n",
         "  One item.\n  | {count} items.\n",
-        "  ? go@12345678901234567891\n    Go.\n    -> END\n",
+        "  ? @rbgkhpf\n    Go.\n    -> END\n",
     ));
     let mut values = InterpolationValues::new();
     values.insert("count".to_owned(), ScalarValue::Integer(2));

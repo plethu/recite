@@ -13,11 +13,11 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
 -> Result<(), Box<dyn std::error::Error>> {
     let asset = support::asset(concat!(
         ":: start default\n! deferred initial()\n",
-        "? repeat@11111111111111111111\n  Repeat.\n  -> loop\n",
-        "? finish@22222222222222222222\n  Finish.\n  -> finish\n",
+        "? @ffee6p8\n  Repeat.\n  -> loop\n",
+        "? @rthh7ab\n  Finish.\n  -> finish\n",
         ":: loop\n! deferred iteration()\n",
-        "? repeat@33333333333333333333\n  Repeat.\n  -> loop\n",
-        "? finish@44444444444444444444\n  Finish.\n  -> finish\n",
+        "? @bqyvpqq\n  Repeat.\n  -> loop\n",
+        "? @z0g6c80\n  Finish.\n  -> finish\n",
         ":: finish\n! deferred final()\n-> END\n",
     ));
     let mut original = start_scene(&asset, None)?;
@@ -34,7 +34,7 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
         choose(
             &asset,
             &mut repeated,
-            ChoiceId::new("11111111111111111111")?,
+            ChoiceId::new("ffee6p8")?,
             &EmptyDialogueContext,
         )?,
         DialogueEvent::Prompt { .. }
@@ -44,13 +44,13 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
     choose(
         &asset,
         &mut repeated,
-        ChoiceId::new("33333333333333333333")?,
+        ChoiceId::new("bqyvpqq")?,
         &EmptyDialogueContext,
     )?;
     let DialogueEvent::End { deferred_effects } = choose(
         &asset,
         &mut ending,
-        ChoiceId::new("22222222222222222222")?,
+        ChoiceId::new("rthh7ab")?,
         &EmptyDialogueContext,
     )?
     else {
@@ -66,12 +66,12 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
     assert_eq!(ending.deferred_effects(), deferred_effects);
     assert_eq!(
         ending.selected_choice_history(),
-        [ChoiceId::new("22222222222222222222")?]
+        [ChoiceId::new("rthh7ab")?]
     );
     let DialogueEvent::End { deferred_effects } = choose(
         &asset,
         &mut repeated,
-        ChoiceId::new("44444444444444444444")?,
+        ChoiceId::new("z0g6c80")?,
         &EmptyDialogueContext,
     )?
     else {
@@ -88,9 +88,9 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
     assert_eq!(
         repeated.selected_choice_history(),
         [
-            ChoiceId::new("11111111111111111111")?,
-            ChoiceId::new("33333333333333333333")?,
-            ChoiceId::new("44444444444444444444")?,
+            ChoiceId::new("ffee6p8")?,
+            ChoiceId::new("bqyvpqq")?,
+            ChoiceId::new("z0g6c80")?,
         ]
     );
     assert_eq!(snapshot_session(&earlier), earlier_snapshot);

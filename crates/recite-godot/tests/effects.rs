@@ -14,7 +14,7 @@ fn blocking_effects_require_matching_acknowledgement_id() {
         concat!(
             ":: start default\n",
             "! blocking grant_item(map)\n",
-            "> after@55555555555555555551\n",
+            "> @after\n",
             "  Granted.\n",
             "-> END\n",
         ),
@@ -32,5 +32,5 @@ fn blocking_effects_require_matching_acknowledgement_id() {
 
     let outputs = must_ok(driver.acknowledge_effect(&effect_id, false, Some("inventory closed")));
     assert_eq!(output_kinds(&outputs), ["line", "end"]);
-    assert_line(&outputs[0], "55555555555555555551", "Granted.");
+    assert_line(&outputs[0], "after", "Granted.");
 }

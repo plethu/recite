@@ -5,7 +5,7 @@ use freya_testing::prelude::*;
 #[test]
 fn trial_answers_conditions_and_acknowledges_effects_on_its_own_screen()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n:if trusts(player)\n  > yes@12345678901234567890\n    Yes.\n:else\n  > no@12345678901234567891\n    No.\n! blocking overlay(work)\n-> END\n";
+    let source = ":: start default\n:if trusts(player)\n  > @w3xnt5r\n    Yes.\n:else\n  > @rbgkhpf\n    No.\n! blocking overlay(work)\n-> END\n";
     let mut test = TestingRunner::new(
         recite_writer::regression_app,
         Size2D::new(1200., 900.),

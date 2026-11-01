@@ -25,14 +25,14 @@ fn valid_manifest_open_identity_survives_creation_and_alias_owner_switch() {
         write_file(
             temp.path(),
             "src/definitions.recite",
-            ":: target\n> target_line@22222222222222222222\n  Target.\n",
+            ":: target\n> @rthh7ab\n  Target.\n",
         );
         let main = source_root.join("main.recite");
         let main_uri = file_uri(&main);
         let definitions_uri = file_uri(&source_root.join("definitions.recite"));
         let source = concat!(
             ":: start default\n",
-            "> intro@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Hello.\n",
             "-> src/definitions.recite::target\n",
         );
@@ -86,12 +86,12 @@ fn manifestless_drafts_keep_cross_file_identity_per_root() {
     write_file(
         &first,
         "definitions.recite",
-        ":: target\n> target_line@22222222222222222222\n  Target.\n",
+        ":: target\n> @rthh7ab\n  Target.\n",
     );
     write_file(
         &second,
         "definitions.recite",
-        ":: target\n> target_line@22222222222222222222\n  Target.\n",
+        ":: target\n> @rthh7ab\n  Target.\n",
     );
     let first_main = first.join("main.recite");
     let second_main = second.join("main.recite");
@@ -101,13 +101,13 @@ fn manifestless_drafts_keep_cross_file_identity_per_root() {
     let second_definitions = file_uri(&second.join("definitions.recite"));
     let first_source = concat!(
         ":: start default\n",
-        "> intro@11111111111111111111\n",
+        "> @ffee6p8\n",
         "  Hello.\n",
         "-> first/definitions.recite::target\n",
     );
     let second_source = concat!(
         ":: start default\n",
-        "> intro@11111111111111111111\n",
+        "> @ffee6p8\n",
         "  Hello.\n",
         "-> second/definitions.recite::target\n",
     );

@@ -1,5 +1,6 @@
 use super::*;
-const SOURCE: &str = "# translator note\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n";
+const SOURCE: &str =
+    "# translator note\nmsgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n";
 
 #[test]
 fn save_draft_preserves_comments_and_review_revalidates_placeholders() -> Result<(), String> {
@@ -80,11 +81,7 @@ fn external_changes_and_failed_reload_preserve_both_versions() -> Result<(), Str
         catalogue.draft(id).map(|d| d.forms.join("")),
         Some("Bonsoir {name}".into())
     );
-    assert!(
-        catalogue
-            .entry_for("11111111111111111111", "Revised source")
-            .is_none()
-    );
+    assert!(catalogue.entry_for("ffee6p8", "Revised source").is_none());
     Ok(())
 }
 
@@ -135,7 +132,7 @@ fn comparison_is_bound_to_the_seen_external_version() -> Result<(), String> {
 fn refresh_refuses_external_changes_and_unsaved_drafts() -> Result<(), String> {
     let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
     let path = dir.path().join("fr.po");
-    let source = "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n";
+    let source = "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n";
     std::fs::write(&path, source).map_err(|e| e.to_string())?;
     let mut catalogue = Catalogue::open(&path)?;
     let baseline = catalogue.document.fingerprint();
@@ -174,14 +171,14 @@ fn refresh_refuses_external_changes_and_unsaved_drafts() -> Result<(), String> {
 fn plural_review_is_atomic_and_variant_drafts_are_independent() -> Result<(), String> {
     let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
     let path = dir.path().join("fr.po");
-    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n#, fuzzy\nmsgctxt \"22222222222222222222\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\n#, fuzzy\nmsgctxt \"22222222222222222222&formal\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n#, fuzzy\nmsgctxt \"rthh7ab\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\n#, fuzzy\nmsgctxt \"rthh7ab&formal\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
     std::fs::write(&path, source).map_err(|e| e.to_string())?;
     let mut catalogue = Catalogue::open(&path)?;
     let id = catalogue
-        .entry_for("22222222222222222222", "{count} ticket")
+        .entry_for("rthh7ab", "{count} ticket")
         .ok_or("default")?;
     let formal = catalogue
-        .entry_for("22222222222222222222&formal", "{count} ticket")
+        .entry_for("rthh7ab&formal", "{count} ticket")
         .ok_or("formal")?;
     catalogue.update(
         formal,
@@ -226,12 +223,10 @@ fn plural_review_is_atomic_and_variant_drafts_are_independent() -> Result<(), St
 fn choosing_the_disk_catalogue_discards_plural_drafts() -> Result<(), String> {
     let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
     let path = dir.path().join("fr.po");
-    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"ticket\"\nmsgid_plural \"22222222222222222222\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n";
+    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"ticket\"\nmsgid_plural \"rthh7ab\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n";
     std::fs::write(&path, source).map_err(|e| e.to_string())?;
     let mut catalogue = Catalogue::open(&path)?;
-    let id = catalogue
-        .entry_for("22222222222222222222", "ticket")
-        .ok_or("entry")?;
+    let id = catalogue.entry_for("rthh7ab", "ticket").ok_or("entry")?;
     catalogue.update(
         id,
         Draft {
@@ -255,12 +250,10 @@ fn choosing_the_disk_catalogue_discards_plural_drafts() -> Result<(), String> {
 fn changed_plural_semantics_cannot_silently_rebase_a_draft() -> Result<(), String> {
     let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
     let path = dir.path().join("fr.po");
-    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"ticket\"\nmsgid_plural \"tickets\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n";
+    let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"ticket\"\nmsgid_plural \"tickets\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n";
     std::fs::write(&path, source).map_err(|e| e.to_string())?;
     let mut catalogue = Catalogue::open(&path)?;
-    let id = catalogue
-        .entry_for("22222222222222222222", "ticket")
-        .ok_or("entry")?;
+    let id = catalogue.entry_for("rthh7ab", "ticket").ok_or("entry")?;
     let draft = Draft {
         forms: vec!["one draft".into(), "many drafts".into()],
         reviewed: false,
@@ -341,7 +334,7 @@ fn save_all_is_atomic_and_keeps_every_draft_on_validation_or_disk_conflict() -> 
     let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
     let path = dir.path().join("fr.po");
     let source = format!(
-        "{SOURCE}\nmsgctxt \"22222222222222222222\"\nmsgid \"Bye {{name}}\"\nmsgstr \"Au revoir {{name}}\"\n"
+        "{SOURCE}\nmsgctxt \"rthh7ab\"\nmsgid \"Bye {{name}}\"\nmsgstr \"Au revoir {{name}}\"\n"
     );
     std::fs::write(&path, &source).map_err(|e| e.to_string())?;
     let mut catalogue = Catalogue::open(&path)?;
@@ -432,13 +425,11 @@ fn plural_header_case_does_not_block_reviewed_edits() -> Result<(), Box<dyn std:
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("fr.po");
         let source = format!(
-            "msgid \"\"\nmsgstr \"Language: fr\\n{header}: nplurals=2; plural=(n > 1);\\n\"\n\n#, fuzzy\nmsgctxt \"22222222222222222222\"\nmsgid \"ticket\"\nmsgid_plural \"tickets\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n"
+            "msgid \"\"\nmsgstr \"Language: fr\\n{header}: nplurals=2; plural=(n > 1);\\n\"\n\n#, fuzzy\nmsgctxt \"rthh7ab\"\nmsgid \"ticket\"\nmsgid_plural \"tickets\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n"
         );
         std::fs::write(&path, source)?;
         let mut catalogue = Catalogue::open(&path)?;
-        let id = catalogue
-            .entry_for("22222222222222222222", "ticket")
-            .ok_or("entry")?;
+        let id = catalogue.entry_for("rthh7ab", "ticket").ok_or("entry")?;
         assert_eq!(catalogue.plural_rule(), Some("nplurals=2; plural=(n > 1);"));
         catalogue.update(
             id,

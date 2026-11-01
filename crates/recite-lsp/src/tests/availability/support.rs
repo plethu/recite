@@ -1,35 +1,4 @@
-use lsp_types::Position;
-
-pub(super) fn position_after(source: &str, needle: &str) -> Position {
-    let index = source
-        .find(needle)
-        .unwrap_or_else(|| panic!("needle not found: {needle}"))
-        + needle.len();
-    position_for_byte_index(source, index)
-}
-
-pub(super) fn position_inside(source: &str, needle: &str) -> Position {
-    let index = source
-        .find(needle)
-        .unwrap_or_else(|| panic!("needle not found: {needle}"))
-        + 1;
-    position_for_byte_index(source, index)
-}
-
-fn position_for_byte_index(source: &str, byte_index: usize) -> Position {
-    let mut line = 0_u32;
-    let mut character = 0_u32;
-    for character_value in source[..byte_index].chars() {
-        if character_value == '\n' {
-            line = line.saturating_add(1);
-            character = 0;
-        } else {
-            character = character.saturating_add(character_value.len_utf16() as u32);
-        }
-    }
-    Position::new(line, character)
-}
-
+pub(super) use crate::tests::support::{position_after, position_after_in_header, position_inside};
 pub(super) fn authoring_schema() -> &'static str {
     r#"{
   "schema_version": 1,

@@ -9,6 +9,12 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandCompile
         | MsgId::CliHelpCommandExtract
         | MsgId::CliHelpCommandCheckIds
+        | MsgId::CliHelpCommandAssignIds
+        | MsgId::CliIdsAssigned
+        | MsgId::CliIdsNoneMissing
+        | MsgId::CliIdsRemoved
+        | MsgId::CliHelpArgSince
+        | MsgId::CliHelpArgAllowRemoved
         | MsgId::CliHelpCommandCheckMarkup
         | MsgId::CliHelpCommandCheckMetadata
         | MsgId::CliHelpCommandValidateProject
@@ -221,6 +227,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorAmbiguousFixtureChoice
         | MsgId::CliErrorFixtureToml
         | MsgId::CliErrorMissingPath
+        | MsgId::CliErrorStableIdBaseline
         | MsgId::CliErrorMissingFixtureChoice
         | MsgId::CliErrorNoInputs
         | MsgId::CliErrorOutputOverwritesInput

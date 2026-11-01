@@ -62,7 +62,7 @@ fn clean_line_edits_match_full_projection_across_grouping_phases_and_split_join_
     let mut accepted = 0;
     for phase in 0..8 {
         let source = format!(
-            "{}:: start default\n> line@00000000000000000000\n  Café 🦊 {{value}}.\n? choice\n  Choice.\n  -> END\n# comment\n:: next\n> next\n  Next.\n-> END\n",
+            "{}:: start default\n> @j209fqe\n  Café 🦊 {{value}}.\n?\n  Choice.\n  -> END\n# comment\n:: next\n>\n  Next.\n-> END\n",
             "\n".repeat(phase)
         );
         let chars = source.chars().count();
@@ -99,7 +99,7 @@ fn clean_line_edits_match_full_projection_across_grouping_phases_and_split_join_
 #[test]
 fn offscreen_paste_errors_repair_replacement_coalescing_and_cancellation_use_safe_fallbacks() {
     let source = (0..40)
-        .map(|n| format!(":: block_{n}\n> line_{n}\n  Text 🦊.\n-> END\n"))
+        .map(|n| format!(":: block_{n}\n> @line_{n}\n  Text 🦊.\n-> END\n"))
         .collect::<String>();
     let theme = EditorSyntaxTheme::default();
     let mut rope = Rope::from_str(&source);
@@ -132,7 +132,7 @@ fn offscreen_paste_errors_repair_replacement_coalescing_and_cancellation_use_saf
     highlighter.edit(&replace(&mut rope, offset, offset, "\n"));
     parity(&mut highlighter, &rope, 0..4);
     assert!(highlighter.tree_current);
-    let unknown = Rope::from_str(":: replacement\n> line\n  Different.\n");
+    let unknown = Rope::from_str(":: replacement\n>\n  Different.\n");
     parity(&mut highlighter, &unknown, 0..unknown.len_lines());
     assert!(highlighter.tree_current);
     highlighter.set_language(Some(&language()), &theme);
@@ -143,7 +143,7 @@ fn offscreen_paste_errors_repair_replacement_coalescing_and_cancellation_use_saf
 #[test]
 fn invalid_sources_retain_incremental_global_parsing_and_rust_remains_on_default_path() {
     let theme = EditorSyntaxTheme::default();
-    let mut rope = Rope::from_str(":: broken [\n> line\n  Text.\n");
+    let mut rope = Rope::from_str(":: broken [\n>\n  Text.\n");
     let mut highlighter = SyntaxHighlighter::new();
     highlighter.set_language(Some(&language()), &theme);
     parity(&mut highlighter, &rope, 0..rope.len_lines());
@@ -164,7 +164,7 @@ fn invalid_sources_retain_incremental_global_parsing_and_rust_remains_on_default
 #[test]
 fn dark_viewport_reprojection_after_consecutive_unicode_edits_matches_full_parse() {
     let theme = EditorSyntaxTheme::dark();
-    let mut rope = Rope::from_str(":: start\n> line\n  Café 🦊.\n-> END");
+    let mut rope = Rope::from_str(":: start\n>\n  Café 🦊.\n-> END");
     let mut highlighter = SyntaxHighlighter::new();
     highlighter.set_language(Some(&language()), &theme);
     let mut actual = SyntaxBlocks::default();
@@ -221,11 +221,11 @@ fn structured_fixtures_and_cross_line_recovery_traces_match_full_highlighting() 
         r###"::
 oops
 :: start default
-> intro_001@b3afea83efe6eb4b9f6a
+> @intro_001
   Parser recovery keeps this block available.
 "###,
         r###":: start default
-> plural_line@5fcf9a1f7b20211f4a92 bind=(count:int=["$count)
+> bind=(count:int=["$count) @plural_line
   You have one letter.
   | You have {count} letters.
 -> END
@@ -262,7 +262,7 @@ oops
 #[test]
 fn large_clean_pastes_use_one_global_parse() {
     let theme = EditorSyntaxTheme::default();
-    let mut rope = Rope::from_str(":: start\n> line\n  Original.\n-> END\n");
+    let mut rope = Rope::from_str(":: start\n>\n  Original.\n-> END\n");
     let mut highlighter = SyntaxHighlighter::new();
     highlighter.set_language(Some(&language()), &theme);
     parity(&mut highlighter, &rope, 0..4);

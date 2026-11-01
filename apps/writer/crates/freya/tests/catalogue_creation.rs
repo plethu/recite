@@ -81,7 +81,7 @@ fn catalogue_creation_revalidates_other_scenes_before_writing()
     assert!(has_text(&test, "Preparing the catalogue"));
     std::fs::write(
         dir.path().join("other.recite"),
-        ":: another\n> added@99999999999999999999\n  Added while preparing.\n-> END\n",
+        ":: another\n> @pm96kqq\n  Added while preparing.\n-> END\n",
     )?;
     for _ in 0..100 {
         std::thread::sleep(std::time::Duration::from_millis(10));

@@ -91,7 +91,7 @@ fn source() -> SavedDocument {
         key("main.recite"),
         concat!(
             ":: start\n",
-            "> line@11111111111111111111 speaker=hazel mood=\n",
+            "> speaker=hazel mood= @ffee6p8\n",
             "  ordinary prose\n",
             "  :if knows_\n",
         ),
@@ -110,7 +110,7 @@ fn completion_derives_site_from_source_and_cursor() {
         .expect("source accepted");
     let key = key("main.recite");
 
-    let QueryResult::Ready(speakers) = kernel.snapshot().complete(&key, position(2, 38)) else {
+    let QueryResult::Ready(speakers) = kernel.snapshot().complete(&key, position(2, 12)) else {
         panic!("speaker site is recognized");
     };
     assert!(speakers.iter().any(|candidate| {
@@ -122,7 +122,7 @@ fn completion_derives_site_from_source_and_cursor() {
             )
     }));
 
-    let QueryResult::Ready(empty) = kernel.snapshot().complete(&key, position(2, 48)) else {
+    let QueryResult::Ready(empty) = kernel.snapshot().complete(&key, position(2, 22)) else {
         panic!("empty metadata domain is a ready empty result");
     };
     assert!(empty.is_empty(), "unexpected candidates: {empty:?}");
@@ -157,7 +157,7 @@ fn hover_resolves_the_token_without_a_caller_context() {
         ))
         .expect("source accepted");
     let key = key("main.recite");
-    let hover_result = kernel.snapshot().hover(&key, position(2, 39));
+    let hover_result = kernel.snapshot().hover(&key, position(2, 13));
     let QueryResult::Ready(hover) = hover_result.clone() else {
         panic!("speaker hover is ready: {hover_result:?}");
     };

@@ -24,7 +24,7 @@ fn po_import_merges_files_and_resolves_choice_reason_and_variant()
         "fr",
         "lines.po",
         concat!(
-            "msgctxt \"11111111111111111111\"\n",
+            "msgctxt \"ffee6p8\"\n",
             "msgid \"Hello.\"\n",
             "msgstr \"Bonjour.\"\n",
         ),
@@ -33,7 +33,7 @@ fn po_import_merges_files_and_resolves_choice_reason_and_variant()
         "fr",
         "choices.po",
         concat!(
-            "msgctxt \"22222222222222222222&formal\"\n",
+            "msgctxt \"rthh7ab&formal\"\n",
             "msgid \"Continue.\"\n",
             "msgstr \"Veuillez continuer.\"\n\n",
             "msgctxt \"availability_reason:blocked\"\n",
@@ -42,20 +42,13 @@ fn po_import_merges_files_and_resolves_choice_reason_and_variant()
         ),
     )?;
     assert_eq!(
-        lookup(
-            &catalog,
-            "11111111111111111111",
-            "Hello.",
-            TextDomain::Line,
-            None
-        )
-        .as_deref(),
+        lookup(&catalog, "ffee6p8", "Hello.", TextDomain::Line, None).as_deref(),
         Some("Bonjour.")
     );
     assert_eq!(
         lookup(
             &catalog,
-            "22222222222222222222",
+            "rthh7ab",
             "Continue.",
             TextDomain::Choice,
             Some("formal")
@@ -83,20 +76,20 @@ fn later_conflict_does_not_partially_merge() -> Result<(), Box<dyn std::error::E
     catalog.import_po(
         "fr",
         "first.po",
-        "msgctxt \"33333333333333333333\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
+        "msgctxt \"bqyvpqq\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
     )?;
     catalog.import_po(
         "fr",
         "same.po",
-        "msgctxt \"33333333333333333333\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
+        "msgctxt \"bqyvpqq\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
     )?;
     let error = catalog
         .import_po(
             "fr",
             "conflict.po",
             concat!(
-                "msgctxt \"44444444444444444444\"\nmsgid \"New.\"\nmsgstr \"Nouveau.\"\n\n",
-                "msgctxt \"33333333333333333333\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
+                "msgctxt \"z0g6c80\"\nmsgid \"New.\"\nmsgstr \"Nouveau.\"\n\n",
+                "msgctxt \"bqyvpqq\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
             ),
         )
         .err();
@@ -105,24 +98,11 @@ fn later_conflict_does_not_partially_merge() -> Result<(), Box<dyn std::error::E
         Some(AdapterErrorKind::Localisation)
     );
     assert_eq!(
-        lookup(
-            &catalog,
-            "33333333333333333333",
-            "Hello.",
-            TextDomain::Line,
-            None
-        )
-        .as_deref(),
+        lookup(&catalog, "bqyvpqq", "Hello.", TextDomain::Line, None).as_deref(),
         Some("Bonjour.")
     );
     assert_eq!(
-        lookup(
-            &catalog,
-            "44444444444444444444",
-            "New.",
-            TextDomain::Line,
-            None
-        ),
+        lookup(&catalog, "z0g6c80", "New.", TextDomain::Line, None),
         None
     );
     Ok(())
@@ -132,17 +112,17 @@ fn later_conflict_does_not_partially_merge() -> Result<(), Box<dyn std::error::E
 fn incoming_delta_preserves_first_conflict_and_rolls_back_all_changes()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut catalog = ReciteDialogueCatalog::new();
-    catalog.insert("fr", "11111111111111111111", "Hello.", "Bonjour.")?;
-    catalog.insert("fr", "33333333333333333333", "Later.", "Plus tard.")?;
+    catalog.insert("fr", "ffee6p8", "Hello.", "Bonjour.")?;
+    catalog.insert("fr", "bqyvpqq", "Later.", "Plus tard.")?;
     let before = format!("{catalog:?}");
     let error = catalog
         .import_po(
             "fr",
             "conflict.po",
             concat!(
-                "msgctxt \"22222222222222222222\"\nmsgid \"Goodbye.\"\nmsgstr \"Au revoir.\"\n\n",
-                "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Different.\"\n\n",
-                "msgctxt \"33333333333333333333\"\nmsgid \"Later.\"\nmsgstr \"Also different.\"\n"
+                "msgctxt \"rthh7ab\"\nmsgid \"Goodbye.\"\nmsgstr \"Au revoir.\"\n\n",
+                "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Different.\"\n\n",
+                "msgctxt \"bqyvpqq\"\nmsgid \"Later.\"\nmsgstr \"Also different.\"\n"
             ),
         )
         .expect_err("first conflict rejects the entire document");
@@ -150,17 +130,14 @@ fn incoming_delta_preserves_first_conflict_and_rolls_back_all_changes()
         error.to_string().contains("conflicting catalogue entry"),
         "{error}"
     );
-    assert!(
-        error.to_string().contains("11111111111111111111"),
-        "{error}"
-    );
+    assert!(error.to_string().contains("ffee6p8"), "{error}");
     assert_eq!(format!("{catalog:?}"), before);
     let error = catalog.import_po(
         "fr",
         "internal.po",
         concat!(
-            "msgctxt \"22222222222222222222\"\nmsgid \"Goodbye.\"\nmsgstr \"One.\"\n\n",
-            "msgctxt \"22222222222222222222\"\nmsgid \"Goodbye.\"\nmsgstr \"Two.\"\n"
+            "msgctxt \"rthh7ab\"\nmsgid \"Goodbye.\"\nmsgstr \"One.\"\n\n",
+            "msgctxt \"rthh7ab\"\nmsgid \"Goodbye.\"\nmsgstr \"Two.\"\n"
         ),
     );
     assert!(error.is_err());

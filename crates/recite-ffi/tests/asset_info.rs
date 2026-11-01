@@ -53,8 +53,8 @@ fn load_info(source: &str) -> AssetInfo {
 
 #[test]
 fn asset_info_reports_canonical_identity_and_no_schema() {
-    let first = load_info(":: start default\n> line@11111111111111111111\n  Old.\n-> END\n");
-    let changed = load_info(":: start default\n> line@11111111111111111111\n  New.\n-> END\n");
+    let first = load_info(":: start default\n> @ffee6p8\n  Old.\n-> END\n");
+    let changed = load_info(":: start default\n> @ffee6p8\n  New.\n-> END\n");
     assert_eq!(first.asset_info_format_version, 0);
     assert_eq!(first.asset_id, "test/main.recitec");
     assert_eq!(
@@ -107,7 +107,7 @@ fn asset_info_reports_present_schema_fingerprint() {
         Err(error) => panic!("schema fingerprint should validate: {error}"),
     };
     let bytes = compile_to_bytes_with_schema(
-        ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
         SchemaFingerprint::Fingerprint(schema),
     );
     let mut asset = 0;

@@ -86,10 +86,8 @@ fn a_new_session_on_replacement_is_a_new_active_revision() {
 }
 
 fn revision_asset(source_revision: &str, line: &str) -> recite_core::compiled::CompiledDialogue {
-    let mut asset = asset(&format!(
-        ":: start default\n> line@12345678901234567890\n  {line}\n-> END\n"
-    ))
-    .into_payload();
+    let mut asset =
+        asset(&format!(":: start default\n> @w3xnt5r\n  {line}\n-> END\n")).into_payload();
     asset.lines[0].source_text = format!("{line} {source_revision}");
     asset.lines[0].authored_source_text = format!("{line} {source_revision}");
     recite_core::compiled::CompiledDialogue::new(asset)

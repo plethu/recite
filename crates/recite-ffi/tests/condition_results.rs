@@ -117,7 +117,7 @@ fn condition_results_require_exact_success_flag_and_non_null_payload() {
 fn enum_results_accept_named_variants_in_either_field_order() {
     let source = concat!(
         ":: start default\n:match ready()\n  :case angry\n",
-        "    > matched@58000000000000000001\n      Matched.\n",
+        "    > @wq7v9g8\n      Matched.\n",
         "  :case _\n    -> END\n-> END\n",
     );
     for bytes in [
@@ -164,8 +164,8 @@ fn run_result(input: ResultInput<'_>) -> ReciteStatus {
     run_scene(
         concat!(
             ":: start default\n:if ready()\n",
-            "  > yes@58000000000000000001\n    Ready.\n",
-            ":else\n  > no@58000000000000000002\n    Not ready.\n-> END\n",
+            "  > @wq7v9g8\n    Ready.\n",
+            ":else\n  > @no\n    Not ready.\n-> END\n",
         ),
         input,
     )

@@ -2,8 +2,8 @@ use super::*;
 use freya_testing::prelude::*;
 use recite_writer_model::View;
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Saved prose.\n-> END\n";
-const DRAFT: &str = ":: start default\n> line@11111111111111111111\n  Unfinished prose.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Saved prose.\n-> END\n";
+const DRAFT: &str = ":: start default\n> @ffee6p8\n  Unfinished prose.\n-> END\n";
 
 #[derive(Clone)]
 struct Scenario {

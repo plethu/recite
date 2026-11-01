@@ -11,12 +11,12 @@ pub(super) fn quick_fix_inserts_marker_only_line_and_choice_ids() {
     missing_id::quick_fix_inserts_marker_only_line_and_choice_ids();
 }
 
-pub(super) fn quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers() {
-    missing_id::quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers();
+pub(super) fn quick_fix_appends_ids_after_metadata_and_clauses() {
+    missing_id::quick_fix_appends_ids_after_metadata_and_clauses();
 }
 
-pub(super) fn quick_fix_freezes_draft_and_plain_label_headers() {
-    missing_id::quick_fix_freezes_draft_and_plain_label_headers();
+pub(super) fn malformed_ids_receive_no_missing_id_action() {
+    missing_id::malformed_ids_receive_no_missing_id_action();
 }
 
 pub(super) fn source_fix_all_orders_deterministic_multi_edits_and_preserves_existing_ids() {
@@ -31,16 +31,16 @@ pub(super) fn quick_fix_full_document_range_uses_bounded_candidates() {
     missing_id::quick_fix_full_document_range_uses_bounded_candidates();
 }
 
-pub(super) fn generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions() {
-    missing_id::generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions();
+pub(super) fn generated_ids_are_new_to_the_project() {
+    missing_id::generated_ids_are_new_to_the_project();
 }
 
 pub(super) fn code_actions_use_utf16_crlf_and_indented_ranges() {
     missing_id::code_actions_use_utf16_crlf_and_indented_ranges();
 }
 
-pub(super) fn existing_and_draft_stem_ids_do_not_receive_missing_id_actions() {
-    missing_id::existing_and_draft_stem_ids_do_not_receive_missing_id_actions();
+pub(super) fn existing_ids_do_not_receive_missing_id_actions() {
+    missing_id::existing_ids_do_not_receive_missing_id_actions();
 }
 
 pub(super) fn block_stub_quick_fix_inserts_local_eof_stub() {

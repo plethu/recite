@@ -22,13 +22,9 @@ const PATH: &str = "dialogue/depth.recite";
 
 fn source(expression: &str, choice: bool) -> String {
     if choice {
-        format!(
-            ":: start default\n? ask@12345678901234567890 requires=({expression})\n  Continue?\n  -> END\n"
-        )
+        format!(":: start default\n? requires=({expression}) @w3xnt5r\n  Continue?\n  -> END\n")
     } else {
-        format!(
-            ":: start default\n:if {expression}\n  > hello@12345678901234567890\n    Hello.\n-> END\n"
-        )
+        format!(":: start default\n:if {expression}\n  > @w3xnt5r\n    Hello.\n-> END\n")
     }
 }
 

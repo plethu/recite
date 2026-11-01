@@ -3,9 +3,9 @@ title: Localising dialogue
 description: Extract stable contexts and test a PO catalogue in a deterministic run.
 ---
 
-Start with the [complete example](/examples/headless-cli/). Its source anchors identify the lines
-and choices independently of their text. Keep those anchors when editing; changing an anchor changes
-the localisation identity.
+Start with the [complete example](/examples/headless-cli/). Its stable IDs identify the lines and
+choices independently of their text. Keep those IDs when editing; changing an ID changes the
+localisation identity.
 
 ```sh
 recite extract src --schema schema/realistic.schema.json -o dialogue.pot

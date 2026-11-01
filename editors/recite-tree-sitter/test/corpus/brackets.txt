@@ -2,11 +2,11 @@
 Bracketed prose, markup and incomplete brackets preserve physical lines
 ================================================================================
 :: start default
-> note@11111111111111111111 bind=(name:string=$name)
+> bind=(name:string=$name) @ffee6p8
   [Junction. N-2.] [slow]Wait.[/slow] {name}
   The plan says [cable shaft], not [stairs].
   [Unclosed.
-> following@22222222222222222222
+> @rthh7ab
   Again.
 -> END
 
@@ -25,25 +25,23 @@ Bracketed prose, markup and incomplete brackets preserve physical lines
   (line_statement
     (line_marker)
     (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
-        (stable_id)))
-    (header_attribute
+    (metadata_field
+      (metadata_key
+        (identifier))
+      (value
+        (grouped_value
+          (expression_part
+            (binding
+              (identifier)
+              (type_name
+                (identifier))
+              (value
+                (runtime_binding
+                  (identifier))))))))
+    (stable_id_attribute
       (hspace)
-      (metadata_field
-        (metadata_key
-          (identifier))
-        (value
-          (grouped_value
-            (expression_part
-              (binding
-                (identifier)
-                (type_name
-                  (identifier))
-                (value
-                  (runtime_binding
-                    (identifier)))))))))
+      (stable_id_field
+        (stable_id)))
     (newline))
   (prose_line
     (indent)
@@ -82,10 +80,9 @@ Bracketed prose, markup and incomplete brackets preserve physical lines
     (newline))
   (line_statement
     (line_marker)
-    (hspace)
-    (line_name
-      (identifier)
-      (id_suffix
+    (stable_id_attribute
+      (hspace)
+      (stable_id_field
         (stable_id)))
     (newline))
   (prose_line

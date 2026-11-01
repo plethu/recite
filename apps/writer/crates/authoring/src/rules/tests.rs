@@ -1,10 +1,10 @@
 use super::*;
-const SOURCE: &str = ":: start default\n? reply@22222222222222222222 requires=(standing(3))\n  Continue.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n! blocking mark_map(floodgate)\n-> END\n";
+const SOURCE: &str = ":: start default\n? requires=(standing(3)) @rthh7ab\n  Continue.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n! blocking mark_map(floodgate)\n-> END\n";
 
 #[test]
 fn cheap_dirty_checks_match_the_original_checked_source_comparison() {
     let document = Document::new(SOURCE).unwrap();
-    let original = document.reply_rules("22222222222222222222").unwrap();
+    let original = document.reply_rules("rthh7ab").unwrap();
     let edits: [fn(&mut ReplyRules); 8] = [
         |_| {},
         |r| r.condition = None,

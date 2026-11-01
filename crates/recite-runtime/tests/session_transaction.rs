@@ -11,7 +11,7 @@ use recite_runtime::{
 
 const SOURCE: &str = concat!(
     ":: start default\n! deferred initial()\n",
-    "? continue@11111111111111111111\n  Continue.\n  -> later\n",
+    "? @ffee6p8\n  Continue.\n  -> later\n",
     ":: later\n! deferred second()\n! blocking wait()\n",
     "! deferred final()\n-> END\n",
 );
@@ -26,7 +26,7 @@ fn transaction_commit_matches_direct_traversal() -> Result<(), Box<dyn std::erro
         trial.next_with(&asset, &EmptyDialogueContext, LocaleResolution::new())
     })?;
     assert_eq!(prompt, direct_prompt);
-    let choice = ChoiceId::new("11111111111111111111")?;
+    let choice = ChoiceId::new("ffee6p8")?;
     let effect = choose(&asset, &mut direct, choice.clone(), &EmptyDialogueContext)?;
     let committed = transactional.try_traverse(|trial| {
         trial.choose_with(
@@ -60,7 +60,7 @@ fn failures_and_unwinding_restore_histories_boundaries_and_retained_sessions()
                 session.try_traverse(|trial| {
                     let event = trial.choose_with(
                         &asset,
-                        ChoiceId::new("11111111111111111111")?,
+                        ChoiceId::new("ffee6p8")?,
                         &EmptyDialogueContext,
                         LocaleResolution::new(),
                     )?;
@@ -95,7 +95,7 @@ fn failures_and_unwinding_restore_histories_boundaries_and_retained_sessions()
             assert_eq!(encode_session_messagepack(&session)?, before);
             let retained = retained_trial.expect("trial session retained before rejection");
             let retained_bytes = encode_session_messagepack(&retained)?;
-            let choice = ChoiceId::new("11111111111111111111")?;
+            let choice = ChoiceId::new("ffee6p8")?;
             session.try_traverse(|trial| {
                 trial.choose_with(
                     &asset,
@@ -116,7 +116,7 @@ fn failures_and_unwinding_restore_histories_boundaries_and_retained_sessions()
 fn unique_history_rolls_back_without_a_retained_session() -> Result<(), Box<dyn std::error::Error>>
 {
     let asset = support::asset(SOURCE);
-    let choice = ChoiceId::new("11111111111111111111")?;
+    let choice = ChoiceId::new("ffee6p8")?;
     for unwind in [false, true] {
         let mut session = start_scene(&asset, None)?;
         next(&asset, &mut session, &EmptyDialogueContext)?;
@@ -173,7 +173,7 @@ fn preview_provider_unwind_restores_the_session_and_its_history_projection()
     }
     let asset = support::asset(concat!(
         ":: start default\n! deferred first()\n",
-        "> render@11111111111111111111 bind=(name:string=$name)\n  Hello {name}.\n-> END\n",
+        "> bind=(name:string=$name) @ffee6p8\n  Hello {name}.\n-> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new())?;
     let before = encode_session_messagepack(preview.session())?;
@@ -196,9 +196,9 @@ fn rejected_traversal_restores_nested_continuations_after_reaching_end()
 -> Result<(), Box<dyn std::error::Error>> {
     let asset = support::asset(concat!(
         ":: start default\n:if ready()\n  :if ready()\n",
-        "    ! deferred first()\n    > inner@11111111111111111111\n      Inner.\n",
-        "  > outer@22222222222222222222\n    Outer.\n",
-        "> after@33333333333333333333\n  After.\n-> END\n",
+        "    ! deferred first()\n    > @ffee6p8\n      Inner.\n",
+        "  > @rthh7ab\n    Outer.\n",
+        "> @bqyvpqq\n  After.\n-> END\n",
     ));
     let ready = |_: recite_runtime::ConditionQuery<'_>| {
         Ok::<_, recite_runtime::ConditionEvaluationError>(recite_runtime::ConditionValue::Bool(

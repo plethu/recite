@@ -47,15 +47,15 @@ recite compile --output build/dialogue.recitec dialogue/migrated/*.recite
 
 ```text
 :: first_migrated_scene default
-> scene_001@817fbf427f76e1268554 speaker=mentor
+> speaker=mentor @scene_001
   Keep the example small until validation is boring.
 
-? scene_ask_next@7f43c7ea106707ff048e
+? @scene_ask_next
   What should I check next?
   -> checklist
 
 :: checklist
-> scene_002@a72ac9d10c2fe59c09bc speaker=mentor
+> speaker=mentor @scene_002
   IDs, conditions, effects, metadata, then localisation.
 ! deferred mark_thread(first_migrated_scene, reviewed)
 -> END

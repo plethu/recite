@@ -23,7 +23,7 @@ recite import fixtures/import/lines.csv --from csv --mapping fixtures/import/map
 Each row/object emits a plain dialogue line. Consecutive records with the same block belong
 together. A nonempty target ends that block with a static jump; `END` means termination. A block
 cannot be reopened later in the input. Speakers must be native identifiers. Native validation
-catches duplicate anchors and missing targets; `--schema` also checks the game's declarations.
+catches duplicate IDs and missing targets; `--schema` also checks the game's declarations.
 
 Unmapped fields are reported, including their JSON Pointer or CSV column/header. Repeated JSON keys,
 repeated CSV headers, multiple mappings to one field, missing fields and non-string mapped values

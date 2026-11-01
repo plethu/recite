@@ -248,10 +248,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             document.replace_source(document.revision(), multiline)
         })?;
         assert!(measure("multiline_undo", &mut rows, || document.undo())?);
-        let changed_id =
-            document
-                .source()
-                .replacen("@00000000000000000000", "@ffffffffffffffffffff", 1);
+        let changed_id = document
+            .source()
+            .replacen("@line_0\n", "@line_0_renamed\n", 1);
         measure("id_edit", &mut rows, || {
             document.replace_source(document.revision(), changed_id)
         })?;

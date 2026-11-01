@@ -64,7 +64,7 @@ participants = ["hazel"]
 }
 
 fn valid_source() -> &'static str {
-    ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n"
+    ":: start default speaker=hazel\n> @ffee6p8\n  Hello.\n-> END\n"
 }
 #[test]
 fn build_once_writes_manifest_assets_from_project_sources() {
@@ -140,7 +140,7 @@ fn initial_build_resolves_project_relative_cross_file_targets() {
     write_file(
         temp.path(),
         "src/second.recite",
-        ":: finish speaker=hazel\n> ending@22222222222222222222\n  Finished.\n-> END\n",
+        ":: finish speaker=hazel\n> @rthh7ab\n  Finished.\n-> END\n",
     );
 
     let mut stderr = Vec::new();

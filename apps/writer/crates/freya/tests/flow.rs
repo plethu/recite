@@ -210,7 +210,7 @@ fn arranging_a_card_tracks_pointer_and_keyboard_without_changing_source()
     support::click(&mut test, "Arrange automatically")?;
     assert_eq!(handle(&test), Some(before));
     click(&mut test, "Source")?;
-    assert!(prose(&test, "31000000000000000001").is_some());
+    assert!(prose(&test, "desk_greeting").is_some());
     Ok(())
 }
 
@@ -258,7 +258,7 @@ fn map_pan_zoom_and_persistent_nudge_use_the_same_visible_coordinates()
     settle(&mut test);
     let moved = grip(&test).ok_or("moved grip")?;
     assert!(moved.min_x() > before.min_x());
-    assert!(std::fs::read_to_string(&state_path)?.contains("passage:31000000000000000001"));
+    assert!(std::fs::read_to_string(&state_path)?.contains("passage:desk_greeting"));
     // Pan an empty patch; releasing over the graph must not activate a beat.
     let viewport = test
         .find(|node, e| {

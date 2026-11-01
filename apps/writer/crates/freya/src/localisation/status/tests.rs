@@ -7,12 +7,10 @@ fn an_unsaved_review_remains_in_attention_until_saved() -> Result<(), Box<dyn st
     let path = dir.path().join("fr.po");
     std::fs::write(
         &path,
-        "#, fuzzy\nmsgctxt \"line@11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n",
+        "#, fuzzy\nmsgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n",
     )?;
     let mut catalogue = Catalogue::open(&path)?;
-    let id = catalogue
-        .entry_for("line@11111111111111111111", "Hello")
-        .ok_or("entry")?;
+    let id = catalogue.entry_for("ffee6p8", "Hello").ok_or("entry")?;
     assert_eq!(
         TranslationStatus::for_entry(&catalogue, id),
         TranslationStatus::NeedsReview
@@ -54,10 +52,7 @@ fn fuzzy_singular_entry_without_translation_stays_untranslated()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("fr.po");
-    std::fs::write(
-        &path,
-        "#, fuzzy\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\n",
-    )?;
+    std::fs::write(&path, "#, fuzzy\nmsgctxt \"ffee6p8\"\nmsgid \"Hello\"\n")?;
     let mut catalogue = Catalogue::open(&path)?;
     let id = PoEntryId::new(0);
     assert_eq!(

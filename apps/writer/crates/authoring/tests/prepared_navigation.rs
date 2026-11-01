@@ -3,7 +3,8 @@ use recite_writer_model::{Document, PreparedNavigation, View, Workbench};
 use std::sync::Arc;
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Before.\n-> END\n\n:: later\n> other@22222222222222222222\n  Later.\n-> END\n";
+const SOURCE: &str =
+    ":: start default\n> @ffee6p8\n  Before.\n-> END\n\n:: later\n> @rthh7ab\n  Later.\n-> END\n";
 fn model() -> Result<Workbench> {
     Ok(Workbench::from_document(
         Document::new(SOURCE)?,
@@ -21,7 +22,7 @@ fn prepare(model: &Workbench) -> Result<PreparedNavigation> {
 #[test]
 fn navigation_preserves_history_preview_and_unapplied_source() -> Result {
     let mut model = model()?;
-    model.select(View::Passage("11111111111111111111".into()))?;
+    model.select(View::Passage("ffee6p8".into()))?;
     model.set_draft("Accepted.".into());
     model.apply()?;
     model.start_preview()?;
@@ -87,9 +88,9 @@ fn cancelled_preparation_does_not_touch_the_live_document() -> Result {
 
 #[test]
 fn rules_belong_to_the_exact_accepted_source_even_when_key_and_revision_repeat() -> Result {
-    let source = ":: start default\n? reply@11111111111111111111\n  Continue.\n  -> END\n";
+    let source = ":: start default\n? @ffee6p8\n  Continue.\n  -> END\n";
     let first = Document::new(source)?;
-    let rules = first.reply_rules("11111111111111111111")?;
+    let rules = first.reply_rules("ffee6p8")?;
     assert!(rules.belongs_to(&first));
     let reopened = Document::new(source)?;
     assert_eq!(first.key(), reopened.key());
@@ -103,10 +104,10 @@ fn rules_belong_to_the_exact_accepted_source_even_when_key_and_revision_repeat()
 fn sibling_edits_rebind_staged_rules_but_schema_changes_leave_them_explicitly_stale() -> Result {
     use recite_compiler::authoring::SavedDocument;
     use recite_writer_model::ProjectContext;
-    let source = ":: start default\n? reply@11111111111111111111 requires=(ready())\n  Continue.\n  -> END\n";
+    let source = ":: start default\n? requires=(ready()) @ffee6p8\n  Continue.\n  -> END\n";
     for changed_schema in [false, true] {
         let document = Document::new(source)?;
-        let mut rules = document.reply_rules("11111111111111111111")?;
+        let mut rules = document.reply_rules("ffee6p8")?;
         rules.condition = None;
         let staged = rules.source()?;
         let mut model = Workbench::from_document(document, Some(View::Source))?;

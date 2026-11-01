@@ -11,23 +11,23 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1 && n % 10 == 1 ? 0 : 1);\n"
 
 # translator note
-msgctxt "11111111111111111111"
+msgctxt "ffee6p8"
 msgid "First"
 msgstr "Premier"
-msgctxt "22222222222222222222"
+msgctxt "rthh7ab"
 msgid "Second"
 msgid_plural "Seconds"
 msgstr[0] "Deuxième"
 msgstr[1] "Deuxièmes"
-msgctxt "33333333333333333333"
+msgctxt "bqyvpqq"
 msgid ""
 msgstr "Empty-source"
 #, fuzzy
-msgctxt "44444444444444444444"
+msgctxt "z0g6c80"
 msgid "Fuzzy"
 msgstr "Fuzzy"
 #~ #. obsolete note
 #~ #: old.po:7
-#~ msgctxt "55555555555555555555"
+#~ msgctxt "yes"
 #~ msgid "Gone"
 #~ msgstr "Gone"

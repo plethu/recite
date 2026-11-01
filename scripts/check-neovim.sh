@@ -183,16 +183,16 @@ mkdir -p "$project" "$second_project" "$invalid_project" "$missing_project" "$un
   "$config_home" "$config_dirs" "$data_home" "$data_dirs" "$state_home" "$cache_home"
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$project/core_language_spike.recite"
 cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$invalid_project/invalid.recite"
-sed 's/> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert/>/' \
+sed 's/> speaker=hazel mood=calm mood=alert @cm3myr8/>/' \
   "$repo_root/fixtures/recite/valid/core_language_spike.recite" >"$missing_project/missing.recite"
 printf '%s\n' 'format_version = 1' >"$project/recite.project.toml"
 printf '%s\r\n' \
   ':: marker_probe default' \
-  '> sign@88990011223344556677' \
+  '> @sign' \
   '  -> 😀East, if you can read it.' \
   '  :if this is a sentence, not a branch.' \
   '  # ash marks the lintel.' \
-  '  ? ask@99aabbccddeeff001122' \
+  '  ? @ask' \
   '    Ask what the sign means.' \
   '    -> END' >"$unicode_project/unicode.recite"
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$second_project/core_language_spike.recite"

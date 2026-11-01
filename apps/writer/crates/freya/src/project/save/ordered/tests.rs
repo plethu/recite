@@ -118,7 +118,7 @@ fn giant_save_preparation_shares_source_and_index_and_rejects_repeat_work()
     let mut source = String::from(":: giant default\n");
     for n in 0..20_000 {
         source.push_str(&format!(
-            "> line_{n}@{n:020x}\n  The courier waits beside the café.\n"
+            "> @line_{n}\n  The courier waits beside the café.\n"
         ));
     }
     source.push_str("-> END\n");
@@ -164,7 +164,7 @@ fn saving_a_retained_document_does_not_apply_the_active_invalid_draft()
     model.set_draft(edited.into());
     files.switch(&mut model, &active, None, |_| Ok(()))?;
     model.select(View::Source)?;
-    model.set_draft(":: unfinished\n? invalid".into());
+    model.set_draft(":: unfinished\n?".into());
     let step = files
         .save_plan(&mut model, Scope::Document(retained.clone()))?
         .remove(0);
@@ -173,7 +173,7 @@ fn saving_a_retained_document_does_not_apply_the_active_invalid_draft()
     files.publish_write(&model, &mut write)?.wait()?;
     assert_eq!(std::fs::read_to_string(retained)?, edited);
     assert_eq!(std::fs::read_to_string(active)?, saved_active);
-    assert_eq!(model.draft(), ":: unfinished\n? invalid");
+    assert_eq!(model.draft(), ":: unfinished\n?");
     assert!(model.has_draft());
     Ok(())
 }

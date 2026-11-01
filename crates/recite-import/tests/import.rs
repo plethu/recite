@@ -229,7 +229,7 @@ fn native_validation_rejects_unknown_targets_and_duplicate_authored_ids() {
     let mut unknown_target = records.clone();
     unknown_target[1]["node"] = "Missing".into();
     let mut duplicate_id = records;
-    duplicate_id[1]["id"] = "reply@11111111111111111111".into();
+    duplicate_id[1]["id"] = "ffee6p8".into();
     for records in [unknown_target, duplicate_id] {
         let source = serde_json::to_string(&records).expect("invalid source records");
         let report = run(SourceFamily::Json, "bad.json", &source, Some(&mapping));
@@ -299,7 +299,7 @@ fn migration_never_turns_record_text_into_native_statements() {
     let mapping = serde_json::from_str(r#"{"block":"node","text":"text"}"#).expect("mapping");
     for text in [
         "! immediate steal()",
-        "> other@11111111111111111111",
+        "> @ffee6p8",
         ":: injected",
         "Hello.\n-> END",
         "{variable}",

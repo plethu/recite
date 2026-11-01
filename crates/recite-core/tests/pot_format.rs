@@ -8,7 +8,7 @@ fn pot_preserves_unicode_control_escapes_plural_forms_and_reference_bounds() {
     let document = PotDocument {
         entries: vec![
             PotEntry {
-                context: "11111111111111111111".to_owned(),
+                context: "ffee6p8".to_owned(),
                 source_text: text.to_owned(),
                 plural_source_text: None,
                 comments: vec!["Café\n张伟\tcontrol\u{7f}".to_owned()],
@@ -19,7 +19,7 @@ fn pot_preserves_unicode_control_escapes_plural_forms_and_reference_bounds() {
                 }),
             },
             PotEntry {
-                context: "22222222222222222222".to_owned(),
+                context: "rthh7ab".to_owned(),
                 source_text: "One \"café\" {count}".to_owned(),
                 plural_source_text: Some("Many \\ cafés\n{count}".to_owned()),
                 comments: Vec::new(),
@@ -37,11 +37,11 @@ fn pot_preserves_unicode_control_escapes_plural_forms_and_reference_bounds() {
         concat!(
             "#. Café 张伟 control \n",
             "#: dialogue/张伟_name_part__.recite:0:4294967295\n",
-            "msgctxt \"11111111111111111111\"\n",
+            "msgctxt \"ffee6p8\"\n",
             "msgid \"Café 张伟 \\\"quote\\\" \\\\ \\n\\r\\t\\a\\b\\f\\v\\000\\033\\177\\205\"\n",
             "msgstr \"\"\n\n",
             "#: dialogue/plural.recite:4294967295:0\n",
-            "msgctxt \"22222222222222222222\"\n",
+            "msgctxt \"rthh7ab\"\n",
             "msgid \"One \\\"café\\\" {count}\"\n",
             "msgid_plural \"Many \\\\ cafés\\n{count}\"\n",
             "msgstr[0] \"\"\nmsgstr[1] \"\"\n",

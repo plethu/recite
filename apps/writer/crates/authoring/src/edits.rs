@@ -1,4 +1,4 @@
-use recite_core::SpeakerId;
+use recite_core::{SpeakerId, StatementHeader};
 use recite_parser::{ReciteSyntaxKind, ReciteSyntaxNode, metadata_assignments, parse};
 
 use crate::{DOCUMENT_NAME, Document, EditError, Passage, PassageKind, projection::offset};
@@ -192,10 +192,11 @@ impl Document {
         };
         // An existing continuation becomes the new reply's target, preserving its
         // destination and comment rather than leaving an unreachable appended choice.
+        let header = StatementHeader::choice();
         let addition = if divert.is_some() {
-            format!("{prefix}?{newline}  New choice.{newline}  ")
+            format!("{prefix}{header}{newline}  New choice.{newline}  ")
         } else {
-            format!("{prefix}?{newline}  New choice.{newline}  -> END{newline}{newline}")
+            format!("{prefix}{header}{newline}  New choice.{newline}  -> END{newline}{newline}")
         };
         let mut next = self.source().to_owned();
         next.insert_str(insertion, &addition);

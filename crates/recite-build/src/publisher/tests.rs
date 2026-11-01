@@ -75,7 +75,7 @@ mod unix {
         write(
             temp.path(),
             "dialogue/main.recite",
-            ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+            ":: start default speaker=hazel\n> @ffee6p8\n  Hello.\n-> END\n",
         );
         let request = ProjectBuildRequest::prepare(temp.path())
             .expect("prepare request")

@@ -140,9 +140,9 @@ fn ending_badges_match_flow_for_nested_choices_jumps_and_duplicate_names()
     for source in [
         ":: start default\n-> END\n",
         ":: start\n:if ready()\n  -> END\n",
-        ":: start\n? finish@11111111111111111111\n  Finish.\n  -> END\n? stay@22222222222222222222\n  Stay.\n  -> start\n",
+        ":: start\n? @ffee6p8\n  Finish.\n  -> END\n? @rthh7ab\n  Stay.\n  -> start\n",
         ":: start\n-> other\n:: start\n-> END\n:: other\n-> missing\n",
-        ":: first\n> line@11111111111111111111\n  A line mentioning END.\n-> missing\n",
+        ":: first\n> @ffee6p8\n  A line mentioning END.\n-> missing\n",
     ] {
         let blocks = Document::new(source)?.script()?;
         let links = scene_links(&blocks);

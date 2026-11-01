@@ -4,8 +4,8 @@
   Hello {traveller_name}
 :if trusts(player)
 :else
-> line@anchor
-? choice@anchor
+> @line_anchor
+? @choice_anchor
 >speaker=rhea
 ?requires=(trusts(player))
 > speaker=foo requires=(trusts(player)) reason="why"
@@ -15,6 +15,6 @@
 :if(trusts(player)) :else( :match(
   [slow tone="soft" speed=2]Hello[/slow]
   [ slow tone = "soft" ]Hi[/ slow ]
-> line speaker="unterminated
-> line choices=[one, two
-> line trailing # not comment
+> speaker="unterminated
+> choices=[one, two
+> trailing # not comment

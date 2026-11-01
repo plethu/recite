@@ -52,8 +52,8 @@ impl LocaleProvider for FrenchProvider {
             template: Some("Vous avez {count} lettres.".to_owned()),
             selected_arm: Some(1),
             matched_locale: Some("fr-FR".to_owned()),
-            matched_context: Some("12345678901234567891".to_owned()),
-            matched_key: Some("12345678901234567891".to_owned()),
+            matched_context: Some("rbgkhpf".to_owned()),
+            matched_key: Some("rbgkhpf".to_owned()),
             attempts: Vec::new(),
         })
     }
@@ -98,9 +98,9 @@ impl LocaleProvider for FrenchProvider {
 fn explicit_locale_keeps_source_interpolation_and_plural_provenance() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> hello@12345678901234567890 bind=(name:string=$display)\n",
+        "> bind=(name:string=$display) @w3xnt5r\n",
         "  Hello, {name}.\n",
-        "> letters@12345678901234567891 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @rbgkhpf\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",
@@ -165,7 +165,7 @@ fn explicit_locale_keeps_source_interpolation_and_plural_provenance() {
 #[test]
 fn locale_provider_failure_leaves_session_unchanged() {
     let asset = asset(
-        ":: start default\n> hello@12345678901234567890 bind=(name:string=$display)\n  Hello, {name}.\n-> END\n",
+        ":: start default\n> bind=(name:string=$display) @w3xnt5r\n  Hello, {name}.\n-> END\n",
     );
     let locale = LocaleId::new("fr-FR").expect("locale");
     let provider = FrenchProvider {
@@ -191,9 +191,9 @@ fn identical_sessions_have_identical_expected_trace_for_condition_replay() {
     let asset = asset(concat!(
         ":: start default\n",
         ":if trusts(player)\n",
-        "  > yes@12345678901234567890\n    Yes.\n",
+        "  > @w3xnt5r\n    Yes.\n",
         ":else\n",
-        "  > no@12345678901234567891\n    No.\n",
+        "  > @rbgkhpf\n    No.\n",
         "-> END\n",
     ));
     let mut left = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("left");
@@ -233,7 +233,7 @@ fn identical_sessions_have_identical_expected_trace_for_condition_replay() {
 #[test]
 fn repeated_localized_occurrences_preserve_order_after_restart() {
     let asset = asset(
-        ":: start default\n> hello@12345678901234567890 bind=(name:string=$display)\n  Hello, {name}.\n-> END\n",
+        ":: start default\n> bind=(name:string=$display) @w3xnt5r\n  Hello, {name}.\n-> END\n",
     );
     let provider = FrenchProvider {
         calls: Cell::new(0),

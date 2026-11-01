@@ -4,9 +4,7 @@ use recite_writer_model::{Document, ProjectContext};
 use std::sync::Arc;
 
 fn source(value: &str) -> String {
-    format!(
-        ":: start default\n> line@11111111111111111111 bind=(name:string=${value})\n  Hello {{name}}.\n-> END\n"
-    )
+    format!(":: start default\n> bind=(name:string=${value}) @ffee6p8\n  Hello {{name}}.\n-> END\n")
 }
 fn context(value: &str) -> Result<ProjectContext, Box<dyn std::error::Error>> {
     Ok(ProjectContext {
@@ -26,11 +24,7 @@ fn bindings_share_accepted_revisions_and_survive_edit_history()
     assert_eq!(original[0].value, "person");
     assert_eq!(original[0].value_type, InterpolationType::String);
     assert!(Arc::ptr_eq(&original, &document.preview_bindings()));
-    document.replace_text(
-        document.revision(),
-        "11111111111111111111",
-        "Goodbye {name}.",
-    )?;
+    document.replace_text(document.revision(), "ffee6p8", "Goodbye {name}.")?;
     assert_eq!(document.preview_bindings(), original);
     document.replace_source(document.revision(), source("replacement"))?;
     let changed = document.preview_bindings();

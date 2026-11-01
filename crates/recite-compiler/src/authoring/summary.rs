@@ -132,7 +132,7 @@ impl Collector {
             kind: StableIdKind::Line,
             source_id: line.source_id.clone(),
             source_id_span: line.source_id_span.clone(),
-            insertion_span: line.source_id_insertion_span.clone(),
+            insertion_span: line.header_fields_end.clone(),
             span: line.span.clone(),
             enclosing_block: enclosing_block.clone(),
         });
@@ -148,7 +148,7 @@ impl Collector {
             kind: StableIdKind::Choice,
             source_id: choice.source_id.clone(),
             source_id_span: choice.source_id_span.clone(),
-            insertion_span: choice.source_id_insertion_span.clone(),
+            insertion_span: choice.header_fields_end.clone(),
             span: choice.span.clone(),
             enclosing_block: enclosing_block.clone(),
         });

@@ -6,6 +6,7 @@ use recite_compiler::authoring::{
     BuildTarget, BuildTerminalStatus, PublishNotAttemptedReason, PublishOutcome, PublishRefusal,
     RecoveryNeeded,
 };
+use recite_core::{StableId, StatementHeader};
 use tempfile::TempDir;
 
 use super::super::events::WatchState;
@@ -34,15 +35,13 @@ fn project(with_target: bool) -> String {
 }
 
 fn source(text: &str) -> String {
-    source_with("11111111111111111111", text)
-}
-
-fn source_with(id: &str, text: &str) -> String {
-    source_with_block("start default speaker=hazel", id, text)
+    source_with_block("start default speaker=hazel", "intro", text)
 }
 
 fn source_with_block(header: &str, id: &str, text: &str) -> String {
-    format!(":: {header}\n> intro@{id}\n  {text}\n-> END\n")
+    let line = StatementHeader::line()
+        .id(&StableId::new(id).unwrap_or_else(|error| panic!("test ID `{id}`: {error}")));
+    format!(":: {header}\n{line}\n  {text}\n-> END\n")
 }
 
 fn schema_project() -> &'static str {
@@ -184,7 +183,7 @@ fn newly_discovered_source_is_stale_not_fresh() {
         write(
             temp.path(),
             "dialogue/new.recite",
-            &source_with_block("other", "22222222222222222222", "New source."),
+            &source_with_block("other", "ending", "New source."),
         )
     });
     assert!(

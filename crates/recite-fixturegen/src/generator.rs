@@ -5,9 +5,10 @@ use std::path::Path;
 
 use crate::config::{FixtureError, FixtureProfile};
 use crate::summary::{FileSummary, FixtureCounts, FixtureSummary, hash_hex, summary_hash};
-use recite_core::SourceIdKind;
 
 mod source;
+
+use source::EntryKind;
 
 fn append_line(output: &mut String, line: fmt::Arguments<'_>) {
     match output.write_fmt(line) {
@@ -62,9 +63,9 @@ impl FixtureGenerator {
     ) -> Result<FixtureSummary, FixtureError> {
         self.emit_schema();
         self.emit_project_manifest();
-        self.emit_runtime_fixture();
-        self.emit_locale_catalog();
-        self.emit_sources();
+        self.emit_runtime_fixture()?;
+        self.emit_locale_catalog()?;
+        self.emit_sources()?;
 
         let mut files = Vec::new();
         for (path, content) in &self.files {
@@ -182,7 +183,7 @@ impl FixtureGenerator {
         self.insert_text("recite.project.toml", manifest);
     }
 
-    fn emit_runtime_fixture(&mut self) {
+    fn emit_runtime_fixture(&mut self) -> Result<(), FixtureError> {
         let mut fixture = String::new();
         append_line(
             &mut fixture,
@@ -209,7 +210,7 @@ impl FixtureGenerator {
             &mut fixture,
             format_args!(
                 "[anchors]\nchoice_anchor_line = \"{}\"\n",
-                self.entry_id(SourceIdKind::Line, 0, 0)
+                self.entry_id(EntryKind::Line, 0, 0)?
             ),
         );
         append_line(&mut fixture, format_args!("[choices]"));
@@ -219,8 +220,8 @@ impl FixtureGenerator {
                     &mut fixture,
                     format_args!(
                         "\"{}\" = \"{}\"",
-                        self.entry_id(SourceIdKind::Line, block, 0),
-                        self.entry_id(SourceIdKind::Choice, block, 0)
+                        self.entry_id(EntryKind::Line, block, 0)?,
+                        self.entry_id(EntryKind::Choice, block, 0)?
                     ),
                 );
             }
@@ -230,9 +231,10 @@ impl FixtureGenerator {
             format_args!("\n[effects]\nauto_ack_blocking = true"),
         );
         self.insert_text("runtime-fixture.toml", fixture);
+        Ok(())
     }
 
-    fn emit_locale_catalog(&mut self) {
+    fn emit_locale_catalog(&mut self) -> Result<(), FixtureError> {
         let mut catalog = String::new();
         self.for_each_entry(|kind, id, text| {
             append_line(&mut catalog, format_args!("msgctxt \"{id}\""));
@@ -241,7 +243,8 @@ impl FixtureGenerator {
                 &mut catalog,
                 format_args!("msgstr \"{kind} translation for {id}\"\n"),
             );
-        });
+        })?;
         self.insert_text("locales/en-US.po", catalog);
+        Ok(())
     }
 }

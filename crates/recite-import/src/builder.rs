@@ -6,10 +6,12 @@ use recite_compiler::compile::{
 use recite_core::compiled::{
     CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId, validate_compiled_dialogue,
 };
-use recite_core::{DiagnosticCode, SourcePosition, SourceSpan, SpeakerId, schema::ProjectSchema};
+use recite_core::{
+    DiagnosticCode, SourcePosition, SourceSpan, SpeakerId, StatementHeader, schema::ProjectSchema,
+};
 
 use crate::diagnostics::{INVALID, LOSS, UNSUPPORTED, item};
-use crate::ids::{block_name, stable_id};
+use crate::ids::{ImportedIds, block_name};
 use crate::{
     Action, ImportError, ImportReport, ImportStatus, Location, Provenance, SourceFamily,
     SourceMapping, TargetSource,
@@ -25,6 +27,7 @@ pub(super) struct Builder {
     default_block: bool,
     target_sources: BTreeMap<String, TargetSource>,
     external_blocks: BTreeMap<String, BTreeSet<String>>,
+    ids: ImportedIds,
 }
 
 pub(super) enum Target<'a> {
@@ -58,6 +61,7 @@ impl Builder {
             default_block,
             target_sources: target_sources.cloned().unwrap_or_default(),
             external_blocks: BTreeMap::new(),
+            ids: ImportedIds::default(),
         }
     }
 
@@ -158,10 +162,13 @@ impl Builder {
                 "Text outside a block or after a terminal jump/choice group.",
             );
         }
-        let stable = stable_id(&self.report.file, id, &provenance);
-        let speaker = speaker.map_or(String::new(), |value| format!(" speaker={value}"));
-        self.record(&provenance, "line", id, &stable);
-        self.append(&format!("> {stable}{speaker}\n  {text}\n"));
+        let stable = self.ids.assign(&self.report.file, id, &provenance);
+        let mut header = StatementHeader::line();
+        if let Some(speaker) = speaker {
+            header = header.field("speaker", speaker);
+        }
+        self.record(&provenance, "line", id, stable.as_str());
+        self.append(&format!("{}\n  {text}\n", header.id(&stable)));
         self.prompt = true;
         Ok(())
     }
@@ -184,10 +191,11 @@ impl Builder {
                 "Choice needs a preceding dialogue line and a static target.",
             );
         }
-        let stable = stable_id(&self.report.file, None, &provenance);
+        let stable = self.ids.assign(&self.report.file, None, &provenance);
         let target = self.target_id(target);
-        self.record(&provenance, "choice", None, &stable);
-        self.append(&format!("  ? {stable}\n    {text}\n    -> {}\n", target));
+        self.record(&provenance, "choice", None, stable.as_str());
+        let header = StatementHeader::choice().id(&stable);
+        self.append(&format!("  {header}\n    {text}\n    -> {target}\n"));
         self.terminal = true;
         Ok(())
     }

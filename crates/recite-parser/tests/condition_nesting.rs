@@ -20,7 +20,7 @@ proptest! {
         for grouped in &wrappers {
             expression = if *grouped { format!("({expression})") } else { format!("not {expression}") };
         }
-        let source = format!("{}\n:: after\n> after@22222222222222222222\n  🦀 Still here.\n-> END\n", conditional_source(&expression))
+        let source = format!("{}\n:: after\n> @rthh7ab\n  🦀 Still here.\n-> END\n", conditional_source(&expression))
             .replace('\n', ending);
         let parsed = parse(PATH, &source);
         prop_assert_eq!(parsed.syntax().text().to_string(), source.clone());
@@ -143,7 +143,7 @@ fn wide_boolean_groups_and_argument_lists_remain_shallow() {
 #[test]
 fn condition_nesting_failures_recover_at_following_blocks_and_keep_shallow_errors() {
     let source = format!(
-        "{}\n:: after\n> after@22222222222222222222\n  Still here.\n-> END\n",
+        "{}\n:: after\n> @rthh7ab\n  Still here.\n-> END\n",
         conditional_source(&format!("{}ready()", "not ".repeat(10_000))),
     );
     let lowered = parse(PATH, &source).lower_source_file();
@@ -169,7 +169,5 @@ fn condition_nesting_failures_recover_at_following_blocks_and_keep_shallow_error
 }
 
 fn conditional_source(expression: &str) -> String {
-    format!(
-        ":: start default\n:if {expression}\n  > line@11111111111111111111\n    Hello.\n-> END\n"
-    )
+    format!(":: start default\n:if {expression}\n  > @ffee6p8\n    Hello.\n-> END\n")
 }

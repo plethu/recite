@@ -3,7 +3,7 @@ use recite_writer_model::{Document, ScriptEntry};
 
 fn blocks() -> Result<Arc<[ScriptBlock]>, Box<dyn std::error::Error>> {
     Ok(Document::new(
-        ":: start default\n> one@00000000000000000001\n  Hello.\n? choose@00000000000000000002\n  Go.\n  -> finish\n:: finish\n> end@00000000000000000003\n  Done.\n-> END\n",
+        ":: start default\n> @qkv50yd\n  Hello.\n? @nz8qsyj\n  Go.\n  -> finish\n:: finish\n> @end\n  Done.\n-> END\n",
     )?
     .script_snapshot()?)
 }
@@ -111,7 +111,7 @@ fn saved_placement_and_its_passage_key_invalidate_geometry()
     compare_fresh(&old, blocks.to_vec(), &Default::default(), false);
     let mut changed = blocks.to_vec();
     if let ScriptEntry::Passage(p) = &mut changed[0].entries[0] {
-        p.id = "ffffffffffffffffffff".into();
+        p.id = "bkr28cq".into();
     }
     compare_fresh(&old, changed, &saved, false);
     compare_fresh(&old, blocks.to_vec(), &saved, true);

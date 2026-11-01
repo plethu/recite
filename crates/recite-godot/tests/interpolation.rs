@@ -12,18 +12,18 @@ fn interpolation_asset() -> recite_godot::ReciteDialogueAsset {
         "dialogue/interpolation.recitec",
         concat!(
             ":: start default\n",
-            "> greeting@92000000000000000001 bind=(name:string=$name) bind=(ready:bool=$ready)\n",
+            "> bind=(name:string=$name) bind=(ready:bool=$ready) @bwg39z1\n",
             "  Hello {name}; ready={ready}.\n",
-            "> letters@92000000000000000002 bind=(count:int=$remaining)\n",
+            "> bind=(count:int=$remaining) @letters\n",
             "  You have one letter.\n",
             "  | You have {count} letters.\n",
-            "> prompt@92000000000000000003 bind=(name:string=$name)\n",
+            "> bind=(name:string=$name) @prompt\n",
             "  Pick for {name}.\n",
-            "  ? choose@92000000000000000004 bind=(name:string=$name) bind=(ready:bool=$ready)\n",
+            "  ? bind=(name:string=$name) bind=(ready:bool=$ready) @choose\n",
             "    Choose {name} ({ready}).\n",
             "    -> after\n",
             ":: after\n",
-            "> remaining@92000000000000000005 bind=(remaining:int=$remaining)\n",
+            "> bind=(remaining:int=$remaining) @remaining\n",
             "  Remaining: {remaining}.\n",
             "-> END\n",
         ),
@@ -46,20 +46,16 @@ fn typed_values_drive_lines_plural_and_choices() {
 
     let outputs = must_ok(driver.start(&asset, None, None));
     assert_eq!(output_kinds(&outputs), ["line", "line", "prompt"]);
-    assert_line(
-        &outputs[0],
-        "92000000000000000001",
-        "Hello Ada; ready=true.",
-    );
-    assert_line(&outputs[1], "92000000000000000002", "You have 2 letters.");
+    assert_line(&outputs[0], "bwg39z1", "Hello Ada; ready=true.");
+    assert_line(&outputs[1], "letters", "You have 2 letters.");
     let ReciteOutput::Prompt { choices, .. } = &outputs[2] else {
         panic!("expected prompt output, got {:?}", outputs[2]);
     };
     assert_eq!(choices[0].text, "Choose Ada (true).");
 
-    let outputs = must_ok(driver.select_choice("92000000000000000004"));
+    let outputs = must_ok(driver.select_choice("choose"));
     assert_eq!(output_kinds(&outputs), ["line", "end"]);
-    assert_line(&outputs[0], "92000000000000000005", "Remaining: 2.");
+    assert_line(&outputs[0], "remaining", "Remaining: 2.");
 }
 
 #[test]

@@ -50,7 +50,7 @@ namespace Recite.Unity.Tests
             {
                 seen.Add(item.Kind);
                 if (item is ReciteLineOutput line && line.Line.Text == "The relay wakes.")
-                    runner.SelectChoice("10000000000000000003");
+                    runner.SelectChoice("inspect_relay");
             });
             runner.StartDialogue();
             Assert.That(seen, Does.Contain("prompt"));

@@ -92,8 +92,7 @@ fn action(test: &mut TestingRunner, name: &str) -> Result<(), Box<dyn std::error
     });
     Ok(())
 }
-const SOURCE: &str =
-    ":: start default\n> line@11111111111111111111\n  Hello from the cold source.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello from the cold source.\n-> END\n";
 #[test]
 fn cold_source_to_script_and_map_preserve_content_and_navigation()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -102,7 +101,7 @@ fn cold_source_to_script_and_map_preserve_content_and_navigation()
     wait(&mut test, |test| has(test, "Add line"))?;
     assert!(has(&test, "Hello from the cold source."));
     support::click(&mut test, "Source")?;
-    assert!(has(&test, "> line@11111111111111111111"));
+    assert!(has(&test, "> @ffee6p8"));
     support::click(&mut test, "Map")?;
     assert!(has(&test, "Start"));
     Ok(())
@@ -115,7 +114,7 @@ fn cancelling_a_deferred_view_keeps_source_after_preparation()
     action(&mut test, "Script")?;
     action(&mut test, "Source")?;
     test.poll_n(Duration::from_millis(16), 30);
-    assert!(has(&test, "> line@11111111111111111111"));
+    assert!(has(&test, "> @ffee6p8"));
     assert!(!has(&test, "Add line"));
     action(&mut test, "Script")?;
     wait(&mut test, |test| has(test, "Add line"))?;
@@ -124,7 +123,7 @@ fn cancelling_a_deferred_view_keeps_source_after_preparation()
 #[test]
 fn repeated_invalid_source_view_commands_keep_the_error_visible()
 -> Result<(), Box<dyn std::error::Error>> {
-    let (_dir, mut test) = open(":: broken\n? invalid\n")?;
+    let (_dir, mut test) = open(":: broken\n?\n")?;
     for _ in 0..2 {
         action(&mut test, "Script")?;
         wait(&mut test, |test| has(test, "has no unique frozen ID"))?;

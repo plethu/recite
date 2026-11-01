@@ -3,7 +3,7 @@ use recite_core::po::{PoDiagnosticKind, PoDocument};
 #[test]
 fn adjacent_obsolete_comments_remain_with_the_obsolete_record() {
     let source = concat!(
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"Active\"\n",
         "msgstr \"Actif\"\n",
         "#~ #. obsolete note\n",

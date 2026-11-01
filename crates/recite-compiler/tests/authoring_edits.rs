@@ -89,7 +89,7 @@ fn stable_id_plans_are_deterministic_and_preserve_source_bytes() {
         "?\r\n",
         "  Keep this choice.\r\n",
     );
-    let other = ":: other\r\n> existing@0123456789abcdef0123\r\n  Existing.\r\n";
+    let other = ":: other\r\n> @ez1fh09\r\n  Existing.\r\n";
     let mut kernel = AuthoringKernel::new();
     kernel
         .apply(AuthoringRequest::new(
@@ -105,11 +105,11 @@ fn stable_id_plans_are_deterministic_and_preserve_source_bytes() {
 
     let first = kernel
         .snapshot()
-        .plan_insert_missing_ids()
+        .plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))
         .expect("missing IDs are planable");
     let repeated = kernel
         .snapshot()
-        .plan_insert_missing_ids()
+        .plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))
         .expect("repeated plan is planable");
     assert_eq!(first, repeated);
     assert_eq!(first.preconditions().len(), 2);
@@ -192,7 +192,10 @@ fn stable_id_batch_and_range_plans_scope_edits_but_guard_project_state() {
 
     let batch = kernel
         .snapshot()
-        .plan_insert_missing_ids_for_document(&key("main.recite"))
+        .plan_insert_missing_ids_for_document(
+            &key("main.recite"),
+            &mut recite_core::StableIdGenerator::seeded(1),
+        )
         .expect("document batch is planable");
     assert_eq!(batch.preconditions().len(), 2);
     assert_eq!(batch.edits().len(), 2);
@@ -206,7 +209,11 @@ fn stable_id_batch_and_range_plans_scope_edits_but_guard_project_state() {
     let range = SourceRange::new(position(2, 1), position(3, 1));
     let ranged = kernel
         .snapshot()
-        .plan_insert_missing_ids_in_range(&key("main.recite"), range)
+        .plan_insert_missing_ids_in_range(
+            &key("main.recite"),
+            range,
+            &mut recite_core::StableIdGenerator::seeded(1),
+        )
         .expect("range batch is planable");
     assert_eq!(ranged.preconditions().len(), 2);
     assert_eq!(ranged.edits().len(), 1);
@@ -221,7 +228,7 @@ fn rename_plan_edits_only_definition_and_resolved_references() {
         "-> target\r\n",
         "-> main.recite::target\r\n",
         ":: target\r\n",
-        "> line@11111111111111111111\r\n",
+        "> @ffee6p8\r\n",
         "  unchanged dialogue\r\n",
     );
     let other = ":: other\r\n-> main.recite::target\r\n";
@@ -254,7 +261,7 @@ fn rename_plan_edits_only_definition_and_resolved_references() {
     assert!(rewritten_main.contains("-> renamed\r\n"));
     assert!(rewritten_main.contains("-> main.recite::renamed\r\n"));
     assert!(rewritten_other.contains("-> main.recite::renamed\r\n"));
-    assert!(rewritten_main.contains("line@11111111111111111111"));
+    assert!(rewritten_main.contains("@ffee6p8"));
     assert!(
         recite_parser::parse("main.recite", rewritten_main)
             .lower_source_file()
@@ -375,13 +382,15 @@ fn edit_plans_refuse_stale_generation_collisions_and_partial_recovery() {
             SnapshotGeneration::initial(),
             [
                 SavedDocument::new(key("clean.recite"), ":: clean\n>\n  Missing.\n"),
-                SavedDocument::new(key("broken.recite"), ":: broken\n> line@bad\n  Broken.\n"),
+                SavedDocument::new(key("broken.recite"), ":: broken\n> @Bad\n  Broken.\n"),
             ],
             [],
         ))
         .expect("recoverable source accepted");
     assert!(matches!(
-        partial.snapshot().plan_insert_missing_ids(),
+        partial
+            .snapshot()
+            .plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1)),
         Err(AuthoringEditError::UnsupportedStableId { .. })
     ));
 }
