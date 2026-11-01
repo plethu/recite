@@ -67,8 +67,7 @@ in v1.
 Keyboard, focus, screen-reader, IME, BiDi/RTL, scaling, high-contrast and non-colour paths must
 cover every essential operation. Cancellation, stale generations, progress, failure/retry and focus
 restoration are observable states. Reduced motion and external-edit protection are required.
-[Writer acceptance](../../apps/writer/acceptance.md) owns repeatable human checks; its
-[guide](../../apps/writer/guide.md) owns current workflows.
+Hands-on acceptance is tracked in #237.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 

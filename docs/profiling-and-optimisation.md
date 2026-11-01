@@ -190,8 +190,7 @@ Kernel-open timing excludes filesystem discovery, indexing and painting. The
 [profile script](../scripts/profile-writer.sh) records builds/environment, refuses overwrite and
 runs perf or bench-only DHAT instrumentation; instrumented latency is not normal-run timing and
 production allocation is unchanged. Allocation bounds run in `just writer check`; investigate
-unexplained regressions before changing them. Native scale requirements belong to
-[Writer acceptance](../apps/writer/acceptance.md#scale-and-performance).
+unexplained regressions before changing them.
 
 ## Bounded regression checks
 
