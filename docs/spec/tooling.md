@@ -67,353 +67,46 @@ in v1.
 Keyboard, focus, screen-reader, IME, BiDi/RTL, scaling, high-contrast and non-colour paths must
 cover every essential operation. Cancellation, stale generations, progress, failure/retry and focus
 restoration are observable states. Reduced motion and external-edit protection are required.
-[Writer acceptance](../../apps/writer/acceptance.md) owns repeatable human checks;
-its [guide](../../apps/writer/guide.md) owns current workflows.
+[Writer acceptance](../../apps/writer/acceptance.md) owns repeatable human checks; its
+[guide](../../apps/writer/guide.md) owns current workflows.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Xilem is the Writer frontend; physical-host acceptance remains pending. Software rendering is
-required wherever no usable GPU is available. The `recite-writer` package owns presentation and focus; source editing
-belongs to the shared authoring model, and file replacement, conflict protection and recovery belong
-to `recite-writer-session`. Language, configuration, compiler and runtime ownership remains outside
-the frontend. Exercise regression checks before upgrading the pinned toolkit.
+Xilem is the Writer frontend. The `recite-writer` package owns presentation, focus and interaction;
+source editing belongs to the shared authoring model, and file replacement, conflict protection and
+recovery belong to `recite-writer-session`. Language, configuration, compiler and runtime ownership
+remains outside the frontend. Toolkit fixes live on pinned forks; exercise regression checks before
+moving a pin. Software rendering is required wherever no usable GPU is available.
 
-The Xilem frontend covers retained project documents, beat/line/reply creation, paged Script
-reading, manuscript editing, diagnostics, checked save, recovery and explicit IDE handoff/reload.
-File switching preserves drafts, selection, accepted edit history and recovery leases; closing and
-Save all consider inactive documents too. It uses an external editor for source repair rather than
-embedding a second source editor. Map, project tools, settings, localisation, preview and linked
-destinations use shared product owners with frontend-specific presentation. Automated parity and
-owned Linux drills do not establish physical IME, screen-reader usability, hardware rendering,
-Windows/macOS acceptance or a passing dependency audit; these remain separate acceptance
-requirements.
+The Writer holds these contracts across every workspace; the crate tests are their executable form:
 
-Project-wide beat rename uses the shared reviewed plan and grouped history. Xilem moves the sole
-project owner to a worker separately for Review and Apply, retaining a read-only writing projection
-and mounted native fields. The durable grouped journal commits before the model swap; cancellation
-after that point cannot discard the returned owner. The Writer excludes newer edits, navigation and
-Save until document recovery and the journal's final directory sync complete. Known checkpoint
-failures offer Retry; an unexpected worker panic requires closing with recovery and reopening.
-Global Undo/Redo reaches grouped history after local document edits. Save all includes the staged
-source, references and manifest in the shared save sequence. Successful publication retires
-informational staging guidance only when the shared owner confirms that the grouped edit is fully
-saved. Partial or failed saves retain that guidance; recovery and error reports remain visible.
-Saving does not retire grouped Undo history. During exclusive work, the scene rail retains the
-current project document and frozen outline with navigation disabled.
-
-Standalone declaration TOML uses the same external-editor boundary in Xilem. A bound source can
-restore an invalid recovered draft; export preserves it in a separate editable TOML file, and
-explicit import validates its producer before staging it. The original source changes only on Save
-and generate. Source replacement stays busy through its fixed recovery fence, while manuscript
-typing and history remain independent. Malformed generated JSON is an explicit damaged-output state:
-inspectors identify the last validated declarations as such, retain the observed bytes for conflict
-checks, and allow the standalone source to regenerate the output.
-
-Output and producer-registration reloads share that checked action owner, preserving newer TOML
-typing. An invalid registration replaces the reviewed command with its error. Output changes retire
-cached source-currentness claims; explicit draft validation compares the current buffer with the
-loaded output, independently of project-analysis refresh and Save's own validation.
-
-Native Map geometry, synopsis, spatial selection and personal-placement format have shared owners.
-Its accepted projection is prepared on workers and checked against source identity before adoption;
-placement writes reconcile even when presentation is cancelled. Camera and local layout never add a
-source undo step. Stable pane slots retain Script's mounted text history. Split requires usable
-widths for both panes at the selected control scale; insufficient space prioritises Script without
-changing the requested workspace. The selector disables unavailable Split entry; an existing Split
-workspace explains the adaptation and offers Open map. Compact writing chrome shares its scene
-lookup with the document toolbar. A changed map allocation reveals the selected card at the existing
-zoom; later panning remains free. Visible detail cards stay native controls; low-zoom overview
-paints geometry, retains complete outline/Go to/Connections paths, and restores a readable focused
-card on selection. Focus requests reveal the whole card through the outer scroll container.
-Collapsing focused cards transfers focus to the persistent map viewport.
-
-Map camera zoom alone converts world geometry to logical viewport coordinates; personal UI scale
-changes controls, not card placement or pan distance. Operating-system DPI remains the native
-window's coordinate conversion. Short windows disclose secondary Map tools to preserve the canvas.
-Detail cards retain native identity as viewport membership changes. Their selectable list items
-publish selected state while ordinary child buttons retain activation and keyboard focus. The
-current Linux adapter exposes the item state/action, not a container Selection interface. Synopsis
-labels abbreviate to a bounded number of visual lines while preserving their complete native
-accessibility text. The clamped layout is reused during camera translation.
-
-Cards, routes and the dot grid are mounted and drawn a fixed overscan beyond each viewport edge.
-Drag and wheel panning translate that retained content without rebuilding Writer state, and commit
-the camera through the ordinary gesture or pan input when the overscan would be exposed, when a drag
-is released and once wheel input settles. Escape and pointer cancellation still restore the
-gesture's origin. A local frame and the committed frame at the same position render identically. The
-routes canvas keeps the visible viewport as its accessible bounds, and translating it updates that
-container's accessibility node rather than every mounted descendant.
-
-An admitted manuscript passage owns draft validation independently of native focus. Selecting Script
-does not itself request passage focus; explicit passage navigation and structural creation do. Clean
-editor context follows actual field focus, while unapplied draft/error context survives blur. Read
-beat remains a stable Project-menu command and keeps checked Apply semantics. Refused field focus
-explicitly restores the admitted passage or clears prose focus when none is admitted. Closing a
-picker restores a live origin or an admitted field; it never selects an arbitrary writing field.
-
-The Writer uses the shared personal configuration, palette and command wording. Its welcome,
-temporary examples and project creation use shared launch/session owners. Its personal settings
-apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
-validation. Ordinary exit confirmation never weakens the unsaved-work guard. The project form keeps
-submission actions visible independently of its scrolling fields and groups them directly below
-short content. Unmodified Enter submits a ready form through the guarded shared handler; native
-composition and field Undo retain ownership. Compact presentation adjustments retain their complete
-native names and mounted identity across theme and scale changes. Project failure recovery uses the
-attempted action, without parsing diagnostic strings. It leads with folder/create guidance and
-retains the original diagnostic behind explicit disclosure. Editing the form clears that attempt’s
-feedback without replacing the native fields.
-
-Xilem's project settings workspace retains a conflict-checked opening baseline. Export creates a
-separate TOML draft for the external editor; explicit Import validates the prospective project and
-preserves every open document. Apply writes the exact review, revalidating under the manifest lock.
-Publication and saved-baseline reload briefly exclude document membership and declaration changes;
-manuscript typing remains independent. Successful writes reconcile before asynchronous analysis
-refresh. Uncertain storage outcomes retain the last-known baseline for inspection, retire obsolete
-producer authority, and require explicit baseline reload before another Apply. Failed refresh keeps
-navigation guarded until a checked retry restores project context. Unstarted reloads preserve prior
-authority; failed observations quarantine it, and cancellation cannot erase observed saved changes.
-
-Configured native shortcuts use the shared validated chord matcher. Xilem routes commands before
-text input, retains native text undo/redo, and scopes Apply to the focused manuscript. Composition
-bypasses application shortcuts; document, screen and binding changes invalidate queued commands.
-Focus acknowledgements refresh native context independently of command freshness, preserving a
-queued Save for the same admitted document. Unbound Control/Meta chords cannot become literal text.
-This does not establish physical IME or keyboard-layout acceptance on every platform.
-
-Writing Focus overlays the selected workspace without replacing its manuscript widgets or native
-text history. Leaving Focus restores and reveals the previous valid native focus target, with a
-writing-pane fallback when that target has retired. F6/Shift+F6 cycle visible panes; Vim's
-directional pane prefix is scoped to its originating focus and keyboard context. Composition, focus
-loss and context changes cancel it, and consumed terminal releases cannot activate underlying
-controls. Host-owned command strokes retain their physical release after focus or command scope
-changes, including picker submission returning focus to an action button. Pane focus, redraw and
-accessibility updates must publish without requiring another input event.
-
-Scene/beat search repeats resolve current accepted navigation facts in discovery/rank order. Native
-lookup retains only its accepted query and semantic scene/beat target; each invocation captures a
-fresh location and advances the cursor only after checked navigation succeeds. Cancelling another
-lookup leaves that accepted search intact. Saved-project-text lookup does not replace it.
-
-Native search is a modal dialog over the retained, disabled workspace. Switching ordinary search
-scope preserves the query and native field history while retiring the previous result authority;
-query focus follows the new scope. Closing restores the invoking field. Workers continue to
-reconcile while the dialog is open. Ordinary prose Save includes the current field without a
-separate Apply action; the stable toolbar and unsaved indicator do not expose that staging step.
-
-Saved-text hits retain their frozen passage anchor when available. The Writer opens that passage
-through checked location selection; unfrozen text retains beat navigation. Excerpts centre the first
-matching prose word and remain bounded without retaining the source file. Current-beat lookup in
-Xilem searches line/reply wording and labels through shared passage snapshots, including the active
-visible prose edit captured when lookup opens. Saved-project search retains its saved-file boundary.
-Its case-insensitive substring matches also centre the visible excerpts, including partial words.
-Only the current result page's excerpts are prepared on query/page changes; unrelated renders and
-focus movement within that page reuse them. Activating a result applies the outgoing draft through
-the ordinary guarded navigation path and revalidates the destination. Search keeps its current beat
-and document context visible. An explicit passage reveal applies even when that passage already owns
-focus; it waits for the matching native field to mount and reveals the complete editor, centred in
-its scroll viewport where space permits. Consuming the request ends that reveal, so later browsing
-does not snap back.
-
-Successful navigation reveals the destination's file and beat pages in Xilem's bounded rail.
-Selecting a valid blank document by path or Script link opens its empty writing surface without
-inventing a beat; pending drafts and malformed source retain their ordinary navigation guards.
-Browsing another rail page remains independent until the next accepted destination. Long manuscripts
-expose one range and navigation row in fixed pane chrome, with direct passage lookup available
-throughout. Explicit steps overlap by eight records within the unchanged sixteen-record native
-budget. Retaining the admitted passage changes neither draft nor accepted source; a step that would
-evict it publishes only after ordinary checked selection accepts the outgoing draft. Refusal,
-cancellation and newer typing retain the old range. Continuously mounted fields retain native undo.
-An exact-current refused continuation exposes local edit/reason controls and a short footer summary;
-editing the draft retires that warning, and old disclosure actions cannot expand a replacement. The
-viewport compensates a retained visible passage's position where scroll limits permit; a step
-without a visible retained passage reveals the destination boundary. Explicit jumps reset/reveal
-their destination, while ordinary rebuilds preserve browsing. This remains bounded explicit
-navigation; the pinned virtual-scroll widget's focus and accessibility limitations preclude
-replacing it directly.
-
-Native manuscript preedit holds a synchronous lease on the admitted writing surface. Navigation,
-queued field admission, closing and prepared edit/reload/workspace adoption cannot retire that
-surface until Commit, cancellation or host teardown releases the lease. Query and settings preedit
-retain their ordinary native lifetime without guarding unrelated manuscript receipts. Automatic map
-refresh defers before consuming its pending request. IME termination releases the lease even when
-stale field authority refuses delivery of the text itself.
-
-Native project-tool screens retain the mounted writing surface and its text history. Declaration
-inspection is paged; generated schemas remain read-only. Build saved uses disk inputs, while Save
-all and build completes the shared ordered save sequence first. Build jobs and terminal polling
-outlive the selected screen. Cancellation keeps close and project replacement guarded until the
-terminal result is collected.
-
-Xilem opens ordinary PO catalogues through the shared localisation owner. Exclusive catalogue
-inspection returns that owner on failure or cancellation; queue and entry presentation are bounded
-independently of catalogue size. Translation typing remains editable during a captured save, and
-newer drafts survive its receipt. Save all publishes catalogue drafts before the normal source save
-sequence. Close waits for both layers and their recovery; cancelling close preserves dispatched
-writes. Unexpected catalogue failures quarantine editing and close using only admitted recovery. An
-idle, saved catalogue permits project replacement. Drafts, recovery failure, active saves and
-exclusive or quarantined owners still block it. Prepared project loads cannot replace a Writer while
-its close flow is active. Wording choices and plural guidance share one catalogue projection.
-Translation typing reuses it; a new PO snapshot or changed form count invalidates it. The bilingual
-workspace retains scene navigation and shows a bounded page of source-ordered beat passages with
-independently editable translations, review state and targeted saves. Missing or ambiguous source
-wordings require source review rather than choosing an arbitrary catalogue entry. Fields retain
-native history through reflow, other rows' edits, saves and catalogue worker checkout; off-page
-fields may retire while their catalogue drafts remain recoverable. Source or catalogue replacement
-invalidates the projection. Queued field actions require the active entry and catalogue lifetime,
-and Save from a field publishes that entry without applying manuscript drafts. Opening Localise for
-the current beat prepares accepted source without applying a manuscript or recovered Source draft;
-Source retains its remembered Script selection, and Map supplies its visible selected beat.
-Preparation validates a unique projectable declaration before publishing the bilingual view. Native
-entry components page wording choices, plural forms and long rule text independently. Invalid plural
-metadata disables the entry save while retaining drafts. Wide entry details pair source and
-translation columns; compact forms carry a bounded source excerpt beside the field, with full source
-context below. Translation prose follows reading size independently of control scale. Nearby source
-excludes wording variants of the current passage. Catalogue source actions use the ordinary checked
-navigation and draft-Apply path. Native receipts also require the originating entry and catalogue
-revision at both publication stages. Preview language and wording change only after successful
-navigation; opening the pane does not restart a run. Existing PO language metadata uses validated
-BCP-47 tags, including private-use and extension tags, independently of the catalogue-creation
-picker. Disk decisions require the exact inspected local catalogue and external fingerprint. Keeping
-drafts preserves compatible translations for review against the adopted PO metadata; using disk
-explicitly discards those drafts. Catalogue creation and source refresh use the shared extraction
-and review policy. The native owner is checked out for source operations and returned on
-cancellation, failed dispatch and unwind. Unresolved current or retained source fields refuse
-extraction. Refresh Apply re-extracts source and checks the exact reviewed catalogue before
-publication. A completed PO write remains an applied result even if recovery subsequently fails; the
-Writer surfaces that warning. Configured preview captures the locale, wording, typed values and
-saved-or-draft catalogue policy. Native controls page interpolation inputs and language results;
-staged changes do not replace an active run. Saved catalogue bytes are read on the worker.
-
-Xilem keeps Start/Restart and preparation cancellation outside the scrolling preview content,
-derives their captions and availability from the existing preparation lifecycle, and shows captured
-locale and wording before playback; full captured provenance is an explicit disclosure and remains
-attached to the immutable run. Its input form explicitly describes next-run settings rather than
-inferring a match between staged values and the retained run.
-
-The native host initializes filtered stderr diagnostics before the toolkit and respects an existing
-embedding subscriber. Diagnostic verbosity follows `RUST_LOG`; ordinary debug and release runs have
-no implicit unfiltered trace-file sink.
-
-An unfinished manuscript edit has its own recovery outcome: Return to unfinished edit reveals the
-exact field, while Apply edit and preview uses checked Apply before capturing a new run. Invalid
-text returns to that field with local feedback; newer typing, cancellation, composition or changed
-document authority prevents continuation. Apply does not save. Returning to writing cancels a
-pending Apply-to-preview continuation so its result cannot reopen Preview. Source repair retains its
-separate import boundary. Resolved manuscript edits retire obsolete recovery feedback.
-
-Submission collapses next-run settings while retaining their mounted fields and typing history.
-Expanded settings follow a running conversation; their explicit entry still focuses the requested
-input. Current choices, condition answers and effect acknowledgements precede future configuration.
-
-Terminal preview feedback remains beside Start/Restart independently of scroll position. Failure
-retains its diagnostic independently of playback status. Explicit review checks current scalar
-inputs once using shared validation and worker defaults, focuses a named typed invalid field on its
-bounded page, or reveals the preparation diagnostic when current scalars are valid. Cancellation and
-stale publication remain distinct outcomes; neither attributes an error to current inputs. Accepted
-document replacement clears idle terminal feedback and review targets without freeing an occupied
-preparation slot. Explicit invalid-field review reveals its label, control and validation context
-together when they fit; in a smaller viewport, visibility of the editable control wins. Expanded
-historical diagnostics use the scrolling preview body. Their heading and dismissal control form the
-preferred entry for diagnostic review, while input review still targets the invalid field. The
-scrolling details do not repeat the persistent failure headline. Current-value checks are described
-beside next-run inputs as historical checks, not continuing validity guarantees. Build target
-selection uses native radio semantics and never starts a build; paths and latest results remain
-distinct from the selection controls.
-
-Draft overlays require the captured disk baseline and never save or review the actual drafts.
-Catalogue changes invalidate localised trial requests and mark running localised snapshots stale;
-source-only trials ignore catalogue changes.
-
-Registered schema generation retains one shared activity owner through command validation, process
-execution and checked output publication. Native publication receipts are reconciled even after
-leaving Declarations or requesting cancellation; cancellation after a successful write cannot undo
-its new schema baseline. Project discovery and analysis refresh run separately on a worker. Refresh
-adopts analysis without replacing live field drafts, selection, preview or undo history. A failed or
-stale refresh keeps the published schema and offers a retry. Stale reply controls retire while their
-staged source draft and validation policy remain available for external repair. Command details and
-terminal reports are paged, including individual long lines.
-
-Queued accessibility actions are checked against current native widget identity before dispatch;
-retired controls cannot crash the host or act on a replacement widget. The current host bridge owns
-one native window and its base layer.
-
-Xilem prepares file/selection navigation and applied edit history on workers. File switches retain
-field drafts; linked navigation applies captured prose first and stops if newer typing remains.
-Publication requires the same document and exact outgoing recovery checkpoint. A Save requested
-during explicit Apply waits for successful publication and retirement, then uses the normal checked
-save path; cancellation or failure clears that request. Save All takes precedence over repeated
-Save.
-
-Cold and existing-window links prepare the same concrete destination, including project tools,
-selected localisation passages, stable PO entry contexts, disk comparison and source-update review.
-Cold project loads wait for the preceding load's complete owner retirement before acquiring another
-project recovery lease. This ordering includes dropping a rejected owner after cancellation;
-activation polling continues independently while the next load waits. Candidate catalogue owners and
-inspections remain separate until acceptance. Cancelled, stale and failed destination receipts
-return both exclusive owners before checking publication authority. Activation replies wait for the
-requested destination, including failure after document selection has already succeeded. Source
-links use the existing checked IDE handoff after ordinary prose navigation; recovered Source drafts
-require explicit repair/import. Their activation completes at process start, independently of editor
-exit, and cancellation is checked again at the launcher.
-
-Xilem prepares explicit disk reload on a worker, including discovery, accepted projections, saved
-search inputs and a complete independent recovery archive. Adoption requires the same project root,
-current selection/draft, baseline and retained session inputs. Completed archives remain available
-even when cancellation or newer typing prevents adoption. Recovery cleanup is queued before an
-infallible owner swap and joined off-thread; a later cleanup failure reports an accepted reload with
-failed cleanup, without rolling back adopted content. Subsequent typing retains its own recovery.
-
-Disk comparison observes the accepted source and unapplied field separately, preserving selection
-and history. Keep Writer retains the exact model and rebases its saved inputs to the inspected disk;
-Use Disk adopts that source as one history step. Both archive the full prior recovery and recheck
-the exact local session and disk before admission. Once recovery submission succeeds, publication
-completes despite cancellation; a late durability failure reports adoption with incomplete recovery.
-Xilem composes this workflow through the existing exclusive project worker. Its comparison mounts
-one bounded changed passage at a time. A separate IDE merge draft materializes pending prose without
-applying it to the live document; Import validates against the captured context and inspected disk,
-then adopts one undoable source replacement. Only explicit Save writes the source file. The Writer
-retains the full compared wording and emphasise changed words with bold and underline. This cue
-works in monochrome. Comparison wrapping accounts for the scene rail and personal UI scale.
-Successful decisions replace unresolved choices with the specific adopted outcome, source identity,
-Save behavior and recovery access. Recovery or presentation warnings preserve an already-adopted
-outcome. Publication on the active disk workspace reveals the completed outcome's preferred Return
-control once; completion after leaving it preserves the author's workspace and focus. Status text
-wraps within the remaining status-bar width. A failed reinspection may retain the result for the
-same document, never another document.
-
-Xilem observes source and catalogue changes in the background, including atomic file replacement.
-Notifications coalesce into bounded path batches; overflow requests a rescan of open sources.
-Observation receipts require the same saved baseline and catalogue lifetime. Pending checks resume
-after saves or exclusive project/catalogue work returns its owner, without idle UI polling. Notices
-mount one changed file at a time and require explicit Compare; detection never applies a draft or
-reloads a document. Comparing a retained source uses ordinary draft-preserving file navigation.
-Watch failures remain advisory because checked saves still enforce disk conflicts.
-
-The Xilem editor handoff saves accepted source and recovery in the background without accepting the
-active field draft. It uses the OS preferred application or literal configured arguments. Cancelling
-the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's
-lifetime stays independent of the Writer window, and completion names its source document.
-
-Its runtime preview prepares immutable accepted inputs off-thread and publishes only into the
-still-current document and requested destination. Explicit cancellation invalidates publication
-immediately; an active compiler phase may finish before another starts. Preview occupies the editor
-workspace while retaining the writing panes and reference snapshot. Return to writing preserves
-staged inputs and the running conversation, and lets unchanged preparation finish in the background
-without reopening Preview or moving focus. Intervening document edits still reject that result.
-Closing the input controls stays in Preview. Playback uses the shared runtime for choices, condition
-inputs and explicit blocking-effect acknowledgements. It never executes game effects, persists trial
-state, applies field drafts or silently replaces a running snapshot after edits. Restart is
-explicit, and failed preparation retains the previous run. Accepted sibling source participates;
-unapplied sibling fields do not. Captured requests and rejected or replaced runtimes return to the
-worker for destruction. The runtime owns its caption and catalogue provenance, so retained document
-trials recover their own metadata when switching files. A failed restart preserves that provenance
-with the prior run.
-
-The Writer inspects that run through the shared trace projection. Events, translation lookups and
-plural lookups retain their own capture order. Presentation mounts eight summaries or six record
-fields at a time; complete text and hexadecimal digest values use bounded pages. Typed arguments,
-pending versus committed choices and lookup attempts remain distinct. Typing and failed restart
-retain the inspected record; only successful restart resets its cursor.
+- **Drafts and history survive.** Navigation, file switches, workspace changes, reloads, catalogue
+  work and project tools never discard an unapplied field draft or native text history. Moving away
+  from a draft applies it through the ordinary checked path and stops on refusal, cancellation or
+  newer typing. Apply never saves; only explicit Save writes files, and Save all follows the shared
+  ordered save sequence across sources, catalogues and staged project edits.
+- **Work is checked before publication.** Expensive work (projections, previews, reloads, disk
+  comparison, builds, schema generation, catalogue operations) runs on workers against captured
+  inputs. A result publishes only into the same document, baseline and destination it was prepared
+  for; stale, cancelled or failed results return exclusive owners and change nothing visible.
+  Results that already wrote durable state still report that outcome after cancellation.
+- **Composition is protected.** IME preedit holds the writing surface until commit or cancellation;
+  application shortcuts never consume composition, and unbound Control/Meta chords never become
+  text.
+- **External editors stay external.** Source repair, standalone declarations and project settings
+  round-trip through explicit export/import with validation; the Writer never embeds a second source
+  editor or silently rewrites authored source. Disk changes are observed and offered for explicit
+  comparison; detection never reloads or applies anything.
+- **Cost is bounded by what is visible.** Manuscript pages, map overscan, search results, catalogue
+  entries, trace records and diagnostics mount a fixed budget of native widgets regardless of
+  project size, and camera movement or typing reuses retained content.
+- **Assistive paths are complete.** Every operation is reachable by keyboard with visible and
+  accessible focus, and focus is restored after dialogs, pickers and workspace changes. Controls
+  keep complete accessible names when visually abbreviated, queued accessibility actions are checked
+  against current widget identity, and colour is never the only cue.
+- **Preview is a trial.** Runtime preview uses accepted source and captured settings, never executes
+  game effects, persists trial state or applies drafts, and keeps its run and provenance until an
+  explicit restart succeeds.
 
 Linux, Windows and macOS remain first-class desktop targets, not implied platform acceptance. Claims
 require native evidence for authoring, assistive technology, physical input, startup, memory and
