@@ -40,68 +40,9 @@ system's preferred application for the file. For a graphical editor that support
 The component specimen uses the production native controls, fonts and palette. Appearance and scale
 changes last only for that window; it opens no project and leaves personal preferences untouched.
 
-This frontend supports project file and beat navigation, manuscript editing, native text undo/redo,
-applying changes, checked saves, diagnostics, crash recovery and guarded closing across retained
-documents. Switching files preserves field drafts, accepted undo history and recovery ownership.
-Save all and Save and close cover every open file. Open in editor saves accepted source while
-retaining an unapplied manuscript draft. Reload keeps local work in an independent recovery copy
-before accepting disk bytes.
-
-File/selection navigation, disk reload, Apply and applied history prepare in the background. A
-pending action can be cancelled while typing continues. Reload checks the captured session before
-adoption; a completed recovery archive remains available when cancellation or newer typing prevents
-adoption. Save pressed during explicit Apply waits for its result and retirement; a failed or
-cancelled Apply leaves the requested save unrun.
-
-The beat outline uses accepted source, including recognizable headers in incomplete documents. Read
-beat shows dialogue, replies, conditions, effects and continuations without running them; edit a
-passage from that reading list. Add beat, Add line and Add reply use the shared stable-ID editing
-operations on workers. Empty documents and empty beats offer creation controls. Leaving a prose
-field applies its valid draft before a structural edit or selection change; rejected prose stays
-open. Reply and unconditional continuation destinations use the searchable beat picker. Each
-structural edit has a separate applied undo step, and Save remains explicit. Duplicate beat names
-and unprojectable syntax require external repair; their source is preserved. Long reading lists
-mount sixteen entries per page.
-
-Start / restart preview prepares source-language playback off the UI thread, starting at the
-selected beat. Continue, choose replies, answer condition requests, and acknowledge simulated
-effects; Writer never executes game effects. The compiled run remains fixed and shows a stale notice
-after edits. Apply or discard a manuscript draft before restarting. Cancel invalidates publication
-while the active compiler phase finishes. Hiding playback retains manuscript typing history. Preview
-inputs select language, wording, interpolation values and saved or draft catalogue policy for the
-next run. Preview trace inspects typed events and localisation decisions through bounded record and
-complete-value pages.
-
-Map and Split use the shared topology, synopsis, personal placement and spatial navigation owners.
-Camera changes leave source untouched; placement saves beside personal configuration. Native cards,
-keyboard selection, move handles, paged Connections and Go to provide equivalent routes through the
-scene. Large scenes start with nearby beats; whole-scene Fit uses a structural overview, and
-selecting a beat restores a readable native card. Script stays mounted across workspace changes so
-its native typing history survives. Geometry and personal placement I/O run on workers; checked
-receipts preserve newer typing and reconcile completed writes after cancellation.
-
-Focus writing hides surrounding panes while preserving the mounted manuscript and its native text
-history. Exit focus restores the workspace and reveals the previous native focus target. F6 and
-Shift+F6 cycle visible panes; in Vim mode, Ctrl+W then h/j/k/l moves by direction and Escape
-cancels. Text fields retain ordinary character input. The pane hint and focus changes publish
-without waiting for another input event. After accepting a scene/beat lookup, next/previous match
-commands (n/N in Vim navigation) repeat that query against current accepted targets. Cancelling a
-new lookup preserves the previous search; a failed navigation does not advance it. Saved project
-text lookup remains a separate search.
-
-Declarations inspection and Build scenes open from Commands without applying manuscript drafts.
-Declaration results and details are paged. Build saved reads disk inputs; Save all and build uses
-the shared ordered save path first. Jobs continue after returning to writing; cancellation stays
-pending until the terminal result is collected. Standalone declaration sources support checked IDE
-export/import, save and generation; producer actions use the shared project owner.
-
-Personal settings and desktop activation also use the shared owners. Copy link sends the current
-location through the toolkit's native clipboard. Linked destinations cover writing, preview, reply
-rules, project tools and catalogue workflows. Source links save accepted source and open the
-configured IDE; recovered source drafts retain their explicit repair workflow. Shared workflow
-parity is covered by headless tests and owned Wayland drills. The native dependency audit remains
-red; changing the default does not waive it or establish release readiness. See
-[acceptance](acceptance.md) for evidence limits.
+Writing, Map, preview, localisation, project tools and settings are described in the
+[guide](guide.md). Drafts and native typing history survive navigation, and only explicit Save
+writes files.
 
 ## Build requirements
 
@@ -111,14 +52,14 @@ checks.
 
 Builds need the platform graphics and window-system libraries, pkg-config and a working desktop
 session. Linux execution and component tests do not establish macOS, Windows, screen-reader, or
-physical IME acceptance. See [remaining validation](acceptance.md).
+physical IME acceptance; see [acceptance](acceptance.md).
 
 Creating a dialogue PO catalogue from the Localise workspace requires GNU gettext (`msginit` on
 `PATH`). Install gettext before running the writer's full test gate, which exercises real catalogue
 creation. Existing PO editing works without it. See [the localisation workflow](localisation.md).
 
-Both frontends support workspace [history and links](guide.md#navigation-and-links), including
-Back/Forward across scenes and the translation queue.
+Writer supports workspace [history and links](guide.md#navigation-and-links), including Back/Forward
+across scenes and the translation queue.
 
 Flatpak, Nix, and native preview package definitions and artifact checks are available; see
 [packaging](packaging.md) for build instructions, desktop-link support and the remaining platform
