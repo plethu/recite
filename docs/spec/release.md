@@ -67,8 +67,8 @@ Declared VS Code/VSCodium, Neovim and Zed capabilities pass the
 
 ### Milestone 5: Native GUI Strategy and Accessibility Proof
 
-Xilem is selected and Freya is retired; platform acceptance still needs the native checks tracked in
-#237. Selection alone is insufficient.
+Xilem is selected and Freya is retired; platform acceptance still needs the native checks tracked
+in #237. Selection alone is insufficient.
 
 ### Milestone 6: GUI Workbench
 
