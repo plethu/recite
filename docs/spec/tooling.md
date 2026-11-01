@@ -67,14 +67,13 @@ in v1.
 Keyboard, focus, screen-reader, IME, BiDi/RTL, scaling, high-contrast and non-colour paths must
 cover every essential operation. Cancellation, stale generations, progress, failure/retry and focus
 restoration are observable states. Reduced motion and external-edit protection are required.
-[Writer acceptance](../../apps/writer/acceptance.md) owns repeatable human checks and known limits;
+[Writer acceptance](../../apps/writer/acceptance.md) owns repeatable human checks;
 its [guide](../../apps/writer/guide.md) owns current workflows.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Xilem is the Writer frontend; the Freya frontend was retired on 2026-10-31 (see
-[Writer acceptance](../../apps/writer/acceptance.md#frontend-decision)), where physical-host
-acceptance remains pending. The `recite-writer` package owns presentation and focus; source editing
+Xilem is the Writer frontend; physical-host acceptance remains pending. Software rendering is
+required wherever no usable GPU is available. The `recite-writer` package owns presentation and focus; source editing
 belongs to the shared authoring model, and file replacement, conflict protection and recovery belong
 to `recite-writer-session`. Language, configuration, compiler and runtime ownership remains outside
 the frontend. Exercise regression checks before upgrading the pinned toolkit.

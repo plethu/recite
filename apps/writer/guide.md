@@ -17,7 +17,7 @@ scrolls. Failed project access leads with recovery guidance; **Show project erro
 the original diagnostic. Editing the folder or project name clears that attempt’s feedback.
 
 **Settings** changes personal appearance, text sizes, scale and shortcut bindings through the shared
-personal configuration. See the [acceptance limits](acceptance.md#known-limits) for native-host and
+personal configuration. See [acceptance](acceptance.md) for native-host and
 dependency-policy evidence gaps. Reading and layout adjustments use paired minus/plus controls with
 full accessible names. At larger UI scales, these controls precede the live writing specimen.
 
