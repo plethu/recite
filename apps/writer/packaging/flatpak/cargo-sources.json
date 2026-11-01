@@ -5330,19 +5330,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/streaming-iterator/streaming-iterator-0.1.9.crate",
-        "sha256": "2b2231b7c3057d5e4ad0156fb3dc807d900806020c5ffa3ee6ff2c8c76fb8520",
-        "dest": "cargo/vendor/streaming-iterator-0.1.9"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"2b2231b7c3057d5e4ad0156fb3dc807d900806020c5ffa3ee6ff2c8c76fb8520\", \"files\": {}}",
-        "dest": "cargo/vendor/streaming-iterator-0.1.9",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/strict-num/strict-num-0.1.1.crate",
         "sha256": "6637bab7722d379c8b41ba849228d680cc12d0a45ba1fa2b48f2a30577a06731",
         "dest": "cargo/vendor/strict-num-0.1.1"
@@ -5897,32 +5884,6 @@
         "type": "inline",
         "contents": "{\"package\": \"84fae205f9c07bfae3d36d199ab985118c90d225ff70a38e7ff3ecbdb4ef61bc\", \"files\": {}}",
         "dest": "cargo/vendor/tracing_android_trace-0.1.1",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/tree-sitter/tree-sitter-0.26.13.crate",
-        "sha256": "17ebdd3a5a7e28a1890b876fdbd0c3c0fe0a6336cffaa104f11b9f720c9daa29",
-        "dest": "cargo/vendor/tree-sitter-0.26.13"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"17ebdd3a5a7e28a1890b876fdbd0c3c0fe0a6336cffaa104f11b9f720c9daa29\", \"files\": {}}",
-        "dest": "cargo/vendor/tree-sitter-0.26.13",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/tree-sitter-language/tree-sitter-language-0.1.8.crate",
-        "sha256": "ca0d1bf6fdd806e43ae5198f82f527056d359def39e54e67a0f478ac09dac081",
-        "dest": "cargo/vendor/tree-sitter-language-0.1.8"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"ca0d1bf6fdd806e43ae5198f82f527056d359def39e54e67a0f478ac09dac081\", \"files\": {}}",
-        "dest": "cargo/vendor/tree-sitter-language-0.1.8",
         "dest-filename": ".cargo-checksum.json"
     },
     {
