@@ -15,12 +15,14 @@ sed 's/Intro line\./Intro line changed./' "$source_file" >"$temporary/changed.re
 CARGO_TARGET_DIR="$target_dir" cargo run --quiet -p recite-cli --offline -- compile --output "$artifact_dir/changed.recitec" "$temporary/changed.recite"
 
 probe="$target_dir/debug/examples/performance_probe"
+bevy_version="$(cargo pkgid --offline bevy_ecs)"
+bevy_version="${bevy_version##*@}"
 report="$artifact_dir/performance.txt"
 {
   date -u '+observed_utc=%Y-%m-%dT%H:%M:%SZ'
   rustc --version
   cargo --version
-  printf 'profile=debug engine=bevy-0.19.1 platform=%s\n' "$(uname -sm)"
+  printf 'profile=debug engine=bevy-%s platform=%s\n' "$bevy_version" "$(uname -sm)"
   if [[ -r /proc/cpuinfo ]]; then
     rg -m1 '^model name' /proc/cpuinfo || true
   fi

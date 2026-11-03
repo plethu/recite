@@ -7,14 +7,15 @@ artifact_dir="$target_dir/recite-bevy-probe/cargo-packages"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/recite-bevy-package.XXXXXX")"
 trap 'rm -rf "$scratch"' EXIT
 stage="$scratch/artifacts"
-package_version="$(
+read -r package_version bevy_version < <(
   python3 - "$repo_root/Cargo.toml" <<'PY'
 import pathlib
 import sys
 import tomllib
-print(tomllib.loads(pathlib.Path(sys.argv[1]).read_text())["workspace"]["package"]["version"])
+workspace = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())["workspace"]
+print(workspace["package"]["version"], workspace["dependencies"]["bevy_ecs"]["version"])
 PY
-)"
+)
 
 crates=(recite-core recite-parser recite-compiler recite-runtime recite-adapter recite-ui recite-bevy)
 patches=()
@@ -93,9 +94,9 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
-bevy_app = { version = "=0.19.1", default-features = false, features = ["std"] }
-bevy_asset = { version = "=0.19.1", default-features = false }
-bevy_ecs = { version = "=0.19.1", default-features = false, features = ["std"] }
+bevy_app = { version = "$bevy_version", default-features = false, features = ["std"] }
+bevy_asset = { version = "$bevy_version", default-features = false }
+bevy_ecs = { version = "$bevy_version", default-features = false, features = ["std"] }
 recite-bevy = "=$package_version"
 recite-compiler = "=$package_version"
 recite-core = "=$package_version"

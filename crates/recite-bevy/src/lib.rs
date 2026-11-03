@@ -1,4 +1,4 @@
-//! Bevy 0.19 companion for Recite compiled dialogue.
+//! Bevy 0.20 companion for Recite compiled dialogue.
 //!
 //! Add [`RecitePlugin`] after Bevy's `AssetPlugin`. A single [`ReciteOwner`]
 //! resource owns one session. Send [`ReciteRequest`] messages in order and read

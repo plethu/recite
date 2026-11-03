@@ -1,9 +1,9 @@
 ---
 title: Bevy
-description: Load compiled Recite dialogue and drive a single session in Bevy 0.19.
+description: Load compiled Recite dialogue and drive a single session in Bevy 0.20.
 ---
 
-`recite-bevy` is a Bevy 0.19.1 companion for compiled `.recitec` assets. It uses Bevy's app, ECS,
+`recite-bevy` is a Bevy 0.20.1 companion for compiled `.recitec` assets. It uses Bevy's app, ECS,
 asset, and reflection crates. The library brings no renderer, window, audio, or UI dependency; game
 code chooses presentation and executes effects. The plugin can run in a headless `App`.
 
@@ -93,7 +93,7 @@ session are separate operations; the compiled dialogue revision never swaps in p
 
 ## Compatibility and evidence
 
-The crate pins Bevy `=0.19.1`. Its
+The crate pins Bevy `=0.20.1`. Its
 [package guide](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md) owns
 conformance coverage, performance probes and clean-consumer verification. The adapter has no
 presentation projection capability.

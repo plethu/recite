@@ -1,4 +1,4 @@
-# Recite for Bevy 0.19
+# Recite for Bevy 0.20
 
 `recite-bevy` loads validated `.recitec` assets through Bevy's asset server and drives one dialogue
 session in a `ReciteOwner` resource. Its default feature set uses Bevy's app, ECS, and asset APIs
