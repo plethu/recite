@@ -35,7 +35,7 @@ Create `dialogue/crossroads.recite`:
 
 Each line and choice header ends with its stable ID, such as `@alice_way_001`. Localisation and
 saves key on that ID, so keep it when you edit the text. You can write a readable ID yourself, or
-leave the header without one and run `recite assign-ids`; the LSP's missing-ID action does the same
+leave the header without one and run `recite id assign`; the LSP's missing-ID action does the same
 in your editor, and clients may configure it on save. The `! deferred` statement is a typed effect
 request. The runtime never executes it; it hands it to your game when the scene ends.
 

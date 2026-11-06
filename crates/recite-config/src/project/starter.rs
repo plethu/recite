@@ -1,4 +1,4 @@
-//! The smallest project `recite validate-project` accepts: a manifest and one scene with a single
+//! The smallest project `recite project validate` accepts: a manifest and one scene with a single
 //! default block and one frozen line. Writer's "New project…" and the CLI test share this.
 use std::fs::OpenOptions;
 use std::io::Write;

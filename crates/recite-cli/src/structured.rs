@@ -10,6 +10,7 @@ use std::process::ExitCode;
 use crate::args::Command;
 use crate::error::CliError;
 
+mod command;
 #[path = "structured/data.rs"]
 pub(crate) mod data;
 mod emitter;
@@ -23,6 +24,7 @@ pub(crate) mod sequence;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use command::StructuredCommand;
 use emitter::ProtocolWriter;
 use error_mapping::structured_error;
 

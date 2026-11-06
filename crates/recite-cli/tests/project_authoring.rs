@@ -15,7 +15,7 @@ fn validate_project_reports_discovered_source_diagnostics_with_project_key() {
         ":: start\n:if broken(\n  prose without a statement header\n",
     );
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("[RECITE_PARSE013]");
     output.assert_stderr_contains("--> dialogue/malformed.recite:2:12");
@@ -39,8 +39,8 @@ fn validate_project_reports_deterministic_cross_file_diagnostics() {
     );
     write_recite(temp.path(), "dialogue/target.recite", ":: known\n");
 
-    let first = run(recite().arg("validate-project").arg(temp.path()));
-    let second = run(recite().arg("validate-project").arg(temp.path()));
+    let first = run(recite().args(["project", "validate"]).arg(temp.path()));
+    let second = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&first);
     assert_eq!(stderr(&first), stderr(&second));
     first.assert_stderr_contains("[RECITE_VALIDATE007]");
@@ -68,7 +68,7 @@ fn validate_project_stops_project_checks_after_non_utf8_source_discovery() {
     std::fs::write(&unreadable, [0xff, 0xfe]).expect("non-UTF-8 source");
     let unreadable = std::fs::canonicalize(unreadable).expect("canonical source path");
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     let stderr = stderr(&output);
     assert!(stderr.contains("error[RECITE_CONFIG115]"), "{stderr}");
@@ -99,7 +99,7 @@ fn validate_project_keeps_readable_parse_diagnostics_with_non_utf8_discovery() {
     std::fs::write(&unreadable, [0xff, 0xfe]).expect("non-UTF-8 source");
     let unreadable = std::fs::canonicalize(unreadable).expect("canonical source path");
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     let stderr = stderr(&output);
     assert!(
@@ -135,7 +135,7 @@ fn validate_project_ignores_malformed_excluded_source() {
     );
 
     recite()
-        .arg("validate-project")
+        .args(["project", "validate"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");
@@ -151,13 +151,13 @@ fn check_fresh_does_not_emit_discovered_source_diagnostics() {
         ":: start\n:if broken(\n  malformed\n",
     );
 
-    let validate = run(recite().arg("validate-project").arg(temp.path()));
+    let validate = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&validate);
     validate.assert_stderr_contains("[RECITE_PARSE013]");
     validate.assert_stderr_contains("--> dialogue/malformed.recite:2:12");
 
     recite()
-        .arg("check-fresh")
+        .args(["project", "check-fresh"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");

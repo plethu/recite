@@ -12,7 +12,7 @@ const STANDALONE: &str = include_str!("../../../fixtures/schema/valid/standalone
 const GENERATED: &str = include_str!("../../../fixtures/schema/valid/full_manifest.json");
 
 fn inspect(path: &std::path::Path) -> std::process::Output {
-    run(recite().arg("inspect-schema").arg(path))
+    run(recite().args(["schema", "inspect"]).arg(path))
 }
 
 fn json(output: &std::process::Output) -> Value {

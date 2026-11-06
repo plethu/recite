@@ -6,7 +6,10 @@ use recite_compiler::{
 };
 use recite_core::schema::ProjectSchema;
 
-use crate::args::{Command, CompileArgs, ExportSchemaArgs, ExtractArgs, RuntimeArgs, ValidateArgs};
+use crate::args::{
+    Command, CompileArgs, ExportSchemaArgs, ExtractArgs, IdCommand, ProjectCommand, RuntimeArgs,
+    SchemaCommand, ValidateArgs,
+};
 use crate::error::CliError;
 use crate::fs::{
     collect_input_files, compile_options, load_schema, read_compile_inputs_for_output,
@@ -17,6 +20,7 @@ use crate::runtime_fixture::{
     load_compiled_asset, load_runtime_fixture, trace_document,
 };
 
+use super::command::StructuredCommand;
 use super::errors::ErrorOperation;
 
 use super::data::{
@@ -44,28 +48,34 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
     match command {
         Command::Validate(args) => {
             let path = args.paths.first().cloned();
-            validate(args)
-                .map_err(|error| CommandFailure::new(error, ErrorOperation::Validate, path))
+            validate(args).map_err(|error| {
+                CommandFailure::new(error, StructuredCommand::Validate.operation(), path)
+            })
         }
         Command::Compile(args) => {
             let path = Some(args.output.clone());
-            compile(args).map_err(|error| CommandFailure::new(error, ErrorOperation::Compile, path))
+            compile(args).map_err(|error| {
+                CommandFailure::new(error, StructuredCommand::Compile.operation(), path)
+            })
         }
-        Command::ExportSchema(args) => {
+        Command::Schema(SchemaCommand::Export(args)) => {
             let path = Some(args.output.clone());
-            export_schema(args)
-                .map_err(|error| CommandFailure::new(error, ErrorOperation::ExportSchema, path))
+            export_schema(args).map_err(|error| {
+                CommandFailure::new(error, StructuredCommand::SchemaExport.operation(), path)
+            })
         }
         Command::Extract(args) => {
             let path = args.output.clone().or_else(|| args.paths.first().cloned());
-            extract(args).map_err(|error| CommandFailure::new(error, ErrorOperation::Extract, path))
+            extract(args).map_err(|error| {
+                CommandFailure::new(error, StructuredCommand::Extract.operation(), path)
+            })
         }
         Command::Run(args) => {
             let asset = args.asset.clone();
             let fixture = args.fixture.clone();
             runtime(args, RuntimeFixtureOptions::default()).map_err(|error| {
                 let path = runtime_failure_path(&error, &asset, &fixture);
-                CommandFailure::new(error, ErrorOperation::Run, Some(path))
+                CommandFailure::new(error, StructuredCommand::Run.operation(), Some(path))
             })
         }
         Command::Trace(args) => {
@@ -79,10 +89,19 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
             )
             .map_err(|error| {
                 let path = runtime_failure_path(&error, &asset, &fixture);
-                CommandFailure::new(error, ErrorOperation::Trace, Some(path))
+                CommandFailure::new(error, StructuredCommand::Trace.operation(), Some(path))
             })
         }
-        _ => Err(CommandFailure::new(
+        // Watch is a streaming lifecycle handled before this finite dispatcher. The rest are
+        // human-only; listing them keeps a new command from silently landing here.
+        Command::Watch(_)
+        | Command::Id(IdCommand::Check(_) | IdCommand::Assign(_))
+        | Command::Schema(SchemaCommand::Inspect(_) | SchemaCommand::CheckFresh(_))
+        | Command::Project(ProjectCommand::Validate(_) | ProjectCommand::CheckFresh(_))
+        | Command::Explain(_)
+        | Command::Play(_)
+        | Command::Bench(_)
+        | Command::Import(_) => Err(CommandFailure::new(
             CliError::MalformedCompiledAsset {
                 reason: "structured protocol was requested for an unsupported command".to_owned(),
             },
@@ -125,10 +144,21 @@ fn runtime_failure_path(error: &CliError, asset: &Path, fixture: &Path) -> std::
 }
 
 fn validate(args: ValidateArgs) -> Result<StructuredOutcome, CliError> {
-    let diagnostics = validate_inputs(&args.paths, None)?.into_all();
+    let schema = match schema_or_diagnostics(args.schema.as_deref())? {
+        SchemaLoad::Loaded(schema) => schema,
+        SchemaLoad::Diagnostics(diagnostics) => {
+            return Ok(StructuredOutcome::content_diagnostics(
+                ContentDiagnosticData::Validate { diagnostics },
+            ));
+        }
+    };
+    let inputs = validate_inputs(&args.paths, schema.as_deref())?;
+    let diagnostics = match args.only {
+        Some(only) => inputs.into_category(only.category()),
+        None => inputs.into_all(),
+    };
     let records = diagnostic_records(&diagnostics)?;
-    let valid = records.is_empty();
-    Ok(if valid {
+    Ok(if records.is_empty() {
         StructuredOutcome::success(SuccessData::Validate {
             diagnostics: records,
         })

@@ -119,7 +119,7 @@ namespace Recite.Unity.Editor
             var start = new ProcessStartInfo
             {
                 FileName = executable,
-                Arguments = "export-schema --schema " + QuoteArgument(sourcePath) +
+                Arguments = "schema export --schema " + QuoteArgument(sourcePath) +
                     " --output " + QuoteArgument(stagedOutputPath) +
                     " --producer-kind unity --producer-id " + QuoteArgument(producerId) +
                     " --output-format structured",
@@ -200,9 +200,9 @@ namespace Recite.Unity.Editor
                 }
             }
             if (records.Count != 2 || records[0].version != 1 || records[0].sequence != 0 ||
-                records[0].command != "export-schema" || records[0].@event != "command.started" ||
+                records[0].command != "schema export" || records[0].@event != "command.started" ||
                 records[1].version != 1 || records[1].sequence != 1 ||
-                records[1].command != "export-schema" ||
+                records[1].command != "schema export" ||
                 (records[1].@event != "command.result" && records[1].@event != "command.error"))
             {
                 Debug.LogError("Recite returned an unsupported structured export response.", registration);

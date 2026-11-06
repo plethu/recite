@@ -180,7 +180,7 @@ id = "unity-schema-restore"
 [speakers.test]
 display_name = "$schema"
 TOML
-    "$target_dir/debug/recite" export-schema --schema "$tmpdir/schema-$schema.toml" \
+    "$target_dir/debug/recite" schema export --schema "$tmpdir/schema-$schema.toml" \
       --output "$tmpdir/schema-$schema.json" || fail "Unity schema $schema fixture failed to export"
     "$target_dir/debug/recite" compile --schema "$tmpdir/schema-$schema.json" \
       -o "$tmpdir/schema-shared.recitec" "$tmpdir/schema-restore.recite" || fail "Unity schema $schema fixture failed to compile"

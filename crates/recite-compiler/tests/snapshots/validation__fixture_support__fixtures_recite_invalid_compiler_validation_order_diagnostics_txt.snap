@@ -16,7 +16,7 @@ diagnostics:
   file: fixtures/recite/invalid/compiler_validation_order.recite
   line: 4
   column: 3
-  help: end the line header with `@id`, or run `recite assign-ids`
+  help: end the line header with `@id`, or run `recite id assign`
 - code: RECITE_VALIDATE014
   severity: Error
   message: choice `choose_path` contains a nested line statement that v0 compiled choices cannot represent

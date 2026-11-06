@@ -1,4 +1,4 @@
-//! `check-ids`: stable-ID diagnostics, and with `--since`, IDs removed since a
+//! `id check`: stable-ID diagnostics, and with `--since`, IDs removed since a
 //! git revision such as the last release tag.
 //!
 //! Removing or renaming a shipped ID breaks translations and saves keyed on it.
@@ -21,14 +21,19 @@ use crate::error::CliError;
 use crate::fs::{collect_input_files, validate_inputs};
 use crate::i18n::{Messages, MsgId};
 
-pub(super) fn check_ids_command(
+pub(super) fn run(
     args: &CheckIdsArgs,
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<(), CliError> {
     let diagnostics = validate_inputs(&args.inputs.paths, None)?;
     let Some(reference) = &args.since else {
-        return report_targeted_diagnostics(stderr, messages, diagnostics, is_id_diagnostic);
+        return report_targeted_diagnostics(
+            stderr,
+            messages,
+            diagnostics,
+            DiagnosticCategory::Identifier,
+        );
     };
 
     let current = current_ids(&args.inputs.paths)?;
@@ -37,7 +42,12 @@ pub(super) fn check_ids_command(
         .filter(|id| !current.contains(id) && !args.allow_removed.contains(id))
         .collect::<Vec<_>>();
     if removed.is_empty() {
-        return report_targeted_diagnostics(stderr, messages, diagnostics, is_id_diagnostic);
+        return report_targeted_diagnostics(
+            stderr,
+            messages,
+            diagnostics,
+            DiagnosticCategory::Identifier,
+        );
     }
     for id in &removed {
         writeln!(
@@ -53,10 +63,6 @@ pub(super) fn check_ids_command(
     Err(CliError::Diagnostics)
 }
 
-fn is_id_diagnostic(diagnostic: &recite_core::Diagnostic) -> bool {
-    diagnostic.code.category() == DiagnosticCategory::Identifier
-}
-
 /// Reports ID diagnostics without the success line, which would contradict
 /// the removed-ID failure already printed.
 fn report_failures_only(
@@ -64,19 +70,10 @@ fn report_failures_only(
     messages: &Messages,
     diagnostics: InputDiagnostics,
 ) -> Result<(), CliError> {
-    if !diagnostics.parse_diagnostics.is_empty() {
-        report_diagnostics(stderr, messages, diagnostics.parse_diagnostics.iter())?;
-        return Ok(());
+    let targeted = diagnostics.into_category(DiagnosticCategory::Identifier);
+    if !targeted.is_empty() {
+        report_diagnostics(stderr, messages, targeted.iter())?;
     }
-    let targeted = diagnostics
-        .validation_diagnostics
-        .iter()
-        .filter(|diagnostic| is_id_diagnostic(diagnostic))
-        .collect::<Vec<_>>();
-    if targeted.is_empty() {
-        return Ok(());
-    }
-    report_diagnostics(stderr, messages, targeted.into_iter())?;
     Ok(())
 }
 

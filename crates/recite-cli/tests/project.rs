@@ -28,12 +28,12 @@ participants = ["hazel"]
     );
 
     recite()
-        .arg("validate-project")
+        .args(["project", "validate"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");
     recite()
-        .arg("check-fresh")
+        .args(["project", "check-fresh"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");
@@ -54,7 +54,7 @@ fn check_schema_producer_freshness_reports_structured_stale_content() {
     );
     let output = run(recite()
         .current_dir(temp.path())
-        .arg("check-schema-producer-freshness")
+        .args(["schema", "check-fresh"])
         .arg("--expected")
         .arg(&expected)
         .arg("--actual")
@@ -90,7 +90,7 @@ fn check_schema_producer_freshness_reports_duplicate_fingerprints_as_invalid_jso
     );
     let output = run(recite()
         .current_dir(temp.path())
-        .arg("check-schema-producer-freshness")
+        .args(["schema", "check-fresh"])
         .arg("--expected")
         .arg(&expected)
         .arg("--actual")
@@ -131,7 +131,7 @@ participants = ["hazel"]
     );
 
     recite()
-        .arg("check-fresh")
+        .args(["project", "check-fresh"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");
@@ -157,7 +157,7 @@ participants = ["hazel"]
 "#,
     );
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT002");
     output.assert_stderr_contains("RECITE_PROJECT003");
@@ -184,7 +184,7 @@ participants = ["rhea"]
 "#,
     );
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT008");
 
@@ -200,7 +200,7 @@ participants = ["hazel"]
 "#,
     );
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT001");
 }
@@ -230,7 +230,7 @@ participants = ["hazel"]
     )
     .expect("stale source");
     fs::write(&schema, schema_manifest(["hazel", "rhea"])).expect("stale schema");
-    let output = run(recite().arg("check-fresh").arg(temp.path()));
+    let output = run(recite().args(["project", "check-fresh"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_FRESH001");
     output.assert_stderr_contains("RECITE_FRESH002");
@@ -239,7 +239,7 @@ participants = ["hazel"]
     fs::write(&schema, schema_manifest(["hazel"])).expect("restore schema");
     compile_project_asset(temp.path(), &source, "dialogue.recitec", Some(&schema));
     corrupt_compiler_compatibility(&temp.path().join("dialogue.recitec"));
-    let output = run(recite().arg("check-fresh").arg(temp.path()));
+    let output = run(recite().args(["project", "check-fresh"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_FRESH003");
 }
@@ -272,7 +272,7 @@ participants = ["rhea"]
     );
 
     recite()
-        .arg("check-fresh")
+        .args(["project", "check-fresh"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");
@@ -282,7 +282,7 @@ participants = ["rhea"]
     changed_schema = changed_schema.replace("\"value\": \"6f1d\"", "\"value\": \"changed\"");
     fs::write(&schema, changed_schema).expect("change producer metadata");
     recite()
-        .arg("check-fresh")
+        .args(["project", "check-fresh"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");
@@ -308,7 +308,7 @@ participants = ["hazel"]
     );
 
     fs::write(&schema, r#"{"schema_version":"one"}"#).expect("invalid schema");
-    let output = run(recite().arg("check-fresh").arg(temp.path()));
+    let output = run(recite().args(["project", "check-fresh"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_SCHEMA001");
     output.assert_stderr_not_contains("RECITE_FRESH002");
@@ -330,7 +330,7 @@ participants = ["hazel"]
     );
 
     fs::remove_file(source).expect("remove compiled source");
-    let output = run(recite().arg("check-fresh").arg(temp.path()));
+    let output = run(recite().args(["project", "check-fresh"]).arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT006");
 }
@@ -344,7 +344,7 @@ fn writer_starter_project_passes_validate_project() {
     assert_eq!(scene, folder.join("night_bus.recite"));
 
     recite()
-        .arg("validate-project")
+        .args(["project", "validate"])
         .arg(&folder)
         .assert_success()
         .assert_stderr("ok  project, no diagnostics\n");

@@ -1,3 +1,4 @@
+use crate::structured::StructuredCommand;
 use crate::structured::errors::ErrorOperation;
 use std::io::{self, Write};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -34,7 +35,12 @@ pub(super) fn run(
     let mut protocol = WatchProtocol::new(stdout, invocation_id);
     match run_inner(args, &mut protocol) {
         Ok(exit_code) => Ok(exit_code),
-        Err(error) => stop_with_error(&mut protocol, error, ErrorOperation::Watch, None),
+        Err(error) => stop_with_error(
+            &mut protocol,
+            error,
+            StructuredCommand::Watch.operation(),
+            None,
+        ),
     }
 }
 

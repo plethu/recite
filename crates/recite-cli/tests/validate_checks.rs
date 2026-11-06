@@ -83,6 +83,22 @@ fn operational_failures_keep_error_prefix() {
 }
 
 #[test]
+fn validate_only_metadata_requires_a_schema() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "metadata.recite",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
+    );
+
+    let output = run(recite()
+        .args(["validate", "--only", "metadata"])
+        .arg(source));
+    output.assert_failure().assert_exit_code(2);
+    output.assert_stderr_contains("--schema <SCHEMA>");
+}
+
+#[test]
 fn check_ids_reports_only_id_diagnostics() {
     let temp = TempDir::new().expect("tempdir");
     let source = write_recite(
@@ -91,7 +107,7 @@ fn check_ids_reports_only_id_diagnostics() {
         ":: start\n>\n  Missing id and missing default.\n> @Repeated\n  Uppercase IDs are malformed.\n> @rthh7ab\n  First.\n> @rthh7ab\n  Duplicate anchor.\n",
     );
 
-    let output = run(recite().arg("check-ids").arg(&source));
+    let output = run(recite().args(["id", "check"]).arg(&source));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_ID001");
     output.assert_stderr_contains("RECITE_ID007");
@@ -104,7 +120,7 @@ fn check_ids_reports_only_id_diagnostics() {
         ":: start\n> @ffee6p8\n  IDs are present, but no default block.\n",
     );
     recite()
-        .arg("check-ids")
+        .args(["id", "check"])
         .arg(unrelated)
         .assert_success()
         .assert_stderr("ok  1 file, no diagnostics\n");
@@ -120,7 +136,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
     );
 
     recite()
-        .arg("check-markup")
+        .args(["validate", "--only", "markup"])
         .arg(&source)
         .assert_success()
         .assert_stderr("ok  1 file, no diagnostics\n");
@@ -130,7 +146,9 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
         "malformed.recite",
         ":: start default\n> @ffee6p8\n  Hello.\n    Mixed indent.\n",
     );
-    let output = run(recite().arg("check-markup").arg(malformed));
+    let output = run(recite()
+        .args(["validate", "--only", "markup"])
+        .arg(malformed));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PARSE007");
 
@@ -140,7 +158,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
         r#"{"schema_version":1,"markup":{"em":{"requires_closing":true,"translatable":true,"allows_nesting":true}}}"#,
     );
     let output = run(recite()
-        .arg("check-markup")
+        .args(["validate", "--only", "markup"])
         .arg("--schema")
         .arg(schema)
         .arg(source));
@@ -163,7 +181,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
     );
 
     recite()
-        .arg("check-metadata")
+        .args(["validate", "--only", "metadata"])
         .arg("--schema")
         .arg(&schema)
         .arg(&source)
@@ -175,7 +193,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
         ":: start default\n> unknown=flat @ffee6p8\n  Hello.\n-> END\n",
     );
     let output = run(recite()
-        .arg("check-metadata")
+        .args(["validate", "--only", "metadata"])
         .arg("--schema")
         .arg(&schema)
         .arg(invalid_metadata));
@@ -188,7 +206,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
         r#"{"schema_version":"one"}"#,
     );
     let output = run(recite()
-        .arg("check-metadata")
+        .args(["validate", "--only", "metadata"])
         .arg("--schema")
         .arg(bad_schema)
         .arg(source));
@@ -226,7 +244,7 @@ fn check_metadata_reports_domain_diagnostics_without_unrelated_validation() {
     );
 
     let output = run(recite()
-        .arg("check-metadata")
+        .args(["validate", "--only", "metadata"])
         .arg("--schema")
         .arg(schema)
         .arg(source));
@@ -291,7 +309,7 @@ fn check_metadata_reports_projection_schema_diagnostics_with_spans() {
     );
 
     let output = run(recite()
-        .arg("check-metadata")
+        .args(["validate", "--only", "metadata"])
         .arg("--schema")
         .arg(schema)
         .arg(source));

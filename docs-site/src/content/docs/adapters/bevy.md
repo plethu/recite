@@ -75,7 +75,7 @@ builder or `recite_schema!` macro, then call
 registration asset, independent of its filesystem path. `export_json()` is a lower-level unowned
 export; it does not stamp native producer identity or input freshness. Both delegate to the
 canonical serializer and validator used by Recite core; compiler, CLI, and LSP consume that
-generated manifest. A host-owned TOML transport can instead run `recite export-schema --schema
+generated manifest. A host-owned TOML transport can instead run `recite schema export --schema
 schema.toml --output schema.json --producer-kind bevy --producer-id stable_id`.
 
 After exporting the schema and rebuilding with `recite watch <project-root>`, explicitly call
@@ -86,7 +86,7 @@ reports its error and retains the last accepted revision. See the
 [shared authoring walkthrough](/adapters/authoring/) for the full edit/import/restart loop.
 
 Source/schema freshness is distinct from compiled revision compatibility. When the game sees only
-`.recitec` bytes, `ReciteAssetFreshness::Unavailable` is explicit. Run `recite check-fresh
+`.recitec` bytes, `ReciteAssetFreshness::Unavailable` is explicit. Run `recite project check-fresh
 <project-root>` where current source and schema inputs are visible. A compiled asset that fails
 import validation cannot start a session. Active asset and locale catalogue replacement during a
 session are separate operations; the compiled dialogue revision never swaps in place.

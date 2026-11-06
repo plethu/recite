@@ -117,7 +117,7 @@ impl ControlWire {
         if self.version != 1 {
             return Err(ControlError::UnsupportedVersion);
         }
-        if self.command != "watch" {
+        if self.command != crate::structured::StructuredCommand::Watch.wire_name() {
             return Err(ControlError::UnsupportedCommand);
         }
         if self.action != "cancel" {

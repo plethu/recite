@@ -42,7 +42,7 @@ Adapters must validate compiled asset compatibility before starting or resuming 
 or decoding failures must surface as structured adapter errors. Stale or schema-incompatible assets
 must not start a session as if they were current.
 
-Adapters should reuse the same freshness semantics as the CLI `compile` and `check-fresh` surface
+Adapters should reuse the same freshness semantics as the CLI `compile` and `project check-fresh` surface
 (spec §12.3) where possible. A host asset importer may cache engine-native resources, but the cache
 must not hide stale compiled content from session start, resume, or diagnostics when source and
 schema inputs are available.
@@ -188,7 +188,7 @@ Producers expose an explicit regeneration or stale-check action. Re-exporting cu
 comparing canonical schema fingerprints establishes whether their semantics changed. Typed producer
 and content fingerprints may also detect stale inputs; they do not replace the semantic fingerprint.
 
-`recite check-schema-producer-freshness --expected OLD.json --actual NEW.json` compares exported
+`recite schema check-fresh --expected OLD.json --actual NEW.json` compares exported
 fingerprints without inspecting host resources. Detailed results distinguish manifest content,
 producer inputs, registry inputs and metadata-domain inputs, including missing, duplicate,
 unexpected and mismatched records. A digest in one scope cannot stand in for another.

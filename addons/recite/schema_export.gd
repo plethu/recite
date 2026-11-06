@@ -70,7 +70,8 @@ static func _prepare(resource: Resource, manifest_path: String) -> Dictionary:
 		"arguments":
 		PackedStringArray(
 			[
-				"export-schema",
+				"schema",
+				"export",
 				"--schema",
 				source_path,
 				"--output",
@@ -153,7 +154,7 @@ static func _read_cli_result(exit_code: int, stream: String, output: String) -> 
 		or records[0].get("version") != 1
 		or records[0].get("sequence") != 0
 		or records[0].get("event") != "command.started"
-		or records[0].get("command") != "export-schema"
+		or records[0].get("command") != "schema export"
 	):
 		return {
 			"ok": false,
@@ -164,7 +165,7 @@ static func _read_cli_result(exit_code: int, stream: String, output: String) -> 
 	if (
 		terminal.get("version") != 1
 		or terminal.get("sequence") != 1
-		or terminal.get("command") != "export-schema"
+		or terminal.get("command") != "schema export"
 		or terminal.get("exit_code") != exit_code
 	):
 		return {

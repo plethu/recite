@@ -26,7 +26,7 @@ lookup. Missing translations use authored source text. A failed catalogue update
 valid one.
 
 For project schema, create a `ReciteSchemaRegistration` asset and use **Tools > Recite > Export
-Schema**. The editor passes the asset's stable GUID to the `recite export-schema` CLI, which
+Schema**. The editor passes the asset's stable GUID to the `recite schema export` CLI, which
 validates and writes the canonical manifest. Build dialogue with the CLI or `recite watch`; Unity
 imports valid compiled `.recitec` files. A rejected reimport uses a GUID-keyed last-valid copy in
 `Library/Recite/CompiledCache` when available. Active sessions keep the revision they started with,

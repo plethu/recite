@@ -13,7 +13,7 @@ recite validate src
 recite compile src --schema schema/realistic.schema.json -o build/dialogue.recitec
 recite run build/dialogue.recitec --block arrival --fixture runtime-fixture.toml
 recite trace build/dialogue.recitec --block arrival --fixture runtime-fixture.toml
-recite check-fresh .
+recite project check-fresh .
 ```
 
 Use choice IDs in fixtures so editing the displayed text does not change the selection. Supply every
