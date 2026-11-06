@@ -2,14 +2,21 @@
 use super::{assign_headings, help_arg, help_template};
 use crate::i18n::{Messages, MsgId};
 
-pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
+/// Localise `command` and, for noun groups, everything beneath it. Entries are keyed by the full
+/// command path (`schema check-fresh`), so the same verb can exist under two nouns.
+pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent: &str) {
+    let path = if parent.is_empty() {
+        command.get_name().to_owned()
+    } else {
+        format!("{parent} {}", command.get_name())
+    };
     *command = std::mem::take(command)
         .help_template(help_template(messages))
         .next_help_heading(messages.text(MsgId::CliHelpOptionsHeading))
         .disable_help_flag(true)
         .arg(help_arg(messages));
 
-    match command.get_name() {
+    match path.as_str() {
         "import" => {
             set_about(command, messages.text(MsgId::CliHelpCommandImport));
             set_positional_arg_help(
@@ -30,6 +37,13 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
         }
         "validate" => {
             set_about(command, messages.text(MsgId::CliHelpCommandValidate));
+            localise_schema(command, messages);
+            set_arg_help(
+                command,
+                "only",
+                messages.text(MsgId::CliHelpArgOnly),
+                messages,
+            );
             localise_paths(command, messages);
         }
         "compile" => {
@@ -54,8 +68,8 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
             localise_schema(command, messages);
             localise_paths(command, messages);
         }
-        "check-ids" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckIds));
+        "id check" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandIdCheck));
             localise_paths(command, messages);
             set_arg_help(
                 command,
@@ -70,22 +84,12 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
-        "assign-ids" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandAssignIds));
+        "id assign" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandIdAssign));
             localise_paths(command, messages);
         }
-        "check-markup" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckMarkup));
-            localise_schema(command, messages);
-            localise_paths(command, messages);
-        }
-        "check-metadata" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckMetadata));
-            localise_schema(command, messages);
-            localise_paths(command, messages);
-        }
-        "validate-project" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandValidateProject));
+        "project validate" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandProjectValidate));
             set_arg_help(
                 command,
                 "project_root",
@@ -93,8 +97,11 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
-        "check-fresh" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckFresh));
+        "project check-fresh" => {
+            set_about(
+                command,
+                messages.text(MsgId::CliHelpCommandProjectCheckFresh),
+            );
             set_arg_help(
                 command,
                 "project_root",
@@ -102,8 +109,8 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
-        "inspect-schema" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandInspectSchema));
+        "schema inspect" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandSchemaInspect));
             set_positional_arg_help(
                 command,
                 "schema",
@@ -111,8 +118,8 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
-        "export-schema" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandExportSchema));
+        "schema export" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandSchemaExport));
             set_arg_help(
                 command,
                 "schema",
@@ -138,12 +145,15 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
-        "check-schema-producer-freshness" => {
+        "schema check-fresh" => {
             set_about(
                 command,
-                messages.text(MsgId::CliHelpCommandCheckSchemaProducerFreshness),
+                messages.text(MsgId::CliHelpCommandSchemaCheckFresh),
             );
         }
+        "id" => localise_group(command, messages, MsgId::CliHelpCommandId, &path),
+        "project" => localise_group(command, messages, MsgId::CliHelpCommandProject, &path),
+        "schema" => localise_group(command, messages, MsgId::CliHelpCommandSchema, &path),
         "explain" => {
             set_about(command, messages.text(MsgId::CliHelpCommandExplain));
             set_arg_help(
@@ -246,6 +256,20 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
         _ => {}
     }
     assign_headings(command, messages);
+}
+
+/// A noun group lists its verbs under the localised heading. Clap's built-in `help` subcommand is
+/// disabled because it is English-only; `--help` on the group and on each verb remain.
+fn localise_group(command: &mut clap::Command, messages: &Messages, about: MsgId, path: &str) {
+    set_about(command, messages.text(about));
+    *command = std::mem::take(command)
+        .subcommand_help_heading(messages.text(MsgId::CliHelpCommandsHeading))
+        .disable_help_subcommand(true)
+        .subcommand_required(true)
+        .arg_required_else_help(true);
+    for subcommand in command.get_subcommands_mut() {
+        localise(subcommand, messages, path);
+    }
 }
 
 fn localise_paths(command: &mut clap::Command, messages: &Messages) {

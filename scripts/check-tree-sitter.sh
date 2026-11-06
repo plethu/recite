@@ -276,7 +276,7 @@ fi
 semantic_output="$scratch/id-recovery-semantic.txt"
 semantic_rc=0
 if cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-  check-ids "$id_recovery_fixture" >"$semantic_output" 2>&1; then
+  id check "$id_recovery_fixture" >"$semantic_output" 2>&1; then
   semantic_rc=0
 else
   semantic_rc=$?

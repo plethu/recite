@@ -83,7 +83,7 @@ freshness.
 Create a `ReciteSchemaRegistration` asset with game-owned condition/effect signatures and any
 referenced enum, registry, or speaker declarations. Set its output to an `Assets/*.json` path, then
 use **Tools > Recite > Export Schema**. The editor lowers declarations to a temporary TOML transport
-and runs `recite export-schema` with the asset's stable Unity GUID as producer ID. Recite's core
+and runs `recite schema export` with the asset's stable Unity GUID as producer ID. Recite's core
 validates and writes the canonical manifest and fingerprint; Unity does not implement schema
 semantics or hashing. A malformed export retains the prior manifest and logs structured CLI
 diagnostics. The CLI must be available as `recite` or at the registration's configured executable

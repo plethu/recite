@@ -51,7 +51,7 @@ fn exports_canonical_schema_from_toml_and_json() -> Result<(), Box<dyn Error>> {
     let source = write_file(temp.path(), "schema.toml", STANDALONE)?;
     let output = temp.path().join("schema.json");
     success(&run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(&source)
         .arg("--output")
@@ -62,7 +62,7 @@ fn exports_canonical_schema_from_toml_and_json() -> Result<(), Box<dyn Error>> {
     assert!(loaded.schema.is_some());
     let second = temp.path().join("again.json");
     success(&run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(&output)
         .arg("--output")
@@ -77,7 +77,7 @@ fn native_producer_flags_are_paired_and_stamp_identity() -> Result<(), Box<dyn E
     let source = write_file(temp.path(), "schema.toml", STANDALONE)?;
     let output = temp.path().join("native.json");
     success(&run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(&source)
         .arg("--output")
@@ -94,7 +94,7 @@ fn native_producer_flags_are_paired_and_stamp_identity() -> Result<(), Box<dyn E
     assert_eq!(value["producer_fingerprints"][0]["id"], "asset-guid");
     assert!(json.contains("can_open"));
     failure(&run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(&source)
         .arg("--output")
@@ -112,7 +112,7 @@ fn structured_export_reports_artifact_and_preserves_output_on_failure() -> Resul
     let source = write_file(temp.path(), "schema.toml", STANDALONE)?;
     let output = temp.path().join("schema.json");
     let result = run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(&source)
         .arg("--output")
@@ -126,6 +126,9 @@ fn structured_export_reports_artifact_and_preserves_output_on_failure() -> Resul
     let result_records = records(&result)?;
     assert_eq!(result_records.len(), 2);
     assert_eq!(result_records[0]["event"], "command.started");
+    // The wire `command` is the command path as typed, so consumers can match on it.
+    assert_eq!(result_records[0]["command"], "schema export");
+    assert_eq!(result_records[1]["command"], "schema export");
     assert_eq!(result_records[1]["event"], "command.result");
     assert_eq!(result_records[1]["status"], "success");
     assert_eq!(
@@ -136,7 +139,7 @@ fn structured_export_reports_artifact_and_preserves_output_on_failure() -> Resul
     let before = fs::read(&output)?;
     let invalid = write_file(temp.path(), "invalid.toml", "schema_version = 0\n")?;
     let result = run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(invalid)
         .arg("--output")
@@ -155,7 +158,7 @@ fn structured_export_reports_artifact_and_preserves_output_on_failure() -> Resul
     assert_eq!(before, fs::read(&output)?);
 
     failure(&run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(&source)
         .arg("--output")
@@ -163,7 +166,7 @@ fn structured_export_reports_artifact_and_preserves_output_on_failure() -> Resul
     let hardlink = temp.path().join("schema-link.toml");
     fs::hard_link(&source, &hardlink)?;
     failure(&run(recite()
-        .arg("export-schema")
+        .args(["schema", "export"])
         .arg("--schema")
         .arg(&source)
         .arg("--output")

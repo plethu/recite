@@ -1,9 +1,9 @@
 use crate::structured::sequence::RecordSequence;
 use std::io::Write;
 
-use crate::args::StructuredInvocation;
 use crate::error::CliError;
 
+use super::command::StructuredInvocation;
 use super::data::{ErrorRecord, ErrorStatus, ResultRecord, StartedRecord, StructuredOutcome};
 use super::errors::StructuredError;
 

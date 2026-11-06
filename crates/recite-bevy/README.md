@@ -14,7 +14,7 @@ Bevy cache, while an active session retains its original compiled revision. A fa
 keeps the last accepted cache entry and emits a typed `ReciteAssetImport::Rejected` status with the
 attempted path and retained revision. Recite compiled asset IDs, choice IDs, and effect IDs remain
 independent of Bevy `AssetId` and `Entity` values. Source/schema freshness cannot be determined from
-compiled bytes alone; run `recite check-fresh` in the authoring project.
+compiled bytes alone; run `recite project check-fresh` in the authoring project.
 
 The Rust schema producer supports fallible typed builders and the `recite_schema!` declaration
 macro. Export native declarations with `ReciteSchema::export_json_with_producer` and a stable
@@ -46,7 +46,7 @@ distribution bundle carries both full license texts. This check does not publish
 
 When updating, keep `recite-bevy` and the other Recite crates on the same compatible release. Keep
 Bevy on the version named above until this adapter declares support for another version. Re-export
-the host schema, rebuild the `.recitec` assets, and run `recite check-fresh <project-root>` before
+the host schema, rebuild the `.recitec` assets, and run `recite project check-fresh <project-root>` before
 loading them. An active session keeps the compiled revision it started with; start a new session
 after an accepted import to use rebuilt content. Preserve authored line, choice, and effect IDs when
 editing source, and test restore from any save format your game intends to carry across the upgrade.

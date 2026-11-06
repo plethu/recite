@@ -61,7 +61,7 @@ def watch_edits(recite, root):
         reader.start()
         try:
             wait_build(records, "succeeded")
-            command(recite, root, "validate-project", ".")
+            command(recite, root, "project", "validate", ".")
             asset = root / "build/dialogue.recitec"
             before = asset.read_bytes()
             source = root / "src/arrival.recite"
@@ -75,7 +75,7 @@ def watch_edits(recite, root):
             source.write_text(original.replace("The case narrows", "The case turns"))
             wait_build(records, "succeeded")
             assert asset.read_bytes() != before, "corrected edit did not publish"
-            command(recite, root, "check-fresh", ".")
+            command(recite, root, "project", "check-fresh", ".")
         finally:
             if process.poll() is None:
                 process.stdin.write('{"version":1,"command":"watch","action":"cancel"}\n')
@@ -97,9 +97,9 @@ def check(recite, root):
     schema = "schema/realistic.schema.json"
     (root / "build").mkdir()
     command(recite, root, "validate", "src")
-    command(recite, root, "check-ids", "src")
-    command(recite, root, "check-metadata", "src", "--schema", schema)
-    command(recite, root, "check-markup", "src", "--schema", schema)
+    command(recite, root, "id", "check", "src")
+    command(recite, root, "validate", "src", "--only", "metadata", "--schema", schema)
+    command(recite, root, "validate", "src", "--only", "markup", "--schema", schema)
     command(recite, root, "compile", "src", "--schema", schema, "-o", "build/dialogue.recitec")
     command(recite, root, "extract", "src", "--schema", schema, "-o", "dialogue.pot")
     assert "ffee6p8" in (root / "dialogue.pot").read_text()

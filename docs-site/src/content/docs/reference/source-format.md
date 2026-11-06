@@ -195,7 +195,7 @@ The current compiler contract requires every line and choice to have a stable ID
 
 A line or choice header ends with one `@id` field after its metadata. An ID uses lowercase letters,
 digits, `_`, `.` and `-`, and starts with a letter or `_`. Write a readable ID yourself, or leave it
-out and let `recite assign-ids` or the LSP's missing-ID action append a generated seven-character
+out and let `recite id assign` or the LSP's missing-ID action append a generated seven-character
 ID. Neither rewrites an existing ID. Changing an ID changes identity, and changed source text
 requires catalogue refresh and translation review.
 

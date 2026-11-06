@@ -1,11 +1,30 @@
+//! `project validate` and `project check-fresh`: checks on a project root.
+
 use std::io::Write;
 use std::path::PathBuf;
 
+use crate::args::ProjectCommand;
 use crate::diagnostics::{Subject, report_diagnostics, report_success};
 use crate::error::CliError;
+use crate::fs::{check_fresh, validate_project};
 use crate::i18n::Messages;
 
-pub(super) fn project_check(
+pub(super) fn run(
+    command: ProjectCommand,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+) -> Result<(), CliError> {
+    match command {
+        ProjectCommand::Validate(args) => {
+            project_check(args.project_root, validate_project, stderr, messages)
+        }
+        ProjectCommand::CheckFresh(args) => {
+            project_check(args.project_root, check_fresh, stderr, messages)
+        }
+    }
+}
+
+fn project_check(
     project_root: PathBuf,
     validate: fn(PathBuf) -> Result<Vec<recite_core::Diagnostic>, CliError>,
     stderr: &mut dyn Write,

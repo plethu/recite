@@ -1,15 +1,12 @@
 use std::io::Write;
 
 use crate::args::{Command, CompileArgs, ExplainArgs, ExtractArgs, RuntimeArgs, TraceArgs};
-use crate::diagnostics::{
-    Subject, report_diagnostics, report_success, report_targeted_diagnostics,
-};
+use crate::diagnostics::{Subject, report_diagnostics, report_success};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
 use crate::fs::{
-    check_fresh, collect_input_files, compile_options, load_optional_schema, load_schema,
-    read_compile_inputs_for_output, read_compile_inputs_from_files, reject_output_input_alias,
-    validate_inputs, validate_project, write_staged,
+    collect_input_files, compile_options, load_optional_schema, read_compile_inputs_for_output,
+    read_compile_inputs_from_files, reject_output_input_alias, write_staged,
 };
 use crate::i18n::{Messages, MsgId};
 use crate::play::run_play_command;
@@ -22,18 +19,14 @@ use recite_compiler::{
     compile::{compile_inputs_to_messagepack, compile_inputs_to_messagepack_with_schema},
     pot::{extract_pot, extract_pot_with_schema},
 };
-use recite_core::{
-    DiagnosticCategory, DiagnosticCode, explain_diagnostic_code, suggest_diagnostic_code,
-};
+use recite_core::{DiagnosticCode, explain_diagnostic_code, suggest_diagnostic_code};
 
-mod assign_ids;
 mod bench;
-mod check_ids;
+mod id;
 mod project;
-use assign_ids::assign_ids_command;
+mod schema;
+mod validate;
 use bench::bench_command;
-use check_ids::check_ids_command;
-use project::project_check;
 
 pub(crate) fn run_command(
     command: Command,
@@ -42,52 +35,12 @@ pub(crate) fn run_command(
     messages: &Messages,
 ) -> Result<(), CliError> {
     match command {
-        Command::Validate(args) => {
-            let inputs = validate_inputs(&args.paths, None)?;
-            let file_count = inputs.file_count;
-            let diagnostics = inputs.into_all();
-            report_diagnostics(stderr, messages, diagnostics.iter())?;
-            if !diagnostics.is_empty() {
-                return Err(CliError::Diagnostics);
-            }
-            report_success(stderr, messages, Subject::Files(file_count))
-        }
+        Command::Validate(args) => validate::run(args, stderr, messages),
         Command::Compile(args) => compile_command(args, stderr, messages),
         Command::Extract(args) => extract_command(args, stdout, stderr, messages),
-        Command::CheckIds(args) => check_ids_command(&args, stderr, messages),
-        Command::AssignIds(args) => assign_ids_command(args, stderr, messages),
-        Command::CheckMarkup(args) => {
-            let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
-            let diagnostics = validate_inputs(&args.paths, schema.as_ref())?;
-            report_targeted_diagnostics(stderr, messages, diagnostics, |diagnostic| {
-                diagnostic.code.category() == DiagnosticCategory::Markup
-            })
-        }
-        Command::CheckMetadata(args) => {
-            let schema = load_schema(&args.schema)?;
-            if !schema.diagnostics.is_empty() {
-                report_diagnostics(stderr, messages, schema.diagnostics.iter())?;
-                return Err(CliError::Diagnostics);
-            }
-
-            let diagnostics = validate_inputs(&args.paths, schema.schema.as_ref())?;
-            report_targeted_diagnostics(stderr, messages, diagnostics, |diagnostic| {
-                diagnostic.code.category() == DiagnosticCategory::Metadata
-            })
-        }
-        Command::ValidateProject(args) => {
-            project_check(args.project_root, validate_project, stderr, messages)
-        }
-        Command::CheckFresh(args) => {
-            project_check(args.project_root, check_fresh, stderr, messages)
-        }
-        Command::CheckSchemaProducerFreshness(args) => {
-            crate::schema_freshness::check(args, stdout, stderr, messages)
-        }
-        Command::InspectSchema(args) => {
-            crate::schema_inspection::run(args, stdout, stderr, messages)
-        }
-        Command::ExportSchema(args) => crate::schema_export::run(args, stdout, stderr, messages),
+        Command::Id(command) => id::run(command, stderr, messages),
+        Command::Schema(command) => schema::run(command, stdout, stderr, messages),
+        Command::Project(command) => project::run(command, stderr, messages),
         Command::Explain(args) => explain_command(args, stdout, messages),
         Command::Watch(args) => run_watch_command(args, stderr, messages),
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout, messages),

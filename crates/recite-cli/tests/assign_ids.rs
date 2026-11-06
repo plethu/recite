@@ -33,7 +33,7 @@ fn assign_ids_appends_generated_ids_and_keeps_existing_ones() {
     );
 
     recite()
-        .arg("assign-ids")
+        .args(["id", "assign"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("assigned 3 stable IDs\n");
@@ -61,9 +61,12 @@ fn assign_ids_appends_generated_ids_and_keeps_existing_ones() {
             .starts_with(":: other\n> @")
     );
 
-    recite().arg("check-ids").arg(temp.path()).assert_success();
     recite()
-        .arg("assign-ids")
+        .args(["id", "check"])
+        .arg(temp.path())
+        .assert_success();
+    recite()
+        .args(["id", "assign"])
         .arg(temp.path())
         .assert_success()
         .assert_stderr("every line and choice already has a stable ID\n");
@@ -75,7 +78,7 @@ fn assign_ids_leaves_files_untouched_when_an_id_is_malformed() {
     let source = ":: start default\n>\n  Missing.\n> @Malformed\n  Needs an author.\n-> END\n";
     let scene = write_recite(temp.path(), "scene.recite", source);
 
-    let output = run(recite().arg("assign-ids").arg(&scene));
+    let output = run(recite().args(["id", "assign"]).arg(&scene));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_ID007");
     assert_eq!(fs::read_to_string(&scene).expect("scene"), source);

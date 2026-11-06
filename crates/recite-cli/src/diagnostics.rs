@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use recite_core::Diagnostic;
+use recite_core::{Diagnostic, DiagnosticCategory};
 
 use crate::{error::CliError, i18n::Messages};
 
@@ -62,11 +62,24 @@ impl InputDiagnostics {
     }
 }
 
+impl InputDiagnostics {
+    /// Syntax errors, which block validation, or else the validation diagnostics in `category`.
+    pub(crate) fn into_category(self, category: DiagnosticCategory) -> Vec<Diagnostic> {
+        if !self.parse_diagnostics.is_empty() {
+            return self.parse_diagnostics;
+        }
+        self.validation_diagnostics
+            .into_iter()
+            .filter(|diagnostic| diagnostic.code.category() == category)
+            .collect()
+    }
+}
+
 pub(crate) fn report_targeted_diagnostics(
     writer: &mut dyn Write,
     messages: &Messages,
     diagnostics: InputDiagnostics,
-    is_target: impl Fn(&Diagnostic) -> bool,
+    category: DiagnosticCategory,
 ) -> Result<(), CliError> {
     if !diagnostics.parse_diagnostics.is_empty() {
         report_diagnostics(writer, messages, diagnostics.parse_diagnostics.iter())?;
@@ -76,7 +89,7 @@ pub(crate) fn report_targeted_diagnostics(
     let targeted = diagnostics
         .validation_diagnostics
         .iter()
-        .filter(|diagnostic| is_target(diagnostic))
+        .filter(|diagnostic| diagnostic.code.category() == category)
         .collect::<Vec<_>>();
     if targeted.is_empty() {
         return report_success(writer, messages, Subject::Files(diagnostics.file_count));

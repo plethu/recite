@@ -61,8 +61,8 @@ fn run_scale_cli_stress(scale: BenchmarkScale) -> Result<(), Box<dyn std::error:
         ],
     )
     .assert_success();
-    run_project_command(cli_root.path(), ["validate-project", "."]).assert_success();
-    run_project_command(cli_root.path(), ["check-fresh", "."]).assert_success();
+    run_project_command(cli_root.path(), ["project", "validate", "."]).assert_success();
+    run_project_command(cli_root.path(), ["project", "check-fresh", "."]).assert_success();
     run_project_command(
         cli_root.path(),
         [

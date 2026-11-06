@@ -130,9 +130,9 @@ kind = "enum"
 values = ["right"]
 EOF
 cargo run --locked --quiet --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-  export-schema --schema "$tmpdir/schema_a.toml" --output "$tmpdir/schema_a.json"
+  schema export --schema "$tmpdir/schema_a.toml" --output "$tmpdir/schema_a.json"
 cargo run --locked --quiet --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-  export-schema --schema "$tmpdir/schema_b.toml" --output "$tmpdir/schema_b.json"
+  schema export --schema "$tmpdir/schema_b.toml" --output "$tmpdir/schema_b.json"
 cargo run --locked --quiet --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
   compile --schema "$tmpdir/schema_a.json" --output "$tmpdir/dialogue/schema_prompt.recitec" \
   "$tmpdir/dialogue/schema_prompt.recite"

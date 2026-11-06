@@ -43,41 +43,23 @@ fn localise_command(command: &mut clap::Command, messages: &Messages) {
         .arg(version_arg(messages));
 
     for subcommand in command.get_subcommands_mut() {
-        subcommands::localise(subcommand, messages);
+        subcommands::localise(subcommand, messages, "");
     }
     group_subcommands(command, messages);
 }
 
 /// Top-level commands grouped as on the documentation's CLI page. Clap prints one subcommand
 /// heading, so the groups are rendered into the template and the flat list is hidden.
-const COMMAND_GROUPS: [(MsgId, &[&str]); 6] = [
-    (
-        MsgId::CliHelpGroupAuthoring,
-        &[
-            "validate",
-            "check-ids",
-            "assign-ids",
-            "check-markup",
-            "check-metadata",
-            "import",
-        ],
-    ),
+const COMMAND_GROUPS: [(MsgId, &[&str]); 5] = [
+    (MsgId::CliHelpGroupAuthoring, &["validate", "id", "import"]),
     (
         MsgId::CliHelpGroupBuilding,
-        &["compile", "validate-project", "check-fresh", "watch"],
+        &["compile", "project", "schema", "watch"],
     ),
     (MsgId::CliHelpGroupLocalisation, &["extract"]),
     (
         MsgId::CliHelpGroupRunning,
         &["run", "trace", "play", "bench"],
-    ),
-    (
-        MsgId::CliHelpGroupSchema,
-        &[
-            "inspect-schema",
-            "export-schema",
-            "check-schema-producer-freshness",
-        ],
     ),
     (MsgId::CliHelpGroupHelp, &["explain", "help"]),
 ];

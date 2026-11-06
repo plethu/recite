@@ -20,12 +20,12 @@ cp -R fixtures/realistic/v1-pack "$work/dialogue"
 cd "$work/dialogue"
 mkdir build
 recite validate src
-recite check-ids src
-recite check-metadata src --schema schema/realistic.schema.json
-recite check-markup src --schema schema/realistic.schema.json
+recite id check src
+recite validate src --only metadata --schema schema/realistic.schema.json
+recite validate src --only markup --schema schema/realistic.schema.json
 recite compile src --schema schema/realistic.schema.json -o build/dialogue.recitec
-recite validate-project .
-recite check-fresh .
+recite project validate .
+recite project check-fresh .
 ```
 
 `recite.project.toml` declares the schema, compiled asset, entry block and scene participants.
@@ -57,7 +57,7 @@ recite watch .
 Wait for a successful build. In `src/arrival.recite`, replace `-> src/effects.recite::effects` with
 `-> missing_block` and save. Watch reports the missing target and keeps the previous compiled bytes.
 Restore the target, change `The case narrows` to `The case turns`, and save again. The next
-successful build replaces the asset. Run `recite check-fresh .` in another terminal.
+successful build replaces the asset. Run `recite project check-fresh .` in another terminal.
 
 Keep the `@` IDs when editing text. The [authoring guide](/guides/authoring-loop/) covers editor
 diagnostics and [engine refresh](/adapters/authoring/).

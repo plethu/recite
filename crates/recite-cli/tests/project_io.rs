@@ -22,7 +22,7 @@ participants = ["hazel"]
 "#,
     );
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     output.assert_failure().assert_exit_code(1);
     output.assert_stderr_contains("compiled asset path");
     output.assert_stderr_contains("is not a regular file");
@@ -42,7 +42,7 @@ participants = ["hazel"]
 "#,
     );
 
-    let output = run(recite().arg("validate-project").arg(temp.path()));
+    let output = run(recite().args(["project", "validate"]).arg(temp.path()));
     output.assert_failure().assert_exit_code(1);
     output.assert_stderr_contains("failed to inspect compiled asset");
     output.assert_stderr_not_contains("RECITE_PROJECT003");
@@ -64,7 +64,7 @@ participants = ["hazel"]
     );
     fs::write(&source, [0xff, 0xfe]).expect("invalid UTF-8 source");
 
-    let output = run(recite().arg("check-fresh").arg(temp.path()));
+    let output = run(recite().args(["project", "check-fresh"]).arg(temp.path()));
     output.assert_failure().assert_exit_code(1);
     output.assert_stderr_contains("failed to read");
     output.assert_stderr_not_contains("RECITE_PROJECT006");
@@ -93,7 +93,7 @@ participants = ["hazel"]
         .join(&decoded.sources[0].path);
     fs::create_dir_all(&first_candidate).expect("blocking source candidate directory");
 
-    let output = run(recite().arg("check-fresh").arg(temp.path()));
+    let output = run(recite().args(["project", "check-fresh"]).arg(temp.path()));
     output.assert_failure().assert_exit_code(1);
     output.assert_stderr_contains("failed to read");
     output.assert_stderr_not_contains("RECITE_PROJECT006");
