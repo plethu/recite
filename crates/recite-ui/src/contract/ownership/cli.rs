@@ -8,19 +8,21 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandValidate
         | MsgId::CliHelpCommandCompile
         | MsgId::CliHelpCommandExtract
-        | MsgId::CliHelpCommandCheckIds
-        | MsgId::CliHelpCommandAssignIds
+        | MsgId::CliHelpCommandId
+        | MsgId::CliHelpCommandProject
+        | MsgId::CliHelpCommandSchema
+        | MsgId::CliHelpArgOnly
+        | MsgId::CliHelpCommandIdCheck
+        | MsgId::CliHelpCommandIdAssign
         | MsgId::CliIdsAssigned
         | MsgId::CliIdsNoneMissing
         | MsgId::CliIdsRemoved
         | MsgId::CliHelpArgSince
         | MsgId::CliHelpArgAllowRemoved
-        | MsgId::CliHelpCommandCheckMarkup
-        | MsgId::CliHelpCommandCheckMetadata
-        | MsgId::CliHelpCommandValidateProject
-        | MsgId::CliHelpCommandCheckFresh
-        | MsgId::CliHelpCommandInspectSchema
-        | MsgId::CliHelpCommandExportSchema
+        | MsgId::CliHelpCommandProjectValidate
+        | MsgId::CliHelpCommandProjectCheckFresh
+        | MsgId::CliHelpCommandSchemaInspect
+        | MsgId::CliHelpCommandSchemaExport
         | MsgId::CliHelpCommandExplain
         | MsgId::CliHelpCommandWatch
         | MsgId::CliHelpCommandRun
@@ -64,12 +66,11 @@ macro_rules! cli_message_ids {
         | MsgId::ExplainCommonCauses
         | MsgId::ExplainHowToFix
         | MsgId::ExplainListItem
-        | MsgId::CliHelpCommandCheckSchemaProducerFreshness
+        | MsgId::CliHelpCommandSchemaCheckFresh
         | MsgId::CliHelpGroupAuthoring
         | MsgId::CliHelpGroupBuilding
         | MsgId::CliHelpGroupLocalisation
         | MsgId::CliHelpGroupRunning
-        | MsgId::CliHelpGroupSchema
         | MsgId::CliHelpGroupHelp
         | MsgId::CliSuccessOk
         | MsgId::CliSuccessFiles

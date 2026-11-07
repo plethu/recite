@@ -89,7 +89,7 @@ impl<'a> WatchProtocol<'a> {
                 version: 1,
                 sequence: self.sequence,
                 event,
-                command: "watch",
+                command: crate::structured::StructuredCommand::Watch.wire_name(),
                 invocation_id: self.invocation_id.clone(),
                 data,
             },

@@ -6,7 +6,7 @@ internal static class ReciteUnitySchemaHeadless
 {
     private static void Main(string[] args)
     {
-        if (args.Length > 0 && args[0] == "export-schema")
+        if (args.Length > 1 && args[0] == "schema" && args[1] == "export")
         {
             ReciteSchemaExporterTests.Child(args);
             return;

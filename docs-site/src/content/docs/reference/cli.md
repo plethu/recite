@@ -13,13 +13,31 @@ Path arguments accept one or more `.recite` files or directories containing them
 report structured diagnostics with stable codes; runtime and filesystem failures exit non-zero with
 a CLI error message.
 
+## Command map
+
+Top-level commands act on dialogue source or compiled assets in the build pipeline. A noun group
+exists where a thing has two or more operations of its own, so related work sits under one name:
+
+| Group              | Commands                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| `id`               | `check`, `assign`                                                                               |
+| `schema`           | `inspect`, `export`, `check-fresh`                                                              |
+| `project`          | `validate`, `check-fresh`                                                                       |
+| Top-level commands | `validate`, `compile`, `extract`, `watch`, `run`, `trace`, `play`, `bench`, `import`, `explain` |
+
+`recite <group>` lists its commands, and `recite <group> <command> --help` documents one.
+
 ## Authoring checks
 
-### `recite validate <PATHS>...`
+### `recite validate [--schema <SCHEMA>] [--only <CATEGORY>] <PATHS>...`
 
 Validates dialogue source without writing compiled output: syntax, structure, and references.
 
-### `recite check-ids [--since <REF>] [--allow-removed <ID>]... <PATHS>...`
+With `--schema`, it also checks metadata, markup and declarations against a schema manifest. `--only
+markup` or `--only metadata` reports just that diagnostic category; syntax errors are always
+reported because they stop validation. `--only metadata` requires `--schema`.
+
+### `recite id check [--since <REF>] [--allow-removed <ID>]... <PATHS>...`
 
 Reports stable line and choice ID diagnostics: missing, malformed, or duplicate IDs.
 
@@ -29,21 +47,15 @@ release tag, and pass `--allow-removed <ID>` for each line you removed on purpos
 another file keeps its ID. If the revision is not available, for example in a shallow CI clone
 without tags, the command fails instead of comparing against nothing.
 
-### `recite assign-ids <PATHS>...`
+### `recite id assign <PATHS>...`
 
 Appends a generated stable ID to every line and choice header that has none, after the header's last
 field. Existing IDs are never rewritten. If a file has syntax errors or a malformed ID, it reports
 those diagnostics and leaves every file unchanged.
 
-### `recite check-markup [--schema <SCHEMA>] <PATHS>...`
+## Schema
 
-Validates inline markup in prose, optionally against a schema manifest's markup policy.
-
-### `recite check-metadata --schema <SCHEMA> <PATHS>...`
-
-Validates metadata keys and values against a schema manifest.
-
-### `recite inspect-schema <SCHEMA>`
+### `recite schema inspect <SCHEMA>`
 
 Projects a standalone schema TOML or generated schema manifest JSON to a versioned, deterministic
 JSON summary on stdout. The input extension selects the authoritative loader: `.toml` uses
@@ -51,7 +63,7 @@ standalone source loading and `.json` uses the generated-manifest loader. Genera
 read-only; this command does not invoke producers or write files. The JSON retains typed ownership,
 freshness and provenance; machine paths use an explicit encoding rather than lossy text conversion.
 
-### `recite export-schema --schema <SCHEMA> --output <OUTPUT>`
+### `recite schema export --schema <SCHEMA> --output <OUTPUT>`
 
 Engine authoring tools can add paired `--producer-kind <KIND> --producer-id <STABLE-ID>` flags. The
 canonical export then records the engine resource as its producer, with a fingerprint derived from
@@ -63,7 +75,12 @@ Engine schema producers can use the public `recite_core::schema::export_schema_m
 function for typed Rust declarations and the same canonical serializer. The command rejects an
 output path that aliases its input and replaces the output only after validation. `--output-format
 structured` reports versioned command records with diagnostics or artifact metadata for authoring
-tools.
+tools; their `command` field is `schema export`.
+
+### `recite schema check-fresh --expected <EXPECTED> --actual <ACTUAL>`
+
+Compares the schema producer fingerprints of a previously exported manifest with a current export
+and reports whether the producer is fresh.
 
 ## Building
 
@@ -73,11 +90,11 @@ Compiles source dialogue into a deterministic MessagePack `.recitec` asset. Iden
 input produces identical bytes when compile options, including the output asset ID/path, are the
 same.
 
-### `recite validate-project <PROJECT_ROOT>`
+### `recite project validate <PROJECT_ROOT>`
 
 Validates `recite.project.toml` and the compiled assets it references.
 
-### `recite check-fresh <PROJECT_ROOT>`
+### `recite project check-fresh <PROJECT_ROOT>`
 
 Checks whether the project's compiled assets are fresh relative to current source fingerprints,
 schema fingerprint, and compiler compatibility version. Wire this into CI to catch stale assets.
@@ -147,10 +164,10 @@ accept typed values, and blocking effects accept Enter or `ack`.
 
 ```bash
 recite validate dialogue/
-recite check-ids dialogue/
-recite check-metadata dialogue/ --schema schema/recite.schema.json
+recite id check dialogue/
+recite validate dialogue/ --only metadata --schema schema/recite.schema.json
 recite compile dialogue/ -o build/scenes.recitec --schema schema/recite.schema.json
-recite check-fresh .
+recite project check-fresh .
 recite trace build/scenes.recitec --block main --fixture tests/golden.toml
 ```
 

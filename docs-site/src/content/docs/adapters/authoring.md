@@ -37,17 +37,16 @@ Beside the manifest, create `main.recite`:
   -> END
 ```
 
-The `@` IDs identify the line and choice. Keep them when editing their text. Run `recite
-assign-ids`, or use the editor's stable-ID action, to add missing IDs. If you use game conditions or
-effects, export the engine's schema first and set `[project].schema` to that manifest's relative
-path.
+The `@` IDs identify the line and choice. Keep them when editing their text. Run `recite id assign`,
+or use the editor's stable-ID action, to add missing IDs. If you use game conditions or effects,
+export the engine's schema first and set `[project].schema` to that manifest's relative path.
 
 ## Watch an edit
 
 From the directory containing `recite.project.toml`, run:
 
 ```sh
-recite check-ids main.recite
+recite id check main.recite
 recite watch .
 ```
 
@@ -72,9 +71,9 @@ revision stays unchanged. The new session should show `The door is closed.`. Res
 scene or Unity Play Mode is the simplest way to try this in the editor; the adapter also preserves
 an active session when its available asset is updated programmatically.
 
-In a second terminal, run `recite check-fresh .` after the successful build. It compares compiled
-fingerprints with the source and schema. A game that loads only the compiled file cannot make that
-comparison.
+In a second terminal, run `recite project check-fresh .` after the successful build. It compares
+compiled fingerprints with the source and schema. A game that loads only the compiled file cannot
+make that comparison.
 
 ## If the new text does not appear
 

@@ -1,4 +1,4 @@
-//! `assign-ids`: append generated stable IDs to headers that have none.
+//! `id assign`: append generated stable IDs to headers that have none.
 //!
 //! Planning and editing belong to the shared authoring kernel, so the CLI
 //! inserts exactly what the LSP quick fix would.
@@ -17,7 +17,7 @@ use crate::error::CliError;
 use crate::fs::{read_relative_inputs, validate_inputs, write_staged};
 use crate::i18n::{Messages, MsgId};
 
-pub(super) fn assign_ids_command(
+pub(super) fn run(
     args: InputArgs,
     stderr: &mut dyn Write,
     messages: &Messages,

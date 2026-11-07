@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
+use recite_core::DiagnosticCategory;
 
 #[derive(Debug, Parser)]
 #[command(name = "recite", version)]
@@ -14,24 +15,15 @@ pub(crate) enum Command {
     Validate(ValidateArgs),
     Compile(CompileArgs),
     Extract(ExtractArgs),
-    #[command(name = "check-ids")]
-    CheckIds(CheckIdsArgs),
-    #[command(name = "assign-ids")]
-    AssignIds(InputArgs),
-    #[command(name = "check-markup")]
-    CheckMarkup(SchemaInputArgs),
-    #[command(name = "check-metadata")]
-    CheckMetadata(RequiredSchemaInputArgs),
-    #[command(name = "validate-project")]
-    ValidateProject(ProjectRootArgs),
-    #[command(name = "check-fresh")]
-    CheckFresh(ProjectRootArgs),
-    #[command(name = "check-schema-producer-freshness")]
-    CheckSchemaProducerFreshness(ProducerFreshnessArgs),
-    #[command(name = "inspect-schema")]
-    InspectSchema(InspectSchemaArgs),
-    #[command(name = "export-schema")]
-    ExportSchema(ExportSchemaArgs),
+    /// Stable line and choice IDs.
+    #[command(subcommand)]
+    Id(IdCommand),
+    /// Schema manifests and their producers.
+    #[command(subcommand)]
+    Schema(SchemaCommand),
+    /// Project manifests and compiled-asset freshness.
+    #[command(subcommand)]
+    Project(ProjectCommand),
     Explain(ExplainArgs),
     Watch(WatchArgs),
     Run(RuntimeArgs),
@@ -40,6 +32,27 @@ pub(crate) enum Command {
     Bench(BenchArgs),
     /// Inspect a bounded migration; write only with --output-dir.
     Import(crate::migration::ImportArgs),
+}
+
+#[derive(Debug, Subcommand)]
+pub(crate) enum IdCommand {
+    Check(CheckIdsArgs),
+    Assign(InputArgs),
+}
+
+#[derive(Debug, Subcommand)]
+pub(crate) enum SchemaCommand {
+    Inspect(InspectSchemaArgs),
+    Export(ExportSchemaArgs),
+    #[command(name = "check-fresh")]
+    CheckFresh(ProducerFreshnessArgs),
+}
+
+#[derive(Debug, Subcommand)]
+pub(crate) enum ProjectCommand {
+    Validate(ProjectRootArgs),
+    #[command(name = "check-fresh")]
+    CheckFresh(ProjectRootArgs),
 }
 
 #[derive(Debug, Args)]
@@ -66,30 +79,36 @@ pub(crate) enum OutputFormat {
     Structured,
 }
 
+/// Diagnostic categories `validate --only` can focus on.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
+pub(crate) enum ValidateOnly {
+    Markup,
+    Metadata,
+}
+
+impl ValidateOnly {
+    pub(crate) const fn category(self) -> DiagnosticCategory {
+        match self {
+            Self::Markup => DiagnosticCategory::Markup,
+            Self::Metadata => DiagnosticCategory::Metadata,
+        }
+    }
+}
+
 #[derive(Debug, Args)]
 pub(crate) struct ValidateArgs {
+    /// Schema manifest whose declarations, metadata and markup policy are checked.
+    #[arg(long, required_if_eq("only", "metadata"))]
+    pub(crate) schema: Option<PathBuf>,
+    /// Report only this diagnostic category; syntax errors are always reported.
+    #[arg(long, value_enum, value_name = "CATEGORY")]
+    pub(crate) only: Option<ValidateOnly>,
     /// Select human-readable or version-1 newline-delimited structured output.
     #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
     pub(crate) output_format: OutputFormat,
     /// Caller-owned identifier copied into each structured protocol record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
-    #[arg(required = true)]
-    pub(crate) paths: Vec<PathBuf>,
-}
-
-#[derive(Debug, Args)]
-pub(crate) struct SchemaInputArgs {
-    #[arg(long)]
-    pub(crate) schema: Option<PathBuf>,
-    #[arg(required = true)]
-    pub(crate) paths: Vec<PathBuf>,
-}
-
-#[derive(Debug, Args)]
-pub(crate) struct RequiredSchemaInputArgs {
-    #[arg(long)]
-    pub(crate) schema: PathBuf,
     #[arg(required = true)]
     pub(crate) paths: Vec<PathBuf>,
 }
@@ -257,34 +276,4 @@ pub(crate) struct BenchArgs {
     pub(crate) baseline: Option<PathBuf>,
     #[arg(long, default_value_t = 3)]
     pub(crate) samples: usize,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct StructuredInvocation {
-    pub(crate) command: &'static str,
-    pub(crate) invocation_id: Option<String>,
-}
-
-impl Command {
-    pub(crate) fn structured_invocation(&self) -> Option<StructuredInvocation> {
-        let (command, output_format, invocation_id) = match self {
-            Self::Validate(args) => ("validate", args.output_format, &args.invocation_id),
-            Self::Compile(args) => ("compile", args.output_format, &args.invocation_id),
-            Self::Extract(args) => ("extract", args.output_format, &args.invocation_id),
-            Self::ExportSchema(args) => ("export-schema", args.output_format, &args.invocation_id),
-            Self::Watch(args) => ("watch", args.output_format, &args.invocation_id),
-            Self::Run(args) => ("run", args.output_format, &args.invocation_id),
-            Self::Trace(args) => (
-                "trace",
-                args.runtime.output_format,
-                &args.runtime.invocation_id,
-            ),
-            _ => return None,
-        };
-
-        (output_format == OutputFormat::Structured).then(|| StructuredInvocation {
-            command,
-            invocation_id: invocation_id.clone(),
-        })
-    }
 }

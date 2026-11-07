@@ -7,7 +7,7 @@ Recite editor plugin imports the compiled file, and the scene loads its native
 `ReciteDialogueResource` through `ResourceLoader`.
 
 For a source edit, keep the watcher running, change text in `dialogue/basic.recite`, and check
-editor diagnostics or run `recite validate dialogue/basic.recite` and `recite check-ids
+editor diagnostics or run `recite validate dialogue/basic.recite` and `recite id check
 dialogue/basic.recite`. Wait for a successful watch rebuild, then let the Godot editor reimport
 `dialogue/basic.recitec`. End the current dialogue session and start another to see the accepted
 revision. A failed compile leaves the previous compiled file in place; a rejected import retains the

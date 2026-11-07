@@ -21,7 +21,7 @@ dotnet build "$headless_dir/Schema.csproj" --artifacts-path "$check_dir/artifact
   dotnet "$check_dir/artifacts/bin/Schema/debug/Schema.dll" schema.toml duplicate.toml
 )
 producer_id='0123456789abcdef0123456789abcdef'
-if ! "$cli" export-schema --schema "$check_dir/schema.toml" --output "$check_dir/manifest.json" --producer-kind unity --producer-id "$producer_id" --output-format structured >"$check_dir/result.ndjson"; then
+if ! "$cli" schema export --schema "$check_dir/schema.toml" --output "$check_dir/manifest.json" --producer-kind unity --producer-id "$producer_id" --output-format structured >"$check_dir/result.ndjson"; then
   cat "$check_dir/result.ndjson" >&2
   cat "$check_dir/schema.toml" >&2
   exit 1
@@ -35,7 +35,7 @@ jq -se --arg name 'Ada \"Élan\"' --arg producer "$producer_id" '
 ' "$check_dir/manifest.json" >/dev/null
 jq -se 'last.status == "success"' "$check_dir/result.ndjson" >/dev/null
 cp "$check_dir/manifest.json" "$check_dir/before.json"
-if "$cli" export-schema --schema "$check_dir/duplicate.toml" --output "$check_dir/manifest.json" --producer-kind unity --producer-id "$producer_id" --output-format structured >"$check_dir/duplicate.ndjson"; then
+if "$cli" schema export --schema "$check_dir/duplicate.toml" --output "$check_dir/manifest.json" --producer-kind unity --producer-id "$producer_id" --output-format structured >"$check_dir/duplicate.ndjson"; then
   echo 'duplicate schema declaration unexpectedly exported' >&2
   exit 1
 fi

@@ -3,14 +3,17 @@
 Recite's non-interactive commands support an opt-in machine-output boundary:
 
 ```text
-recite validate --output-format structured [--invocation-id ID] PATHS...
+recite validate [--schema SCHEMA] [--only markup|metadata] --output-format structured [--invocation-id ID] PATHS...
 recite compile --output OUTPUT --output-format structured [--invocation-id ID] PATHS...
 recite extract --output-format structured [--output OUTPUT] [--invocation-id ID] PATHS...
-recite export-schema --schema SCHEMA --output OUTPUT [--producer-kind KIND --producer-id ID] --output-format structured [--invocation-id ID]
+recite schema export --schema SCHEMA --output OUTPUT [--producer-kind KIND --producer-id ID] --output-format structured [--invocation-id ID]
 recite run --output-format structured [--invocation-id ID] ASSET --block BLOCK --fixture FIXTURE
 recite trace --output-format structured [--invocation-id ID] ASSET --block BLOCK --fixture FIXTURE
 recite watch --output-format structured [--invocation-id ID] PROJECT-ROOT
 ```
+
+The `command` field in every record is the command path as typed: `validate`, `compile`, `extract`,
+`schema export`, `run`, `trace` or `watch`.
 
 The default output format remains the existing human CLI surface. `watch` is a streaming lifecycle
 and does not use the finite two-record result contract.
@@ -45,7 +48,7 @@ The data object is selected by command, and its shape is coupled to the result s
 `artifact` metadata; a compile with content diagnostics contains diagnostics and no artifact. A
 successful `extract` contains diagnostics and exactly one of artifact metadata (when `--output` is
 supplied) or typed `entries`; an extract with content diagnostics contains diagnostics only. A
-successful `export-schema` contains diagnostics and required `artifact` metadata; invalid schema
+successful `schema export` contains diagnostics and required `artifact` metadata; invalid schema
 input returns content diagnostics without an artifact and preserves any existing output. `run` and
 `trace` return the deterministic runtime `trace` model; they do not return localized human run
 lines. The protocol does not add redundant `valid`, `compiled`, or `extracted` booleans: `status`
@@ -112,3 +115,16 @@ and do not stop the watch. EOF is not cancellation. A valid cancellation wakes a
 cooperatively cancels an active build through the shared build control. Notify failures are
 similarly reported as typed recoverable records. Startup, stream, and fatal watch failures are typed
 in the terminal `watch.stopped` record. No OS signal transport is implied.
+
+## Command names and error operations
+
+`StructuredCommand` in `recite-cli` is the closed set of commands that speak this protocol. It owns
+two things for each command: the wire `command` string above, and the `ErrorOperation` reported when
+the command itself fails. Both are exhaustive matches, and so is the classification of every CLI
+command as structured or human-only, so the compiler rejects a new command, or a structured `id` or
+`project` command, until its name and operation are chosen. A test checks that every wire name is a
+real command path in the CLI tree.
+
+`ErrorOperation` names failure stages (`export_schema`, `validate_project`), not commands, and is
+projected to the editors with `just editor protocol-update`. A command rename does not rename an
+operation.

@@ -231,18 +231,18 @@ trailing `@id` field after any metadata and clauses:
   `l`, `o` or `u`, starting with a letter. Tooling draws them at random and checks each against the
   project namespace, so branches that insert at the same place do not generate the same ID. Authors
   may write a readable ID instead; it carries the same freeze obligation.
-- A header without an ID is incomplete. `recite assign-ids` and the LSP missing-ID action append a
+- A header without an ID is incomplete. `recite id assign` and the LSP missing-ID action append a
   generated `@id` field after the header's last field. Neither rewrites an existing or malformed ID.
 - Once written, an ID is **frozen**. Changing it changes identity: translations and saves keyed on
   the old ID no longer match. Before a release, an ID change only requires regenerating catalogues
-  and development saves. After a release, treat it as a breaking content change: `recite check-ids
+  and development saves. After a release, treat it as a breaking content change: `recite id check
   --since <release tag>` fails for every ID that has disappeared since that git revision unless it
   is acknowledged with `--allow-removed <id>`, and fails if the revision is unavailable rather than
   passing on an empty baseline. Projects outside git keep only the duplicate check.
-- Concurrent branches can still add the same ID. The compiler and `recite check-ids` report the
+- Concurrent branches can still add the same ID. The compiler and `recite id check` report the
   duplicate before merge; reassign the branch's new ID.
-- The compiler errors if any line or choice has a missing, malformed or duplicate ID. `recite
-  check-ids` enforces the same.
+- The compiler errors if any line or choice has a missing, malformed or duplicate ID. `recite id
+  check` enforces the same.
 - A bare ID belongs to the project's own content. A future pack or DLC qualifier is applied when
   assets are loaded and does not change source.
 

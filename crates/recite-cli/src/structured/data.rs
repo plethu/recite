@@ -8,6 +8,7 @@ use recite_core::{
 };
 use serde::Serialize;
 
+use super::command::StructuredCommand;
 use super::errors::StructuredError;
 use crate::error::CliError;
 use crate::runtime_fixture::TraceDocument;
@@ -18,7 +19,7 @@ pub(super) struct StartedRecord<'a> {
     pub(super) version: u16,
     pub(super) sequence: RecordSequence,
     pub(super) event: &'static str,
-    pub(super) command: &'static str,
+    pub(super) command: StructuredCommand,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) invocation_id: Option<&'a str>,
 }
@@ -28,7 +29,7 @@ pub(super) struct ResultRecord {
     pub(super) version: u16,
     pub(super) sequence: RecordSequence,
     pub(super) event: &'static str,
-    pub(super) command: &'static str,
+    pub(super) command: StructuredCommand,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) invocation_id: Option<String>,
     pub(super) status: ResultStatus,
@@ -41,7 +42,7 @@ pub(super) struct ErrorRecord {
     pub(super) version: u16,
     pub(super) sequence: RecordSequence,
     pub(super) event: &'static str,
-    pub(super) command: &'static str,
+    pub(super) command: StructuredCommand,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) invocation_id: Option<String>,
     pub(super) status: ErrorStatus,

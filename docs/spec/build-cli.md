@@ -222,8 +222,8 @@ after assets exist requires a format or compatibility version change.
 
 ### 12.3 Freshness
 
-`recite check-fresh` compares current source fingerprints, schema fingerprint or no-schema marker,
-and compiler compatibility version against their embedded counterparts.
+`recite project check-fresh` compares current source fingerprints, schema fingerprint or no-schema
+marker, and compiler compatibility version against their embedded counterparts.
 
 The v0 freshness comparison is content-based. Source and schema fingerprints are algorithm-tagged
 binary digest values; the initial algorithm is BLAKE3. The MessagePack asset stores digest bytes
@@ -243,6 +243,39 @@ The [CLI reference](../../docs-site/src/content/docs/reference/cli.md) owns comm
 a second option inventory. `play` is interactive; fixture-driven `run` and `trace` remain
 scriptable. Binding generation is deferred beyond v1.
 
+### 13.0 Command structure
+
+**Grouping rule.** Top-level commands act on dialogue source or compiled assets in the build
+pipeline. A noun group exists when a thing has two or more operations of its own. Groups are
+verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun top-level names.
+
+| Command                                                 | Group                                              |
+| ------------------------------------------------------- | -------------------------------------------------- |
+| `validate`, `compile`, `extract`, `watch`               | top-level; source and project pipeline             |
+| `run`, `trace`, `play`, `bench`                         | top-level; running compiled assets                 |
+| `import`, `explain`                                     | top-level; migration and diagnostic help           |
+| `id check`, `id assign` (`id rename`, #276)             | stable line and choice IDs                         |
+| `schema inspect`, `schema export`, `schema check-fresh` | schema manifests and their producers               |
+| `project validate`, `project check-fresh`               | `recite.project.toml` and compiled-asset freshness |
+
+`check-markup` and `check-metadata` are `validate --only markup` and `validate --only metadata`,
+because they filter the same diagnostics run; `--only metadata` requires `--schema`. The released-ID
+guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems and `id
+assign` makes the one safe automatic repair, so a third command would only overlap them.
+
+Recite is pre-release, so the previous hyphenated names (`check-ids`, `assign-ids`, `check-markup`,
+`check-metadata`, `validate-project`, `check-fresh`, `check-schema-producer-freshness`,
+`inspect-schema`, `export-schema`) have no aliases.
+
+**Contracts that follow the tree.**
+
+- Help and clap errors are localised per command path through `recite-ui`; nested groups recurse.
+- The structured protocol's `command` field is the command path as typed, such as `schema export`.
+  `StructuredCommand` in `recite-cli` is the closed set that speaks the protocol and ties each wire
+  name to its `ErrorOperation`; see the [structured protocol](../cli-structured-protocol.md).
+- `ErrorOperation` names failure stages, not commands, and is projected to the editors with `just
+  editor protocol-update`.
+
 ### 13.1 `compile`
 
 Compiles source dialogue into a compiled asset.
@@ -253,7 +286,9 @@ Validation errors prevent compiled output; warnings remain diagnostics.
 
 Validates dialogue source without writing compiled output.
 
-Must report all recoverable diagnostics.
+Must report all recoverable diagnostics. `--schema` adds schema-backed metadata, markup and
+declaration checks. `--only <category>` (`markup`, `metadata`) narrows the report to one diagnostic
+category while syntax errors still stop validation and are always reported.
 
 ### 13.3 `extract`
 
@@ -266,7 +301,7 @@ Options:
 - include/exclude speaker names;
 - include/exclude metadata localisable fields.
 
-### 13.4 `check-ids`
+### 13.4 `id check`
 
 Reports:
 
@@ -365,7 +400,7 @@ recite watch <project-root>
 
 `watch` observes the project manifest, dialogue source files, generated schema manifest, and other
 compile inputs. On change, it validates the project and rebuilds compiled assets using the same
-deterministic whole-project compiler as `compile`. It should reuse `check-fresh` fingerprint
+deterministic whole-project compiler as `compile`. It should reuse `project check-fresh` fingerprint
 semantics so generated assets can be compared against current source and schema without editor- or
 engine-specific state.
 
