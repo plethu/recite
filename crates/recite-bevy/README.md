@@ -46,10 +46,11 @@ distribution bundle carries both full license texts. This check does not publish
 
 When updating, keep `recite-bevy` and the other Recite crates on the same compatible release. Keep
 Bevy on the version named above until this adapter declares support for another version. Re-export
-the host schema, rebuild the `.recitec` assets, and run `recite project check-fresh <project-root>` before
-loading them. An active session keeps the compiled revision it started with; start a new session
-after an accepted import to use rebuilt content. Preserve authored line, choice, and effect IDs when
-editing source, and test restore from any save format your game intends to carry across the upgrade.
+the host schema, rebuild the `.recitec` assets, and run `recite project check-fresh <project-root>`
+before loading them. An active session keeps the compiled revision it started with; start a new
+session after an accepted import to use rebuilt content. Preserve authored line, choice, and effect
+IDs when editing source, and test restore from any save format your game intends to carry across the
+upgrade.
 
 ## Performance
 

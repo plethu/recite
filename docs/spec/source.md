@@ -241,8 +241,8 @@ trailing `@id` field after any metadata and clauses:
   passing on an empty baseline. Projects outside git keep only the duplicate check.
 - Concurrent branches can still add the same ID. The compiler and `recite id check` report the
   duplicate before merge; reassign the branch's new ID.
-- The compiler errors if any line or choice has a missing, malformed or duplicate ID. `recite
-  id check` enforces the same.
+- The compiler errors if any line or choice has a missing, malformed or duplicate ID. `recite id
+  check` enforces the same.
 - A bare ID belongs to the project's own content. A future pack or DLC qualifier is applied when
   assets are loaded and does not change source.
 

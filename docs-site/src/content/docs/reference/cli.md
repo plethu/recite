@@ -33,8 +33,8 @@ exists where a thing has two or more operations of its own, so related work sits
 
 Validates dialogue source without writing compiled output: syntax, structure, and references.
 
-With `--schema`, it also checks metadata, markup and declarations against a schema manifest.
-`--only markup` or `--only metadata` reports just that diagnostic category; syntax errors are always
+With `--schema`, it also checks metadata, markup and declarations against a schema manifest. `--only
+markup` or `--only metadata` reports just that diagnostic category; syntax errors are always
 reported because they stop validation. `--only metadata` requires `--schema`.
 
 ### `recite id check [--since <REF>] [--allow-removed <ID>]... <PATHS>...`

@@ -222,8 +222,8 @@ after assets exist requires a format or compatibility version change.
 
 ### 12.3 Freshness
 
-`recite project check-fresh` compares current source fingerprints, schema fingerprint or no-schema marker,
-and compiler compatibility version against their embedded counterparts.
+`recite project check-fresh` compares current source fingerprints, schema fingerprint or no-schema
+marker, and compiler compatibility version against their embedded counterparts.
 
 The v0 freshness comparison is content-based. Source and schema fingerprints are algorithm-tagged
 binary digest values; the initial algorithm is BLAKE3. The MessagePack asset stores digest bytes
@@ -260,8 +260,8 @@ verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun to
 
 `check-markup` and `check-metadata` are `validate --only markup` and `validate --only metadata`,
 because they filter the same diagnostics run; `--only metadata` requires `--schema`. The released-ID
-guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems and
-`id assign` makes the one safe automatic repair, so a third command would only overlap them.
+guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems and `id
+assign` makes the one safe automatic repair, so a third command would only overlap them.
 
 Recite is pre-release, so the previous hyphenated names (`check-ids`, `assign-ids`, `check-markup`,
 `check-metadata`, `validate-project`, `check-fresh`, `check-schema-producer-freshness`,
@@ -273,8 +273,8 @@ Recite is pre-release, so the previous hyphenated names (`check-ids`, `assign-id
 - The structured protocol's `command` field is the command path as typed, such as `schema export`.
   `StructuredCommand` in `recite-cli` is the closed set that speaks the protocol and ties each wire
   name to its `ErrorOperation`; see the [structured protocol](../cli-structured-protocol.md).
-- `ErrorOperation` names failure stages, not commands, and is projected to the editors with
-  `just editor protocol-update`.
+- `ErrorOperation` names failure stages, not commands, and is projected to the editors with `just
+  editor protocol-update`.
 
 ### 13.1 `compile`
 
@@ -287,8 +287,8 @@ Validation errors prevent compiled output; warnings remain diagnostics.
 Validates dialogue source without writing compiled output.
 
 Must report all recoverable diagnostics. `--schema` adds schema-backed metadata, markup and
-declaration checks. `--only <category>` (`markup`, `metadata`) narrows the report to one
-diagnostic category while syntax errors still stop validation and are always reported.
+declaration checks. `--only <category>` (`markup`, `metadata`) narrows the report to one diagnostic
+category while syntax errors still stop validation and are always reported.
 
 ### 13.3 `extract`
 

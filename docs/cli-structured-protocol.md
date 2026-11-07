@@ -12,8 +12,8 @@ recite trace --output-format structured [--invocation-id ID] ASSET --block BLOCK
 recite watch --output-format structured [--invocation-id ID] PROJECT-ROOT
 ```
 
-The `command` field in every record is the command path as typed: `validate`, `compile`,
-`extract`, `schema export`, `run`, `trace` or `watch`.
+The `command` field in every record is the command path as typed: `validate`, `compile`, `extract`,
+`schema export`, `run`, `trace` or `watch`.
 
 The default output format remains the existing human CLI surface. `watch` is a streaming lifecycle
 and does not use the finite two-record result contract.
@@ -119,11 +119,11 @@ in the terminal `watch.stopped` record. No OS signal transport is implied.
 ## Command names and error operations
 
 `StructuredCommand` in `recite-cli` is the closed set of commands that speak this protocol. It owns
-two things for each command: the wire `command` string above, and the `ErrorOperation` reported
-when the command itself fails. Both are exhaustive matches, and so is the classification of every
-CLI command as structured or human-only, so the compiler rejects a new command, or a structured
-`id` or `project` command, until its name and operation are chosen. A test checks that every wire
-name is a real command path in the CLI tree.
+two things for each command: the wire `command` string above, and the `ErrorOperation` reported when
+the command itself fails. Both are exhaustive matches, and so is the classification of every CLI
+command as structured or human-only, so the compiler rejects a new command, or a structured `id` or
+`project` command, until its name and operation are chosen. A test checks that every wire name is a
+real command path in the CLI tree.
 
 `ErrorOperation` names failure stages (`export_schema`, `validate_project`), not commands, and is
 projected to the editors with `just editor protocol-update`. A command rename does not rename an
