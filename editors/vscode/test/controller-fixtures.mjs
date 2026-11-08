@@ -74,7 +74,9 @@ export function output(messages = [], hostApi) {
       this.appendLine("Place the cursor in an open Recite document before renaming.");
     },
     renameUnavailable() {
-      this.appendLine("Recite could not prepare a rename at the cursor. Place it on a block name or stable ID.");
+      this.appendLine(
+        "Recite could not prepare a rename at the cursor. Place it on a block name or stable ID.",
+      );
     },
     renameInvalid() {
       this.appendLine("Recite returned an invalid rename response.");
