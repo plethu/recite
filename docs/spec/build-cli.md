@@ -265,9 +265,9 @@ verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun to
 
 `check-markup` and `check-metadata` are `validate --only markup` and `validate --only metadata`,
 because they filter the same diagnostics run; `--only metadata` requires `--schema`. The released-ID
-guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems, `id
-assign` makes the one safe automatic repair, and `id rename` and `id reassign` make the deliberate
-identity changes an author chooses, so a further command would only overlap them.
+guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems, `id assign`
+makes the one safe automatic repair, and `id rename` and `id reassign` make the deliberate identity
+changes an author chooses, so a further command would only overlap them.
 
 Recite is pre-release, so the previous hyphenated names (`check-ids`, `assign-ids`, `check-markup`,
 `check-metadata`, `validate-project`, `check-fresh`, `check-schema-producer-freshness`,

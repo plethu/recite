@@ -71,8 +71,8 @@ old ID as removed until you acknowledge it with `--allow-removed`.
 
 ### `recite id reassign <ID|PATH:LINE> [PATHS]... [--catalog <PATH>]...`
 
-Gives one header a freshly generated stable ID, with the same refusals and catalogue updates as
-`id rename`. Use it to repair a duplicate ID that two branches added: select the copy to change with
+Gives one header a freshly generated stable ID, with the same refusals and catalogue updates as `id
+rename`. Use it to repair a duplicate ID that two branches added: select the copy to change with
 `PATH:LINE`. When the old ID is duplicated, only that header changes, and the catalogue entries stay
 with the other header.
 
