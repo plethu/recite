@@ -23,10 +23,10 @@ const FRENCH: &str = concat!(
     "msgctxt \"desk_greeting\"\nmsgid \"Hello there.\"\nmsgstr \"Bonjour.\"\n\n",
     "msgctxt \"desk_greeting&formal\"\nmsgid \"Hello there.\"\nmsgstr \"Bonjour, madame.\"\n\n",
     "#, fuzzy\n#| msgctxt \"desk_greeting\"\n#| msgid \"Hello.\"\nmsgctxt \"desk_greeting&casual\"\nmsgid \"Hello there.\"\nmsgstr \"Salut.\"\n\n",
-    "msgctxt \"ask_room\"\nmsgid \"I need a room.\"\nmsgstr \"Il me faut une chambre.\"\n",
+    "msgctxt \"ask_room\"\nmsgid \"I need a room.\"\nmsgstr \"Je veux dormir.\"\n",
 );
 
-const GERMAN: &str = "msgctxt \"ask_room\"\r\nmsgid \"I need a room.\"\r\nmsgstr \"Ich brauche ein Zimmer.\"\r\n\r\n#~ msgctxt \"retired_id\"\r\n#~ msgid \"Gone.\"\r\n#~ msgstr \"Weg.\"\r\n";
+const GERMAN: &str = "msgctxt \"ask_room\"\r\nmsgid \"I need a room.\"\r\nmsgstr \"Zimmer, bitte.\"\r\n\r\n#~ msgctxt \"retired_id\"\r\n#~ msgid \"Gone.\"\r\n#~ msgstr \"Weg.\"\r\n";
 
 fn key(value: &str) -> DocumentKey {
     DocumentKey::new(value).expect("test document key is valid")
