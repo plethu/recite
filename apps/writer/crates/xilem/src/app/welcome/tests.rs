@@ -1,8 +1,18 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
 use crate::app::opening::Job;
+use crate::app::picker;
 use crate::app::view;
+use crate::session::Session;
 use crate::tests::support::mounted::Mounted;
+use recite_config::WriterCommand;
 use recite_config::WriterPresentationField;
+use recite_writer_app::shell::welcome::{FormScope, ProjectAction};
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use xilem::WidgetView;
 use xilem::masonry::{core::WindowEvent, widgets::Passthrough};
@@ -22,7 +32,7 @@ fn project_actions_stay_visible_at_both_scales_without_replacing_folder_fields()
             .presentation
             .with_value(WriterPresentationField::UiScale, scale)
             .unwrap();
-        app.theme.refresh(&app.preferences.config.writer);
+        app.theme.refresh(&app.shell.preferences.config.writer);
         let properties = app.theme.properties.clone();
         let mut mounted = Mounted::new(app, page);
         mounted.harness.set_default_properties(properties);

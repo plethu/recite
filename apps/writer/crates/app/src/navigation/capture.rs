@@ -2,7 +2,7 @@ use super::*;
 use recite_writer_session::navigation::{Destination, Prepare};
 
 impl Writer {
-    pub fn submit_structural(&mut self, command: StructuralCommand) -> Result<(), String> {
+    pub(super) fn submit_structural(&mut self, command: StructuralCommand) -> Result<(), String> {
         let edit = self
             .session
             .model()
@@ -16,7 +16,11 @@ impl Writer {
         });
         self.send_navigation(request, worker::Work::Structure(Box::new(edit)))
     }
-    pub fn submit_edit(&mut self, target: Target, operation: EditOperation) -> Result<(), String> {
+    pub(crate) fn submit_edit(
+        &mut self,
+        target: Target,
+        operation: EditOperation,
+    ) -> Result<(), String> {
         let edit = self
             .session
             .model()
@@ -51,7 +55,7 @@ impl Writer {
             },
         )
     }
-    pub fn submit_navigation(&mut self, target: Target) -> Result<(), String> {
+    pub(super) fn submit_navigation(&mut self, target: Target) -> Result<(), String> {
         self.require_finished_composition()?;
         self.navigation.require_ready()?;
         if matches!(target, Target::Workspace(_) | Target::MapRefresh) {

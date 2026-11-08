@@ -1,10 +1,10 @@
 //! Source actions hold both real owners until their terminal outcome returns.
-pub mod accepting;
+mod accepting;
 #[cfg(test)]
 mod tests;
 use super::*;
-use crate::localisation::presentation;
-use crate::session::{Checkout as ProjectCheckout, RecoveryReason};
+pub use crate::localisation::presentation;
+pub use crate::session::{Checkout as ProjectCheckout, RecoveryReason};
 use recite_compiler::authoring::WorkControl;
 use recite_writer_session::{
     ProjectSession,
@@ -15,7 +15,7 @@ use recite_writer_session::{
         target::TargetLocale,
     },
 };
-use slot::{Checkout, Owner};
+pub use slot::{Checkout, Owner};
 
 pub enum Action {
     Create(TargetLocale),
@@ -31,7 +31,7 @@ pub struct Work {
 pub struct Completed {
     project: ProjectCheckout,
     catalogue: Checkout,
-    result: Result<Outcome, String>,
+    pub result: Result<Outcome, String>,
     previous: Option<Identity>,
     recovery: Option<RecoveryReason>,
     retired_entry: Option<Entry>,
@@ -62,7 +62,7 @@ impl Work {
             retired_beat: None,
         }
     }
-    pub fn not_started(self, error: String) -> Completed {
+    pub(super) fn not_started(self, error: String) -> Completed {
         let previous = self
             .catalogue
             .owner
@@ -73,7 +73,7 @@ impl Work {
     pub fn execute(self) -> Completed {
         self.execute_with(perform)
     }
-    fn execute_with(
+    pub fn execute_with(
         mut self,
         perform: impl FnOnce(&ProjectSession, &mut Checkout, &Action, &Query) -> Result<Outcome, String>,
     ) -> Completed {
@@ -114,7 +114,7 @@ impl Work {
         self.complete(result, previous, recovery)
     }
 }
-fn perform(
+pub fn perform(
     project: &ProjectSession,
     checkout: &mut Checkout,
     action: &Action,

@@ -1,6 +1,6 @@
 //! Explicit jumps reset scrolling; overlapping reading shifts retain their native anchor.
-use crate::{Writer, reading::ReadingWindow};
-use recite_core::DocumentKey;
+use crate::Writer;
+use recite_writer_app::reading::Anchor;
 use xilem::{
     ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewMarker},
@@ -13,40 +13,23 @@ use xilem::{
 #[cfg(test)]
 mod tests;
 
-#[derive(Clone, PartialEq)]
-struct ReadingLocation {
-    document: DocumentKey,
-    beat: Option<String>,
-    window: ReadingWindow,
-}
+/// The native scroll container's copy of the reading anchor it was built for.
 #[derive(Clone, Default, PartialEq)]
-pub(crate) struct ReadingViewport(Option<ReadingLocation>);
+pub(crate) struct ReadingViewport(Anchor);
 impl ReadingViewport {
     pub(crate) fn capture(writer: &Writer) -> Self {
-        Self(Some(ReadingLocation {
-            document: writer.session.model().document().key().clone(),
-            beat: writer.reading.selected.clone(),
-            window: writer.reading.window,
-        }))
+        Self(Anchor::capture(writer))
     }
     pub(crate) fn shifted_from(&self, previous: &Self) -> bool {
-        match (&self.0, &previous.0) {
-            (Some(current), Some(previous)) => {
-                current.document == previous.document
-                    && current.beat == previous.beat
-                    && current.window.is_shift()
-                    && current.window.start() != previous.window.start()
-            }
-            _ => false,
-        }
+        self.0.shifted_from(&previous.0)
     }
     pub(crate) fn is_manuscript(&self) -> bool {
-        self.0.is_some()
+        self.0.is_manuscript()
     }
 }
 impl Property for ReadingViewport {
     fn static_default() -> &'static Self {
-        static EMPTY: ReadingViewport = ReadingViewport(None);
+        static EMPTY: ReadingViewport = ReadingViewport(Anchor::NONE);
         &EMPTY
     }
 }

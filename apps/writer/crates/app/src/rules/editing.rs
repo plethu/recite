@@ -1,7 +1,7 @@
 //! Edits stage atomically through the shared Workbench owner.
 use super::*;
 impl Writer {
-    pub fn stage_rules(&mut self, structural: bool, edit: impl FnOnce(&mut ReplyRules)) {
+    pub(super) fn stage_rules(&mut self, structural: bool, edit: impl FnOnce(&mut ReplyRules)) {
         if !self.rules_editable() {
             self.status =
                 "Finish the current action, then refresh reply controls if needed.".into();

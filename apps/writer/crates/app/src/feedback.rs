@@ -9,7 +9,7 @@ pub fn edit(error: &EditError) -> String {
     }
 }
 
-pub fn file(error: &FileError) -> String {
+pub(super) fn file(error: &FileError) -> String {
     match error {
         FileError::Workbench(error) => workbench(error),
         FileError::Saving { path, error } => {
@@ -19,7 +19,7 @@ pub fn file(error: &FileError) -> String {
     }
 }
 
-pub fn workbench(error: &WorkbenchError) -> String {
+pub(super) fn workbench(error: &WorkbenchError) -> String {
     match error {
         WorkbenchError::Edit(error) => edit(error),
         _ => error.to_string(),

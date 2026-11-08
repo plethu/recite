@@ -16,11 +16,11 @@ impl PartialEq for Identity {
 }
 impl Eq for Identity {}
 pub struct Owner {
-    pub identity: Identity,
+    pub(crate) identity: Identity,
     pub catalogue: Catalogue,
     access: Access,
 }
-pub enum Access {
+enum Access {
     Editable,
     ReopenRequired,
 }
@@ -32,20 +32,20 @@ impl Owner {
             access: Access::Editable,
         }
     }
-    pub fn renew_identity(&mut self) {
+    pub(crate) fn renew_identity(&mut self) {
         self.identity = Identity(Arc::new(()));
     }
-    pub fn quarantine(&mut self) {
+    pub(crate) fn quarantine(&mut self) {
         self.access = Access::ReopenRequired;
     }
-    pub fn flush_recovery(&mut self) -> Result<(), String> {
+    pub(crate) fn flush_recovery(&mut self) -> Result<(), String> {
         match self.access {
             Access::Editable => self.catalogue.flush_recovery(),
             Access::ReopenRequired => self.catalogue.flush_admitted_recovery(),
         }
     }
 }
-pub struct Claim {
+struct Claim {
     cancel: CancellationToken,
 }
 #[derive(Clone)]
@@ -79,9 +79,9 @@ pub enum Slot {
     },
 }
 pub struct Checkout {
-    pub ticket: Ticket,
+    pub(super) ticket: Ticket,
     pub owner: Option<Box<Owner>>,
-    pub retired: Option<Frozen>,
+    pub(crate) retired: Option<Frozen>,
 }
 impl Slot {
     pub fn owner(&self) -> Option<&Owner> {

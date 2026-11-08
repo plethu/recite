@@ -32,7 +32,7 @@ impl PassageRefusal {
     }
 }
 impl Writer {
-    pub fn record_reading_refusal(&mut self, request: &Arc<Request>, reason: String) {
+    pub(super) fn record_reading_refusal(&mut self, request: &Arc<Request>, reason: String) {
         if matches!(
             request.target,
             Target::Reading { .. } | Target::PreviewEdit(_)
@@ -49,7 +49,7 @@ impl Writer {
             self.navigation.refusal = Some(refusal);
         }
     }
-    pub fn preview_edit_failed(&mut self, request: &Request) {
+    pub(super) fn preview_edit_failed(&mut self, request: &Request) {
         if matches!(request.target, Target::PreviewEdit(_)) && request.checkpoint().is_ok() {
             self.return_to_trial_edit();
         }

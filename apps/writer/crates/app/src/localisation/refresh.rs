@@ -13,7 +13,7 @@ pub struct Refresh {
 pub struct Page {
     pub source: ComparisonRow,
     pub detail: Option<String>,
-    pub change: usize,
+    pub(crate) change: usize,
 }
 impl Refresh {
     pub fn new(preview: RefreshPreview) -> Self {

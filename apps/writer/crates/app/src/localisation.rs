@@ -1,10 +1,10 @@
 //! Translation edits use the shared file-backed catalogue, with one native presentation owner.
 pub mod beat;
-pub mod closing;
-pub mod creation;
-pub mod editing;
-pub mod history;
-pub mod keyboard;
+mod closing;
+mod creation;
+mod editing;
+mod history;
+mod keyboard;
 pub mod location;
 pub mod presentation;
 pub mod refresh;
@@ -12,9 +12,9 @@ pub mod slot;
 pub mod source_navigation;
 #[cfg(any(test, feature = "test-support"))]
 pub mod tests;
-pub mod watching;
+mod watching;
 pub mod work;
-use crate::{
+pub use crate::{
     Phase, Writer,
     editor_work::AfterSave as SourceAfterSave,
     workspaces::{Screen, text},
@@ -26,12 +26,12 @@ use recite_writer_session::{
     comparison::ComparisonRow,
     localisation::catalogue::{Catalogue, EntryDetails, ExternalDecision, Inspection},
 };
-use slot::{Identity, Slot};
-pub use source_navigation::SourceIntent;
+pub use slot::{Identity, Slot};
+pub(crate) use source_navigation::SourceIntent;
 use std::{path::PathBuf, sync::Arc};
 pub use watching::{Observation as WatchObservation, Request as WatchRequest, Scope as WatchScope};
 pub use work::{Completed, Work};
-pub use work::{Finish, Finished};
+pub(crate) use work::{Finish, Finished};
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum Filter {
@@ -134,7 +134,7 @@ impl Localisation {
     pub fn working(&self) -> bool {
         self.slot.working()
     }
-    pub fn can_leave(&self) -> bool {
+    pub(crate) fn can_leave(&self) -> bool {
         !self.slot.read_only() && !self.needs_save() && !self.saving()
     }
     pub fn has_catalogue(&self) -> bool {
@@ -165,7 +165,7 @@ impl Writer {
             && self.session.project().is_some()
             && !self.project_action_blocked()
     }
-    pub fn enter_localisation(&mut self) -> bool {
+    pub(crate) fn enter_localisation(&mut self) -> bool {
         if !self.can_open_localisation() {
             return false;
         }
@@ -222,7 +222,7 @@ impl Writer {
             self.catalogue_action(work::Action::Open(path));
         }
     }
-    pub fn flush_catalogue_before_close(&mut self) {
+    pub(crate) fn flush_catalogue_before_close(&mut self) {
         self.catalogue_action(work::Action::FlushForClose);
     }
     pub fn search_catalogue(&mut self) {
@@ -248,6 +248,33 @@ impl Writer {
                 decision,
                 inspection: Box::new(comparison.inspection.clone()),
             });
+        }
+    }
+}
+
+impl Localisation {
+    /// The catalogue language and file name, bounded for display.
+    pub fn catalogue_caption(&self) -> String {
+        let catalogue = self;
+        let filename = catalogue
+            .catalogue_path()
+            .and_then(|path| path.file_name())
+            .map(|name| name.to_string_lossy())
+            .unwrap_or_else(|| "PO catalogue".into());
+        let language = catalogue.slot.document().and_then(|document| {
+            document
+                .headers()
+                .iter()
+                .find(|header| header.key().eq_ignore_ascii_case("Language"))
+                .map(|header| header.value())
+        });
+        match language.filter(|language| !language.is_empty()) {
+            Some(language) => format!(
+                "{} · {}",
+                language.chars().take(80).collect::<String>(),
+                filename.chars().take(80).collect::<String>()
+            ),
+            None => filename.chars().take(80).collect(),
         }
     }
 }

@@ -1,6 +1,7 @@
 use super::*;
 use crate::tests::support::NoProxy;
 use crate::tests::support::mounted::Mounted;
+use recite_config::WriterCommand;
 use recite_config::{Keymap, WriterPaneSide, WriterTheme};
 use std::sync::Arc;
 use xilem::masonry::core;

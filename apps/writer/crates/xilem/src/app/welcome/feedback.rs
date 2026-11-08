@@ -1,5 +1,5 @@
-//! Project failure recovery keeps technical diagnostics behind explicit disclosure.
-use super::App;
+//! Project problem views over `recite_writer_app::shell::welcome::feedback`.
+use super::super::App;
 use crate::presentation::{group, label, paragraph, text_button};
 use xilem::{
     WidgetView,
@@ -7,49 +7,6 @@ use xilem::{
     style::Style,
     view::{CrossAxisAlignment, flex_col},
 };
-
-pub(in crate::app) enum ProjectAction {
-    Open,
-    Create,
-}
-pub(in crate::app) struct Problem {
-    action: ProjectAction,
-    diagnostic: String,
-    expanded: bool,
-}
-impl Problem {
-    fn heading(&self) -> &'static str {
-        match self.action {
-            ProjectAction::Open => "Project didn’t open",
-            ProjectAction::Create => "Project wasn’t created",
-        }
-    }
-    fn guidance(&self) -> &'static str {
-        match self.action {
-            ProjectAction::Open => {
-                "Choose the folder containing recite.project.toml, or create a new project."
-            }
-            ProjectAction::Create => {
-                "Choose a writable folder and a project name. Existing project files are preserved."
-            }
-        }
-    }
-}
-impl App {
-    pub(in crate::app) fn clear_project_problem(&mut self) {
-        if self.welcome_problem.take().is_some() {
-            self.status.clear();
-        }
-    }
-    pub(in crate::app) fn project_failed(&mut self, action: ProjectAction, diagnostic: String) {
-        self.status = diagnostic.clone();
-        self.welcome_problem = Some(Problem {
-            action,
-            diagnostic,
-            expanded: false,
-        });
-    }
-}
 
 pub(super) fn panel(app: &App, scale: f32, width: f64) -> Option<impl WidgetView<App> + use<>> {
     let problem = app.welcome_problem.as_ref()?;

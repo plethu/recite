@@ -1,8 +1,8 @@
 //! Advisory disk changes never apply drafts or adopt a file without explicit comparison.
 pub mod listener;
-pub mod observation;
-pub mod worker;
-use crate::{
+mod observation;
+mod worker;
+pub use crate::{
     Phase, Writer,
     localisation::{WatchObservation, WatchRequest, WatchScope},
 };
@@ -23,7 +23,7 @@ pub enum Evidence {
     Catalogue(WatchObservation),
 }
 #[derive(Clone)]
-pub struct Flight(Arc<()>);
+struct Flight(Arc<()>);
 impl Flight {
     fn matches(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.0, &other.0)

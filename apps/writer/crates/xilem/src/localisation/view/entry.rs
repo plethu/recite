@@ -6,7 +6,6 @@ use recite_writer_session::localisation::catalogue::Draft;
 use recite_writer_session::location::Screen as LinkedScreen;
 use xilem::view::{GridExt, GridTrackSize, grid};
 mod forms;
-pub(super) use forms::catalogue_caption;
 mod plural;
 mod source;
 #[cfg(test)]

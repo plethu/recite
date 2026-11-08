@@ -22,7 +22,7 @@ pub struct Panel {
     pub preview_open: bool,
 }
 impl Panel {
-    pub fn invalidate_output(&mut self) {
+    pub(crate) fn invalidate_output(&mut self) {
         if matches!(self.validation, Validation::Valid(_)) {
             self.validation = Validation::Unchecked;
         }
@@ -34,13 +34,13 @@ impl Panel {
             self.validation.message()
         }
     }
-    pub fn retire_export(&mut self) {
+    pub(crate) fn retire_export(&mut self) {
         self.artifact = None;
     }
     pub fn toggle_preview(&mut self) {
         self.preview_open = !self.preview_open;
     }
-    pub fn binding_path(&self) -> &str {
+    pub(crate) fn binding_path(&self) -> &str {
         &self.path
     }
     pub fn import_path(&self) -> &str {
@@ -49,7 +49,7 @@ impl Panel {
     pub fn exported(&self) -> Option<&Path> {
         self.artifact.as_deref()
     }
-    pub fn record_artifacts(&mut self, archive: Option<PathBuf>, editable: Option<PathBuf>) {
+    pub(crate) fn record_artifacts(&mut self, archive: Option<PathBuf>, editable: Option<PathBuf>) {
         if let Some(path) = archive {
             self.archive = Some(path);
         }
@@ -59,7 +59,7 @@ impl Panel {
             self.repair_open = true;
         }
     }
-    pub fn replace_preview(
+    pub(crate) fn replace_preview(
         &mut self,
         preview: Vec<String>,
         validation: &Result<SourceStatus, String>,
@@ -78,7 +78,7 @@ impl Panel {
     }
 }
 impl Validation {
-    fn message(&self) -> &'static str {
+    pub fn message(&self) -> &'static str {
         match self {
             Self::Unchecked => {
                 "Generated schema changed. Validate this draft to check whether it needs generation."

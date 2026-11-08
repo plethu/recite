@@ -1,7 +1,7 @@
 use super::*;
 use recite_compiler::authoring::WorkControl;
 use recite_writer_session::localisation::{catalogue::RefreshPreview, extraction};
-use slot::Owner;
+pub use slot::Owner;
 
 impl Plan {
     pub fn prepare(
@@ -30,7 +30,7 @@ impl Plan {
             query: self.query.clone(),
         })
     }
-    fn project(
+    pub fn project(
         &self,
         owner: Option<&Owner>,
         project: &ProjectSession,

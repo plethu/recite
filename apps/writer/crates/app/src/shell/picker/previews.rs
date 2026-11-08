@@ -1,13 +1,13 @@
 //! Only the visible passage snippets are prepared, at query and result-page boundaries.
-use super::{Entry, Item, PAGE};
+pub use super::{Entry, Item, PAGE};
 
 #[derive(Default)]
-pub(super) struct Previews {
+pub struct Previews {
     page: Option<usize>,
     text: Vec<String>,
 }
 impl Previews {
-    pub fn invalidate(&mut self) {
+    pub(crate) fn invalidate(&mut self) {
         self.page = None;
         self.text.clear();
     }

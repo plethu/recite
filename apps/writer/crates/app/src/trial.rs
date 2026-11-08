@@ -1,6 +1,6 @@
 //! One in-flight compilation; the worker also destroys rejected/replaced trials.
-use super::{Phase, Writer};
-use crate::{
+pub use super::{Phase, Writer};
+pub use crate::{
     attention::{Pane, PaneMotion},
     map::Workspace,
     workspaces::Screen,
@@ -13,11 +13,12 @@ use std::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-pub mod inputs;
+pub mod captions;
+mod inputs;
 pub use inputs::{Review, Settings, VALUE_PAGE};
 pub mod preparation;
-pub mod recovery;
-use preparation::{Outcome, Preparation};
+mod recovery;
+pub use preparation::{Outcome, Preparation};
 
 pub struct Trial {
     pub sender: Option<UnboundedSender<Arc<Request>>>,
@@ -217,5 +218,17 @@ impl Writer {
 impl Default for Trial {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Writer {
+    /// Reset preview paging and show the outcome of a playback step.
+    pub fn report_trial_step(&mut self, result: Result<(), recite_writer_session::FileError>) {
+        self.trial.choice_page = 0;
+        self.trial.effect_page = 0;
+        self.trial.status = match result {
+            Ok(()) => String::new(),
+            Err(error) => error.to_string(),
+        };
     }
 }

@@ -1,5 +1,5 @@
 //! Prepare bounded catalogue presentation on the worker.
-use super::slot::Owner;
+pub use super::slot::Owner;
 use super::*;
 use recite_writer_model::Passage;
 use recite_writer_session::localisation::{
@@ -7,11 +7,11 @@ use recite_writer_session::localisation::{
 };
 
 pub struct Presentation {
-    pub queue: Queue,
-    pub entry: Option<Entry>,
-    pub message: &'static str,
+    pub(crate) queue: Queue,
+    pub(crate) entry: Option<Entry>,
+    pub(crate) message: &'static str,
 }
-pub fn describe(
+pub(super) fn describe(
     owner: &Owner,
     query: &Query,
     selected: Option<PoEntryId>,

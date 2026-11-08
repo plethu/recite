@@ -2,7 +2,7 @@
 //!
 //! Native callbacks schedule owned work; these helpers execute it synchronously so tests in this
 //! crate and the frontend observe the same ordering without a toolkit.
-use crate::Writer;
+pub use crate::Writer;
 use crate::navigation::worker::Job as NavigationJob;
 use recite_writer_session::ProjectSession;
 use recite_writer_session::project::save::sequence;
@@ -59,4 +59,16 @@ pub fn save(writer: &mut Writer) -> Result<(), Box<dyn std::error::Error>> {
     writer.work.sender = Some(sender);
     writer.save();
     finish_work(writer, &mut requests)
+}
+
+impl crate::shell::Shell {
+    /// A shell already showing `writer`, as after a completed project opening.
+    pub fn with_writer(writer: Writer) -> Self {
+        Self {
+            writer: Some(writer),
+            show_welcome: false,
+            status: String::new(),
+            ..Self::empty()
+        }
+    }
 }

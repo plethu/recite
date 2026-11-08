@@ -1,6 +1,6 @@
 use super::*;
 impl Job {
-    pub fn not_started(self, error: String) -> Completed {
+    pub(super) fn not_started(self, error: String) -> Completed {
         let result = match self.work {
             Work::Start(work) => Ok(Value::Started(work.not_started(error))),
             Work::Publish(work) => Ok(Value::Published {

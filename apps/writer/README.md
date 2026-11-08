@@ -32,11 +32,12 @@ within a line, but paragraphs are laid out left to right.
 
 - `crates/authoring` (`recite-writer-model`): source-preserving documents, edits and preview.
 - `crates/session` (`recite-writer-session`): files, saves, recovery and configuration.
-- `crates/app` (`recite-writer-app`): Writer state, workflows and policy, with no GUI toolkit.
+- `crates/app` (`recite-writer-app`): Writer state, workflows, policy and the application shell,
+  with no GUI toolkit.
 - `crates/xilem` (`recite-writer`): the native Xilem frontend that renders that state.
 
-Put behaviour that does not need a widget in `crates/app`; the frontend should only present it and
-adapt native input. See [spec §15.5][strategy].
+Put behaviour that does not need a widget in `crates/app`; the frontend should only present it,
+adapt native input and call named app operations. See [spec §15.5][strategy].
 
 [strategy]: ../../docs/spec/tooling.md#155-native-gui-strategy-and-accessibility-proof
 

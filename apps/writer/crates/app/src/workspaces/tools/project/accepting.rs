@@ -1,5 +1,5 @@
 use super::*;
-use crate::{
+pub use crate::{
     attention::{Pane, PaneMotion},
     workspaces::{Screen, tools::Work as ToolWork},
 };
@@ -29,7 +29,7 @@ impl Writer {
             Err(error) => self.status = error.to_string(),
         }
     }
-    pub fn accept_project_tool(&mut self, completed: &mut Completed) -> Result<(), String> {
+    pub(crate) fn accept_project_tool(&mut self, completed: &mut Completed) -> Result<(), String> {
         self.session
             .restore_checkout(
                 &mut completed.checkout,

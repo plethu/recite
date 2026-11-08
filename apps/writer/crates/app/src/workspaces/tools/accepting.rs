@@ -1,4 +1,4 @@
-use super::super::ContextUpdate;
+pub use super::super::ContextUpdate;
 use super::*;
 impl Writer {
     pub fn accept_tool(&mut self, mut completed: Completed) -> Retirement {

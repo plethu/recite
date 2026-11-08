@@ -1,8 +1,8 @@
 //! Terminal feedback is distinct from the worker slot and the retained conversation.
 use super::{Request, Review, Trial};
-use crate::attention::EditingTarget;
+pub use crate::attention::EditingTarget;
 use std::sync::Arc;
-pub const GUIDANCE: &str =
+pub(super) const GUIDANCE: &str =
     "Effects are displayed, never executed. Restart captures your staged inputs.";
 
 pub enum Preparation {
@@ -20,7 +20,7 @@ pub enum Outcome {
 }
 
 impl Trial {
-    pub fn document_replaced(&mut self) {
+    pub(crate) fn document_replaced(&mut self) {
         self.context_details = false;
         self.settings.review = Review::Inputs;
         if !self.busy() {

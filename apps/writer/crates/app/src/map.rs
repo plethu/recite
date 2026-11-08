@@ -3,12 +3,12 @@ pub mod actions;
 pub mod connections;
 pub mod input;
 pub mod interaction;
-pub mod overview;
-pub mod placement;
+mod overview;
+mod placement;
 pub mod preparation;
-pub mod publication;
+mod publication;
 pub mod scene;
-use crate::{Writer, navigation::Target};
+pub use crate::{Writer, navigation::Target};
 use kurbo::{BezPath, Point};
 pub use preparation::{Preparation, Prepared, Purpose};
 use recite_core::DocumentKey;
@@ -32,7 +32,7 @@ pub enum Workspace {
     Split,
 }
 impl Workspace {
-    pub fn configured(view: recite_config::WriterView, split: bool) -> Self {
+    pub(crate) fn configured(view: recite_config::WriterView, split: bool) -> Self {
         if split {
             Self::Split
         } else if view == recite_config::WriterView::Map {
@@ -135,7 +135,7 @@ impl MapSession {
             refresh: None,
         }
     }
-    pub fn personal_storage(&mut self) {
+    pub(crate) fn personal_storage(&mut self) {
         self.store = Some(
             recite_config::UserConfigStore::discover()
                 .map_err(|error| error.to_string())
@@ -146,7 +146,7 @@ impl MapSession {
                 }),
         );
     }
-    pub fn cancel_gestures(&mut self) {
+    pub(crate) fn cancel_gestures(&mut self) {
         for scene in self.scenes.values_mut() {
             if let Gesture::Panning { camera, .. } = std::mem::take(&mut scene.gesture) {
                 scene.camera = camera;

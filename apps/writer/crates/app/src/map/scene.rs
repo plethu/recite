@@ -54,7 +54,7 @@ impl Scene {
                 0
             })
     }
-    pub fn node_indices(&self) -> impl Iterator<Item = usize> + '_ {
+    pub(super) fn node_indices(&self) -> impl Iterator<Item = usize> + '_ {
         self.scope
             .iter()
             .flat_map(|scope| scope.node_indices.iter().copied())
@@ -78,7 +78,7 @@ impl Scene {
                 }),
             )
     }
-    pub fn select(&mut self, selected: Option<String>) {
+    pub(super) fn select(&mut self, selected: Option<String>) {
         if self.selected == selected
             && selected
                 .as_ref()
@@ -91,7 +91,7 @@ impl Scene {
         self.reconcile_selection();
         self.reveal_selected();
     }
-    pub fn reveal_selected(&mut self) {
+    pub(super) fn reveal_selected(&mut self) {
         if let Some(node) = self
             .selected
             .as_ref()
@@ -120,7 +120,7 @@ impl Scene {
             .then(|| scope::nearby(&self.projection.graph, self.selected.as_deref()))
             .flatten();
     }
-    pub fn frame(&mut self) {
+    pub(super) fn frame(&mut self) {
         match self.camera.framing {
             Framing::Entry => {
                 if let Some(entry) = self.projection.graph.entry {

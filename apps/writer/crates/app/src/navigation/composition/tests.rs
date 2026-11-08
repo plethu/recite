@@ -1,6 +1,6 @@
 use super::*;
-use crate::attention::EditingTarget;
-use crate::map::Workspace;
+pub use crate::attention::EditingTarget;
+pub use crate::map::Workspace;
 
 #[test]
 fn queued_native_focus_and_close_cannot_retire_the_composing_passage() {

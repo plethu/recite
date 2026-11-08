@@ -1,5 +1,5 @@
 //! Native presentation selects a concrete product owner; examples never pretend to own files.
-pub mod exclusive;
+mod exclusive;
 pub use exclusive::{Checkout, ExclusiveTicket, FrozenProject, RecoveryReason};
 use recite_writer_model::{
     ConditionValue, EffectAck, PreparedPreview, Preview, WRITER_EXAMPLES, Workbench, WorkbenchError,
@@ -85,7 +85,7 @@ impl Session {
             Self::Working { .. } | Self::Recovering { .. } => Err(FileError::ProjectActionPending),
         }
     }
-    pub fn accept_preview(
+    pub(crate) fn accept_preview(
         &mut self,
         preview: Box<PreparedPreview>,
     ) -> Result<Option<Preview>, Box<PreparedPreview>> {

@@ -7,7 +7,6 @@ mod menu;
 pub(super) use menu::panel;
 
 mod header;
-use header::document_caption;
 pub(super) use header::{focus_header, project_header};
 
 pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -59,18 +58,14 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
                         "Example edits are temporary and will be discarded"
                     },
                 ),
-                label(scale, document_caption(state))
+                label(scale, state.document_caption())
                     .prop(LineBreaking::WordWrap),
                 (state.session.project().is_some() && !ordinary_exit).then(|| {
                     paragraph(scale, "Save all and close checks and saves pending prose and project drafts. Close and keep recovery keeps pending edits recoverable without saving them to the source files.", (state.viewport.width - 80.).min(760.))
                 }),
                 crate::localisation::close_details(state),
                 flex_row((
-                    text_button(scale, "Keep editing", |state: &mut Writer| {
-                        state.phase = Phase::Writing;
-                        state.work.keep_editing();
-                        state.localisation.keep_editing();
-                    }),
+                    text_button(scale, "Keep editing", Writer::keep_editing),
                     (state.session.project().is_some()
                         && !ordinary_exit
                         && state.phase != Phase::Closing)

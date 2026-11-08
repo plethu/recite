@@ -2,7 +2,7 @@
 use super::*;
 
 impl Writer {
-    pub fn remember_catalogue_location(&mut self) {
+    pub(super) fn remember_catalogue_location(&mut self) {
         if self.phase == Phase::Writing
             && self.workspaces.screen == Screen::Localisation
             && !self.navigation.busy()

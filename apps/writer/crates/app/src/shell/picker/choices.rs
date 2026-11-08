@@ -1,9 +1,9 @@
 //! Editor pickers own the receipt required to interpret their entries.
 use super::*;
-use crate::choices::Request;
+pub use crate::choices::Request;
 
-impl App {
-    pub(in crate::app) fn open_editor_choices(&mut self) {
+impl Shell {
+    pub fn open_editor_choices(&mut self) {
         let Some(writer) = &mut self.writer else {
             return;
         };

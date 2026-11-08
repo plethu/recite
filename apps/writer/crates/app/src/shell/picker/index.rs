@@ -1,13 +1,13 @@
 //! Labels and accepted lookup inputs are captured once, not reconstructed on every render.
 use super::*;
-use crate::reading::Content;
+pub use crate::reading::Content;
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, View};
 use recite_writer_session::commands::{self, targets};
 #[cfg(test)]
 mod tests;
 
-pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
+pub(crate) fn entries(app: &Shell, search: Search) -> Result<Vec<Entry>, String> {
     let Some(writer) = &app.writer else {
         return Ok(Vec::new());
     };
@@ -91,7 +91,7 @@ fn visible_passage(writer: &Writer, passage: &Passage) -> Passage {
     visible
 }
 impl Picker {
-    pub(super) fn refresh(
+    pub fn refresh(
         &mut self,
         keymap: recite_config::Keymap,
         search: Option<&recite_writer_model::SearchIndex>,

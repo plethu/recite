@@ -1,5 +1,5 @@
 //! Accepted scene/beat search survives its transient picker; requests carry fresh locations.
-use crate::{Phase, Writer, navigation::Target};
+pub use crate::{Phase, Writer, navigation::Target};
 use recite_writer_session::commands::{search::repeat_target, targets};
 
 #[derive(Clone)]
@@ -8,7 +8,7 @@ pub struct Search {
     accepted: targets::Target,
 }
 impl Writer {
-    pub fn lookup(&mut self, query: String, target: targets::Target) {
+    pub(crate) fn lookup(&mut self, query: String, target: targets::Target) {
         let mut location = target.location(self.current_location());
         if self.workspaces.screen == crate::workspaces::Screen::Localisation {
             location.screen = recite_writer_session::location::Screen::Localise;
@@ -22,7 +22,7 @@ impl Writer {
             },
         });
     }
-    pub fn repeat_lookup(&mut self, forward: bool) {
+    pub(crate) fn repeat_lookup(&mut self, forward: bool) {
         if self.phase != Phase::Writing || self.navigation.busy() || self.work.busy() {
             return;
         }
@@ -49,7 +49,7 @@ impl Writer {
         };
         self.lookup(search.query.clone(), target);
     }
-    pub fn accept_lookup(&mut self, search: &Search) {
+    pub(crate) fn accept_lookup(&mut self, search: &Search) {
         if !search.query.trim().is_empty() {
             self.lookup = Some(search.clone());
         }

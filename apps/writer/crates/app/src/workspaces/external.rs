@@ -1,9 +1,9 @@
 //! A comparison is an observation of one exact session; decisions never stage the field implicitly.
-use super::{
+pub use super::{
     Screen, Writer, text,
     tools::{ExternalAction, ProjectAction},
 };
-use crate::external_editor::Request;
+pub use crate::external_editor::Request;
 use recite_writer_session::{
     comparison::ComparisonRow,
     project::{ExternalComparison, ExternalDecision, SourceRepairArtifact},
@@ -15,7 +15,7 @@ pub struct Inspection {
     pub changes: Vec<ComparisonRow>,
     pub pending: Option<Vec<String>>,
     pub artifact: Option<SourceRepairArtifact>,
-    pub archive: Option<PathBuf>,
+    pub(crate) archive: Option<PathBuf>,
 }
 impl Inspection {
     pub fn prepare(comparison: &ExternalComparison) -> Self {
@@ -47,7 +47,7 @@ pub struct Panel {
     pub report_page: usize,
 }
 #[derive(Default)]
-pub enum State {
+enum State {
     #[default]
     Empty,
     Reviewing(Inspection),
@@ -65,7 +65,7 @@ pub enum Resolution {
     Merged,
 }
 impl Panel {
-    pub fn exchange(&mut self, inspection: &mut Option<Inspection>) {
+    pub(super) fn exchange(&mut self, inspection: &mut Option<Inspection>) {
         let previous = std::mem::replace(
             &mut self.state,
             inspection.take().map(State::Reviewing).unwrap_or_default(),
@@ -77,7 +77,7 @@ impl Panel {
         self.page = 0;
         self.draft_page = 0;
     }
-    pub fn replace(&mut self, inspection: Option<Inspection>) {
+    pub(super) fn replace(&mut self, inspection: Option<Inspection>) {
         self.state = inspection.map(State::Reviewing).unwrap_or_default();
         self.page = 0;
         self.draft_page = 0;
@@ -108,7 +108,7 @@ impl Panel {
             self.report(None);
         }
     }
-    pub fn report(&mut self, report: Option<&str>) {
+    pub(super) fn report(&mut self, report: Option<&str>) {
         self.report = report.map(text::pages).unwrap_or_default();
         self.report_page = 0;
     }

@@ -1,5 +1,5 @@
 //! File observation is scoped to the retained catalogue lifetime, including exclusive checkout.
-use super::{Identity, Localisation, Writer};
+pub use super::{Identity, Localisation, Writer};
 use recite_writer_session::localisation::watching::worker;
 use std::path::{Path, PathBuf};
 #[cfg(test)]
@@ -32,7 +32,7 @@ impl Request {
     }
 }
 impl Observation {
-    pub fn scope(&self) -> &Scope {
+    pub(crate) fn scope(&self) -> &Scope {
         &self.scope
     }
     pub fn changed(&self) -> bool {
@@ -48,13 +48,13 @@ impl Observation {
     }
 }
 impl Localisation {
-    pub fn watch_scope(&self) -> Option<Scope> {
+    pub(crate) fn watch_scope(&self) -> Option<Scope> {
         Some(Scope {
             identity: self.slot.identity()?.clone(),
             path: self.slot.path()?.to_owned(),
         })
     }
-    pub fn watch_request(&self) -> Option<Request> {
+    pub(crate) fn watch_request(&self) -> Option<Request> {
         if self.slot.read_only() || self.saving() {
             return None;
         }
@@ -69,7 +69,7 @@ impl Localisation {
     }
 }
 impl Writer {
-    pub fn compare_noticed_catalogue(&mut self, scope: &Scope) {
+    pub(crate) fn compare_noticed_catalogue(&mut self, scope: &Scope) {
         if self.localisation.watch_scope().as_ref() == Some(scope) && self.enter_localisation() {
             self.compare_catalogue();
         }

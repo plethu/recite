@@ -1,10 +1,11 @@
 //! Disk work owns the real catalogue and always returns it, including failure and cancellation.
 use super::*;
-use crate::localisation::presentation::{Presentation, describe};
+pub use crate::localisation::presentation::Presentation;
+use crate::localisation::presentation::describe;
 use recite_compiler::authoring::WorkControl;
 use recite_writer_model::Passage;
 use recite_writer_session::localisation::catalogue::Catalogue;
-use slot::{Checkout, Owner};
+pub use slot::{Checkout, Owner};
 use std::sync::Arc;
 
 pub enum Action {
@@ -37,7 +38,7 @@ pub struct CheckedCompleted {
     retired_refresh: Option<refresh::Refresh>,
     retired_beat: Option<beat::Beat>,
 }
-pub enum Completion {
+enum Completion {
     Show(Presentation),
     Compared(Option<Comparison>),
     CloseWindow,
@@ -59,7 +60,7 @@ impl Checked {
             passages,
         }
     }
-    pub fn not_started(self, error: String) -> CheckedCompleted {
+    pub(super) fn not_started(self, error: String) -> CheckedCompleted {
         CheckedCompleted {
             previous: self.previous,
             retired_entry: None,
@@ -73,7 +74,7 @@ impl Checked {
     pub fn execute(self) -> CheckedCompleted {
         self.execute_with(perform)
     }
-    fn execute_with(
+    pub fn execute_with(
         self,
         perform: impl FnOnce(&mut Checkout, &Action) -> Result<(), String>,
     ) -> CheckedCompleted {
@@ -144,7 +145,7 @@ impl Checked {
         }
     }
 }
-fn perform(checkout: &mut Checkout, action: &Action) -> Result<(), String> {
+pub fn perform(checkout: &mut Checkout, action: &Action) -> Result<(), String> {
     match action {
         Action::Open(path) => {
             if let Some(owner) = checkout.owner.as_mut() {
@@ -212,7 +213,7 @@ fn replace_catalogue(
     result
 }
 impl Writer {
-    pub fn accept_checked_catalogue(
+    pub(super) fn accept_checked_catalogue(
         &mut self,
         completed: &mut CheckedCompleted,
     ) -> Result<(), String> {

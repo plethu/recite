@@ -1,6 +1,16 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::attention::DocumentMenu;
+use crate::session::Session;
 use crate::{map::Workspace, workspaces::Screen};
+use recite_config::WriterCommand;
 use recite_writer_model::{View as DocumentView, Workbench};
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use xilem::masonry::widgets::Passthrough;
 
 fn deliver<V: WidgetView<App, Widget = Passthrough>>(
@@ -44,9 +54,9 @@ fn queued_picker_opening_survives_real_save_reconciliation_before_and_after_rebu
         let invocation = Invocation {
             action: Action::OpenPicker {
                 search: picker::Search::GoTo,
-                generation: local.picker_opening_generation,
+                generation: local.generations.picker_opening,
             },
-            generation: local.generation,
+            generation: local.generations.command,
         };
         let mut harness = TestHarness::create_with_size(
             theme::default_property_set(),
@@ -66,7 +76,7 @@ fn queued_picker_opening_survives_real_save_reconciliation_before_and_after_rebu
         if rebuild {
             harness
                 .edit_root_widget(|root| next.rebuild(&view, &mut local, &mut ctx, root, &mut app));
-            assert_ne!(local.generation, invocation.generation);
+            assert_ne!(local.generations.command, invocation.generation);
         }
         let result = if rebuild {
             deliver(
@@ -110,8 +120,8 @@ fn picker_opening_still_rejects_changed_lifetime_document_selection_screen_picke
         );
         let view = host(&app, xilem::view::label("Keyboard host"));
         let (pod, mut local) = view.build(&mut ctx, &mut app);
-        let generation = local.picker_opening_generation;
-        let strict = local.generation;
+        let generation = local.generations.picker_opening;
+        let strict = local.generations.command;
         let mut harness = TestHarness::create_with_size(
             theme::default_property_set(),
             pod.new_widget,
@@ -203,9 +213,9 @@ fn accepted_opening_closes_the_document_menu_before_presenting_search() {
     let invocation = Invocation {
         action: Action::OpenPicker {
             search: picker::Search::GoTo,
-            generation: local.picker_opening_generation,
+            generation: local.generations.picker_opening,
         },
-        generation: local.generation,
+        generation: local.generations.command,
     };
     let mut harness =
         TestHarness::create_with_size(theme::default_property_set(), pod.new_widget, (300, 100));

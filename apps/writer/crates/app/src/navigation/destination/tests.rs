@@ -1,5 +1,5 @@
 use super::*;
-use crate::attention::EditingTarget;
+pub use crate::attention::EditingTarget;
 use crate::test_support as support;
 use std::{
     fs,

@@ -106,12 +106,12 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             }),
         (app.writer.is_some() && app.show_welcome && !app.settings_open).then(|| {
             print::action(scale, "Return to Writer", blocked, |app: &mut App| {
-                app.show_welcome = false
+                app.return_to_document()
             })
         }),
         app.settings_open.then(|| {
             print::action(scale, "Done with settings", blocked, |app: &mut App| {
-                app.settings_open = false
+                app.close_settings()
             })
         }),
         app.writer
@@ -134,7 +134,7 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             }),
         (!writing).then(|| {
             print::action(scale, "Workspace", blocked, |app: &mut App| {
-                app.workspace_menu = !app.workspace_menu
+                app.toggle_workspace_menu()
             })
         }),
     ))
@@ -148,11 +148,7 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
                 scale,
                 "Projects",
                 searching || writer.phase != Phase::Writing,
-                |app: &mut App| {
-                    app.show_welcome = !app.show_welcome;
-                    app.settings_open = false;
-                    app.workspace_menu = false;
-                },
+                |app: &mut App| app.toggle_projects(),
             )
         }),
         print::action(
@@ -164,10 +160,7 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
                     .writer
                     .as_ref()
                     .is_some_and(|writer| writer.phase != Phase::Writing),
-            |app: &mut App| {
-                app.workspace_menu = false;
-                app.show_settings();
-            },
+            |app: &mut App| app.settings_from_menu(),
         ),
         app.writer
             .as_ref()
@@ -179,12 +172,7 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
                     searching
                         || writer.project_action_blocked()
                         || writer.session.project().is_none(),
-                    |app: &mut App| {
-                        app.workspace_menu = false;
-                        if let Some(writer) = &mut app.writer {
-                            writer.open_localisation();
-                        }
-                    },
+                    |app: &mut App| app.localise_from_menu(),
                 )
             }),
         app.writer
@@ -215,16 +203,14 @@ fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
             .is_none_or(|writer| writer.phase != Phase::Writing);
     flex_row((
         print::action(scale, "Go to", disabled, |app: &mut App| {
-            app.workspace_menu = false;
-            app.open_picker(picker::Search::GoTo)
+            app.search_from_menu(picker::Search::GoTo)
         }),
         app.writer
             .as_ref()
             .and_then(|writer| writer.session.project())
             .map(|_| {
                 print::action(scale, "Find project text", disabled, |app: &mut App| {
-                    app.workspace_menu = false;
-                    app.open_picker(picker::Search::ProjectText)
+                    app.search_from_menu(picker::Search::ProjectText)
                 })
             }),
     ))

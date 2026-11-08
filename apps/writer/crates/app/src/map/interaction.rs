@@ -1,6 +1,6 @@
 //! Gestures carry their origin; cancellation restores it before any layout commit.
 use super::*;
-use input::Input;
+pub use input::Input;
 use kurbo::Vec2;
 use recite_writer_session::map::placement::card_key;
 

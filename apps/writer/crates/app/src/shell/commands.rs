@@ -1,5 +1,5 @@
 use super::*;
-use crate::{
+pub use crate::{
     attention::{DocumentMenu, PaneMotion},
     map::Workspace,
     navigation::Target,
@@ -8,8 +8,8 @@ use crate::{
 use recite_config::WriterCommand;
 use recite_writer_model::{EditOperation, StructuralCommand};
 
-impl App {
-    pub(super) fn run_command(&mut self, command: WriterCommand) {
+impl Shell {
+    pub fn run_command(&mut self, command: WriterCommand) {
         if self.picker.is_some() {
             match command {
                 WriterCommand::Commands => self.open_picker(picker::Search::Commands),

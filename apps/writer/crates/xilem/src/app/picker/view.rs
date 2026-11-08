@@ -21,8 +21,9 @@ use xilem::{
 };
 mod controls;
 mod results;
-use controls::{guidance, heading, keyboard_help, query, scopes};
-use results::{empty_message, pagination, result, result_count};
+use controls::{heading, query, scopes};
+use recite_writer_app::shell::picker::{empty_message, result_count};
+use results::{pagination, result};
 #[cfg(test)]
 mod tests;
 
@@ -95,7 +96,7 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                         )
                     }),
                     query(scale, mode, picker, width),
-                    paragraph(scale, guidance(mode), width),
+                    paragraph(scale, mode.guidance(), width),
                     label(scale, result_count(picker, page, count)),
                     (count == 0).then(|| label(scale, empty_message(mode, picker))),
                     portal(
@@ -106,7 +107,7 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                     .constrain_horizontal(true)
                     .flex(1.),
                     pagination(scale, picker, page, count),
-                    label(scale, keyboard_help(mode)),
+                    label(scale, mode.keyboard_help()),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(if compact { 8.px() } else { 12.px() }),

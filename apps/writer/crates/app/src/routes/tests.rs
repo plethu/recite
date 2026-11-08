@@ -1,5 +1,5 @@
 use super::*;
-use crate::navigation::{self, Target};
+pub use crate::navigation::{self, Target};
 use crate::test_support as support;
 use recite_writer_model::{EditOperation, View};
 use tokio::sync::mpsc as async_mpsc;

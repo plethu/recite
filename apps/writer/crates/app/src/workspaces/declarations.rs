@@ -1,6 +1,6 @@
 //! Bounded declaration inspection; the shared Session remains the canonical schema/source owner.
 use super::*;
-pub mod producer;
+mod producer;
 pub mod source;
 pub const PAGE: usize = 5;
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
@@ -48,10 +48,10 @@ pub struct Panel {
     pub detail_page: usize,
 }
 impl Panel {
-    pub fn describe_producer(&mut self, pages: Vec<String>) {
+    pub(crate) fn describe_producer(&mut self, pages: Vec<String>) {
         self.producer = producer::Panel { pages, page: 0 };
     }
-    pub fn replace(&mut self, rows: Vec<Row>) {
+    pub(crate) fn replace(&mut self, rows: Vec<Row>) {
         self.rows = rows;
         self.filter(self.query.clone());
     }

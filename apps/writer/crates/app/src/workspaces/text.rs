@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod tests;
 use recite_writer_session::comparison::ComparisonRow;
-pub fn change_pages(row: ComparisonRow) -> Vec<ComparisonRow> {
+pub(crate) fn change_pages(row: ComparisonRow) -> Vec<ComparisonRow> {
     let before = row.before.as_deref().map(pages).unwrap_or_default();
     let after = row.after.as_deref().map(pages).unwrap_or_default();
     let count = before.len().max(after.len());
@@ -37,7 +37,7 @@ pub fn pages(text: &str) -> Vec<String> {
 }
 
 /// Reading pages preserve all text while preferring complete words at each boundary.
-pub fn reading_pages(text: &str) -> Vec<String> {
+pub(crate) fn reading_pages(text: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut page = String::new();
     let mut length = 0;

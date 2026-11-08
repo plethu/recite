@@ -3445,6 +3445,7 @@ dependencies = [
  "recite-compiler",
  "recite-config",
  "recite-core",
+ "recite-runtime",
  "recite-writer-model",
  "recite-writer-session",
  "tempfile",

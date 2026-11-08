@@ -1,22 +1,22 @@
 //! Detached preparation for linked project screens, before any presentation is replaced.
-use super::{Open, Prepared, Screen, Work, Writer, external::Inspection};
+pub use super::{Open, Prepared, Screen, Work, Writer, external::Inspection};
 use recite_compiler::authoring::WorkControl;
 use recite_writer_session::{
     ProjectSession, location::Screen as LinkedScreen, project::ExternalComparison,
 };
 
-pub enum Plan {
+pub(crate) enum Plan {
     Writing,
     Workspace(Work),
     Disk,
 }
 pub struct Presentation(Surface);
-pub enum Surface {
+enum Surface {
     Writing,
     Workspace(Prepared),
     Disk(Box<Disk>),
 }
-pub struct Disk {
+struct Disk {
     comparison: Option<ExternalComparison>,
     inspection: Option<Inspection>,
 }
@@ -64,7 +64,7 @@ impl Plan {
     }
 }
 impl Writer {
-    pub fn present_linked_workspace(
+    pub(crate) fn present_linked_workspace(
         &mut self,
         presentation: &mut Presentation,
     ) -> Result<(), String> {

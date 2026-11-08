@@ -1,7 +1,7 @@
 //! Native event-loop scheduling around Recite's shared save policy.
-pub mod accepting;
-pub mod completion;
-use super::{Phase, Writer, feedback};
+mod accepting;
+mod completion;
+pub use super::{Phase, Writer, feedback};
 use crate::external_editor::linked::Link;
 use recite_writer_model::EditOperation;
 use recite_writer_session::{
@@ -29,7 +29,7 @@ pub enum AfterSave {
     OpenLinkedEditor(Link),
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Layers {
+enum Layers {
     Sources,
     SourcesAndCatalogue,
 }
@@ -87,16 +87,19 @@ impl Writer {
             .and_then(|project| project.files().builds.selected.clone());
         self.start_save(Scope::All, AfterSave::Build(selected));
     }
-    pub fn save_for_editor(&mut self, request: std::sync::Arc<crate::external_editor::Request>) {
+    pub(crate) fn save_for_editor(
+        &mut self,
+        request: std::sync::Arc<crate::external_editor::Request>,
+    ) {
         self.start_save(Scope::AcceptedCurrent, AfterSave::OpenEditor(request));
     }
-    pub fn save_for_linked_editor(&mut self, link: Link) {
+    pub(crate) fn save_for_linked_editor(&mut self, link: Link) {
         self.start_save(Scope::AcceptedCurrent, AfterSave::OpenLinkedEditor(link));
     }
     fn start_save(&mut self, scope: Scope, after: AfterSave) {
         self.start_save_layers(scope, after, Layers::SourcesAndCatalogue);
     }
-    pub fn resume_source_save(&mut self, scope: Scope, after: AfterSave) {
+    pub(crate) fn resume_source_save(&mut self, scope: Scope, after: AfterSave) {
         self.start_save_layers(scope, after, Layers::Sources);
     }
     fn start_save_layers(&mut self, scope: Scope, after: AfterSave, layers: Layers) {

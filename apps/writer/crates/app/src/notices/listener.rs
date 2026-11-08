@@ -4,7 +4,7 @@ use std::time::Duration;
 use tokio::{sync::mpsc, task::JoinHandle};
 
 pub struct Listener {
-    pub changes: mpsc::Receiver<Changes>,
+    pub(crate) changes: mpsc::Receiver<Changes>,
     task: JoinHandle<()>,
 }
 impl Listener {

@@ -20,7 +20,7 @@ pub struct Request {
     origin: NavigationStamp,
     session: SessionIdentity,
     structure: StructureRevision,
-    pub choices: Vec<(String, String, Choice)>,
+    pub(crate) choices: Vec<(String, String, Choice)>,
 }
 impl Request {
     pub fn is_current(&self, writer: &Writer) -> bool {
@@ -31,7 +31,7 @@ impl Request {
                 reply.identity == self.session && reply.controls.revision == self.structure
             })
     }
-    pub fn apply(&self, writer: &mut Writer, choice: Choice) -> bool {
+    pub(crate) fn apply(&self, writer: &mut Writer, choice: Choice) -> bool {
         if !self.is_current(writer) {
             writer.status = "This reply choice changed. Reopen the choice to continue.".into();
             return false;

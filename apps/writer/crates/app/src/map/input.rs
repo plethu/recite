@@ -1,5 +1,5 @@
 //! Toolkit-neutral input the Map viewport delivers to authoring state.
-use super::Detail;
+pub use super::Detail;
 use kurbo::{Point, Vec2};
 use std::sync::Arc;
 pub mod pan;

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn unfinished_shortcuts_survive_switching_commands_and_reopening_settings() {
-    let mut app = App::empty();
+    let mut app = Shell::empty();
     app.choose_shortcut(WriterCommand::Save);
     app.edit_shortcut("Primary+Alt+S".into());
     app.choose_shortcut(WriterCommand::SaveAll);
@@ -27,7 +27,7 @@ fn unfinished_shortcuts_survive_switching_commands_and_reopening_settings() {
 
 #[test]
 fn conflicting_or_failed_shortcut_saves_retain_the_field_and_the_saved_binding() {
-    let mut app = App::empty();
+    let mut app = Shell::empty();
     app.choose_shortcut(WriterCommand::Save);
     let saved = app
         .preferences

@@ -1,6 +1,6 @@
 //! A catalogue action carries its scope through Apply and final navigation publication.
-use super::{EntryKey, Writer};
-use crate::navigation::Target;
+pub use super::{EntryKey, Writer};
+pub use crate::navigation::Target;
 use recite_core::LocaleId;
 use recite_writer_model::CatalogueRevision;
 use recite_writer_session::{
@@ -32,7 +32,7 @@ pub struct SourceIntent {
 }
 
 impl SourceIntent {
-    fn capture(writer: &Writer, key: &EntryKey, action: SourceAction) -> Result<Self, String> {
+    pub fn capture(writer: &Writer, key: &EntryKey, action: SourceAction) -> Result<Self, String> {
         let state = &writer.localisation;
         let owner = state
             .slot
@@ -91,7 +91,7 @@ impl SourceIntent {
         &self.location
     }
 
-    pub fn check(&self, writer: &Writer) -> Result<(), String> {
+    pub(crate) fn check(&self, writer: &Writer) -> Result<(), String> {
         let state = &writer.localisation;
         let slot = &state.slot;
         if writer.translation_entry_active(&self.key)
@@ -106,7 +106,7 @@ impl SourceIntent {
         }
     }
 
-    pub fn complete(&self, writer: &mut Writer) {
+    pub(crate) fn complete(&self, writer: &mut Writer) {
         if let Mode::Preview { locale, variant } = &self.mode {
             writer.trial.settings.locale = locale
                 .as_ref()

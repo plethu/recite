@@ -1,5 +1,5 @@
 use super::*;
-use crate::tests::support;
+use crate::test_support as support;
 use recite_writer_model::View;
 use tokio::sync::mpsc as async_mpsc;
 
@@ -14,7 +14,7 @@ fn cold_link_failure_installs_recovered_source_and_reports_failure_to_the_forwar
     let recovered = writer.session.model().recovery();
     writer.session.project_mut().unwrap().checkpoint().unwrap();
     drop(writer);
-    let mut app = App::empty();
+    let mut app = Shell::empty();
     let (sender, mut jobs) = async_mpsc::unbounded_channel();
     app.sender = Some(sender);
     let (reply, waiting) = mpsc::channel();

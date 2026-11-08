@@ -40,7 +40,7 @@ impl Connections {
             self.incoming = next.incoming;
         }
     }
-    pub fn for_selection(graph: &Topology, selected: Option<&str>) -> Self {
+    pub(crate) fn for_selection(graph: &Topology, selected: Option<&str>) -> Self {
         let mut lists = Self::default();
         if let Some(selected) = selected
             && let Some(index) = graph.ids.get(selected)

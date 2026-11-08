@@ -9,7 +9,7 @@ impl Writer {
             .and_then(|project| project.files().builds.selected.clone());
         self.build_selected(selected);
     }
-    pub fn build_selected(&mut self, asset: Option<String>) {
+    pub(crate) fn build_selected(&mut self, asset: Option<String>) {
         if self.declaration_action_blocked() {
             return;
         }

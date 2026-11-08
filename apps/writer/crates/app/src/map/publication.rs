@@ -1,7 +1,7 @@
 //! Prepared graphs publish conditionally; completed personal-state writes always reconcile.
 use super::*;
 impl Writer {
-    pub fn accept_map(
+    pub(crate) fn accept_map(
         &mut self,
         prepared: &mut Prepared,
         workspace: Workspace,
@@ -55,7 +55,7 @@ impl Writer {
         Ok(())
     }
     /// A completed personal-state write survives cancellation of its presentation.
-    pub fn reconcile_map_placement(&mut self, prepared: &mut Prepared) {
+    pub(crate) fn reconcile_map_placement(&mut self, prepared: &mut Prepared) {
         if prepared.persistence.take().is_none() {
             return;
         }

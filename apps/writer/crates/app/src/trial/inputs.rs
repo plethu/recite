@@ -1,5 +1,5 @@
 //! Staged values are independent of the immutable running trial.
-use super::Writer;
+pub use super::Writer;
 use recite_core::ast::{InterpolationBinding, InterpolationType};
 use recite_writer_session::preview::parse_value;
 use recite_writer_session::{

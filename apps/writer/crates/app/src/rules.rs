@@ -1,11 +1,11 @@
 //! Native rule controls stage edits through the shared authoring owner.
-pub mod editing;
+mod editing;
 pub mod rows;
 pub mod selection;
-use crate::{Phase, Writer};
+pub use crate::{Phase, Writer};
 use recite_core::ast::EffectMode;
 use recite_writer_model::{ReplyRules, RuleArgument, RuleExpression};
-use rows::Row;
+pub use rows::Row;
 use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -26,7 +26,7 @@ pub struct ArgumentTarget {
     index: usize,
 }
 impl ArgumentTarget {
-    fn get<'a>(&self, rules: &'a ReplyRules) -> Option<&'a RuleArgument> {
+    pub fn get<'a>(&self, rules: &'a ReplyRules) -> Option<&'a RuleArgument> {
         match &self.call {
             CallTarget::Condition(path) => match rules.condition.as_ref()?.at(path)? {
                 RuleExpression::Call { arguments, .. } => arguments.get(self.index),
@@ -71,7 +71,7 @@ impl PartialEq for SessionIdentity {
     }
 }
 impl ReplySession {
-    fn new(projection: ReplyRules, document: recite_core::DocumentKey) -> Self {
+    pub fn new(projection: ReplyRules, document: recite_core::DocumentKey) -> Self {
         let rows = rows::project(&projection);
         Self {
             projection,
@@ -83,14 +83,14 @@ impl ReplySession {
             },
         }
     }
-    pub fn is_open_for(&self, model: &recite_writer_model::Workbench) -> bool {
+    pub(crate) fn is_open_for(&self, model: &recite_writer_model::Workbench) -> bool {
         model.view() == &recite_writer_model::View::Source
             && self.document == *model.document().key()
     }
-    pub fn projection(&self) -> &ReplyRules {
+    pub(crate) fn projection(&self) -> &ReplyRules {
         &self.projection
     }
-    pub fn take_refresh_status(&mut self) -> Option<String> {
+    pub(crate) fn take_refresh_status(&mut self) -> Option<String> {
         self.controls.refresh_status.take()
     }
     fn replace(&mut self, projection: ReplyRules) -> ReplyRules {
@@ -111,12 +111,12 @@ pub enum Grouping {
     Not,
 }
 impl Writer {
-    pub fn retire_rules(&mut self) {
+    pub(super) fn retire_rules(&mut self) {
         self.rules = None;
         self.pending_choice = None;
         self.location.screen = recite_writer_session::location::Screen::Write;
     }
-    pub fn reset_rule_structure(&mut self) {
+    pub(super) fn reset_rule_structure(&mut self) {
         if let Some(reply) = &mut self.rules {
             reply.controls.revision.advance();
         }
@@ -131,7 +131,7 @@ impl Writer {
                     && reply.projection.belongs_to(self.session.model().document())
             })
     }
-    pub fn install_rules(&mut self, rules: &mut Option<ReplyRules>) {
+    pub(super) fn install_rules(&mut self, rules: &mut Option<ReplyRules>) {
         let document = self.session.model().document().key();
         let old = self.rules.take();
         self.rules = match (old, rules.take()) {
@@ -194,3 +194,12 @@ impl Writer {
 
 #[cfg(any(test, feature = "test-support"))]
 pub mod tests;
+
+/// The author-facing name of an effect timing mode.
+pub fn effect_mode_name(mode: EffectMode) -> &'static str {
+    match mode {
+        EffectMode::Deferred => "Deferred",
+        EffectMode::Immediate => "Immediate",
+        EffectMode::Blocking => "Blocking",
+    }
+}

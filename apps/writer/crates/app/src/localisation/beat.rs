@@ -1,8 +1,8 @@
 //! A bounded bilingual beat projects source order without owning translation drafts.
 pub mod incoming;
 pub mod rows;
-use super::{EntryKey, Localisation, Writer, slot::Owner, text};
-use crate::reading::{self, Content};
+pub use super::{EntryKey, Localisation, Writer, slot::Owner, text};
+pub use crate::reading::{self, Content};
 use incoming::Incoming;
 use recite_core::po::PoEntryId;
 use recite_writer_model::{AnalysisStamp, Workbench};
@@ -100,7 +100,7 @@ impl Localisation {
             )
             .collect()
     }
-    pub fn active_entry(&self, key: &EntryKey) -> bool {
+    pub(super) fn active_entry(&self, key: &EntryKey) -> bool {
         if self.slot.identity() != Some(&key.catalogue) {
             return false;
         }
@@ -118,7 +118,7 @@ impl Localisation {
     }
 }
 impl Writer {
-    pub fn translation_entry_active(&self, key: &EntryKey) -> bool {
+    pub(super) fn translation_entry_active(&self, key: &EntryKey) -> bool {
         self.phase == super::Phase::Writing
             && self.workspaces.screen == super::Screen::Localisation
             && self.localisation.active_entry(key)
@@ -142,5 +142,19 @@ impl Writer {
             .iter_mut()
             .filter_map(Row::passage_mut)
             .find(|row| row.source.id == anchor)
+    }
+}
+
+impl Localisation {
+    /// The mounted source-context row at `index` in the open passage, if any.
+    pub fn context_row_mut(&mut self, index: usize) -> Option<&mut Context> {
+        self.passage
+            .as_mut()?
+            .rows
+            .iter_mut()
+            .find_map(|row| match row {
+                Row::Context(row) if row.index == index => Some(row),
+                _ => None,
+            })
     }
 }

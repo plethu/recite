@@ -1,15 +1,15 @@
 //! Project screens retain writing widgets; durable state remains in the shared project owner.
-pub mod builds;
+mod builds;
 pub mod declarations;
 pub mod external;
 pub mod location;
 pub mod opening;
 pub mod rename;
-pub use rename::BeatChoice;
-pub mod settings;
+pub(crate) use rename::BeatChoice;
+mod settings;
 pub mod text;
 pub mod tools;
-use crate::{Phase, Writer};
+pub use crate::{Phase, Writer};
 pub use opening::{Open, Prepared, Work};
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -32,7 +32,7 @@ pub enum ContextUpdate {
     SettingsUnconfirmed,
 }
 impl ContextUpdate {
-    fn message(self) -> &'static str {
+    pub fn message(self) -> &'static str {
         match self {
             Self::Published => "Schema published",
             Self::Reloaded => "Schema reloaded",
@@ -58,7 +58,7 @@ pub struct Workspaces {
     pub schema_feedback_page: usize,
 }
 impl Writer {
-    pub fn invalidate_declaration_output(&mut self) {
+    pub(crate) fn invalidate_declaration_output(&mut self) {
         self.workspaces.declarations.source.invalidate_output();
     }
     pub fn project_jobs_busy(&self) -> bool {

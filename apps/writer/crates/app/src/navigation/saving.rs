@@ -3,17 +3,17 @@ use super::*;
 use recite_writer_session::project::save::ordered::Scope;
 
 #[derive(Clone, Copy)]
-pub enum SaveScope {
+enum SaveScope {
     Current,
     All,
 }
-pub struct DeferredSave {
+pub(super) struct DeferredSave {
     request: Arc<Request>,
     scope: SaveScope,
     applied: bool,
 }
 impl Writer {
-    pub fn defer_save_until_apply(&mut self, scope: &Scope) -> bool {
+    pub(crate) fn defer_save_until_apply(&mut self, scope: &Scope) -> bool {
         let scope = match scope {
             Scope::Current => SaveScope::Current,
             Scope::All => SaveScope::All,
@@ -41,7 +41,7 @@ impl Writer {
         self.status = "Save requested; waiting for Apply.".into();
         true
     }
-    pub fn mark_deferred_save_applied(&mut self, request: &Arc<Request>) {
+    pub(super) fn mark_deferred_save_applied(&mut self, request: &Arc<Request>) {
         if let Some(deferred) = &mut self.navigation.deferred_save
             && Arc::ptr_eq(request, &deferred.request)
         {

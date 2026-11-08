@@ -1,20 +1,20 @@
 //! Reveal accepted destinations without moving pages during ordinary rail browsing.
-use crate::{Writer, map::Workspace};
+pub use crate::{Writer, map::Workspace};
 
 pub const FILE_PAGE: usize = 4;
-pub const BEAT_PAGE: usize = 8;
-pub const UNPAGED: usize = 12;
+const BEAT_PAGE: usize = 8;
+const UNPAGED: usize = 12;
 
 pub fn beat_page_size(total: usize) -> usize {
     if total <= UNPAGED { UNPAGED } else { BEAT_PAGE }
 }
 
 impl Writer {
-    pub fn reveal_navigation(&mut self) {
+    pub(crate) fn reveal_navigation(&mut self) {
         self.reading.reveal_selected();
         self.reveal_rail();
     }
-    pub fn reveal_rail(&mut self) {
+    pub(crate) fn reveal_rail(&mut self) {
         if let Some(project) = self.session.project()
             && let Some(index) = project
                 .documents()

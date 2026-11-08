@@ -1,5 +1,5 @@
 //! The scene picker chooses a proposal value without applying or navigating the manuscript.
-use crate::{Phase, Writer, choices::Request, workspaces::Screen};
+pub use crate::{Phase, Writer, choices::Request, workspaces::Screen};
 use recite_writer_model::AnalysisStamp;
 use recite_writer_session::choices::{PickerOption, display_name};
 
@@ -8,7 +8,7 @@ pub struct BeatChoice {
     source: AnalysisStamp,
     block: String,
     name: String,
-    pub choices: Vec<PickerOption>,
+    pub(crate) choices: Vec<PickerOption>,
 }
 impl BeatChoice {
     pub fn is_current(&self, writer: &Writer) -> bool {
@@ -20,7 +20,7 @@ impl BeatChoice {
             && self.block == writer.workspaces.rename.block
             && self.name == writer.workspaces.rename.name
     }
-    pub fn apply(self, writer: &mut Writer, beat: String) {
+    pub(crate) fn apply(self, writer: &mut Writer, beat: String) {
         if !self.is_current(writer) || !self.choices.iter().any(|choice| choice.value == beat) {
             writer.status =
                 "The rename proposal changed. Reopen the beat choice to continue.".into();

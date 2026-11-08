@@ -1,6 +1,6 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
-use crate::app::{Request, picker::Search};
+use crate::app::picker::Search;
 use crate::presentation::{Icon, print};
 use recite_writer_session::choices::display_name;
 use xilem::{
@@ -79,17 +79,17 @@ fn app_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     flex_row((
         (state.compact_chrome() && state.navigation_width() == 0.).then(|| {
             print::action(scale, "Scenes…", blocked, |state: &mut Writer| {
-                state.app_request = Some(Request::Search(Search::GoTo));
+                state.request_search(Search::GoTo);
             })
         }),
         print::action(scale, "Commands", blocked, |state: &mut Writer| {
-            state.app_request = Some(Request::Search(Search::Commands))
+            state.request_search(Search::Commands)
         }),
         (state.viewport.width - state.navigation_width()
             >= if state.compact_chrome() { 760. } else { 600. } * f64::from(scale))
         .then(|| workspace::authoring_modes(state)),
         text_button(scale, "Workspace", |state: &mut Writer| {
-            state.app_request = Some(Request::Workspace)
+            state.request_workspace_menu()
         })
         .disabled(blocked),
     ))

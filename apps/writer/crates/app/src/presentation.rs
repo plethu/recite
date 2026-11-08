@@ -1,9 +1,10 @@
 //! Personal presentation values derived from the Writer configuration.
+pub mod emphasis;
 use recite_config::{WriterConfig, WriterPresentationField, WriterTheme};
 use recite_writer_session::palette::{Palette, Rgba};
 
 /// The display colour every frontend renders with.
-pub type Color = color::AlphaColor<color::Srgb>;
+pub(crate) type Color = color::AlphaColor<color::Srgb>;
 
 /// The interface scale factor chosen in personal settings.
 pub fn scale(config: &WriterConfig) -> f32 {

@@ -7,8 +7,8 @@ use recite_writer_session::project::{SourceRepairArtifact, SourceRepairExport};
 #[derive(Default)]
 pub struct Repair {
     document: Option<recite_core::DocumentKey>,
-    pub path: String,
-    pub native_path: Option<PathBuf>,
+    pub(crate) path: String,
+    pub(crate) native_path: Option<PathBuf>,
     pub artifact: Option<SourceRepairArtifact>,
 }
 #[derive(Clone)]
@@ -52,7 +52,7 @@ impl Work {
     }
 }
 impl Writer {
-    pub fn source_repair_requirement(&self, scope: &ordered::Scope) -> Option<PathBuf> {
+    pub(crate) fn source_repair_requirement(&self, scope: &ordered::Scope) -> Option<PathBuf> {
         use recite_writer_session::project::save::ordered::Scope;
         let project = self.session.project()?;
         match scope {
@@ -169,7 +169,7 @@ impl Writer {
         });
         self.send_navigation(request, worker::Work::Repair(Box::new(work)))
     }
-    pub fn publish_source_repair(
+    pub(super) fn publish_source_repair(
         &mut self,
         request: &Request,
         value: &mut ResultValue,

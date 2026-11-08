@@ -4,7 +4,7 @@ use super::*;
 use recite_core::DocumentKey;
 
 #[derive(PartialEq)]
-pub(super) struct Scope {
+pub struct Scope {
     pub(super) writer: Option<DocumentScope>,
     pub(super) welcome: bool,
     pub(super) project_form: Option<FormScope>,
@@ -13,7 +13,7 @@ pub(super) struct Scope {
     pub(super) keymap: recite_config::Keymap,
 }
 pub(super) struct DocumentScope {
-    window: recite_writer_app::WindowKey,
+    window: crate::WindowKey,
     document: DocumentKey,
     view: recite_writer_model::View,
     workspace: crate::map::Workspace,
@@ -33,10 +33,10 @@ impl PartialEq for DocumentScope {
     }
 }
 impl DocumentScope {
-    fn same_command_scope(&self, other: &Self) -> bool {
+    pub fn same_command_scope(&self, other: &Self) -> bool {
         self.same_picker_opening_scope(other) && self.stamp == other.stamp
     }
-    fn same_picker_opening_scope(&self, other: &Self) -> bool {
+    pub fn same_picker_opening_scope(&self, other: &Self) -> bool {
         self.window == other.window
             && self.document == other.document
             && self.view == other.view
@@ -49,7 +49,7 @@ impl DocumentScope {
     }
 }
 impl Scope {
-    pub(super) fn same_command_scope(&self, other: &Self) -> bool {
+    pub fn same_command_scope(&self, other: &Self) -> bool {
         self.same_shell(other)
             && match (&self.writer, &other.writer) {
                 (Some(writer), Some(other)) => writer.same_command_scope(other),
@@ -57,7 +57,7 @@ impl Scope {
                 _ => false,
             }
     }
-    pub(super) fn same_picker_opening_scope(&self, other: &Self) -> bool {
+    pub fn same_picker_opening_scope(&self, other: &Self) -> bool {
         self.same_shell(other)
             && match (&self.writer, &other.writer) {
                 (Some(writer), Some(other)) => writer.same_picker_opening_scope(other),
@@ -72,7 +72,7 @@ impl Scope {
             && self.picker == other.picker
             && self.keymap == other.keymap
     }
-    pub(super) fn capture(app: &App) -> Self {
+    pub fn capture(app: &Shell) -> Self {
         Self {
             writer: app.writer.as_ref().map(|writer| {
                 let model = writer.session.model();

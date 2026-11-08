@@ -46,7 +46,7 @@ impl Action {
         }
     }
 }
-pub fn describe(project: &ProjectSession) -> Vec<rename::Change> {
+pub(super) fn describe(project: &ProjectSession) -> Vec<rename::Change> {
     let Some(review) = &project.files().rename_review else {
         return vec![];
     };

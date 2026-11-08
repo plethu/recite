@@ -1,7 +1,7 @@
 //! Bound emphasis work to visible snippets without splitting case-expanded Unicode characters.
 use std::ops::Range;
 
-pub(super) fn ranges(text: &str, query: &str) -> Vec<Range<usize>> {
+pub fn ranges(text: &str, query: &str) -> Vec<Range<usize>> {
     let mut folded = String::new();
     let mut origins = Vec::new();
     for (start, character) in text.char_indices() {
@@ -36,3 +36,6 @@ pub(super) fn ranges(text: &str, query: &str) -> Vec<Range<usize>> {
     }
     merged
 }
+
+#[cfg(test)]
+mod tests;

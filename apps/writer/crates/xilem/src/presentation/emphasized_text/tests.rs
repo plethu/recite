@@ -7,23 +7,6 @@ use xilem::masonry::{
 };
 
 #[test]
-fn search_emphasis_keeps_unicode_expansions_whole_and_marks_each_term() {
-    let text = "İstanbul café 🚋 café";
-    let ranges = search::ranges(text, "i CAFÉ 🚋");
-    assert_eq!(
-        ranges
-            .iter()
-            .map(|range| &text[range.clone()])
-            .collect::<Vec<_>>(),
-        ["İ", "café", "🚋", "café"]
-    );
-    assert!(search::ranges(text, "").is_empty());
-    let overlapping = search::ranges("courier", "cour courier");
-    assert_eq!(overlapping.len(), 1);
-    assert_eq!(overlapping[0], 0..7);
-}
-
-#[test]
 fn highlighted_search_results_keep_complete_native_text() {
     let text = "The café courier takes tram 39.";
     let view = manuscript_search(20., text.into(), "CAFÉ 39".into());

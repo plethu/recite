@@ -1,5 +1,5 @@
 //! Presentation only; the shared project owner retains the manifest baseline and review.
-use super::{Writer, text};
+pub use super::{Writer, text};
 use recite_writer_session::project::settings::Session;
 use std::path::PathBuf;
 
@@ -14,18 +14,18 @@ pub struct Panel {
     pub feedback_page: usize,
 }
 impl Panel {
-    pub fn clear_feedback(&mut self) {
+    pub(super) fn clear_feedback(&mut self) {
         self.feedback.clear();
         self.feedback_page = 0;
     }
     pub fn toggle_preview(&mut self) {
         self.preview_open = !self.preview_open;
     }
-    pub fn replace_preview(&mut self, preview: Vec<String>) {
+    pub(super) fn replace_preview(&mut self, preview: Vec<String>) {
         self.preview = preview;
         self.page = 0;
     }
-    pub fn record_artifact(&mut self, artifact: PathBuf) {
+    pub(super) fn record_artifact(&mut self, artifact: PathBuf) {
         self.import = artifact.display().to_string();
         self.artifact = Some(artifact);
     }
@@ -43,7 +43,7 @@ impl Writer {
     pub fn project_settings(&self) -> Option<&Session> {
         self.session.project()?.files().settings.as_ref()
     }
-    pub fn settings_feedback(&mut self, message: String) {
+    pub(super) fn settings_feedback(&mut self, message: String) {
         self.status = message
             .lines()
             .next()

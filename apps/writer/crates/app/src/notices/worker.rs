@@ -1,5 +1,5 @@
-use super::{Connection, Event, Output, Request, WatchScope, Writer, listener};
-use crate::WindowKey;
+pub use super::{Connection, Event, Output, Request, WatchScope, Writer, listener};
+pub use crate::WindowKey;
 use listener::Listener;
 use recite_writer_session::external::{Affected, Changes, Subscription, Watch};
 use tokio::{
@@ -38,7 +38,7 @@ impl Writer {
         serve(emit, self.window, source, requests, binding)
     }
 }
-pub struct Catalogue {
+struct Catalogue {
     scope: WatchScope,
     _watch: Watch,
     listener: Listener,

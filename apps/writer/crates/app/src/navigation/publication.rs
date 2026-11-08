@@ -1,7 +1,7 @@
 use super::*;
-use crate::map::Workspace;
+pub use crate::map::Workspace;
 use recite_writer_session::navigation::PreparedDestination;
-use worker::{Completed, ResultValue};
+pub use worker::{Completed, ResultValue};
 
 impl Writer {
     pub fn accept_navigation(&mut self, completed: Completed) -> Option<ResultValue> {
@@ -309,7 +309,7 @@ impl Writer {
         }
         Ok(())
     }
-    pub fn navigation_failed(&mut self, error: String) {
+    pub(crate) fn navigation_failed(&mut self, error: String) {
         self.navigation.visit = None;
         if self
             .rules

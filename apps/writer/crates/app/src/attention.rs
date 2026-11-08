@@ -1,6 +1,6 @@
 //! Focus overlays the selected workspace; native pane requests carry their own identity.
-use crate::WindowKey;
-use crate::{Phase, Writer, map::Workspace};
+pub use crate::WindowKey;
+pub use crate::{Phase, Writer, map::Workspace};
 use recite_core::DocumentKey;
 use recite_writer_model::View;
 use std::sync::Arc;
@@ -135,7 +135,7 @@ impl Attention {
     pub fn is_focused(&self) -> bool {
         self.focused
     }
-    pub fn leave_focus(&mut self) {
+    pub(crate) fn leave_focus(&mut self) {
         self.focused = false;
     }
     pub fn pane_request(&self) -> Option<&PaneRequest> {
@@ -150,7 +150,7 @@ impl Attention {
     pub fn edit_request(&self) -> Option<&EditRequest> {
         self.edit_request.as_ref()
     }
-    pub fn clear_edit_request(&mut self) {
+    pub(crate) fn clear_edit_request(&mut self) {
         self.edit_request = None;
     }
     pub fn request_edit(&mut self, target: EditingTarget) {
@@ -158,7 +158,7 @@ impl Attention {
     }
 }
 impl Writer {
-    pub fn require_finished_composition(&self) -> Result<(), String> {
+    pub(crate) fn require_finished_composition(&self) -> Result<(), String> {
         if self.attention.is_composing() {
             Err("Finish text composition before leaving this passage.".into())
         } else {

@@ -1,6 +1,6 @@
 use super::*;
 use crate::navigation::worker::Job;
-use crate::workspaces::Screen;
+pub use crate::workspaces::Screen;
 use crate::{test_support as support, workspaces::tests::ToolDriver};
 use recite_core::po::PoEntryId;
 use std::fs;

@@ -1,10 +1,10 @@
 use super::*;
-use crate::tests::support;
+use crate::test_support as support;
 
 #[test]
 fn window_commands_remain_available_without_a_document_and_workspace_commands_keep_welcome_guarded()
 {
-    let mut app = App::empty();
+    let mut app = Shell::empty();
     app.run_command(WriterCommand::Settings);
     assert!(app.settings_open);
     app.run_command(WriterCommand::OpenProject);
@@ -13,7 +13,7 @@ fn window_commands_remain_available_without_a_document_and_workspace_commands_ke
     assert!(app.closed);
 
     let directory = support::project(recite_writer_model::FIXTURE).unwrap();
-    let mut app = App::with_writer(support::open(&directory).unwrap());
+    let mut app = Shell::with_writer(support::open(&directory).unwrap());
     let before = app.writer.as_ref().unwrap().session.model().recovery();
     app.run_command(WriterCommand::OpenProject);
     app.run_command(WriterCommand::AddLine);
@@ -27,7 +27,7 @@ fn window_commands_remain_available_without_a_document_and_workspace_commands_ke
 #[test]
 fn closing_a_picker_dismisses_it_without_closing_the_live_document() {
     let directory = support::project(recite_writer_model::FIXTURE).unwrap();
-    let mut app = App::with_writer(support::open(&directory).unwrap());
+    let mut app = Shell::with_writer(support::open(&directory).unwrap());
     app.run_command(WriterCommand::Commands);
     assert!(app.picker.is_some());
     app.run_command(WriterCommand::Close);

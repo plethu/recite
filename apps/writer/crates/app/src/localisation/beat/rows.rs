@@ -1,6 +1,6 @@
 //! Typed bilingual records reuse the manuscript's structural reading projection.
-use super::{EntryKey, Owner, text};
-use crate::reading::{Content, PassageNumber, Row as ReadingRow};
+pub use super::{EntryKey, Owner, text};
+pub use crate::reading::{Content, PassageNumber, Row as ReadingRow};
 use recite_writer_model::{AnalysisStamp, Passage};
 use recite_writer_session::localisation::catalogue::EntryDetails;
 use std::sync::Arc;
@@ -62,7 +62,7 @@ impl Row {
             }
         }
     }
-    fn context(row: &ReadingRow, index: usize, text: &str) -> Self {
+    pub fn context(row: &ReadingRow, index: usize, text: &str) -> Self {
         Self::Context(Context {
             index,
             groups: row.groups.clone(),
@@ -76,7 +76,7 @@ impl Row {
             Self::Context(_) => None,
         }
     }
-    pub fn passage_mut(&mut self) -> Option<&mut PassageRow> {
+    pub(crate) fn passage_mut(&mut self) -> Option<&mut PassageRow> {
         match self {
             Self::Passage(row) => Some(row),
             Self::Context(_) => None,

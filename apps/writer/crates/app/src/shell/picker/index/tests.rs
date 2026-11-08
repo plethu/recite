@@ -1,7 +1,7 @@
 use super::*;
-use crate::tests::support;
+use crate::test_support as support;
 
-fn documents(app: &App) -> Vec<String> {
+fn documents(app: &Shell) -> Vec<String> {
     entries(app, Search::GoTo)
         .unwrap()
         .into_iter()
@@ -24,7 +24,7 @@ fn project_lookup_keeps_its_documents_while_a_worker_exclusively_owns_the_projec
     )
     .unwrap();
     let writer = support::open(&directory).unwrap();
-    let mut app = App::with_writer(writer);
+    let mut app = Shell::with_writer(writer);
     let before = documents(&app);
     assert!(before.iter().any(|key| key == "other.recite"));
     let mut checkout = app.writer.as_mut().unwrap().session.checkout().unwrap();

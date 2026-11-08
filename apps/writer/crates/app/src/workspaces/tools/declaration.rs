@@ -1,5 +1,5 @@
 //! Checked source adoption and its recovery fence share one worker continuation.
-use super::super::{ContextUpdate, declarations::producer_description, text};
+pub use super::super::{ContextUpdate, declarations::producer_description, text};
 use super::*;
 use crate::external_editor::Request as EditorRequest;
 use recite_writer_session::declarations::SourceStatus;
@@ -43,7 +43,7 @@ impl Prepared {
             presentation,
         }
     }
-    pub fn completion(&self) -> Completion {
+    pub(super) fn completion(&self) -> Completion {
         match self.presentation {
             Presentation::Source { .. } => Completion::Source,
             Presentation::Registration(_) => Completion::Registration,
@@ -128,7 +128,7 @@ impl Writer {
     pub fn refresh_declaration_rows(&mut self) {
         self.declaration_action(DeclarationAction::InspectSource);
     }
-    pub fn accept_declaration_tool(
+    pub(super) fn accept_declaration_tool(
         &mut self,
         prepared: &mut Prepared,
     ) -> Result<DeclarationFinish, String> {
@@ -190,7 +190,7 @@ impl Writer {
         self.status = "Declaration action adopted; finishing recovery and cleanup…".into();
         Ok(recovery)
     }
-    pub fn finish_declaration_tool(
+    pub(super) fn finish_declaration_tool(
         &mut self,
         receipt: &mut DeclarationFinished,
         completion: Completion,

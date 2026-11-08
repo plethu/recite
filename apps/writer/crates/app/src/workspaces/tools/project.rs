@@ -1,6 +1,6 @@
 //! Exclusive project actions always return the real owner, including failed dispatch and unwind.
 use super::*;
-use crate::{
+pub use crate::{
     session::{Checkout, RecoveryReason},
     workspaces::{
         external::{Inspection, Resolved},
@@ -10,9 +10,9 @@ use crate::{
 use recite_compiler::authoring::WorkControl;
 use recite_writer_session::{FileError, ProjectSession};
 use std::path::PathBuf;
-pub mod accepting;
-pub mod external;
-pub mod renaming;
+mod accepting;
+mod external;
+mod renaming;
 pub use external::Action as ExternalAction;
 #[cfg(any(test, feature = "test-support"))]
 pub mod tests;
@@ -36,7 +36,7 @@ pub struct Completed {
     family: Family,
 }
 #[derive(Clone, Copy)]
-pub enum Family {
+enum Family {
     Rename,
     External,
 }
@@ -56,7 +56,7 @@ pub enum Outcome {
     },
 }
 impl Work {
-    pub fn not_started(self, error: String) -> Completed {
+    pub(super) fn not_started(self, error: String) -> Completed {
         let outcome = match self.was_recovering {
             Some(reason) => Outcome::RecoveryRequired {
                 reason,
@@ -171,7 +171,7 @@ pub enum Effect {
     ExternalResolved(Resolved),
 }
 impl Success {
-    fn message(message: &'static str) -> Self {
+    pub fn message(message: &'static str) -> Self {
         Self {
             message,
             archive: None,

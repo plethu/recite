@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-pub struct Claim {
+struct Claim {
     cancel: CancellationToken,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -20,11 +20,11 @@ pub struct ExclusiveTicket(Arc<Claim>);
 pub struct FrozenProject {
     root: PathBuf,
     model: FrozenWorkbench,
-    pub current_dirty: bool,
-    pub dirty: bool,
+    pub(super) current_dirty: bool,
+    pub(super) dirty: bool,
 }
 pub struct Checkout {
-    pub ticket: ExclusiveTicket,
+    pub(crate) ticket: ExclusiveTicket,
     pub project: Option<Box<ProjectSession>>,
     pub retired: Option<Box<FrozenProject>>,
 }
@@ -65,7 +65,7 @@ impl Session {
             _ => self.project().map(ProjectSession::root),
         }
     }
-    pub fn cancel_exclusive(&self) {
+    pub(crate) fn cancel_exclusive(&self) {
         if let Self::Working { ticket, .. } = self {
             ticket.cancel();
         }

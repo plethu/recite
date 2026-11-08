@@ -1,10 +1,10 @@
 //! One project-tool operation owns its terminal receipt across screen changes.
-pub mod accepting;
-pub mod declaration;
-pub mod job;
+mod accepting;
+mod declaration;
+mod job;
 pub mod project;
 pub mod settings;
-use super::{Phase, Writer, declarations::Row};
+pub use super::{Phase, Writer, declarations::Row};
 pub use project::Action as ProjectAction;
 pub use project::ExternalAction;
 use recite_writer_session::{
@@ -31,7 +31,7 @@ pub struct Request {
     kind: ToolKind,
 }
 #[derive(PartialEq, Eq)]
-pub enum ToolKind {
+enum ToolKind {
     Refresh,
     Settings,
     Other,
@@ -122,7 +122,7 @@ impl Tools {
     }
 }
 impl Writer {
-    pub fn submit_catalogue_tool(&mut self, work: crate::localisation::Work) {
+    pub(crate) fn submit_catalogue_tool(&mut self, work: crate::localisation::Work) {
         self.submit_tool(Work::Catalogue(Box::new(work)));
     }
     pub fn declaration_session(&self) -> Option<&Session> {
@@ -171,7 +171,7 @@ impl Writer {
             self.status = "Cancelling generation; waiting for its terminal result.".into();
         }
     }
-    pub fn poll_schema_generation(&mut self) {
+    pub(super) fn poll_schema_generation(&mut self) {
         if self.workspaces.tools.busy() || self.work.busy() {
             return;
         }
@@ -184,7 +184,7 @@ impl Writer {
             None => (),
         }
     }
-    pub fn schema_feedback(&mut self, message: String) {
+    pub(crate) fn schema_feedback(&mut self, message: String) {
         self.status = message
             .lines()
             .next()

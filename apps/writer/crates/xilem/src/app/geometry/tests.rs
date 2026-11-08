@@ -96,7 +96,7 @@ fn allocated_window_bounds_control_reflow_and_keep_the_manuscript_across_panes()
         writer.configure(config.clone());
         let mut app = App::with_writer(writer);
         app.preferences.config = config;
-        app.theme.refresh(&app.preferences.config.writer);
+        app.theme.refresh(&app.shell.preferences.config.writer);
         let properties = app.theme.properties.clone();
         let mut mounted = Mounted::new(app, page);
         mounted.harness.set_default_properties(properties);

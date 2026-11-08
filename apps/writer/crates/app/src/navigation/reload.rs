@@ -3,7 +3,7 @@ use super::*;
 use recite_writer_session::project::PreparedReload;
 
 impl Writer {
-    pub fn submit_reload(&mut self) -> Result<(), String> {
+    pub(super) fn submit_reload(&mut self) -> Result<(), String> {
         let project = self.session.project().ok_or("Open a project first.")?;
         let reload = project
             .files()
@@ -17,11 +17,11 @@ impl Writer {
         });
         self.send_navigation(request, worker::Work::Reload(Box::new(reload)))
     }
-    pub fn record_reload_archive(&mut self, prepared: &PreparedReload) {
+    pub(super) fn record_reload_archive(&mut self, prepared: &PreparedReload) {
         self.recovery_copy = Some(prepared.archive().to_owned());
         self.recovery_details = false;
     }
-    pub fn publish_reload(
+    pub(super) fn publish_reload(
         &mut self,
         request: &Request,
         prepared: &mut PreparedReload,

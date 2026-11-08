@@ -56,13 +56,14 @@ fn navigation(app: &App) -> impl WidgetView<App> + use<> {
             ))
             .gap(12.px()),
         ),
-        text_button(scale, "Project settings…", App::open_project_settings).disabled(
-            app.writer.as_ref().is_none_or(|writer| {
-                writer.session.project().is_none()
-                    || writer.project_jobs_busy()
-                    || writer.phase != crate::Phase::Writing
-            }),
-        ),
+        text_button(scale, "Project settings…", |app: &mut App| {
+            app.open_project_settings()
+        })
+        .disabled(app.writer.as_ref().is_none_or(|writer| {
+            writer.session.project().is_none()
+                || writer.project_jobs_busy()
+                || writer.phase != crate::Phase::Writing
+        })),
     ))
     .direction(if app.viewport.width >= 600. * f64::from(scale) {
         Axis::Horizontal

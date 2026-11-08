@@ -1,7 +1,7 @@
 //! An independently reaped editor opens only after accepted source and recovery are durable.
 pub mod linked;
 pub mod request;
-use super::{Phase, Writer};
+pub use super::{Phase, Writer};
 use recite_writer_session::startup::EditorCommand;
 pub use request::Request;
 use std::sync::Arc;
@@ -91,7 +91,7 @@ impl Writer {
             self.status = "Editor launch cancelled; the accepted save will finish.".into();
         }
     }
-    pub fn launch_editor(&mut self, request: Arc<Request>) {
+    pub(super) fn launch_editor(&mut self, request: Arc<Request>) {
         if self.phase != Phase::Writing
             || self
                 .session

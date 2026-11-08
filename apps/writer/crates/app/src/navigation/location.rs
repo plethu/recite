@@ -3,10 +3,10 @@ use super::*;
 use crate::workspaces::Screen as WorkspaceScreen;
 use recite_writer_session::location::Screen as LinkedScreen;
 
-pub fn requests_editor(location: &Location) -> bool {
+pub(super) fn requests_editor(location: &Location) -> bool {
     location.source || location.view == Some(recite_config::WriterView::Source)
 }
-pub fn selection_location(location: &Location) -> Location {
+pub(super) fn selection_location(location: &Location) -> Location {
     let mut selection = location.clone();
     if requests_editor(location) {
         selection.source = false;

@@ -33,7 +33,7 @@ pub struct Finished {
     result: Result<(), String>,
 }
 impl Save {
-    pub fn not_started(self, error: String) -> Saved {
+    pub(crate) fn not_started(self, error: String) -> Saved {
         Saved {
             identity: self.identity,
             request: self.request,
@@ -79,7 +79,7 @@ impl Writer {
             self.begin_catalogue_save(Some(vec![key.id]), AfterSave::Stay);
         }
     }
-    pub fn save_catalogue_then_sources(&mut self, scope: Scope, after: SourceAfterSave) {
+    pub(crate) fn save_catalogue_then_sources(&mut self, scope: Scope, after: SourceAfterSave) {
         self.begin_catalogue_save(None, AfterSave::Sources { scope, after });
     }
     fn begin_catalogue_save(&mut self, entries: Option<Vec<PoEntryId>>, after: AfterSave) {
@@ -109,7 +109,10 @@ impl Writer {
             Err(error) => self.catalogue_feedback(error),
         }
     }
-    pub fn accept_catalogue_save(&mut self, saved: &mut Saved) -> Result<Option<Finish>, String> {
+    pub(crate) fn accept_catalogue_save(
+        &mut self,
+        saved: &mut Saved,
+    ) -> Result<Option<Finish>, String> {
         let owner = self
             .localisation
             .slot
@@ -136,7 +139,7 @@ impl Writer {
             }
         }
     }
-    pub fn finish_catalogue_tool(&mut self, finished: &mut Finished) -> Result<(), String> {
+    pub(crate) fn finish_catalogue_tool(&mut self, finished: &mut Finished) -> Result<(), String> {
         if self.localisation.slot.identity() != Some(&finished.identity) {
             return Err("The catalogue changed while its recovery write was finishing.".into());
         }

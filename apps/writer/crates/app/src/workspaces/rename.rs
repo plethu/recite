@@ -2,9 +2,9 @@
 pub mod selection;
 #[cfg(test)]
 mod tests;
-use super::{Writer, text, tools::ProjectAction};
-pub use recite_writer_session::comparison::ComparisonRow as Change;
-pub use selection::BeatChoice;
+pub use super::{Writer, text, tools::ProjectAction};
+pub(super) use recite_writer_session::comparison::ComparisonRow as Change;
+pub(crate) use selection::BeatChoice;
 #[derive(Default)]
 pub struct Panel {
     pub block: String,
@@ -26,26 +26,26 @@ impl Report {
     }
 }
 impl Panel {
-    pub fn choose_block(&mut self, block: Option<String>) {
+    pub(super) fn choose_block(&mut self, block: Option<String>) {
         if self.block.is_empty() {
             self.block = block.unwrap_or_default();
         }
     }
-    pub fn replace(&mut self, pages: Vec<Change>) {
+    pub(super) fn replace(&mut self, pages: Vec<Change>) {
         self.changes = pages;
         self.page = 0;
     }
-    pub fn report(&mut self, report: Option<&str>) {
+    pub(super) fn report(&mut self, report: Option<&str>) {
         self.report = report.map(|report| Report::Problem(text::pages(report)));
         self.report_page = 0;
     }
-    pub fn inform(&mut self, report: &str) {
+    pub(super) fn inform(&mut self, report: &str) {
         self.report = Some(Report::Information(text::pages(report)));
         self.report_page = 0;
     }
 }
 impl Writer {
-    pub fn retire_published_rename_notice(&mut self) {
+    pub(crate) fn retire_published_rename_notice(&mut self) {
         if matches!(self.workspaces.rename.report, Some(Report::Information(_)))
             && self
                 .session

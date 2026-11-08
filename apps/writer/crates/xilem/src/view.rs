@@ -13,7 +13,7 @@ use xilem::view::{
 use xilem::{InsertNewline, WidgetView};
 
 mod manuscript;
-mod surface;
+use recite_writer_app::reading::surface;
 pub(super) mod workspace;
 use workspace::workspace;
 #[derive(Clone, Copy, Default, PartialEq)]

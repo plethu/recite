@@ -1,7 +1,17 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
 use crate::attention::PaneMotion;
+use crate::attention::{DocumentMenu, EditingTarget, FieldRestoration};
+use crate::session::Session;
 use crate::tests::support;
 use crate::tests::support::NoProxy;
+use recite_config::WriterCommand;
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use xilem::masonry::theme;
 use xilem::{core::DynMessage, masonry::testing::TestHarness};
@@ -100,7 +110,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         *ctx.environment() = message.finish().0;
         let next = host(&app, xilem::view::label("Keyboard host"));
         harness.edit_root_widget(|root| next.rebuild(&view, &mut state, &mut ctx, root, &mut app));
-        assert_ne!(state.generation, CommandGeneration::default());
+        assert_ne!(state.generations.command, CommandGeneration::default());
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),
             Vec::new(),
@@ -123,7 +133,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                 } else {
                     WriterCommand::Settings
                 }),
-                generation: state.generation,
+                generation: state.generations.command,
             }),
         );
         assert!(matches!(
@@ -175,7 +185,7 @@ fn queued_save_survives_focus_acknowledgement_and_context_refresh_without_losing
                 pod.new_widget,
                 (300, 100),
             );
-            let generation = state.generation;
+            let generation = state.generations.command;
             let (sender, mut work) = mpsc::unbounded_channel();
             app.writer.as_mut().unwrap().work.sender = Some(sender);
             let mut message = MessageCtx::new(
@@ -273,7 +283,7 @@ fn clearing_refused_focus_retires_its_request_without_retargeting_a_queued_save(
             pod.new_widget,
             (300, 100),
         );
-        let generation = state.generation;
+        let generation = state.generations.command;
         let (sender, mut work) = mpsc::unbounded_channel();
         app.writer.as_mut().unwrap().work.sender = Some(sender);
         let mut message = MessageCtx::new(
@@ -294,7 +304,7 @@ fn clearing_refused_focus_retires_its_request_without_retargeting_a_queued_save(
         if rebuild {
             harness
                 .edit_root_widget(|root| next.rebuild(&view, &mut state, &mut ctx, root, &mut app));
-            assert_eq!(state.generation, generation);
+            assert_eq!(state.generations.command, generation);
             assert!(
                 harness
                     .root_widget()

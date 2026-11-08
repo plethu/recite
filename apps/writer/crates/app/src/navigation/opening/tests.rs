@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support;
+pub use crate::test_support;
 use recite_writer_session::location::Location;
 
 const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";

@@ -1,5 +1,5 @@
 //! Reading aids do not navigate, own another draft, or outlive the application.
-use crate::{Writer, navigation::Target};
+pub use crate::{Writer, navigation::Target};
 use recite_core::DocumentKey;
 use recite_writer_session::reading::ReferenceSnapshot;
 use std::collections::BTreeSet;

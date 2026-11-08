@@ -13,11 +13,11 @@ impl PartialEq for Composition {
 }
 pub struct Preedit(Arc<AtomicUsize>);
 impl Composition {
-    pub fn begin(&self) -> Preedit {
+    pub(crate) fn begin(&self) -> Preedit {
         self.0.fetch_add(1, Ordering::AcqRel);
         Preedit(self.0.clone())
     }
-    pub fn active(&self) -> bool {
+    pub(crate) fn active(&self) -> bool {
         self.0.load(Ordering::Acquire) != 0
     }
 }

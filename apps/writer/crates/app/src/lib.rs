@@ -3,18 +3,18 @@
 //! The native frontend renders this state and forwards input to it. Nothing here depends on a
 //! GUI toolkit, so a frontend can change without moving authoring behaviour.
 pub mod attention;
-pub mod choices;
+mod choices;
 pub mod editor_work;
 pub mod external_editor;
 pub mod feedback;
 pub mod localisation;
-pub mod lookup;
+mod lookup;
 pub mod map;
 pub mod navigation;
 pub mod notices;
 pub mod presentation;
 pub mod reading;
-pub mod reading_context;
+mod reading_context;
 pub mod routes;
 pub mod rules;
 pub mod session;
@@ -54,7 +54,7 @@ impl Default for Host {
 }
 
 pub struct Writer {
-    pub host: Host,
+    pub(crate) host: Host,
     pub session: session::Session,
     pub editor: Option<recite_writer_session::startup::EditorCommand>,
     pub external: external_editor::ExternalEditor,
@@ -72,10 +72,10 @@ pub struct Writer {
     pub repair: navigation::repair::Repair,
     pub recovery_copy: Option<std::path::PathBuf>,
     pub recovery_details: bool,
-    pub location: recite_writer_session::location::Location,
+    location: recite_writer_session::location::Location,
     pub rules: Option<rules::ReplySession>,
-    pub pending_choice: Option<choices::Request>,
-    pub app_request: Option<shell::Request>,
+    pending_choice: Option<choices::Request>,
+    pub(crate) app_request: Option<shell::Request>,
     pub pending_clipboard: Option<String>,
     lookup: Option<lookup::Search>,
     pub workspaces: workspaces::Workspaces,
@@ -255,7 +255,7 @@ impl Writer {
         }
         self.close_sources_with_recovery();
     }
-    pub fn close_sources_with_recovery(&mut self) {
+    pub(crate) fn close_sources_with_recovery(&mut self) {
         let Some(project) = self.session.project_mut() else {
             self.phase = Phase::Closed;
             return;
@@ -267,5 +267,63 @@ impl Writer {
                 self.phase = Phase::ConfirmClose;
             }
         }
+    }
+}
+
+impl Writer {
+    /// The open document and whether it has unsaved edits.
+    pub fn document_caption(&self) -> String {
+        format!(
+            "{}{}",
+            self.session.model().document().key(),
+            if self.session.current_dirty() {
+                " · Unsaved"
+            } else {
+                ""
+            }
+        )
+    }
+}
+
+/// Intents a frontend raises from controls; each keeps related state consistent.
+impl Writer {
+    /// Leave a close or exit prompt and continue working.
+    pub fn keep_editing(&mut self) {
+        self.phase = Phase::Writing;
+        self.work.keep_editing();
+        self.localisation.keep_editing();
+    }
+    /// Leave a close prompt to review translations that still have unsaved drafts.
+    pub fn open_unsaved_translations(&mut self) {
+        self.keep_editing();
+        self.enter_localisation();
+        self.localisation.query.filter = localisation::Filter::Unsaved;
+        self.search_catalogue();
+    }
+    /// Ask the shell to open a search.
+    pub fn request_search(&mut self, search: shell::Search) {
+        self.app_request = Some(shell::Request::Search(search));
+    }
+    /// Ask the shell to toggle its workspace menu.
+    pub fn request_workspace_menu(&mut self) {
+        self.app_request = Some(shell::Request::Workspace);
+    }
+    /// Close document actions after a chosen action.
+    pub fn close_document_menu(&mut self) {
+        self.document_menu = attention::DocumentMenu::Closed;
+    }
+    /// Dismiss document actions without choosing one.
+    pub fn dismiss_document_menu(&mut self) {
+        self.document_menu = attention::DocumentMenu::Dismissed;
+    }
+    /// Report that a copied link reached the system clipboard.
+    pub fn clipboard_written(&mut self) {
+        self.status = "Link sent to clipboard.".into();
+    }
+    /// Resume background work that a native message may have unblocked.
+    pub fn after_native_message(&mut self) {
+        self.refresh_map_if_needed();
+        self.resume_external_notices();
+        self.resume_linked_editor();
     }
 }

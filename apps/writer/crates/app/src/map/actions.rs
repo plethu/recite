@@ -28,12 +28,12 @@ impl Writer {
             self.reveal_rail();
         }
     }
-    pub fn invalidate_map(&mut self) {
+    pub(crate) fn invalidate_map(&mut self) {
         if self.map.workspace.has_map() {
             self.map.refresh = Some(self.session.model().document().key().clone());
         }
     }
-    pub fn refresh_map_if_needed(&mut self) {
+    pub(crate) fn refresh_map_if_needed(&mut self) {
         if self.navigation.busy()
             || self.attention.is_composing()
             || self.workspaces.screen != crate::workspaces::Screen::Write
@@ -133,7 +133,7 @@ impl Writer {
             .scene(self)
             .and_then(|scene| scene.selected.as_deref())
     }
-    pub fn sync_map_selection(&mut self) {
+    pub(crate) fn sync_map_selection(&mut self) {
         let selected = self.reading.selected.clone();
         let current = self
             .map
@@ -148,7 +148,7 @@ impl Writer {
             }
         }
     }
-    pub fn select_map_beat(&mut self, beat: String) {
+    pub(super) fn select_map_beat(&mut self, beat: String) {
         if let Some(scene) = self.map_scene_mut() {
             scene.select(Some(beat));
         }

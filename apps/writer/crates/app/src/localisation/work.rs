@@ -1,14 +1,14 @@
 //! The existing project-tools worker carries catalogue owners and save receipts.
-pub mod checked;
+mod checked;
 pub mod saving;
 pub mod source;
 use super::*;
 pub use checked::Action;
 use recite_writer_model::Passage;
 pub use saving::AfterSave;
-pub use saving::{Finish, Finished};
-use slot::Checkout;
-pub use source::Action as SourceAction;
+pub(crate) use saving::{Finish, Finished};
+pub use slot::Checkout;
+pub(super) use source::Action as SourceAction;
 use std::sync::Arc;
 
 pub struct Work {
@@ -22,13 +22,13 @@ pub enum Kind {
 pub struct Completed {
     kind: Completion,
 }
-pub enum Completion {
+enum Completion {
     Checked(Box<checked::CheckedCompleted>),
     Saving(saving::Saved),
     Source(Box<source::Completed>),
 }
 impl Work {
-    pub fn checked(
+    pub(super) fn checked(
         checkout: Checkout,
         action: Action,
         query: Query,
@@ -38,7 +38,7 @@ impl Work {
             kind: Kind::Checked(checked::Checked::new(checkout, action, query, passages)),
         }
     }
-    pub fn not_started(self, error: String) -> Completed {
+    pub(crate) fn not_started(self, error: String) -> Completed {
         Completed {
             kind: match self.kind {
                 Kind::Checked(work) => Completion::Checked(Box::new(work.not_started(error))),
@@ -58,7 +58,7 @@ impl Work {
     }
 }
 impl Writer {
-    pub fn accept_catalogue_tool(
+    pub(crate) fn accept_catalogue_tool(
         &mut self,
         completed: &mut Completed,
     ) -> Result<Option<Finish>, String> {

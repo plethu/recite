@@ -1,8 +1,8 @@
-//! A tagged immutable keyboard context routes native host messages through Xilem.
-use super::*;
-use crate::attention::{DocumentMenu, EditingTarget, FieldRestoration, PaneMotion};
-use crate::localisation::TranslationTarget;
-use recite_config::{WriterCommand, WriterShortcuts};
+//! A tagged immutable keyboard context routes native host messages to the shell through Xilem.
+use super::App;
+use recite_config::WriterShortcuts;
+pub(crate) use recite_writer_app::shell::keyboard::*;
+use std::sync::Arc;
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{
@@ -15,76 +15,15 @@ use xilem::{
     },
 };
 
-mod scope;
-use scope::Scope;
-
 pub(crate) const TAG: WidgetTag<Passthrough> = WidgetTag::named("recite-commands");
-/// Freshness of commands captured from one mounted keyboard context.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct CommandGeneration(u64);
-impl CommandGeneration {
-    fn advance(&mut self) {
-        self.0 = self.0.wrapping_add(1);
-    }
-}
-/// Picker opening reads current state and does not own an earlier analysis snapshot.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct PickerOpeningGeneration(u64);
-impl PickerOpeningGeneration {
-    fn advance(&mut self) {
-        self.0 = self.0.wrapping_add(1);
-    }
-}
+use recite_writer_app::shell::keyboard::Context as CommandContext;
+pub(crate) type Context = CommandContext<MessageProxy<Invocation>>;
 #[derive(Clone, Default)]
 pub(crate) struct KeyboardContext(pub Option<Arc<Context>>);
 impl Property for KeyboardContext {
     fn static_default() -> &'static Self {
         static EMPTY: KeyboardContext = KeyboardContext(None);
         &EMPTY
-    }
-}
-pub(crate) struct Context {
-    pub shortcuts: WriterShortcuts,
-    pub generation: CommandGeneration,
-    pub picker_opening_generation: PickerOpeningGeneration,
-    pub writer_active: bool,
-    pub screen: Option<crate::workspaces::Screen>,
-    pub picker_open: bool,
-    pub picker_instance: Option<picker::PickerInstance>,
-    pub project_form_ready: bool,
-    pub document_menu: DocumentMenu,
-    pub attention: crate::attention::Attention,
-    pub editing: Option<EditingTarget>,
-    pub field_restoration: Option<FieldRestoration>,
-    pub keymap: recite_config::Keymap,
-    pub proxy: MessageProxy<Invocation>,
-}
-pub(crate) struct Invocation {
-    pub action: Action,
-    pub generation: CommandGeneration,
-}
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) enum Action {
-    OpenPicker {
-        search: picker::Search,
-        generation: PickerOpeningGeneration,
-    },
-    Command(WriterCommand),
-    SaveTranslation(TranslationTarget),
-    SubmitPicker,
-    SubmitProject,
-    PaneHint(bool),
-    CyclePane {
-        forward: bool,
-    },
-    FieldFocus(Option<EditingTarget>),
-    DismissDocumentMenu,
-}
-impl std::fmt::Debug for Invocation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CommandInvocation")
-            .field("action", &self.action)
-            .finish_non_exhaustive()
     }
 }
 pub(super) struct Host<V> {
@@ -94,8 +33,7 @@ pub(super) struct Host<V> {
 }
 pub(super) struct Hosted<T> {
     child: T,
-    generation: CommandGeneration,
-    picker_opening_generation: PickerOpeningGeneration,
+    generations: Generations,
     proxy: MessageProxy<Invocation>,
 }
 pub(super) fn host<V: WidgetView<App>>(app: &App, child: V) -> Host<V> {
@@ -103,66 +41,6 @@ pub(super) fn host<V: WidgetView<App>>(app: &App, child: V) -> Host<V> {
         child,
         scope: Scope::capture(app),
         shortcuts: app.preferences.config.writer.shortcuts.clone(),
-    }
-}
-impl<V> Host<V> {
-    fn context(&self, state: &Hosted<impl Sized>) -> KeyboardContext {
-        KeyboardContext(Some(Arc::new(Context {
-            shortcuts: self.shortcuts.clone(),
-            generation: state.generation,
-            picker_opening_generation: state.picker_opening_generation,
-            writer_active: self.scope.writer.as_ref().is_some_and(|writer| {
-                writer.writing && writer.screen == crate::workspaces::Screen::Write
-            }) && !self.scope.welcome
-                && !self.scope.settings,
-            picker_open: self.scope.picker.is_some(),
-            picker_instance: self
-                .scope
-                .picker
-                .as_ref()
-                .map(|(instance, _, _)| instance.clone()),
-            project_form_ready: self
-                .scope
-                .project_form
-                .as_ref()
-                .is_some_and(|form| form.ready),
-            document_menu: self
-                .scope
-                .writer
-                .as_ref()
-                .map_or(DocumentMenu::Closed, |writer| writer.document_menu),
-            screen: self
-                .scope
-                .writer
-                .as_ref()
-                .filter(|writer| writer.writing && !self.scope.welcome && !self.scope.settings)
-                .map(|writer| writer.screen),
-            attention: self
-                .scope
-                .writer
-                .as_ref()
-                .map(|writer| writer.attention.clone())
-                .unwrap_or_default(),
-            editing: self
-                .scope
-                .writer
-                .as_ref()
-                .filter(|writer| {
-                    writer.writing
-                        && writer.screen == crate::workspaces::Screen::Write
-                        && !self.scope.welcome
-                        && !self.scope.settings
-                        && self.scope.picker.is_none()
-                })
-                .and_then(|writer| writer.editing.clone()),
-            keymap: self.scope.keymap,
-            field_restoration: self
-                .scope
-                .writer
-                .as_ref()
-                .and_then(|writer| writer.field_restoration.clone()),
-            proxy: state.proxy.clone(),
-        })))
     }
 }
 impl<V> ViewMarker for Host<V> {}
@@ -174,8 +52,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         let (child, child_state) = ctx.with_id(ViewId::new(0), |ctx| self.child.build(ctx, app));
         let state = Hosted {
             child: child_state,
-            generation: CommandGeneration::default(),
-            picker_opening_generation: PickerOpeningGeneration::default(),
+            generations: Generations::default(),
             proxy,
         };
         let mut pod = Pod::new_with_props(Passthrough::new(child.new_widget), Dimensions::MAX);
@@ -194,12 +71,10 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         mut element: Mut<'_, Self::Element>,
         app: &mut App,
     ) {
-        if !self.scope.same_command_scope(&prev.scope) || self.shortcuts != prev.shortcuts {
-            state.generation.advance();
-        }
-        if !self.scope.same_picker_opening_scope(&prev.scope) || self.shortcuts != prev.shortcuts {
-            state.picker_opening_generation.advance();
-        }
+        state.generations.update(
+            (&prev.scope, &prev.shortcuts),
+            (&self.scope, &self.shortcuts),
+        );
         if self.scope != prev.scope || self.shortcuts != prev.shortcuts {
             element.insert_prop(self.context(state));
         }
@@ -240,56 +115,21 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         let Some(invocation) = message.take_message::<Invocation>() else {
             return MessageResult::Stale;
         };
-        let current = Scope::capture(app);
-        let current_scope = match &invocation.action {
-            Action::OpenPicker { generation, .. } => {
-                *generation == state.picker_opening_generation
-                    && self.scope.same_picker_opening_scope(&current)
-            }
-            _ => {
-                invocation.generation == state.generation && self.scope.same_command_scope(&current)
-            }
-        };
-        if !current_scope || self.shortcuts != app.preferences.config.writer.shortcuts {
-            return MessageResult::Stale;
+        if app.invoke(&self.scope, &self.shortcuts, state.generations, *invocation) {
+            MessageResult::Action(())
+        } else {
+            MessageResult::Stale
         }
-        match invocation.action {
-            Action::OpenPicker { search, .. } => {
-                if let Some(writer) = &mut app.writer {
-                    writer.document_menu = DocumentMenu::Closed;
-                }
-                app.open_picker(search);
-            }
-            Action::FieldFocus(target) => {
-                if let Some(writer) = &mut app.writer {
-                    writer.native_field_focus(target);
-                }
-            }
-            Action::Command(command) => app.run_command(command),
-            Action::SaveTranslation(target) => {
-                if let Some(writer) = &mut app.writer {
-                    writer.save_focused_translation(&target);
-                }
-            }
-            Action::SubmitPicker => app.submit_picker(),
-            Action::SubmitProject => app.open_selected(),
-            Action::DismissDocumentMenu => {
-                if let Some(writer) = &mut app.writer {
-                    writer.document_menu = DocumentMenu::Dismissed;
-                }
-            }
-            Action::PaneHint(pending) => app.pane_hint = pending,
-            Action::CyclePane { forward } => {
-                if let Some(writer) = &mut app.writer {
-                    writer.focus_pane(if forward {
-                        PaneMotion::Next
-                    } else {
-                        PaneMotion::Previous
-                    });
-                }
-            }
-        }
-        MessageResult::Action(())
+    }
+}
+
+impl<V> Host<V> {
+    fn context(&self, state: &Hosted<impl Sized>) -> KeyboardContext {
+        KeyboardContext(Some(Arc::new(self.scope.context(
+            &self.shortcuts,
+            state.generations,
+            state.proxy.clone(),
+        ))))
     }
 }
 

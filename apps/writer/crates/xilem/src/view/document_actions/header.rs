@@ -53,7 +53,7 @@ pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer>
 
 pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        label(state.ui_scale(), document_caption(state)),
+        label(state.ui_scale(), state.document_caption()),
         temporary_notice(state),
         flex_row((
             text_button(state.ui_scale(), "Exit focus", Writer::toggle_focus).disabled(
@@ -78,17 +78,6 @@ pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> +
     .gap(8.px())
 }
 
-pub(super) fn document_caption(state: &Writer) -> String {
-    format!(
-        "{}{}",
-        state.session.model().document().key(),
-        if state.session.current_dirty() {
-            " · Unsaved"
-        } else {
-            ""
-        }
-    )
-}
 fn temporary_notice(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     state.session.project_root().is_none().then(|| {
         label(
@@ -125,7 +114,7 @@ fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
             |state: &mut Writer| state.history_step(true),
         ),
         (!state.compact_chrome()).then(|| {
-            print::meta(scale, document_caption(state))
+            print::meta(scale, state.document_caption())
                 .prop(LineBreaking::WordWrap)
                 .flex(1.)
         }),

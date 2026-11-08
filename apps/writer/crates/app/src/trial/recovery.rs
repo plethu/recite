@@ -1,6 +1,6 @@
 //! Preview recovery names the manuscript field and reuses checked Apply publication.
 use super::*;
-use crate::{attention::EditingTarget, navigation::Target};
+pub use crate::{attention::EditingTarget, navigation::Target};
 
 impl Writer {
     fn stale_trial_edit(&self) -> bool {

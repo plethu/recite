@@ -1,5 +1,14 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::session::Session;
 use crate::tests::support::{self, NoProxy};
+use recite_config::WriterCommand;
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc as async_mpsc;
 use xilem::masonry::accesskit;
 use xilem::{
@@ -197,7 +206,7 @@ fn native_picker_renders_bounded_results_at_personal_scales() {
             .presentation
             .with_value(recite_config::WriterPresentationField::UiScale, scale)
             .unwrap();
-        app.theme.refresh(&app.preferences.config.writer);
+        app.theme.refresh(&app.shell.preferences.config.writer);
         for mode in [Mode::Commands, Mode::GoTo, Mode::Destinations] {
             if mode == Mode::Destinations {
                 let writer = app.writer.as_mut().unwrap();

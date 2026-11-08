@@ -101,7 +101,7 @@ pub(super) fn effect(
                 "Effect {}: {} · {}",
                 index + 1,
                 effect.function,
-                mode_name(effect.mode)
+                recite_writer_app::rules::effect_mode_name(effect.mode)
             ),
             target,
             expanded,
@@ -157,7 +157,7 @@ fn delivery_modes(
                 format!(
                     "{}Delivery: {}",
                     if selected { "Selected · " } else { "" },
-                    mode_name(mode)
+                    recite_writer_app::rules::effect_mode_name(mode)
                 ),
                 move |state: &mut Writer| state.effect_mode(index, mode),
             )
@@ -167,13 +167,6 @@ fn delivery_modes(
     flex_col(modes)
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(4.px())
-}
-fn mode_name(mode: EffectMode) -> &'static str {
-    match mode {
-        EffectMode::Deferred => "Deferred",
-        EffectMode::Immediate => "Immediate",
-        EffectMode::Blocking => "Blocking",
-    }
 }
 fn actions(
     state: &Writer,

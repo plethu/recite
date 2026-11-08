@@ -44,7 +44,7 @@ pub(super) fn heading(scale: f32, mode: Mode, width: f64) -> impl WidgetView<App
             .text_size(20. * scale)
             .prop(LineBreaking::WordWrap)
             .flex(if wide { 1. } else { 0. }),
-        text_button(scale, "Close search", App::dismiss_picker),
+        text_button(scale, "Close search", |app: &mut App| app.dismiss_picker()),
     ))
     .direction(if wide {
         Axis::Horizontal
@@ -64,7 +64,7 @@ pub(super) fn query(
     sized_box(
         text_input(
             picker.map_or_else(String::new, |picker| picker.query.clone()),
-            App::filter_picker,
+            |app: &mut App, value: String| app.filter_picker(value),
         )
         .placeholder(mode.title())
         .text_size(14. * scale)
@@ -74,36 +74,4 @@ pub(super) fn query(
         .prop(QueryField(true)),
     )
     .width(width.px())
-}
-
-pub(super) fn guidance(mode: Mode) -> &'static str {
-    match mode {
-        Mode::Commands => {
-            "Up/Down to choose. Enter runs the command. Esc returns to your document."
-        }
-        Mode::GoTo => {
-            "Find a scene or beat by name. Opening keeps your edits; Save writes them to disk."
-        }
-        Mode::ProjectText => "Saved text · Save to include edits.",
-        Mode::Passages => "This beat, including your text edits. Opening keeps your changes.",
-        Mode::RulesChoices => {
-            "Enter stages a value. Apply or Save commits it; Esc keeps your current draft."
-        }
-        Mode::Destinations => {
-            "Choose a beat or END. Your current draft is applied; Save writes the change to disk."
-        }
-        Mode::RenameBeat => {
-            "Choose a beat to rename. This updates the proposal; Esc keeps the current proposal."
-        }
-    }
-}
-
-pub(super) fn keyboard_help(mode: Mode) -> &'static str {
-    match mode {
-        Mode::Commands => "Up/Down: choose · Enter: run · Esc: return",
-        Mode::RulesChoices | Mode::Destinations | Mode::RenameBeat => {
-            "Up/Down: choose · Enter: choose · Esc: return"
-        }
-        _ => "Up/Down: choose · Enter: open · Esc: return",
-    }
 }

@@ -1,4 +1,9 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::session::Session;
 use crate::{
     keyed::keyed,
     map::Workspace,
@@ -7,7 +12,10 @@ use crate::{
 };
 use recite_config::WriterCommand;
 use recite_writer_session::commands;
+use recite_writer_session::startup::{LaunchOptions, Startup};
 use std::fs;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc as async_mpsc;
 use xilem::{WidgetView, masonry::widgets::Passthrough};
 

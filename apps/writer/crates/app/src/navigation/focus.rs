@@ -1,10 +1,10 @@
 //! Native fields retain selection/history; only the admitted passage owns the product draft.
 use super::*;
-use crate::Phase;
-use crate::attention::{EditingTarget, FieldRestoration};
+pub use crate::Phase;
+pub use crate::attention::{EditingTarget, FieldRestoration};
 
 #[derive(Default)]
-pub enum Admission {
+pub(super) enum Admission {
     #[default]
     Idle,
     Applying {
@@ -97,7 +97,7 @@ impl Writer {
             EditingTarget::capture(self).map_or(FieldRestoration::Clear, FieldRestoration::Passage),
         );
     }
-    pub fn field_apply_completed(&mut self, completed: &Arc<Request>, accepted: bool) {
+    pub(super) fn field_apply_completed(&mut self, completed: &Arc<Request>, accepted: bool) {
         if matches!(&self.navigation.field, Admission::Applying { request, .. } if Arc::ptr_eq(request, completed))
         {
             let Admission::Applying { request, latest } =
@@ -112,7 +112,7 @@ impl Writer {
             };
         }
     }
-    pub fn field_apply_retired(&mut self, completed: &Arc<Request>) {
+    pub(super) fn field_apply_retired(&mut self, completed: &Arc<Request>) {
         if !matches!(&self.navigation.field, Admission::Retiring { request, .. } if Arc::ptr_eq(request, completed))
         {
             return;

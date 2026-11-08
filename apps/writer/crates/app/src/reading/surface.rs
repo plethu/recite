@@ -1,8 +1,9 @@
-//! Borrowed presentation derived once; Workbench remains the selection authority.
-use super::*;
-use crate::{reading::Row, rules::ReplySession};
+//! Which reading surface the current view shows, derived once; Workbench remains the selection
+//! authority.
+pub use crate::{Writer, reading::Row, rules::ReplySession};
+use recite_writer_model::View;
 
-pub(super) enum Surface<'a> {
+pub enum Surface<'a> {
     Manuscript {
         passage: &'a str,
     },

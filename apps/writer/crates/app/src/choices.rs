@@ -1,5 +1,5 @@
 //! One pending editor choice; opening another replaces the previous request.
-use crate::{Writer, routes, rules};
+pub use crate::{Writer, routes, rules};
 
 pub enum Request {
     Rules(rules::selection::Request),

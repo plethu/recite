@@ -1,13 +1,13 @@
 //! One destination receipt returns both exclusive owners before checking route freshness.
 use super::*;
-use crate::{
+pub use crate::{
     localisation::location as catalogue,
     session::{Checkout, RecoveryReason},
     workspaces::location as workspace,
 };
 use recite_writer_session::location::{self, Screen};
 
-pub struct Plan {
+pub(super) struct Plan {
     location: Location,
     catalogue: catalogue::Plan,
     workspace: workspace::Plan,
@@ -41,7 +41,7 @@ impl Plan {
             workspace,
         })
     }
-    pub fn needs_work(&self) -> bool {
+    pub(super) fn needs_work(&self) -> bool {
         self.catalogue.needs_work() || !matches!(self.workspace, workspace::Plan::Writing)
     }
     pub fn checkout(self, writer: &mut Writer) -> Result<Work, String> {
@@ -101,7 +101,7 @@ impl Work {
             recovery,
         }
     }
-    pub fn not_started(self, error: String) -> Prepared {
+    pub(super) fn not_started(self, error: String) -> Prepared {
         Prepared {
             project: self.project,
             catalogue: self.catalogue.not_started(error.clone()),
@@ -128,7 +128,7 @@ impl Prepared {
     }
 }
 impl Writer {
-    pub fn show_current_catalogue_beat(&mut self, page: usize) -> Result<(), String> {
+    pub(crate) fn show_current_catalogue_beat(&mut self, page: usize) -> Result<(), String> {
         if self.phase != crate::Phase::Writing || self.project_action_blocked() {
             return Err("Finish the current action before opening translations.".into());
         }
@@ -149,7 +149,7 @@ impl Writer {
         self.remember_location();
         self.start_location_destination(plan, CancellationToken::new())
     }
-    pub fn prepare_initial_location_destination(
+    pub(super) fn prepare_initial_location_destination(
         &mut self,
         location: &Location,
     ) -> Result<(), String> {
@@ -173,7 +173,7 @@ impl Writer {
         }
         self.finish_location_presentation(location, CancellationToken::new())
     }
-    pub fn start_location_destination(
+    pub(super) fn start_location_destination(
         &mut self,
         plan: Plan,
         cancel: CancellationToken,
@@ -195,7 +195,7 @@ impl Writer {
         let work = plan.checkout(self)?;
         self.send_navigation(request, worker::Work::Present(Box::new(work)))
     }
-    pub fn finish_location_presentation(
+    pub(super) fn finish_location_presentation(
         &mut self,
         location: &Location,
         cancel: CancellationToken,
@@ -213,7 +213,7 @@ impl Writer {
         }
         Ok(())
     }
-    pub fn publish_location_destination(
+    pub(super) fn publish_location_destination(
         &mut self,
         request: &Request,
         prepared: &mut Prepared,

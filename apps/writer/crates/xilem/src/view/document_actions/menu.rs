@@ -1,6 +1,6 @@
 //! A bounded action panel leaves the writing workspace allocated and retained.
 use super::*;
-use crate::attention::{DocumentMenu, Pane, Region};
+use crate::attention::{Pane, Region};
 use crate::presentation::{group::named, print};
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use xilem::{
@@ -25,7 +25,7 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
                     scale,
                     "Dismiss document actions",
                     false,
-                    |state: &mut Writer| state.document_menu = DocumentMenu::Dismissed,
+                    Writer::dismiss_document_menu,
                 ),
             ))
             .gap(8.px()),
@@ -40,7 +40,7 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
                 .gap(12.px()),
                 |state: &mut Writer, result: MessageResult<()>| {
                     if matches!(result, MessageResult::Action(())) {
-                        state.document_menu = DocumentMenu::Closed;
+                        state.close_document_menu();
                     }
                     result
                 },

@@ -1,6 +1,6 @@
 //! Window movement never retires the admitted draft before checked navigation accepts it.
-use super::{Content, Direction};
-use crate::{Phase, Writer, navigation::Target};
+pub use super::{Content, Direction};
+pub use crate::{Phase, Writer, navigation::Target};
 
 impl Writer {
     pub fn shift_reading(&mut self, direction: Direction) {

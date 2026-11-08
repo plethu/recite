@@ -19,7 +19,7 @@ impl Status {
     }
 }
 #[derive(Clone, PartialEq)]
-pub enum Change {
+pub(super) enum Change {
     Move {
         beat: String,
         card: String,
@@ -28,7 +28,7 @@ pub enum Change {
     Reset,
 }
 impl Change {
-    pub fn apply(&self, positions: &mut Positions) {
+    pub(crate) fn apply(&self, positions: &mut Positions) {
         match self {
             Self::Move { card, node, .. } => {
                 positions.insert(card.clone(), (node.x, node.y));

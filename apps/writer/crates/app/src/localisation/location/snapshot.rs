@@ -1,7 +1,12 @@
 use super::*;
 
 impl Localisation {
-    pub fn describe_location(&self, root: Option<&Path>, active: bool, location: &mut Location) {
+    pub(crate) fn describe_location(
+        &self,
+        root: Option<&Path>,
+        active: bool,
+        location: &mut Location,
+    ) {
         location.catalogue = self.slot.path().map(|path| {
             root.and_then(|root| path.strip_prefix(root).ok())
                 .unwrap_or(path)

@@ -1,5 +1,5 @@
 //! Destination choices capture the owning reply or beat before the checked structural edit.
-use crate::{Phase, Writer};
+pub use crate::{Phase, Writer};
 use recite_writer_model::{NavigationStamp, RouteOwner, StructuralCommand};
 use recite_writer_session::choices::{self, PickerOption};
 #[cfg(test)]
@@ -9,7 +9,7 @@ pub struct Request {
     window: crate::WindowKey,
     origin: NavigationStamp,
     owner: RouteOwner,
-    pub choices: Vec<PickerOption>,
+    pub(crate) choices: Vec<PickerOption>,
 }
 impl Request {
     pub fn is_current(&self, writer: &Writer) -> bool {
@@ -19,7 +19,7 @@ impl Request {
             && !writer.work.busy()
             && !writer.navigation.busy()
     }
-    pub fn apply(self, writer: &mut Writer, destination: String) {
+    pub(crate) fn apply(self, writer: &mut Writer, destination: String) {
         if !self.is_current(writer)
             || !self
                 .choices

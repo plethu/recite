@@ -49,11 +49,14 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         .collect::<Vec<_>>();
     flex_col((
         label(scale, "Find a command").text_size(18. * scale),
-        text_input(app.settings.query.clone(), App::search_shortcuts)
-            .text_size(14. * scale)
-            .placeholder("Search shortcuts")
-            .prop(TextAreaLabel::new("Search shortcuts"))
-            .width(width.min(600.).px()),
+        text_input(
+            app.settings.query.clone(),
+            |app: &mut App, value: String| app.search_shortcuts(value),
+        )
+        .text_size(14. * scale)
+        .placeholder("Search shortcuts")
+        .prop(TextAreaLabel::new("Search shortcuts"))
+        .width(width.min(600.).px()),
         label(scale, format!("{count} matching commands")),
         radio_group(
             flex_col(choices)
@@ -93,11 +96,11 @@ fn editor(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     flex_col((
         label(scale, format!("Shortcut for {selected}")).text_size(18. * scale),
         label(scale, format!("Saved binding: {}", if stored.is_empty() { "Disabled" } else { stored })),
-        sized_box(keyed(app.settings.command, text_input(app.shortcut_draft().to_owned(), App::edit_shortcut)
+        sized_box(keyed(app.settings.command, text_input(app.shortcut_draft().to_owned(), |app: &mut App, value: String| app.edit_shortcut(value))
             .text_size(14. * scale).prop(TextAreaLabel::new("Shortcut binding")))).width(width.min(600.).px()),
         flex_row((
-            text_button(scale, "Save shortcut", App::save_shortcut).disabled(!changed),
-            text_button(scale, "Reset shortcuts", App::reset_shortcuts),
+            text_button(scale, "Save shortcut", |app: &mut App| app.save_shortcut()).disabled(!changed),
+            text_button(scale, "Reset shortcuts", |app: &mut App| app.reset_shortcuts()),
             changed.then(|| label(scale, "Unsaved binding")),
         )).gap(8.px()),
         paragraph(scale, if cfg!(target_os = "macos") { "Primary means Command. Leave empty to disable. Apply, Undo and Redo belong to the focused editor." } else { "Primary means Ctrl. Leave empty to disable. Apply, Undo and Redo belong to the focused editor." }, width),

@@ -5,11 +5,11 @@ use recite_compiler::authoring::CancellationToken;
 use recite_writer_session::activation::IncomingRoute;
 use std::sync::{Mutex, atomic, mpsc};
 
-pub struct Reply {
+struct Reply {
     sender: Option<mpsc::Sender<Result<(), String>>>,
     cancelled: Option<Arc<atomic::AtomicBool>>,
 }
-pub struct Control {
+pub(crate) struct Control {
     cancel: CancellationToken,
     reply: Mutex<Option<Reply>>,
 }
@@ -18,7 +18,7 @@ pub struct Link {
     origin: Origin,
 }
 impl Control {
-    fn new(cancel: CancellationToken, incoming: Option<IncomingRoute>) -> Self {
+    pub fn new(cancel: CancellationToken, incoming: Option<IncomingRoute>) -> Self {
         Self {
             cancel,
             reply: Mutex::new(Some(Reply {
@@ -27,7 +27,7 @@ impl Control {
             })),
         }
     }
-    pub fn check(&self) -> Result<(), String> {
+    pub(super) fn check(&self) -> Result<(), String> {
         self.cancel
             .checkpoint()
             .map_err(|error| error.to_string())?;
@@ -42,7 +42,7 @@ impl Control {
         }
         Ok(())
     }
-    pub fn complete(&self, result: Result<(), String>) {
+    pub(super) fn complete(&self, result: Result<(), String>) {
         let reply = self
             .reply
             .lock()
@@ -72,7 +72,7 @@ impl Drop for Control {
     }
 }
 impl Link {
-    pub fn check(&self, writer: &Writer) -> Result<(), String> {
+    pub(crate) fn check(&self, writer: &Writer) -> Result<(), String> {
         self.request.check_link()?;
         if !self.origin.is_current(writer) {
             return Err("The source or draft changed while opening the link. Your current work stays open; retry the link.".into());
@@ -90,7 +90,7 @@ impl Link {
     }
 }
 impl Writer {
-    pub fn queue_linked_editor(&mut self, cancel: CancellationToken) -> Result<(), String> {
+    pub(crate) fn queue_linked_editor(&mut self, cancel: CancellationToken) -> Result<(), String> {
         if self.external.busy() || self.source_repair_pending() {
             return Err("Finish the current editor action or repair the recovered source before opening this link.".into());
         }
@@ -112,7 +112,7 @@ impl Writer {
         self.status = "Preparing source for your editor…".into();
         Ok(())
     }
-    pub fn attach_linked_editor_reply(
+    pub(crate) fn attach_linked_editor_reply(
         &mut self,
         reply: Option<mpsc::Sender<Result<(), String>>>,
         cancelled: Option<Arc<atomic::AtomicBool>>,
@@ -125,7 +125,7 @@ impl Writer {
         }
         true
     }
-    pub fn resume_linked_editor(&mut self) {
+    pub(crate) fn resume_linked_editor(&mut self) {
         if self.work.sender.is_none()
             || self.external.sender.is_none()
             || self.navigation.runtime.is_none()

@@ -1,12 +1,12 @@
 //! Capture document and draft authority for worker publication.
-use crate::WindowKey;
-use crate::{Phase, Writer};
+pub use crate::WindowKey;
+pub use crate::{Phase, Writer};
 use recite_writer_model::{AnalysisStamp, RecoveredDraft};
 
-pub struct Origin {
-    pub window: WindowKey,
-    pub source: AnalysisStamp,
-    pub draft: RecoveredDraft,
+pub(crate) struct Origin {
+    pub(crate) window: WindowKey,
+    pub(super) source: AnalysisStamp,
+    pub(super) draft: RecoveredDraft,
 }
 impl Origin {
     pub fn capture(writer: &Writer) -> Self {
@@ -17,7 +17,7 @@ impl Origin {
             draft: model.recovery(),
         }
     }
-    pub fn presentation_is_current(&self, writer: &Writer) -> bool {
+    pub(super) fn presentation_is_current(&self, writer: &Writer) -> bool {
         self.window == writer.window
             && self.source.is_current(writer.session.model().document())
             && self.draft.view() == writer.session.model().view()

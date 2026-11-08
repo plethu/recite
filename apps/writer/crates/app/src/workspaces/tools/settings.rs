@@ -1,5 +1,5 @@
 use super::*;
-use crate::{
+pub use crate::{
     external_editor::Request as EditorRequest,
     workspaces::{ContextUpdate, text},
 };
@@ -99,7 +99,7 @@ impl Writer {
             self.editor.clone(),
         )));
     }
-    pub fn accept_settings_tool(&mut self, prepared: &mut Prepared) -> Result<(), String> {
+    pub(super) fn accept_settings_tool(&mut self, prepared: &mut Prepared) -> Result<(), String> {
         if let Some(path) = prepared.receipt.artifact() {
             self.workspaces.settings.record_artifact(path.to_owned());
         }
@@ -154,7 +154,10 @@ impl Writer {
         self.status = message.into();
         Ok(())
     }
-    pub fn accept_settings_written(&mut self, receipt: &mut SettingsWritten) -> Result<(), String> {
+    pub(crate) fn accept_settings_written(
+        &mut self,
+        receipt: &mut SettingsWritten,
+    ) -> Result<(), String> {
         let project = self
             .session
             .project_mut()

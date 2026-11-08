@@ -1,16 +1,13 @@
 //! Project access keeps form fields mounted and submission controls in view.
 use super::App;
-use std::path::PathBuf;
 use xilem::masonry::kurbo::Size;
 use xilem::masonry::{
     core::{Property, UsesProperty},
     widgets::TextInput,
 };
+mod feedback;
 mod view;
 pub(in crate::app) use view::panel;
-
-mod feedback;
-pub(super) use feedback::{Problem, ProjectAction};
 
 /// Actual native extents let short forms stay together and tall forms scroll.
 #[derive(Default)]
@@ -47,26 +44,5 @@ impl Property for ProjectField {
     fn static_default() -> &'static Self {
         static NONE: ProjectField = ProjectField(false);
         &NONE
-    }
-}
-
-/// A queued submission cannot acquire newer folder, name or mode authority.
-#[derive(PartialEq)]
-pub(super) struct FormScope {
-    creating: bool,
-    folder: String,
-    name: String,
-    native_path: Option<PathBuf>,
-    pub(super) ready: bool,
-}
-impl FormScope {
-    pub(super) fn capture(app: &App) -> Self {
-        Self {
-            creating: app.creating,
-            folder: app.path.clone(),
-            name: app.name.clone(),
-            native_path: app.native_path.clone(),
-            ready: app.project_form_ready(),
-        }
     }
 }

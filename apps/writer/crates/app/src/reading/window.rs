@@ -2,7 +2,7 @@
 use std::ops::Range;
 
 pub const CAPACITY: usize = 16;
-pub const STEP: usize = CAPACITY / 2;
+const STEP: usize = CAPACITY / 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Direction {
@@ -23,13 +23,13 @@ impl ReadingWindow {
     pub fn start(self) -> usize {
         self.start
     }
-    pub fn normalize(&mut self, total: usize) {
+    pub(crate) fn normalize(&mut self, total: usize) {
         if self.start >= total {
             self.start = total.saturating_sub(1) / CAPACITY * CAPACITY;
             self.shifted = false;
         }
     }
-    pub fn is_shift(self) -> bool {
+    pub(crate) fn is_shift(self) -> bool {
         self.shifted
     }
     pub fn reveal(&mut self, index: usize) {

@@ -1,11 +1,11 @@
 //! Cold project selection and destination preparation run before installing the owner.
 use super::*;
 
-pub(super) struct Loaded {
+pub struct Loaded {
     pub(super) writer: Box<Writer>,
     pub(super) location: Result<(), String>,
 }
-pub(super) fn load(request: &Request) -> Result<Loaded, String> {
+pub fn load(request: &Request) -> Result<Loaded, String> {
     request.checkpoint().map_err(|e| e.to_string())?;
     let location = request.options.location()?;
     let session = match &request.options.intent {
@@ -32,7 +32,7 @@ pub(super) fn load(request: &Request) -> Result<Loaded, String> {
         _ => return Err("Choose a project or a temporary example.".into()),
     };
     let mut writer = Writer::from_session(session, request.options.editor.clone());
-    writer.host = crate::native_host::services();
+    writer.host = request.host;
     if writer.session.project().is_some() {
         writer.map.personal_storage();
     }

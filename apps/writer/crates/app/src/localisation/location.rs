@@ -1,9 +1,9 @@
 //! Linked catalogue destinations resolve stable contexts against one captured owner.
-pub mod preparing;
-pub mod snapshot;
+mod preparing;
+mod snapshot;
 #[cfg(any(test, feature = "test-support"))]
 pub mod tests;
-use super::{
+pub use super::{
     presentation::Presentation,
     slot::{Checkout, Slot},
     *,
@@ -14,7 +14,7 @@ use recite_writer_session::{
 };
 use std::path::Path;
 
-pub enum Installation {
+enum Installation {
     Keep,
     Close,
     Open(PathBuf),
@@ -27,7 +27,7 @@ pub enum Target {
     Compare,
     Updates(usize),
 }
-pub struct Plan {
+pub(crate) struct Plan {
     installation: Installation,
     target: Target,
     query: Query,
@@ -41,16 +41,16 @@ pub struct Prepared {
     ready: Result<Ready, String>,
     retired: Option<Retired>,
 }
-pub struct Ready {
+pub(crate) struct Ready {
     installation: Install,
     projection: Projection,
     query: Query,
 }
-pub enum Install {
+enum Install {
     Keep,
     Replace(Slot),
 }
-pub enum Projection {
+pub(crate) enum Projection {
     Hidden,
     Queue(Presentation),
     Entry(Presentation),
@@ -65,10 +65,10 @@ pub struct Retired {
     _passage: Option<beat::Beat>,
 }
 impl Localisation {
-    pub fn catalogue_path(&self) -> Option<&Path> {
+    pub(crate) fn catalogue_path(&self) -> Option<&Path> {
         self.slot.path()
     }
-    pub fn linked_catalogue_preflight(&self, changed: bool) -> Result<(), String> {
+    pub(crate) fn linked_catalogue_preflight(&self, changed: bool) -> Result<(), String> {
         if self.slot.read_only() || self.saving() {
             return Err("Finish the current catalogue action before opening a link.".into());
         }
@@ -131,7 +131,7 @@ impl Plan {
             },
         })
     }
-    pub fn needs_work(&self) -> bool {
+    pub(crate) fn needs_work(&self) -> bool {
         !matches!(self.installation, Installation::Keep) || !matches!(self.target, Target::Hidden)
     }
     pub fn checkout(self, writer: &mut Writer) -> Result<Work, String> {
@@ -161,7 +161,7 @@ impl Work {
             retired: None,
         }
     }
-    pub fn not_started(self, error: String) -> Prepared {
+    pub(crate) fn not_started(self, error: String) -> Prepared {
         Prepared {
             checkout: self.checkout,
             ready: Err(error),
@@ -173,10 +173,10 @@ impl Prepared {
     pub fn restore(&mut self, writer: &mut Writer) -> Result<(), String> {
         writer.localisation.slot.restore(&mut self.checkout)
     }
-    pub fn require_ready(&self) -> Result<(), String> {
+    pub(crate) fn require_ready(&self) -> Result<(), String> {
         self.ready.as_ref().map(|_| ()).map_err(Clone::clone)
     }
-    pub fn present(&mut self, writer: &mut Writer) -> Result<(), String> {
+    pub(crate) fn present(&mut self, writer: &mut Writer) -> Result<(), String> {
         let ready = self.ready.as_mut().map_err(|error| error.clone())?;
         if matches!(ready.installation, Install::Keep)
             && matches!(ready.projection, Projection::Hidden)

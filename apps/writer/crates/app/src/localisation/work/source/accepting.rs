@@ -1,6 +1,6 @@
 use super::*;
 impl Writer {
-    pub fn source_catalogue_action(&mut self, action: Action) {
+    pub(in crate::localisation) fn source_catalogue_action(&mut self, action: Action) {
         if self.project_action_blocked()
             || self.trial.busy()
             || self.localisation.slot.read_only()
@@ -32,7 +32,10 @@ impl Writer {
             }
         }
     }
-    pub fn accept_catalogue_source(&mut self, completed: &mut Completed) -> Result<(), String> {
+    pub(crate) fn accept_catalogue_source(
+        &mut self,
+        completed: &mut Completed,
+    ) -> Result<(), String> {
         let project = self
             .session
             .restore_checkout(&mut completed.project, completed.recovery)

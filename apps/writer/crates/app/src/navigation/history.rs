@@ -15,7 +15,7 @@ impl Writer {
             self.status = error;
         }
     }
-    pub fn remember_location(&mut self) {
+    pub(crate) fn remember_location(&mut self) {
         let actual = self.current_location();
         if !self
             .navigation

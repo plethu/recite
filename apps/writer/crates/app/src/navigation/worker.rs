@@ -65,7 +65,7 @@ impl Job {
     }
 }
 impl Work {
-    fn execute(self, control: &dyn WorkControl) -> Result<ResultValue, String> {
+    pub fn execute(self, control: &dyn WorkControl) -> Result<ResultValue, String> {
         match self {
             Self::Present(work) => Ok(ResultValue::Presented(Box::new(
                 match control.checkpoint() {

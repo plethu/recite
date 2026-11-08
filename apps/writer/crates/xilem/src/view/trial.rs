@@ -6,10 +6,10 @@ use crate::{
     presentation::{group::named, manuscript_text, print},
     trial::Review,
 };
+use recite_writer_app::trial::captions;
 use recite_writer_model::PreviewPage;
 use recite_writer_session::preview::catalogue_stale;
 use xilem::view::{GridExt, GridTrackSize, grid, portal};
-mod captions;
 mod context;
 mod controls;
 mod feedback;

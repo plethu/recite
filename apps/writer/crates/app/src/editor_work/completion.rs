@@ -2,7 +2,7 @@
 use super::*;
 
 impl Writer {
-    pub fn linked_editor_readiness(&self) -> Result<(), String> {
+    pub(super) fn linked_editor_readiness(&self) -> Result<(), String> {
         match &self.work.after {
             AfterSave::OpenLinkedEditor(link) => link.check(self),
             _ => Ok(()),
@@ -16,7 +16,7 @@ impl Writer {
         };
         self.complete_save_work(result, readiness);
     }
-    pub fn complete_save_work(
+    pub(super) fn complete_save_work(
         &mut self,
         result: Result<(), FileError>,
         linked_editor_readiness: Result<(), String>,

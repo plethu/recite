@@ -1,22 +1,22 @@
 //! Authoring selection and document navigation use the shared product locations.
 use recite_writer_session::location::history as location_history;
 pub mod capture;
-pub mod destination;
-pub mod focus;
-pub mod history;
+mod destination;
+mod focus;
+mod history;
 pub mod location;
 pub mod opening;
-pub mod origin;
-pub use origin::Origin;
-pub mod publication;
+mod origin;
+pub(crate) use origin::Origin;
+mod publication;
 pub mod rail;
-pub mod refusal;
+mod refusal;
 pub mod reload;
-pub mod repair;
+pub(super) mod repair;
 pub mod saving;
 pub mod worker;
-use super::{Writer, feedback, session::Session};
-use crate::{attention::EditingTarget, workspaces::Screen as WorkspaceScreen};
+pub use super::{Writer, feedback, session::Session};
+pub use crate::{attention::EditingTarget, workspaces::Screen as WorkspaceScreen};
 use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
 use recite_writer_model::StructuralCommand;
 use recite_writer_model::{EditOperation, View};
@@ -55,7 +55,7 @@ pub enum Target {
 }
 
 impl Target {
-    fn location(&self) -> Option<&Location> {
+    pub fn location(&self) -> Option<&Location> {
         match self {
             Self::Location(location)
             | Self::Lookup { location, .. }
@@ -111,7 +111,9 @@ impl Navigation {
         }
         Ok(())
     }
-    pub fn take_incoming(&mut self) -> Option<recite_writer_session::activation::IncomingRoute> {
+    pub(crate) fn take_incoming(
+        &mut self,
+    ) -> Option<recite_writer_session::activation::IncomingRoute> {
         self.incoming.take()
     }
     pub fn busy(&self) -> bool {
@@ -203,7 +205,7 @@ impl Writer {
             self.status = error;
         }
     }
-    pub fn navigate_activation(
+    pub(super) fn navigate_activation(
         &mut self,
         location: Location,
         incoming: recite_writer_session::activation::IncomingRoute,
@@ -299,14 +301,14 @@ impl Writer {
             self.status = "Requested save cancelled; your work stays open.".into();
         }
     }
-    pub fn cancel_map_preparation(&mut self) {
+    pub(crate) fn cancel_map_preparation(&mut self) {
         if let Some(request) = &self.navigation.pending
             && matches!(request.target, Target::Workspace(_) | Target::MapRefresh)
         {
             request.cancel.interrupt();
         }
     }
-    pub fn cancel_project_workspace_open(&mut self) {
+    pub(crate) fn cancel_project_workspace_open(&mut self) {
         if self
             .navigation
             .pending
@@ -316,7 +318,7 @@ impl Writer {
             self.cancel_navigation();
         }
     }
-    pub fn cancel_history_navigation(&mut self) {
+    pub(crate) fn cancel_history_navigation(&mut self) {
         if self.navigation.visit.is_some() {
             self.cancel_navigation();
         }

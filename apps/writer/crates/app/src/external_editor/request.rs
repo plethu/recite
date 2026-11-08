@@ -28,10 +28,10 @@ pub enum Target {
 pub struct Request {
     target: Target,
     pub editor: Option<EditorCommand>,
-    pub link: Option<Arc<Control>>,
+    pub(super) link: Option<Arc<Control>>,
 }
 impl Request {
-    pub fn merge_draft(
+    pub(crate) fn merge_draft(
         project: &ProjectSession,
         path: PathBuf,
         editor: Option<EditorCommand>,
@@ -46,7 +46,7 @@ impl Request {
             link: None,
         }
     }
-    pub fn declaration_source(
+    pub(crate) fn declaration_source(
         project: &ProjectSession,
         path: PathBuf,
         editor: Option<EditorCommand>,
@@ -77,7 +77,7 @@ impl Request {
         }
     }
 
-    pub fn settings_draft(
+    pub(crate) fn settings_draft(
         project: &ProjectSession,
         path: PathBuf,
         editor: Option<EditorCommand>,
@@ -92,7 +92,7 @@ impl Request {
             link: None,
         }
     }
-    pub fn project_manifest(
+    pub(crate) fn project_manifest(
         project: &ProjectSession,
         path: PathBuf,
         editor: Option<EditorCommand>,
@@ -114,7 +114,7 @@ impl Request {
             link: None,
         }
     }
-    pub fn repair(artifact: &SourceRepairArtifact, editor: Option<EditorCommand>) -> Self {
+    pub(super) fn repair(artifact: &SourceRepairArtifact, editor: Option<EditorCommand>) -> Self {
         Self {
             target: Target::Repair {
                 document: artifact.document.clone(),
@@ -124,7 +124,7 @@ impl Request {
             link: None,
         }
     }
-    pub fn with_system_editor(&self) -> Self {
+    pub(super) fn with_system_editor(&self) -> Self {
         Self {
             target: self.target.clone(),
             editor: None,
@@ -138,10 +138,10 @@ impl Request {
             | Target::ProjectFile { path, .. } => path,
         }
     }
-    pub fn check_link(&self) -> Result<(), String> {
+    pub(super) fn check_link(&self) -> Result<(), String> {
         self.link.as_ref().map_or(Ok(()), |control| control.check())
     }
-    pub fn finish_link(&self, result: Result<(), String>) {
+    pub(super) fn finish_link(&self, result: Result<(), String>) {
         if let Some(control) = &self.link {
             control.complete(result);
         }
@@ -153,7 +153,7 @@ impl Request {
             Target::ProjectFile { root, .. } => project.root() == root,
         }
     }
-    pub fn is_separate_file(&self) -> bool {
+    pub(super) fn is_separate_file(&self) -> bool {
         !matches!(self.target, Target::Source(_))
     }
     pub fn next_step(&self) -> &'static str {

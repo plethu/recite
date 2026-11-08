@@ -1,5 +1,14 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::session::Session;
 use crate::tests::support::{open, project};
+use recite_config::WriterCommand;
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic;
 use tokio::sync::mpsc as async_mpsc;
 #[path = "workflow/tests.rs"]

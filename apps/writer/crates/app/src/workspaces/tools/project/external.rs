@@ -1,6 +1,7 @@
 //! External reconciliation executes against the checked-out canonical session.
-use super::{Effect, FileError, ProjectSession, Success, WorkControl};
-use crate::workspaces::external::{Inspection, Resolution, Resolved};
+pub use super::{Effect, Success};
+use super::{FileError, ProjectSession, WorkControl};
+pub use crate::workspaces::external::{Inspection, Resolution, Resolved};
 use recite_writer_session::project::{ExternalDecision, ExternalResolution};
 use std::path::PathBuf;
 
@@ -81,7 +82,7 @@ fn adopted(resolution: ExternalResolution, effect: Resolved, message: &'static s
         effect: Effect::ExternalResolved(effect),
     }
 }
-pub fn describe(project: &ProjectSession) -> Option<Inspection> {
+pub(super) fn describe(project: &ProjectSession) -> Option<Inspection> {
     let comparison = project.files().external.as_ref()?;
     Some(Inspection::prepare(comparison))
 }
