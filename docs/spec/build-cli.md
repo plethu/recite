@@ -24,7 +24,12 @@ enumeration:
 - duplicate canonical roots are errors; overlapping roots are allowed with a warning, and the first
   declared root owns a shared document;
 - eligible files have the exact lowercase `.recite` suffix and receive project-relative slash
-  `DocumentKey`s sorted deterministically.
+  `DocumentKey`s sorted deterministically;
+- `catalogs` is a project-relative slash glob list, defaulting to empty, that selects the project's
+  dialogue gettext PO catalogues. Patterns follow the same validation and exclusions as sources and
+  must select `.po` files; a pattern matching nothing is allowed. Catalogues are enumerated by path
+  and read only by operations that edit them, such as stable-ID rename (§5.4.2); editors
+  re-enumerate them per operation so a catalogue added later is not missed.
 
 The shared discovery report retains valid documents alongside typed diagnostics and marks coverage
 complete or partial. CLI project commands fail on partial coverage; LSP clients may retain usable
@@ -254,14 +259,15 @@ verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun to
 | `validate`, `compile`, `extract`, `watch`               | top-level; source and project pipeline             |
 | `run`, `trace`, `play`, `bench`                         | top-level; running compiled assets                 |
 | `import`, `explain`                                     | top-level; migration and diagnostic help           |
-| `id check`, `id assign` (`id rename`, #276)             | stable line and choice IDs                         |
+| `id check`, `id assign`, `id rename`, `id reassign`     | stable line and choice IDs                         |
 | `schema inspect`, `schema export`, `schema check-fresh` | schema manifests and their producers               |
 | `project validate`, `project check-fresh`               | `recite.project.toml` and compiled-asset freshness |
 
 `check-markup` and `check-metadata` are `validate --only markup` and `validate --only metadata`,
 because they filter the same diagnostics run; `--only metadata` requires `--schema`. The released-ID
-guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems and `id
-assign` makes the one safe automatic repair, so a third command would only overlap them.
+guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems, `id assign`
+makes the one safe automatic repair, and `id rename` and `id reassign` make the deliberate identity
+changes an author chooses, so a further command would only overlap them.
 
 Recite is pre-release, so the previous hyphenated names (`check-ids`, `assign-ids`, `check-markup`,
 `check-metadata`, `validate-project`, `check-fresh`, `check-schema-producer-freshness`,

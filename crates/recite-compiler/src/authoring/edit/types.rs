@@ -1,4 +1,4 @@
-pub use super::error::AuthoringEditError;
+pub use super::error::{AuthoringEditError, StableIdRefusal};
 pub use super::fingerprint::SourceFingerprint;
 pub use super::operation::AuthoringEditOperation;
 pub use super::plan::AuthoringEditPlan;

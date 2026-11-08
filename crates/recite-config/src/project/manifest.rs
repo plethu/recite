@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use recite_core::project::ProjectManifestSource;
 
+use super::catalogs::{DiscoveredCatalog, enumerate_catalogs};
 use super::diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 use super::enumerate::{Coverage, DiscoveredDocument, DiscoveredRoot};
 use super::glob::GlobPattern;
@@ -23,6 +24,7 @@ pub struct ProjectManifest {
     roots: Vec<DiscoveredRoot>,
     excludes: Vec<String>,
     exclude_patterns: Vec<GlobPattern>,
+    catalogs: Vec<(String, GlobPattern)>,
 }
 
 impl ProjectManifest {
@@ -49,6 +51,32 @@ impl ProjectManifest {
     #[must_use]
     pub fn excludes(&self) -> &[String] {
         &self.excludes
+    }
+
+    /// Normalized `[discovery].catalogs` globs in declaration order.
+    #[must_use]
+    pub fn catalogs(&self) -> Vec<&str> {
+        self.catalogs
+            .iter()
+            .map(|(pattern, _)| pattern.as_str())
+            .collect()
+    }
+
+    /// Re-enumerates the catalogues these globs select now, sorted by key.
+    ///
+    /// Editors call this when an operation needs catalogues, so a catalogue
+    /// added after discovery is not missed. Diagnostics mean the selection may
+    /// be incomplete.
+    #[must_use]
+    pub fn discover_catalogs(&self) -> (Vec<DiscoveredCatalog>, Vec<DiscoveryDiagnostic>) {
+        let mut diagnostics = Vec::new();
+        let catalogs = enumerate_catalogs(
+            &self.project_root,
+            &self.catalogs,
+            &self.exclude_patterns,
+            &mut diagnostics,
+        );
+        (catalogs, diagnostics)
     }
 
     /// Whether a canonical path is an eligible source path under this
@@ -91,6 +119,7 @@ impl ProjectManifest {
 pub struct ProjectDiscoveryReport {
     manifest: ProjectManifest,
     documents: Vec<DiscoveredDocument>,
+    catalogs: Vec<DiscoveredCatalog>,
     diagnostics: Vec<DiscoveryDiagnostic>,
     coverage: Coverage,
 }
@@ -104,6 +133,13 @@ impl ProjectDiscoveryReport {
     #[must_use]
     pub fn documents(&self) -> &[DiscoveredDocument] {
         &self.documents
+    }
+
+    /// Dialogue PO catalogues selected by `[discovery].catalogs`, sorted by
+    /// key. Callers read their text when an operation needs it.
+    #[must_use]
+    pub fn catalogs(&self) -> &[DiscoveredCatalog] {
+        &self.catalogs
     }
 
     #[must_use]

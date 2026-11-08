@@ -155,6 +155,7 @@ impl CliError {
                 [("prompt_keys", prompt_keys.join("|"))],
             ),
             Self::NoInputs => messages.text(MsgId::CliErrorNoInputs),
+            Self::StableIdEdit(refusal) => refusal.to_user_message(messages),
             Self::StableIdBaseline { reference, detail } => messages.format(
                 MsgId::CliErrorStableIdBaseline,
                 [("reference", reference.clone()), ("detail", detail.clone())],

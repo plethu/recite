@@ -1,9 +1,12 @@
 use super::{AuthoringError, AuthoringKernel, SnapshotGeneration};
 use crate::authoring::engine::{self, build_delta, build_documents, rebuild_analyses};
+use crate::authoring::input::RequestParts;
 use crate::authoring::input_state::{
     changed_keys, effective_documents, unique_open, unique_saved, validate_overlay_versions,
 };
-use crate::authoring::{AnalysisDelta, AuthoringRequest, AuthoringSnapshot, WorkControl};
+use crate::authoring::{
+    AnalysisDelta, AuthoringRequest, AuthoringSnapshot, CatalogSnapshot, Interrupted, WorkControl,
+};
 use std::sync::Arc;
 
 impl AuthoringKernel {
@@ -13,8 +16,14 @@ impl AuthoringKernel {
         control: &dyn WorkControl,
     ) -> Result<(Self, AnalysisDelta), AuthoringError> {
         control.checkpoint()?;
-        let (expected_generation, saved_documents, open_documents, project_complete) =
-            request.into_parts();
+        let RequestParts {
+            expected_generation,
+            saved_documents,
+            open_documents,
+            saved_catalogs,
+            open_catalogs,
+            project_complete,
+        } = request.into_parts();
         if expected_generation != self.snapshot.generation() {
             return Err(AuthoringError::GenerationMismatch {
                 expected: expected_generation,
@@ -25,8 +34,21 @@ impl AuthoringKernel {
         let saved = unique_saved(saved_documents)?;
         let open = unique_open(open_documents)?;
         validate_overlay_versions(&self.open, &open)?;
-        let unchanged =
-            saved == self.saved && open == self.open && project_complete == self.project_complete;
+        let saved_catalogs = unique_saved(saved_catalogs)?;
+        let open_catalogs = unique_open(open_catalogs)?;
+        validate_overlay_versions(&self.open_catalogs, &open_catalogs)?;
+        if let Some(key) = saved_catalogs
+            .keys()
+            .chain(open_catalogs.keys())
+            .find(|key| saved.contains_key(*key) || open.contains_key(*key))
+        {
+            return Err(AuthoringError::CatalogKeyConflict { key: key.clone() });
+        }
+        let unchanged = saved == self.saved
+            && open == self.open
+            && saved_catalogs == self.saved_catalogs
+            && open_catalogs == self.open_catalogs
+            && project_complete == self.project_complete;
         let generation = if unchanged {
             self.snapshot.generation()
         } else {
@@ -81,6 +103,7 @@ impl AuthoringKernel {
             &project_changed,
             control,
         )?;
+        let catalogs = build_catalogs(&self.snapshot, &saved_catalogs, &open_catalogs, control)?;
         let (changed, removed) = build_delta(changed_inputs, &self.snapshot, &documents);
         let delta = AnalysisDelta::new(self.snapshot.generation(), generation, changed, removed);
 
@@ -88,6 +111,8 @@ impl AuthoringKernel {
         let candidate = Self {
             saved,
             open,
+            saved_catalogs,
+            open_catalogs,
             analyses,
             project_complete,
             project_index,
@@ -96,10 +121,32 @@ impl AuthoringKernel {
             snapshot: AuthoringSnapshot::new(
                 generation,
                 documents,
+                catalogs,
                 self.schema.clone(),
                 project_complete,
             ),
         };
         Ok((candidate, delta))
     }
+}
+
+/// Catalogue snapshots in key order, reusing unchanged line indexes.
+fn build_catalogs(
+    previous: &AuthoringSnapshot,
+    saved: &std::collections::BTreeMap<recite_core::DocumentKey, crate::authoring::SavedDocument>,
+    open: &std::collections::BTreeMap<recite_core::DocumentKey, crate::authoring::OpenDocument>,
+    control: &dyn WorkControl,
+) -> Result<Vec<CatalogSnapshot>, Interrupted> {
+    let effective = effective_documents(saved, open);
+    let mut catalogs = Vec::with_capacity(effective.len());
+    for (key, document) in effective {
+        control.checkpoint()?;
+        let reused = previous
+            .catalog(key)
+            .filter(|catalog| catalog.describes(document.layer, document.version, document.text));
+        catalogs.push(reused.cloned().unwrap_or_else(|| {
+            CatalogSnapshot::new(key.clone(), document.layer, document.version, document.text)
+        }));
+    }
+    Ok(catalogs)
 }

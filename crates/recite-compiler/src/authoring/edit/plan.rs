@@ -80,7 +80,7 @@ impl AuthoringEditPlan {
         // Edits are sorted by document then range, so applying each document's
         // edits back to front keeps earlier byte offsets valid.
         for edit in self.edits.iter().rev() {
-            let document = query.document(edit.document()).ok_or_else(|| {
+            let document = query.edit_source(edit.document()).ok_or_else(|| {
                 AuthoringEditError::StaleDocument {
                     document: edit.document().clone(),
                 }
@@ -115,7 +115,7 @@ impl AuthoringEditPlan {
         }
         for precondition in &self.preconditions {
             snapshot.checkpoint()?;
-            let Some(document) = snapshot.document(precondition.document()) else {
+            let Some(document) = snapshot.edit_source(precondition.document()) else {
                 return Err(AuthoringEditError::StaleDocument {
                     document: precondition.document().clone(),
                 });
@@ -135,7 +135,7 @@ impl AuthoringEditPlan {
         }
         for edit in &self.edits {
             snapshot.checkpoint()?;
-            let Some(document) = snapshot.document(edit.document()) else {
+            let Some(document) = snapshot.edit_source(edit.document()) else {
                 return Err(AuthoringEditError::StaleDocument {
                     document: edit.document().clone(),
                 });

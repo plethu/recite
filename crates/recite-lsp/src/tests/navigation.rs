@@ -259,7 +259,7 @@ pub(super) fn rename_updates_only_block_symbols() {
     harness.finish();
 }
 
-pub(super) fn rename_rejects_non_block_symbols_and_invalid_names() {
+pub(super) fn rename_refuses_prose_invalid_names_and_incomplete_id_renames() {
     let mut harness = Harness::start();
     let source_uri = uri("file:///workspace/dialogue/reject-rename.recite");
     harness.did_open(
@@ -277,9 +277,21 @@ pub(super) fn rename_rejects_non_block_symbols_and_invalid_names() {
 
     assert!(
         harness
-            .prepare_rename(source_uri.clone(), Position::new(1, 4))
+            .prepare_rename(source_uri.clone(), Position::new(2, 4))
             .is_none()
     );
+    // Stable IDs are renameable; this standalone buffer is not a complete
+    // project, so the rename is refused with a reason rather than ignored.
+    assert_eq!(
+        harness.prepare_rename(source_uri.clone(), Position::new(1, 4)),
+        Some(PrepareRenameResponse::RangeWithPlaceholder {
+            range: range(1, 3, 1, 10),
+            placeholder: "line_id".to_owned(),
+        })
+    );
+    let refusal = harness.rename_error(source_uri.clone(), Position::new(1, 4), "renamed_id");
+    assert_eq!(refusal.code, lsp_server::ErrorCode::RequestFailed as i32);
+    assert!(refusal.message.contains("whole project"), "{refusal:?}");
     assert!(
         harness
             .rename(source_uri.clone(), Position::new(4, 4), "not valid")

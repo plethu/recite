@@ -322,8 +322,23 @@ fn rename_updates_only_block_symbols() {
 }
 
 #[test]
-fn rename_rejects_non_block_symbols_and_invalid_names() {
-    super::navigation::rename_rejects_non_block_symbols_and_invalid_names();
+fn rename_refuses_prose_invalid_names_and_incomplete_id_renames() {
+    super::navigation::rename_refuses_prose_invalid_names_and_incomplete_id_renames();
+}
+
+#[test]
+fn stable_id_prepare_rename_offers_the_id_without_its_marker() {
+    super::stable_id_rename::prepare_rename_offers_the_id_without_its_marker();
+}
+
+#[test]
+fn stable_id_rename_edits_the_header_and_catalogues_found_at_request_time() {
+    super::stable_id_rename::rename_edits_the_header_and_catalogues_found_at_request_time();
+}
+
+#[test]
+fn stable_id_rename_refusals_are_localised_messages() {
+    super::stable_id_rename::rename_refusals_are_localised_messages();
 }
 
 #[test]

@@ -17,6 +17,15 @@ macro_rules! cli_message_ids {
         | MsgId::CliIdsAssigned
         | MsgId::CliIdsNoneMissing
         | MsgId::CliIdsRemoved
+        | MsgId::CliHelpCommandIdRename
+        | MsgId::CliHelpCommandIdReassign
+        | MsgId::CliHelpArgIdTarget
+        | MsgId::CliHelpArgNewId
+        | MsgId::CliHelpArgIdPaths
+        | MsgId::CliHelpArgCatalog
+        | MsgId::CliIdsRenamed
+        | MsgId::CliIdsReassignedDuplicate
+        | MsgId::CliIdsNoCatalogs
         | MsgId::CliHelpArgSince
         | MsgId::CliHelpArgAllowRemoved
         | MsgId::CliHelpCommandProjectValidate
@@ -229,6 +238,15 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorFixtureToml
         | MsgId::CliErrorMissingPath
         | MsgId::CliErrorStableIdBaseline
+        | MsgId::CliErrorStableIdReserved
+        | MsgId::CliErrorStableIdMalformed
+        | MsgId::CliErrorStableIdInUse
+        | MsgId::CliErrorStableIdInCatalog
+        | MsgId::CliErrorStableIdUnknown
+        | MsgId::CliErrorStableIdAmbiguous
+        | MsgId::CliErrorStableIdTarget
+        | MsgId::CliErrorStableIdUnchanged
+        | MsgId::CliErrorStableIdCatalogMalformed
         | MsgId::CliErrorMissingFixtureChoice
         | MsgId::CliErrorNoInputs
         | MsgId::CliErrorOutputOverwritesInput

@@ -200,7 +200,10 @@ Neither rewrites an existing ID. Changing an ID changes identity, and changed so
 catalogue refresh and translation review.
 
 Once an ID is written, it is frozen. Tooling must not silently rewrite existing IDs because
-localisation, fixtures, traces, and save-compatible dialogue state depend on stable identifiers.
+localisation, fixtures, traces, and save-compatible dialogue state depend on stable identifiers. To
+change one deliberately, use `recite id rename`, `recite id reassign` or your editor's rename on the
+`@id` field: they update the header and the matching `msgctxt` entries in the project's catalogues
+together.
 
 ## Glossary
 

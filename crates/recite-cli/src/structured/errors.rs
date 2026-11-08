@@ -55,6 +55,7 @@ pub(crate) enum ErrorCode {
     MissingFixtureChoice,
     NoInputs,
     StableIdBaseline,
+    StableIdEdit,
     OutputOverwritesInput,
     PlayEof,
     PlayInvalidInput,

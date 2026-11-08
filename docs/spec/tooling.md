@@ -13,10 +13,12 @@ cancellation, result freshness and structured commands; its machine-readable fix
 capabilities.
 
 Required authoring operations include syntax/schema diagnostics, completion from declarations and
-registries, hover, definition/references, block rename and guarded source-preserving code actions.
-Missing stable IDs are inserted explicitly; clients may configure invocation on save. Existing IDs
-remain frozen. Schema actions edit source declarations or invoke their registered producer, never
-generated manifests. Metadata completions use the compiler's domain and missing-context rules.
+registries, hover, definition/references, block and stable-ID rename and guarded source-preserving
+code actions. Missing stable IDs are inserted explicitly; clients may configure invocation on save.
+Existing IDs remain frozen except through an explicit stable-ID rename (§5.4.2), which also edits
+the project's catalogues and is refused with a localised `RequestFailed` reason when unsafe. Schema
+actions edit source declarations or invoke their registered producer, never generated manifests.
+Metadata completions use the compiler's domain and missing-context rules.
 
 ## 15. Editor Support
 

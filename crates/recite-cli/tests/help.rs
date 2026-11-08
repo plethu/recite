@@ -173,7 +173,7 @@ locale = "en-GB"
         .args(["id", "--help"])
         .env("RECITE_CONFIG", &config));
     group.assert_success().assert_stderr("");
-    group.assert_stdout_contains("Check and assign stable line and choice IDs");
+    group.assert_stdout_contains("Check, assign and rename stable line and choice IDs");
     group.assert_stdout_contains("Append generated stable IDs");
     group.assert_stdout_contains("Print help");
 

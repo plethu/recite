@@ -3,7 +3,7 @@ use super::{
     requests::RequestState,
     workers::{AnalysisJob, AnalysisResult, QueryJob, QueryResult},
 };
-use lsp_server::{ErrorCode, Notification, Response};
+use lsp_server::{Notification, Response};
 use lsp_types::notification::{Notification as _, PublishDiagnostics};
 use recite_compiler::authoring::CancellationToken;
 use std::sync::Arc;
@@ -177,7 +177,7 @@ impl Server {
                     result: Some(value),
                     error: None,
                 },
-                Err(error) => Response::new_err(id.clone(), ErrorCode::InternalError as i32, error),
+                Err(failure) => Response::new_err(id.clone(), failure.code, failure.message),
             });
         }
     }

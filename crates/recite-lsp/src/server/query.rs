@@ -10,6 +10,22 @@ use lsp_types::{
 };
 use recite_compiler::authoring::CancellationToken;
 
+/// A query that completed without a result value.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(super) struct QueryFailure {
+    pub(super) code: i32,
+    pub(super) message: String,
+}
+
+impl QueryFailure {
+    fn internal(message: impl ToString) -> Self {
+        Self {
+            code: ErrorCode::InternalError as i32,
+            message: message.to_string(),
+        }
+    }
+}
+
 pub(super) enum Query {
     Completion(CompletionParams),
     Hover(HoverParams),
@@ -78,8 +94,8 @@ impl Query {
         &self,
         workspace: &LspWorkspace,
         control: &CancellationToken,
-    ) -> Result<serde_json::Value, String> {
-        control.checkpoint().map_err(|error| error.to_string())?;
+    ) -> Result<serde_json::Value, QueryFailure> {
+        control.checkpoint().map_err(QueryFailure::internal)?;
         let result = match self {
             Self::Completion(p) => serde_json::to_value(workspace.completion_with_control(
                 &p.text_document_position.text_document.uri,
@@ -107,17 +123,26 @@ impl Query {
                 p.position,
                 control,
             )),
-            Self::Rename(p) => serde_json::to_value(workspace.rename_with_control(
+            Self::Rename(p) => match workspace.rename_with_control(
                 &p.text_document_position.text_document.uri,
                 p.text_document_position.position,
                 &p.new_name,
                 control,
-            )),
+            ) {
+                Ok(edit) => serde_json::to_value(edit),
+                // A refused rename is the author's to fix, not a server fault.
+                Err(refusal) => {
+                    return Err(QueryFailure {
+                        code: ErrorCode::RequestFailed as i32,
+                        message: refusal.message,
+                    });
+                }
+            },
             Self::CodeAction(p) => {
                 serde_json::to_value(workspace.code_action_with_control(p, control))
             }
         };
-        control.checkpoint().map_err(|error| error.to_string())?;
-        result.map_err(|error| error.to_string())
+        control.checkpoint().map_err(QueryFailure::internal)?;
+        result.map_err(QueryFailure::internal)
     }
 }

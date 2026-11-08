@@ -25,12 +25,12 @@ pub use path::{
     ResolvedConfigPath, production_config_path, resolve_config_path,
 };
 pub use project::{
-    Coverage, DiscoveredDocument, DiscoveredRoot, DiscoveryDiagnostic, DocumentKey,
-    DocumentKeyError, LoadedProjectSchema, PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION,
-    ProjectDiscoveryError, ProjectDiscoveryReport, ProjectManifest, ProjectSchemaError,
-    ProjectSettings, ProjectSettingsError, StarterProjectError, allows_unscoped_source_path,
-    create_starter_project, discover_project, discover_unscoped_sources, starter_files,
-    starter_slug,
+    Coverage, DiscoveredCatalog, DiscoveredDocument, DiscoveredRoot, DiscoveryDiagnostic,
+    DocumentKey, DocumentKeyError, LoadedProjectSchema, PROJECT_MANIFEST_FILE,
+    PROJECT_MANIFEST_FORMAT_VERSION, ProjectDiscoveryError, ProjectDiscoveryReport,
+    ProjectManifest, ProjectSchemaError, ProjectSettings, ProjectSettingsError,
+    StarterProjectError, allows_unscoped_source_path, create_starter_project, discover_project,
+    discover_unscoped_sources, starter_files, starter_slug,
 };
 pub use user::{
     AuthorityValue, CONFIG_VERSION, ColorPolicy, ConfigAuthority, ConfigDiagnostic, ConfigError,

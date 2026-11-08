@@ -286,6 +286,25 @@ impl Harness {
         position: Position,
         new_name: &str,
     ) -> Option<WorkspaceEdit> {
+        self.send_rename(uri, position, new_name);
+        self.recv_response_result()
+    }
+
+    /// Sends a rename that the server must refuse, returning its error.
+    pub(in crate::tests) fn rename_error(
+        &mut self,
+        uri: Uri,
+        position: Position,
+        new_name: &str,
+    ) -> lsp_server::ResponseError {
+        self.send_rename(uri, position, new_name);
+        let response = self.recv_response();
+        response
+            .error
+            .unwrap_or_else(|| panic!("rename succeeded: {:?}", response.result))
+    }
+
+    fn send_rename(&mut self, uri: Uri, position: Position, new_name: &str) {
         let id = self.next_request_id();
         self.send(Message::Request(Request {
             id,
@@ -299,7 +318,6 @@ impl Harness {
                 work_done_progress_params: WorkDoneProgressParams::default(),
             }),
         }));
-        self.recv_response_result()
     }
 
     pub(in crate::tests) fn code_action(

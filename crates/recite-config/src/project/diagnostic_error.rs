@@ -16,7 +16,8 @@ impl ProjectDiscoveryError {
             | Self::MissingFormatVersion { path, .. }
             | Self::UnsupportedFormatVersion { path, .. }
             | Self::InvalidSourceRoot { path, .. }
-            | Self::InvalidExclude { path, .. } => Some(path),
+            | Self::InvalidExclude { path, .. }
+            | Self::InvalidCatalog { path, .. } => Some(path),
             Self::DuplicateRoot { manifest, .. } => Some(manifest),
         }
     }
@@ -42,6 +43,7 @@ impl ProjectDiscoveryError {
             }
             Self::InvalidSourceRoot { .. } => super::INVALID_ROOT,
             Self::InvalidExclude { .. } => super::INVALID_EXCLUDE,
+            Self::InvalidCatalog { .. } => super::INVALID_CATALOG,
             Self::DuplicateRoot { .. } => super::DUPLICATE_ROOT,
         }
     }
@@ -57,6 +59,7 @@ impl ProjectDiscoveryError {
             | Self::UnsupportedFormatVersion { path, .. }
             | Self::InvalidSourceRoot { path, .. }
             | Self::InvalidExclude { path, .. }
+            | Self::InvalidCatalog { path, .. }
             | Self::DuplicateRoot { path, .. } => path,
         };
         super::structured_diagnostic(

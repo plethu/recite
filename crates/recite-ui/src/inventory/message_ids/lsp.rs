@@ -1,5 +1,12 @@
 pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
     match id {
+        super::MsgId::LspRenameIdReserved => Some("lsp-rename-id-reserved"),
+        super::MsgId::LspRenameIdMalformed => Some("lsp-rename-id-malformed"),
+        super::MsgId::LspRenameIdInUse => Some("lsp-rename-id-in-use"),
+        super::MsgId::LspRenameIdInCatalog => Some("lsp-rename-id-in-catalog"),
+        super::MsgId::LspRenameIdCatalogMalformed => Some("lsp-rename-id-catalog-malformed"),
+        super::MsgId::LspRenameIdCatalogUnreadable => Some("lsp-rename-id-catalog-unreadable"),
+        super::MsgId::LspRenameIdIncomplete => Some("lsp-rename-id-incomplete"),
         super::MsgId::LspHoverRequires => Some("lsp-hover-requires"),
         super::MsgId::LspHoverIf => Some("lsp-hover-if"),
         super::MsgId::LspHoverSpeaker => Some("lsp-hover-speaker"),

@@ -649,3 +649,61 @@ detail = "string"
 [arguments."cli-import-summary"]
 records = "string"
 issues = "string"
+
+[arguments."cli-ids-renamed"]
+from = "string"
+to = "string"
+count = "integer"
+
+[arguments."cli-ids-reassigned-duplicate"]
+from = "string"
+to = "string"
+
+[arguments."cli-error-stable-id-reserved"]
+id = "string"
+character = "string"
+
+[arguments."cli-error-stable-id-malformed"]
+id = "string"
+
+[arguments."cli-error-stable-id-in-use"]
+id = "string"
+
+[arguments."cli-error-stable-id-in-catalog"]
+id = "string"
+catalog = "string"
+
+[arguments."cli-error-stable-id-unknown"]
+id = "string"
+
+[arguments."cli-error-stable-id-ambiguous"]
+id = "string"
+
+[arguments."cli-error-stable-id-target"]
+target = "string"
+
+[arguments."cli-error-stable-id-unchanged"]
+id = "string"
+
+[arguments."cli-error-stable-id-catalog-malformed"]
+catalog = "string"
+
+[arguments."lsp-rename-id-reserved"]
+id = "string"
+character = "string"
+
+[arguments."lsp-rename-id-malformed"]
+id = "string"
+
+[arguments."lsp-rename-id-in-use"]
+id = "string"
+
+[arguments."lsp-rename-id-in-catalog"]
+id = "string"
+catalog = "string"
+
+[arguments."lsp-rename-id-catalog-malformed"]
+catalog = "string"
+
+[arguments."lsp-rename-id-catalog-unreadable"]
+catalog = "string"

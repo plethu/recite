@@ -1,5 +1,7 @@
+mod catalog;
 mod model;
 
+pub use catalog::{CatalogSnapshot, EditSource};
 pub use model::{DocumentLayer, DocumentMetadata, DocumentSnapshot};
 
 use recite_core::schema::ProjectSchema;
@@ -14,6 +16,7 @@ use crate::validation::ValidationParticipation;
 pub struct AuthoringSnapshot {
     generation: super::SnapshotGeneration,
     documents: Vec<DocumentSnapshot>,
+    catalogs: Vec<CatalogSnapshot>,
     pub(super) schema: Option<Arc<ProjectSchema>>,
     pub(super) project_complete: bool,
 }
@@ -23,6 +26,7 @@ impl Default for AuthoringSnapshot {
         Self {
             generation: super::SnapshotGeneration::initial(),
             documents: Vec::new(),
+            catalogs: Vec::new(),
             schema: None,
             project_complete: true,
         }
@@ -34,12 +38,14 @@ impl AuthoringSnapshot {
     pub(crate) fn new(
         generation: super::SnapshotGeneration,
         documents: Vec<DocumentSnapshot>,
+        catalogs: Vec<CatalogSnapshot>,
         schema: Option<Arc<ProjectSchema>>,
         project_complete: bool,
     ) -> Self {
         Self {
             generation,
             documents,
+            catalogs,
             schema,
             project_complete,
         }

@@ -45,7 +45,7 @@ pub(super) struct QueryJob {
 }
 pub(super) struct QueryResult {
     pub(super) serial: QuerySerial,
-    pub(super) result: Result<serde_json::Value, String>,
+    pub(super) result: Result<serde_json::Value, super::query::QueryFailure>,
 }
 
 pub(super) struct Workers {

@@ -72,6 +72,7 @@ fn assert_rename_owner(workspace: &LspWorkspace, requested: &Uri, owner: &Uri, v
             "renamed",
             &CancellationToken::new(),
         )
+        .expect("rename is not refused")
         .expect("rename");
     let Some(DocumentChanges::Edits(changes)) = edit.document_changes else {
         panic!("versioned document edits");
@@ -118,7 +119,7 @@ fn assert_queries(workspace: &LspWorkspace, uri: &Uri, cursor: Position, expecte
             "rename",
             workspace
                 .rename_with_control(uri, cursor, "renamed", &control)
-                .is_some(),
+                .is_ok_and(|edit| edit.is_some()),
         ),
     ] {
         assert_eq!(actual, expected, "{name}: {uri:?} at {cursor:?}");

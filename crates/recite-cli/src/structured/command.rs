@@ -110,7 +110,12 @@ impl Command {
                 args.runtime.output_format,
                 &args.runtime.invocation_id,
             ),
-            Self::Id(IdCommand::Check(_) | IdCommand::Assign(_))
+            Self::Id(
+                IdCommand::Check(_)
+                | IdCommand::Assign(_)
+                | IdCommand::Rename(_)
+                | IdCommand::Reassign(_),
+            )
             | Self::Schema(SchemaCommand::Inspect(_) | SchemaCommand::CheckFresh(_))
             | Self::Project(ProjectCommand::Validate(_) | ProjectCommand::CheckFresh(_))
             | Self::Explain(_)

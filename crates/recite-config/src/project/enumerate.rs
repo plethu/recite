@@ -159,7 +159,7 @@ fn is_builtin_excluded(name: &str) -> bool {
         )
 }
 
-fn is_excluded_relative(relative: &str, excludes: &[GlobPattern]) -> bool {
+pub(super) fn is_excluded_relative(relative: &str, excludes: &[GlobPattern]) -> bool {
     relative.split('/').any(is_builtin_excluded)
         || excludes.iter().any(|glob| glob.matches(relative))
 }

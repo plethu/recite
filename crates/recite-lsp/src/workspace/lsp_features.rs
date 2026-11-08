@@ -7,7 +7,8 @@ use recite_compiler::authoring::DocumentLayer;
 use recite_core::DocumentKey;
 
 use super::{
-    LspWorkspace, document_key_for_identity, document_key_for_open, document_key_for_saved,
+    LspWorkspace, RenameRefusal, document_key_for_identity, document_key_for_open,
+    document_key_for_saved,
 };
 use crate::documents::OpenDocument;
 use crate::edit_projection::EditDocument;
@@ -120,37 +121,51 @@ impl LspWorkspace {
             .snapshot()
             .document(&key)?;
         let position = indexed_lsp_position_to_source(source.source_index(), position)?;
-        features::prepare_rename(
-            &key,
-            position,
-            &self.partition(&partition)?.kernel.snapshot().query(control),
-        )
+        self.prepare_stable_id_rename(&partition, &key, position, control)
+            .or_else(|| {
+                features::prepare_rename(
+                    &key,
+                    position,
+                    &self.partition(&partition)?.kernel.snapshot().query(control),
+                )
+            })
     }
 
+    /// Renames the stable ID or block symbol at `position`. A refusal carries
+    /// a localised reason for the client; `Ok(None)` means nothing to rename.
     pub(crate) fn rename_with_control(
         &self,
         uri: &Uri,
         position: Position,
         new_name: &str,
         control: &CancellationToken,
-    ) -> Option<WorkspaceEdit> {
-        control.checkpoint().ok()?;
-        let (partition, key) = self.source_document(uri)?;
-        let source = self
-            .partition(&partition)?
-            .kernel
-            .snapshot()
-            .document(&key)?;
-        let position = indexed_lsp_position_to_source(source.source_index(), position)?;
-        let partition_state = self.partition(&partition)?;
+    ) -> Result<Option<WorkspaceEdit>, RenameRefusal> {
+        if control.checkpoint().is_err() {
+            return Ok(None);
+        }
+        let Some((partition, key)) = self.source_document(uri) else {
+            return Ok(None);
+        };
+        let Some(partition_state) = self.partition(&partition) else {
+            return Ok(None);
+        };
+        let Some(source) = partition_state.kernel.snapshot().document(&key) else {
+            return Ok(None);
+        };
+        let Some(position) = indexed_lsp_position_to_source(source.source_index(), position) else {
+            return Ok(None);
+        };
+        if let Some(result) = self.stable_id_rename(&partition, &key, position, new_name, control) {
+            return result;
+        }
         let documents = self.navigation_documents(&partition);
-        features::rename(
+        Ok(features::rename(
             &key,
             position,
             new_name,
             &partition_state.kernel.snapshot().query(control),
             &documents,
-        )
+        ))
     }
 
     pub(crate) fn code_action_with_control(
@@ -179,7 +194,10 @@ impl LspWorkspace {
         )
     }
 
-    fn navigation_documents(&self, partition: &str) -> Vec<features::NavigationDocument<'_>> {
+    pub(super) fn navigation_documents(
+        &self,
+        partition: &str,
+    ) -> Vec<features::NavigationDocument<'_>> {
         let Some(snapshot) = self.partition(partition).map(|p| p.kernel.snapshot()) else {
             return Vec::new();
         };

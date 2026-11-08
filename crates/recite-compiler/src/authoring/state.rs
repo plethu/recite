@@ -66,6 +66,8 @@ pub enum AuthoringError {
     DuplicateSavedDocument { key: DocumentKey },
     #[error("open document {key} was supplied more than once")]
     DuplicateOpenDocument { key: DocumentKey },
+    #[error("catalogue {key} uses the same key as a source document")]
+    CatalogKeyConflict { key: DocumentKey },
     #[error("open document {key} reused version {version} with different text")]
     OverlayVersionConflict {
         key: DocumentKey,
@@ -83,6 +85,8 @@ pub enum AuthoringError {
 pub struct AuthoringKernel {
     saved: BTreeMap<DocumentKey, SavedDocument>,
     open: BTreeMap<DocumentKey, OpenDocument>,
+    saved_catalogs: BTreeMap<DocumentKey, SavedDocument>,
+    open_catalogs: BTreeMap<DocumentKey, OpenDocument>,
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
     project_diagnostics: Arc<ProjectDiagnostics>,
@@ -105,10 +109,12 @@ impl AuthoringKernel {
         Self {
             saved: BTreeMap::new(),
             open: BTreeMap::new(),
+            saved_catalogs: BTreeMap::new(),
+            open_catalogs: BTreeMap::new(),
             analyses: BTreeMap::new(),
             project_diagnostics: Arc::default(),
             project_index: Arc::default(),
-            snapshot: AuthoringSnapshot::new(generation, Vec::new(), None, true),
+            snapshot: AuthoringSnapshot::new(generation, Vec::new(), Vec::new(), None, true),
             schema: None,
             project_complete: true,
         }
@@ -165,6 +171,27 @@ impl AuthoringKernel {
         control: &dyn WorkControl,
     ) -> Result<Self, AuthoringError> {
         self.prepare(request, control).map(|(kernel, _)| kernel)
+    }
+
+    /// Prepare a candidate that keeps this kernel's documents and replaces
+    /// only its catalogues, sharing every document analysis.
+    ///
+    /// Hosts that load catalogues only for an operation that needs them, such
+    /// as an editor's stable-ID rename, plan against the candidate.
+    pub fn with_catalogs(
+        &self,
+        saved: impl IntoIterator<Item = SavedDocument>,
+        open: impl IntoIterator<Item = OpenDocument>,
+        control: &dyn WorkControl,
+    ) -> Result<Self, AuthoringError> {
+        let request = AuthoringRequest::new(
+            self.snapshot.generation(),
+            self.saved.values().cloned(),
+            self.open.values().cloned(),
+        )
+        .with_project_completeness(self.project_complete)
+        .with_catalogs(saved, open);
+        self.updated(request, control)
     }
 
     /// Atomically install a completed analysis; interruption retains all state.

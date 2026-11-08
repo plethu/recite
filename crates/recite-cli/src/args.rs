@@ -38,6 +38,8 @@ pub(crate) enum Command {
 pub(crate) enum IdCommand {
     Check(CheckIdsArgs),
     Assign(InputArgs),
+    Rename(RenameIdArgs),
+    Reassign(ReassignIdArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -71,6 +73,38 @@ pub(crate) struct CheckIdsArgs {
     /// Stable ID intentionally removed since `--since`; repeat for each ID.
     #[arg(long = "allow-removed", value_name = "ID", requires = "since")]
     pub(crate) allow_removed: Vec<String>,
+}
+
+/// The project an ID edit reads: explicit sources, or the nearest manifest's.
+#[derive(Debug, Args)]
+pub(crate) struct IdProjectArgs {
+    /// `.recite` files or directories forming the whole project.
+    #[arg(value_name = "PATHS")]
+    pub(crate) paths: Vec<PathBuf>,
+    /// Dialogue PO catalogue to update besides `[discovery].catalogs`.
+    #[arg(long = "catalog", value_name = "PATH")]
+    pub(crate) catalogs: Vec<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct RenameIdArgs {
+    /// Stable ID to change, or `PATH:LINE` of its header.
+    #[arg(value_name = "TARGET")]
+    pub(crate) target: String,
+    /// New stable ID.
+    #[arg(value_name = "NEW_ID")]
+    pub(crate) new_id: String,
+    #[command(flatten)]
+    pub(crate) project: IdProjectArgs,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct ReassignIdArgs {
+    /// Stable ID to change, or `PATH:LINE` of its header.
+    #[arg(value_name = "TARGET")]
+    pub(crate) target: String,
+    #[command(flatten)]
+    pub(crate) project: IdProjectArgs,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]

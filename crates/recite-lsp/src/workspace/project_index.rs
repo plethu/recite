@@ -95,6 +95,24 @@ impl SavedProjectIndex {
         &self.discoveries
     }
 
+    /// The valid manifest that owns a manifest-backed partition.
+    pub(super) fn manifest_for_partition(
+        &self,
+        partition: &str,
+    ) -> Option<&recite_config::ProjectManifest> {
+        self.discoveries
+            .iter()
+            .find_map(|discovery| match &discovery.state {
+                WorkspaceDiscoveryState::Manifest(report)
+                    if crate::paths::stable_path_identity(report.manifest().project_root())
+                        == partition =>
+                {
+                    Some(report.manifest())
+                }
+                _ => None,
+            })
+    }
+
     pub(super) fn document_uris(&self) -> impl Iterator<Item = &Uri> {
         self.documents
             .values()

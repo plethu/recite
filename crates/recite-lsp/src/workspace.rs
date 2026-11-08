@@ -14,6 +14,7 @@ mod query_index;
 mod schema_index;
 mod schema_lifecycle;
 mod snapshot;
+mod stable_id_rename;
 #[cfg(any(test, feature = "bench-support"))]
 mod synchronous_queries;
 mod transaction;
@@ -36,6 +37,7 @@ pub(crate) use kernel::{KernelPartition, PartitionBuildId};
 use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
 pub(crate) use snapshot::LiveProjectSnapshot;
+pub(crate) use stable_id_rename::RenameRefusal;
 
 use crate::documents::{OpenDocument, OpenDocumentStore};
 

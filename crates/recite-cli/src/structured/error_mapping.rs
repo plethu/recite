@@ -201,6 +201,11 @@ pub(crate) fn structured_error(
             ErrorOperation::Validate,
             fallback_path,
         ),
+        CliError::StableIdEdit(_) => input(
+            ErrorCode::StableIdEdit,
+            ErrorOperation::Validate,
+            fallback_path,
+        ),
         CliError::OutputOverwritesInput {
             output,
             input: related,

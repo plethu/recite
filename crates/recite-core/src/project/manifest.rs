@@ -166,6 +166,8 @@ struct RawProjectDiscovery {
     source_roots: Option<Vec<String>>,
     #[serde(default)]
     excludes: Vec<String>,
+    #[serde(default)]
+    catalogs: Vec<String>,
 }
 
 impl RawProjectManifest {
@@ -183,6 +185,7 @@ impl RawProjectManifest {
                     .source_roots
                     .unwrap_or_else(|| ProjectDiscovery::default().source_roots),
                 excludes: self.discovery.excludes,
+                catalogs: self.discovery.catalogs,
             },
             scenes: self
                 .scenes
