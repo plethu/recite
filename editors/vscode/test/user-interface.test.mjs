@@ -116,8 +116,8 @@ test("runtime input pickers localize prompts and constrain file types", async ()
     [
       "input",
       {
-        title: "Recite: Rename block",
-        prompt: "New block name",
+        title: "Recite: Rename block or stable ID",
+        prompt: "New name",
         placeHolder: "work",
       },
     ],

@@ -62,7 +62,10 @@ impl SourceLineIndex {
         scalar_offset(line, scalar).map(|offset| self.starts[index] + offset)
     }
 
-    pub(crate) fn position_for_byte_offset(&self, offset: usize) -> Option<SourcePosition> {
+    /// One-based Unicode scalar position of a byte offset, rounded up to the
+    /// next character boundary.
+    #[must_use]
+    pub fn position_for_byte_offset(&self, offset: usize) -> Option<SourcePosition> {
         let offset = self
             .source
             .ceil_char_boundary(offset.min(self.source.len()));

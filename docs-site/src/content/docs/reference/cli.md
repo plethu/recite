@@ -53,6 +53,29 @@ Appends a generated stable ID to every line and choice header that has none, aft
 field. Existing IDs are never rewritten. If a file has syntax errors or a malformed ID, it reports
 those diagnostics and leaves every file unchanged.
 
+### `recite id rename <ID|PATH:LINE> <NEW_ID> [PATHS]... [--catalog <PATH>]...`
+
+Renames one stable ID and every catalogue context keyed on it, in one edit. Select the header by its
+current ID, or by `PATH:LINE` when the ID is duplicated. The new ID may be written with or without
+its `@`.
+
+Without `PATHS`, the command uses the sources of the nearest `recite.project.toml`. Catalogues come
+from that manifest's `[discovery].catalogs` globs, such as `catalogs = ["locales/*.po"]`, plus any
+`--catalog` paths. In each catalogue, `msgctxt` values equal to the old ID or `old_id&variant` are
+rewritten, including obsolete `#~` entries and previous `#|` values, keeping the variant suffix.
+
+The command refuses a malformed ID, one containing `&`, `:` or `/`, one already used by a line or
+choice, and one that still keys catalogue entries. Refused or failed renames leave every file
+unchanged. Renaming changes identity: after a release, `recite id check --since <TAG>` reports the
+old ID as removed until you acknowledge it with `--allow-removed`.
+
+### `recite id reassign <ID|PATH:LINE> [PATHS]... [--catalog <PATH>]...`
+
+Gives one header a freshly generated stable ID, with the same refusals and catalogue updates as
+`id rename`. Use it to repair a duplicate ID that two branches added: select the copy to change with
+`PATH:LINE`. When the old ID is duplicated, only that header changes, and the catalogue entries stay
+with the other header.
+
 ## Schema
 
 ### `recite schema inspect <SCHEMA>`

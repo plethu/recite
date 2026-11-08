@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use super::super::catalogs::{enumerate_catalogs, parse_catalog_pattern};
 use super::super::diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 use super::super::enumerate::{Coverage, DiscoveredRoot, enumerate_root};
 use super::super::glob::{GlobPattern, normalize_relative_pattern, validate_relative_pattern};
@@ -139,6 +140,19 @@ pub(in crate::project) fn discover_source(
         normalized_excludes.push(pattern);
     }
 
+    let mut catalog_patterns = Vec::new();
+    for pattern in &manifest.discovery.catalogs {
+        let invalid = |reason| ProjectDiscoveryError::InvalidCatalog {
+            path: manifest_path.clone(),
+            pattern: pattern.clone(),
+            reason,
+        };
+        validate_relative_pattern(pattern).map_err(invalid)?;
+        let normalized = normalize_relative_pattern(pattern);
+        let glob = parse_catalog_pattern(&normalized).map_err(invalid)?;
+        catalog_patterns.push((normalized, glob));
+    }
+
     let mut diagnostics = Vec::new();
     for (index, root) in roots.iter().enumerate() {
         if let Some(owner) = roots[..index].iter().find(|earlier| {
@@ -164,6 +178,12 @@ pub(in crate::project) fn discover_source(
         );
     }
     documents.sort_by(|left, right| left.key().cmp(right.key()));
+    let catalogs = enumerate_catalogs(
+        &project_root,
+        &catalog_patterns,
+        &excludes,
+        &mut diagnostics,
+    );
     diagnostics.sort_by_key(ToString::to_string);
     let coverage = if diagnostics
         .iter()
@@ -182,8 +202,10 @@ pub(in crate::project) fn discover_source(
             roots,
             excludes: normalized_excludes,
             exclude_patterns: excludes,
+            catalogs: catalog_patterns,
         },
         documents,
+        catalogs,
         diagnostics,
         coverage,
     })

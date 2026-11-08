@@ -4,6 +4,7 @@
 //! It deliberately does not parse dialogue or speak an editor protocol; those
 //! concerns remain in the compiler and LSP crates respectively.
 
+mod catalogs;
 mod diagnostics;
 mod enumerate;
 mod glob;
@@ -15,6 +16,7 @@ pub use starter::{StarterProjectError, create_starter_project, starter_files, st
 
 pub use schema::{LoadedProjectSchema, ProjectSchemaError};
 
+pub use catalogs::DiscoveredCatalog;
 pub use diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 pub use enumerate::{
     Coverage, DiscoveredDocument, DiscoveredRoot, allows_unscoped_source_path,

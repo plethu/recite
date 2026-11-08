@@ -91,8 +91,9 @@ a shell or a hosted service.
 
 Code-action and rename edits are returned through extension-owned commands. The commands keep the
 LSP document versions, including zero-edit sibling preconditions, and check them again immediately
-before applying the edit. Use `Recite: Rename block` (the `recite.renameBlock` command) for
-version-safe block rename. Native F2 rename is disabled by the Recite adapter: VS Code's native
+before applying the edit. Use `Recite: Rename block or stable ID` (the `recite.renameBlock`
+command) for version-safe rename of a block or a line or choice `@id`. A stable-ID rename also edits
+the project's catalogues, and a refused rename reports the language server's reason. Native F2 rename is disabled by the Recite adapter: VS Code's native
 `WorkspaceEdit` path cannot preserve those LSP versions at its eventual apply boundary. The explicit
 command is covered by the installed-host activation evidence; native F2 remains intentionally
 unsupported by this client.

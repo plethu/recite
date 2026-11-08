@@ -1,6 +1,13 @@
 macro_rules! lsp_message_ids {
     () => {
-        MsgId::LspHoverRequires
+        MsgId::LspRenameIdReserved
+        | MsgId::LspRenameIdMalformed
+        | MsgId::LspRenameIdInUse
+        | MsgId::LspRenameIdInCatalog
+        | MsgId::LspRenameIdCatalogMalformed
+        | MsgId::LspRenameIdCatalogUnreadable
+        | MsgId::LspRenameIdIncomplete
+        | MsgId::LspHoverRequires
         | MsgId::LspHoverIf
         | MsgId::LspHoverSpeaker
         | MsgId::LspHoverSpeakerWithDisplayName

@@ -157,6 +157,7 @@ diagnostic-config-114	detail	string
 diagnostic-config-115	detail	string
 diagnostic-config-116	detail	string
 diagnostic-config-117	detail	string
+diagnostic-config-118	detail	string
 diagnostic-project-001	detail	string
 diagnostic-project-002	scene_id	string
 diagnostic-project-003	asset	string

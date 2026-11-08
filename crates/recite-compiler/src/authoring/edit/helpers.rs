@@ -53,7 +53,12 @@ pub(super) fn precondition(
     snapshot: &AuthoringQuery<'_>,
     key: &DocumentKey,
 ) -> Result<EditPrecondition, AuthoringEditError> {
-    let document = document(snapshot, key)?;
+    let document =
+        snapshot
+            .edit_source(key)
+            .ok_or_else(|| AuthoringEditError::UnknownDocument {
+                document: key.clone(),
+            })?;
     Ok(EditPrecondition::new(
         key.clone(),
         document.version(),

@@ -14,6 +14,7 @@ mod position;
 mod project_indexes;
 #[path = "tests/protocol_registry/tests.rs"]
 mod protocol_registry;
+mod stable_id_rename;
 mod support;
 mod sync;
 

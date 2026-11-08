@@ -9,7 +9,7 @@ use recite_core::{DocumentKey, SourceLineIndex};
 
 use crate::position::source_range_to_lsp;
 
-/// One exact source document available to an LSP projection.
+/// One exact source document or catalogue available to an LSP projection.
 ///
 /// The compiler owns the logical key, source bytes, and layer.  The LSP adds
 /// only the URI and protocol version needed to form a workspace edit.
@@ -45,7 +45,7 @@ pub(crate) fn project_plan(
             key: document.key.clone(),
             uri: document.uri.clone(),
             version,
-            source: snapshot.document(document.key)?.source_index(),
+            source: snapshot.edit_source(document.key)?.source_index(),
             edits: Vec::new(),
         });
     }
@@ -138,7 +138,7 @@ fn precondition_matches(
     precondition: &recite_compiler::authoring::EditPrecondition,
     document: &EditDocument<'_>,
 ) -> Option<()> {
-    let current = snapshot.document(document.key)?;
+    let current = snapshot.edit_source(document.key)?;
     if current.source_text() != document.text
         || current.layer() != document.layer
         || current.version() != document.version

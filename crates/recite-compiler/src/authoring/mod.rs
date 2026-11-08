@@ -33,9 +33,11 @@ pub use catalog_summary::{
 };
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,
-    SourceFingerprint, SourceRange, plan_create_block_stub, plan_create_block_stub_in_range,
-    plan_insert_missing_id, plan_insert_missing_ids, plan_insert_missing_ids_for_document,
-    plan_insert_missing_ids_in_range, plan_rename_block,
+    SourceFingerprint, SourceRange, StableIdOccurrence, StableIdRefusal, StableIdTarget,
+    plan_create_block_stub, plan_create_block_stub_in_range, plan_insert_missing_id,
+    plan_insert_missing_ids, plan_insert_missing_ids_for_document,
+    plan_insert_missing_ids_in_range, plan_reassign_stable_id, plan_rename_block,
+    plan_rename_stable_id,
 };
 pub use input::{AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument};
 pub use query::{
@@ -63,8 +65,8 @@ pub use schema_summary::{
     SchemaSummaryEvidenceBuilder, SchemaSummaryEvidenceError, SchemaTypeSummary, SpeakerSummary,
 };
 pub use snapshot::{
-    AnalysisDelta, AuthoringSnapshot, DiagnosticCollection, DiagnosticIter, DocumentDelta,
-    DocumentLayer, DocumentMetadata, DocumentSnapshot,
+    AnalysisDelta, AuthoringSnapshot, CatalogSnapshot, DiagnosticCollection, DiagnosticIter,
+    DocumentDelta, DocumentLayer, DocumentMetadata, DocumentSnapshot, EditSource,
 };
 pub use state::{AuthoringError, AuthoringKernel, SnapshotGeneration};
 pub use summary::{

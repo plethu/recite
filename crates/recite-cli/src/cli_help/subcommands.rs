@@ -88,6 +88,31 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             set_about(command, messages.text(MsgId::CliHelpCommandIdAssign));
             localise_paths(command, messages);
         }
+        "id rename" | "id reassign" => {
+            let rename = path == "id rename";
+            let about = if rename {
+                MsgId::CliHelpCommandIdRename
+            } else {
+                MsgId::CliHelpCommandIdReassign
+            };
+            set_about(command, messages.text(about));
+            let mut positionals = vec![("target", MsgId::CliHelpArgIdTarget)];
+            if rename {
+                positionals.push(("new_id", MsgId::CliHelpArgNewId));
+            }
+            positionals.push(("paths", MsgId::CliHelpArgIdPaths));
+            // `mut_arg` moves an argument to the end; keep usage order explicit.
+            for (order, (id, help)) in positionals.into_iter().enumerate() {
+                set_positional_arg_help(command, id, messages.text(help), messages);
+                *command = std::mem::take(command).mut_arg(id, |arg| arg.display_order(order));
+            }
+            set_arg_help(
+                command,
+                "catalogs",
+                messages.text(MsgId::CliHelpArgCatalog),
+                messages,
+            );
+        }
         "project validate" => {
             set_about(command, messages.text(MsgId::CliHelpCommandProjectValidate));
             set_arg_help(

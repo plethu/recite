@@ -127,7 +127,19 @@ pub struct AuthoringRequest {
     expected_generation: super::SnapshotGeneration,
     saved_documents: Vec<SavedDocument>,
     open_documents: Vec<OpenDocument>,
+    saved_catalogs: Vec<SavedDocument>,
+    open_catalogs: Vec<OpenDocument>,
     project_complete: bool,
+}
+
+/// An accepted request split into the owned input sets the kernel retains.
+pub(crate) struct RequestParts {
+    pub(crate) expected_generation: super::SnapshotGeneration,
+    pub(crate) saved_documents: Vec<SavedDocument>,
+    pub(crate) open_documents: Vec<OpenDocument>,
+    pub(crate) saved_catalogs: Vec<SavedDocument>,
+    pub(crate) open_catalogs: Vec<OpenDocument>,
+    pub(crate) project_complete: bool,
 }
 
 impl Default for AuthoringRequest {
@@ -156,8 +168,28 @@ impl AuthoringRequest {
             expected_generation,
             saved_documents: saved_documents.into_iter().collect(),
             open_documents: open_documents.into_iter().collect(),
+            saved_catalogs: Vec::new(),
+            open_catalogs: Vec::new(),
             project_complete: true,
         }
+    }
+
+    /// Replaces the project's dialogue PO catalogues carried by this request.
+    ///
+    /// Catalogues are not analysed. The kernel retains their exact text so
+    /// edit plans that also rewrite catalogue contexts, such as a stable-ID
+    /// rename, stay conditional on the bytes they were planned against.
+    /// Catalogue keys share the document key namespace and must not collide
+    /// with a source document key.
+    #[must_use]
+    pub fn with_catalogs(
+        mut self,
+        saved: impl IntoIterator<Item = SavedDocument>,
+        open: impl IntoIterator<Item = OpenDocument>,
+    ) -> Self {
+        self.saved_catalogs = saved.into_iter().collect();
+        self.open_catalogs = open.into_iter().collect();
+        self
     }
 
     /// Sets whether this request's documents cover the complete project.
@@ -195,19 +227,26 @@ impl AuthoringRequest {
         &self.open_documents
     }
 
-    pub(crate) fn into_parts(
-        self,
-    ) -> (
-        super::SnapshotGeneration,
-        Vec<SavedDocument>,
-        Vec<OpenDocument>,
-        bool,
-    ) {
-        (
-            self.expected_generation,
-            self.saved_documents,
-            self.open_documents,
-            self.project_complete,
-        )
+    /// Returns caller-owned saved catalogues in supplied order.
+    #[must_use]
+    pub fn saved_catalogs(&self) -> &[SavedDocument] {
+        &self.saved_catalogs
+    }
+
+    /// Returns caller-owned open catalogue overlays in supplied order.
+    #[must_use]
+    pub fn open_catalogs(&self) -> &[OpenDocument] {
+        &self.open_catalogs
+    }
+
+    pub(crate) fn into_parts(self) -> RequestParts {
+        RequestParts {
+            expected_generation: self.expected_generation,
+            saved_documents: self.saved_documents,
+            open_documents: self.open_documents,
+            saved_catalogs: self.saved_catalogs,
+            open_catalogs: self.open_catalogs,
+            project_complete: self.project_complete,
+        }
     }
 }

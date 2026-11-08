@@ -5,6 +5,7 @@
 
 use std::{ops::Range, sync::Arc};
 
+mod context_rename;
 mod document;
 mod entry;
 mod escape;
@@ -17,6 +18,7 @@ mod updates;
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 mod write;
 
+pub use context_rename::PoSourceReplacement;
 pub use document::PoEditError;
 pub use parser::{PluralRuleError, evaluate_plural_form, validate_plural_rule};
 pub use parser::{

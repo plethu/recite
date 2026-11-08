@@ -241,6 +241,16 @@ trailing `@id` field after any metadata and clauses:
   passing on an empty baseline. Projects outside git keep only the duplicate check.
 - Concurrent branches can still add the same ID. The compiler and `recite id check` report the
   duplicate before merge; reassign the branch's new ID.
+- Renaming or reassigning an ID is one explicit, tool-assisted edit: `recite id rename <ID|PATH:LINE>
+  <NEW>`, `recite id reassign <ID|PATH:LINE>` (a freshly generated ID) and LSP rename on an `@id`
+  field share one authoring-kernel plan. It rewrites the header and, in every project catalogue
+  (§11.1 `[discovery].catalogs`), each active, obsolete (`#~`) and previous (`#|`) `msgctxt` equal
+  to the old ID or `old&variant`, keeping the variant. It refuses a malformed ID, one containing
+  `&`, `:` or `/`, one already carried by a line or choice, and one that still keys catalogue
+  entries, which would otherwise revive orphaned translations. When the old ID is duplicated, only
+  the selected header changes; catalogue entries cannot be attributed to one side and stay with the
+  rest. There is no alias table, sidecar or automatic rename detection: after a release the old ID
+  is reported as removed unless acknowledged as above.
 - The compiler errors if any line or choice has a missing, malformed or duplicate ID. `recite id
   check` enforces the same.
 - A bare ID belongs to the project's own content. A future pack or DLC qualifier is applied when

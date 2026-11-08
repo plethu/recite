@@ -1,4 +1,4 @@
-use recite_core::{BlockId, DocumentKey};
+use recite_core::{BlockId, DocumentKey, StableId};
 
 use super::super::{DocumentVersion, QueryClass, SnapshotGeneration};
 
@@ -55,6 +55,23 @@ pub enum AuthoringEditError {
     UnmappableRange { document: DocumentKey },
     #[error("stable-ID source in {document} is malformed or ambiguous")]
     UnsupportedStableId { document: DocumentKey },
+    #[error("stable ID {id:?} is not valid: {reason}")]
+    InvalidStableId { id: String, reason: StableIdRefusal },
+    #[error("stable ID {id} is already used{}", document.as_ref().map_or_else(String::new, |document| format!(" by catalogue {document}")))]
+    StableIdCollision {
+        id: StableId,
+        /// The catalogue still keying entries on the ID, or `None` when a
+        /// line or choice header already carries it.
+        document: Option<DocumentKey>,
+    },
+    #[error("no line or choice carries stable ID {id:?}")]
+    UnknownStableId { id: String },
+    #[error("stable ID {id} is carried by more than one header; select one by location")]
+    AmbiguousStableId { id: StableId },
+    #[error("catalogue {document} is not valid PO source")]
+    MalformedCatalog { document: DocumentKey },
+    #[error("the authoring snapshot does not cover the complete project")]
+    IncompleteProject,
     #[error("authoring edit plan has no edits")]
     NoEdits,
     #[error("expected snapshot generation {expected}, but current generation is {actual}")]
@@ -78,4 +95,28 @@ pub enum AuthoringEditError {
     MissingPrecondition { document: DocumentKey },
     #[error("document {document} has overlapping edits")]
     OverlappingEdits { document: DocumentKey },
+}
+
+/// Why a requested stable ID was refused.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum StableIdRefusal {
+    /// The ID does not match the stable-ID grammar.
+    Malformed,
+    /// The ID contains a character reserved by catalogue contexts or pack
+    /// qualifiers: `&`, `:` or `/`.
+    ReservedCharacter(char),
+}
+
+impl std::fmt::Display for StableIdRefusal {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Malformed => formatter.write_str(
+                "use lowercase ASCII letters, digits, `_`, `.` and `-`, starting with a letter or `_`",
+            ),
+            Self::ReservedCharacter(character) => {
+                write!(formatter, "`{character}` is reserved and never appears in an ID")
+            }
+        }
+    }
 }

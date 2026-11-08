@@ -349,6 +349,7 @@ diagnostic-config-114 = project source symlink escapes the project: {$detail}
 diagnostic-config-115 = project source is not valid UTF-8: {$detail}
 diagnostic-config-116 = project source root is not a directory: {$detail}
 diagnostic-config-117 = project source has an invalid document key: {$detail}
+diagnostic-config-118 = invalid project catalogue pattern: {$detail}
 
 # RECITE_FRESH001
 diagnostic-fresh-001-meaning = A compiled asset was built from an older version of one or more source files.

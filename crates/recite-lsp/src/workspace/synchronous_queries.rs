@@ -23,5 +23,7 @@ impl LspWorkspace {
         new_name: &str,
     ) -> Option<WorkspaceEdit> {
         self.rename_with_control(uri, position, new_name, &CancellationToken::new())
+            .ok()
+            .flatten()
     }
 }

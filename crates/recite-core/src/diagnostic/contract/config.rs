@@ -39,6 +39,8 @@ const ROOT_NOT_DIRECTORY: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_CONFIG116", "diagnostic-config-116", DETAIL);
 const INVALID_DOCUMENT_KEY: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_CONFIG117", "diagnostic-config-117", DETAIL);
+const INVALID_CATALOG: DiagnosticPresentationContract =
+    DiagnosticPresentationContract::new("RECITE_CONFIG118", "diagnostic-config-118", DETAIL);
 
 static CONTRACTS: &[&DiagnosticPresentationContract] = &[
     &MISSING_MANIFEST,
@@ -58,6 +60,7 @@ static CONTRACTS: &[&DiagnosticPresentationContract] = &[
     &NON_UTF8_SOURCE,
     &ROOT_NOT_DIRECTORY,
     &INVALID_DOCUMENT_KEY,
+    &INVALID_CATALOG,
 ];
 
 pub(super) fn contracts() -> impl Iterator<Item = &'static DiagnosticPresentationContract> {

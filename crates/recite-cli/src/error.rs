@@ -6,7 +6,10 @@ use std::io;
 use std::path::PathBuf;
 
 mod conversions;
+mod stable_id_edit;
 mod user_message;
+
+pub(crate) use stable_id_edit::StableIdEditError;
 
 #[derive(Debug)]
 pub(crate) enum CliError {
@@ -98,6 +101,7 @@ pub(crate) enum CliError {
         reference: String,
         detail: String,
     },
+    StableIdEdit(StableIdEditError),
     OutputOverwritesInput {
         output: PathBuf,
         input: PathBuf,
@@ -309,6 +313,7 @@ impl std::fmt::Display for CliError {
                 formatter,
                 "cannot read stable IDs at `{reference}`: {detail}"
             ),
+            Self::StableIdEdit(refusal) => refusal.fmt(formatter),
             Self::OutputOverwritesInput { output, input } => write!(
                 formatter,
                 "refusing to overwrite input {} with output {}",

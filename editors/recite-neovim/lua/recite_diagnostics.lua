@@ -18,6 +18,7 @@ return {
   ["diagnostic-config-115"] = { arguments = { { name = "detail", type = "string" } }, template = "project source is not valid UTF-8: {$detail}" },
   ["diagnostic-config-116"] = { arguments = { { name = "detail", type = "string" } }, template = "project source root is not a directory: {$detail}" },
   ["diagnostic-config-117"] = { arguments = { { name = "detail", type = "string" } }, template = "project source has an invalid document key: {$detail}" },
+  ["diagnostic-config-118"] = { arguments = { { name = "detail", type = "string" } }, template = "invalid project catalogue pattern: {$detail}" },
   ["diagnostic-fresh-001"] = { arguments = { { name = "asset", type = "string" }, { name = "source", type = "string" } }, template = "compiled asset '{$asset}' is stale for source '{$source}'" },
   ["diagnostic-fresh-001-cause-001"] = { arguments = {  } },
   ["diagnostic-fresh-001-meaning"] = { arguments = {  } },

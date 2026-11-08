@@ -49,6 +49,9 @@ pub struct ProjectDiscovery {
     pub source_roots: Vec<String>,
     /// Project-relative slash-separated exclusion globs.
     pub excludes: Vec<String>,
+    /// Project-relative slash-separated globs selecting the project's dialogue
+    /// gettext PO catalogues. Empty when the project declares none.
+    pub catalogs: Vec<String>,
 }
 
 impl Default for ProjectDiscovery {
@@ -56,6 +59,7 @@ impl Default for ProjectDiscovery {
         Self {
             source_roots: vec![".".to_owned()],
             excludes: Vec::new(),
+            catalogs: Vec::new(),
         }
     }
 }

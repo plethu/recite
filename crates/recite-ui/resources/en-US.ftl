@@ -6,7 +6,7 @@ cli-help-options-heading = Options
 cli-help-command-validate = Validate dialogue source without writing compiled output
 cli-help-command-compile = Compile dialogue source to a MessagePack .recitec asset
 cli-help-command-extract = Extract gettext POT entries
-cli-help-command-id = Check and assign stable line and choice IDs
+cli-help-command-id = Check, assign and rename stable line and choice IDs
 cli-help-command-project = Validate a project manifest and check compiled-asset freshness
 cli-help-command-schema = Inspect, export and freshness-check schema manifests
 cli-help-arg-only = Report only this diagnostic category; syntax errors are always reported
@@ -76,6 +76,18 @@ cli-ids-assigned = { $count ->
     }
 cli-ids-none-missing = every line and choice already has a stable ID
 cli-ids-removed = stable ID `@{$id}` from {$reference} is missing; restore it or pass --allow-removed {$id}
+cli-help-command-id-rename = Rename a stable ID and every dialogue catalogue context keyed on it
+cli-help-command-id-reassign = Give one line or choice a freshly generated stable ID, as duplicate-ID repair does
+cli-help-arg-id-target = Stable ID to change, or PATH:LINE of the header that carries it
+cli-help-arg-new-id = New stable ID, with or without its leading @
+cli-help-arg-id-paths = .recite files or directories forming the whole project; defaults to the sources of the nearest recite.project.toml
+cli-help-arg-catalog = Dialogue PO catalogue to update in addition to [discovery].catalogs. Repeatable
+cli-ids-renamed = renamed `@{$from}` to `@{$to}` and { $count ->
+        [one] { $count } catalogue context
+       *[other] { $count } catalogue contexts
+    }
+cli-ids-reassigned-duplicate = reassigned one header from duplicated `@{$from}` to `@{$to}`; catalogues stay with the remaining header
+cli-ids-no-catalogs = no dialogue catalogues are configured; add [discovery].catalogs to recite.project.toml or pass --catalog
 cli-diagnostic-errors = { $count ->
         [one] { $count } error
        *[other] { $count } errors
@@ -335,6 +347,15 @@ cli-error-ambiguous-fixture-choice = fixture block choice `{$block}` is ambiguou
 cli-error-fixture-toml = failed to parse fixture {$path}: {$source}
 cli-error-missing-path = input path does not exist: {$path}
 cli-error-stable-id-baseline = cannot read stable IDs at `{$reference}`: {$detail}
+cli-error-stable-id-reserved = stable ID `{$id}` contains `{$character}`, which is reserved and never appears in an ID
+cli-error-stable-id-malformed = stable ID `{$id}` is malformed; use lowercase ASCII letters, digits, `_`, `.` and `-`, starting with a letter or `_`
+cli-error-stable-id-in-use = stable ID `@{$id}` is already used by a line or choice
+cli-error-stable-id-in-catalog = stable ID `@{$id}` still keys entries in catalogue {$catalog}; remove or rename those entries first
+cli-error-stable-id-unknown = no line or choice carries stable ID `@{$id}`
+cli-error-stable-id-ambiguous = stable ID `@{$id}` is carried by more than one header; select one as PATH:LINE
+cli-error-stable-id-target = no stable ID header at {$target}
+cli-error-stable-id-unchanged = stable ID `@{$id}` already has that name
+cli-error-stable-id-catalog-malformed = catalogue {$catalog} is not valid PO; fix it before renaming IDs
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys
 cli-error-no-inputs = no .recite inputs found
 cli-error-output-overwrites-input = refusing to overwrite input {$input} with output {$output}
@@ -351,6 +372,13 @@ cli-error-read-dir = failed to read directory {$path}: {$source}
 cli-error-write = failed to write {$path}: {$source}
 cli-error-watch = {$message}
 
+lsp-rename-id-reserved = Stable ID `{$id}` contains `{$character}`, which is reserved and never appears in an ID.
+lsp-rename-id-malformed = Stable ID `{$id}` is malformed. Use lowercase ASCII letters, digits, `_`, `.` and `-`, starting with a letter or `_`.
+lsp-rename-id-in-use = Stable ID `@{$id}` is already used by a line or choice.
+lsp-rename-id-in-catalog = Stable ID `@{$id}` still keys entries in catalogue {$catalog}. Remove or rename those entries first.
+lsp-rename-id-catalog-malformed = Catalogue {$catalog} is not valid PO. Fix it before renaming stable IDs.
+lsp-rename-id-catalog-unreadable = Catalogue {$catalog} cannot be read, so stable IDs cannot be renamed safely.
+lsp-rename-id-incomplete = Stable IDs can be renamed only when the whole project and all of its catalogues are available.
 lsp-hover-requires = requires=(...) keeps the choice visible and marks it unavailable when the condition is false.
 lsp-hover-if = :if structurally omits hidden dialogue content when the condition is false.
 lsp-hover-speaker = Recite speaker `{$name}`.
@@ -494,17 +522,17 @@ vscode-command-watch-start-title = Recite: Start watch
 vscode-command-watch-stop-title = Recite: Stop watch
 vscode-command-run-title = Recite: Run fixture
 vscode-command-trace-title = Recite: Trace fixture
-vscode-command-rename-title = Recite: Rename block
-vscode-command-rename-command-title = Recite: Rename block
-vscode-command-rename-prompt = New block name
+vscode-command-rename-title = Recite: Rename block or stable ID
+vscode-command-rename-command-title = Recite: Rename block or stable ID
+vscode-command-rename-prompt = New name
 vscode-command-rename-placeholder = For example, start
-vscode-command-rename-busy = Recite block rename is already waiting for a response.
-vscode-command-rename-document-required = Place the cursor in an open Recite document before renaming a block.
-vscode-command-rename-unavailable = Recite could not prepare a block rename at the cursor.
-vscode-command-rename-invalid = Recite returned an invalid block rename response.
+vscode-command-rename-busy = Recite rename is already waiting for a response.
+vscode-command-rename-document-required = Place the cursor in an open Recite document before renaming.
+vscode-command-rename-unavailable = Recite could not prepare a rename at the cursor. Place it on a block name or stable ID.
+vscode-command-rename-invalid = Recite returned an invalid rename response.
 vscode-command-rename-stale = Recite rename was cancelled because the document or language server changed.
-vscode-command-rename-apply-failed = VS Code could not apply the Recite block rename.
-vscode-command-rename-request-failed = Recite block rename failed: {$detail}.
+vscode-command-rename-apply-failed = VS Code could not apply the Recite rename.
+vscode-command-rename-request-failed = Recite rename failed: {$detail}.
 vscode-command-cli-path-description = Executable used for local Recite commands. A bare name is resolved through PATH; a path is resolved relative to the project root.
 vscode-command-untrusted = Recite commands are unavailable until workspace trust is granted.
 vscode-command-document-required = Open a saved Recite document before running this command.

@@ -34,6 +34,7 @@ pub(super) const ROOT_NOT_DIRECTORY: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_CONFIG116");
 pub(super) const INVALID_DOCUMENT_KEY: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_CONFIG117");
+pub(super) const INVALID_CATALOG: DiagnosticCode = DiagnosticCode::new_static("RECITE_CONFIG118");
 
 /// A typed, deterministic discovery diagnostic. Warnings remain in the report
 /// so callers can present overlap policy without reconstructing it from text.
@@ -87,6 +88,12 @@ pub enum ProjectDiscoveryError {
     },
     #[error("project manifest {path} has invalid exclude {pattern:?}: {reason}")]
     InvalidExclude {
+        path: PathBuf,
+        pattern: String,
+        reason: String,
+    },
+    #[error("project manifest {path} has invalid catalogue pattern {pattern:?}: {reason}")]
+    InvalidCatalog {
         path: PathBuf,
         pattern: String,
         reason: String,

@@ -68,16 +68,16 @@ export function output(messages = [], hostApi) {
       this.appendLine("Recite code action is no longer available.");
     },
     renameBusy() {
-      this.appendLine("Recite block rename is already waiting for a response.");
+      this.appendLine("Recite rename is already waiting for a response.");
     },
     renameDocumentRequired() {
-      this.appendLine("Place the cursor in an open Recite document before renaming a block.");
+      this.appendLine("Place the cursor in an open Recite document before renaming.");
     },
     renameUnavailable() {
-      this.appendLine("Recite could not prepare a block rename at the cursor.");
+      this.appendLine("Recite could not prepare a rename at the cursor. Place it on a block name or stable ID.");
     },
     renameInvalid() {
-      this.appendLine("Recite returned an invalid block rename response.");
+      this.appendLine("Recite returned an invalid rename response.");
     },
     renameStale() {
       this.appendLine(
@@ -85,10 +85,10 @@ export function output(messages = [], hostApi) {
       );
     },
     renameApplyFailed() {
-      this.appendLine("VS Code could not apply the Recite block rename.");
+      this.appendLine("VS Code could not apply the Recite rename.");
     },
     renameRequestFailed(detail) {
-      this.appendLine(`Recite block rename failed: ${detail}.`);
+      this.appendLine(`Recite rename failed: ${detail}.`);
     },
     configurationPathInvalid: () => new Error("recite.lsp.path must be a non-empty string."),
     configurationArgsInvalid: () => new Error("recite.lsp.args must be an array of strings."),

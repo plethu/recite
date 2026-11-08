@@ -95,7 +95,12 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
         // Watch is a streaming lifecycle handled before this finite dispatcher. The rest are
         // human-only; listing them keeps a new command from silently landing here.
         Command::Watch(_)
-        | Command::Id(IdCommand::Check(_) | IdCommand::Assign(_))
+        | Command::Id(
+            IdCommand::Check(_)
+            | IdCommand::Assign(_)
+            | IdCommand::Rename(_)
+            | IdCommand::Reassign(_),
+        )
         | Command::Schema(SchemaCommand::Inspect(_) | SchemaCommand::CheckFresh(_))
         | Command::Project(ProjectCommand::Validate(_) | ProjectCommand::CheckFresh(_))
         | Command::Explain(_)
