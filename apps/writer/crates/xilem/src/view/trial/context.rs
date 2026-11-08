@@ -1,5 +1,6 @@
 //! A short captured summary stays subordinate to prose; full provenance is explicit.
 use super::*;
+use crate::WriterLayout;
 use recite_writer_model::PreviewProvenance;
 use xilem::masonry::properties::LineBreaking;
 

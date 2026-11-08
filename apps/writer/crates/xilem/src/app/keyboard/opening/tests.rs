@@ -118,7 +118,7 @@ fn picker_opening_still_rejects_changed_lifetime_document_selection_screen_picke
             (300, 100),
         );
         match change {
-            0 => app.writer.as_mut().unwrap().window = WindowId::next(),
+            0 => app.writer.as_mut().unwrap().window = recite_writer_app::WindowKey::next(),
             1 => app.writer.as_mut().unwrap().change(|model| {
                 *model = Workbench::open("other.recite", SOURCE)?;
                 model.select(DocumentView::Source)

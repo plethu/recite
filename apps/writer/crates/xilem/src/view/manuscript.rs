@@ -1,5 +1,6 @@
 use super::surface::Surface;
 use super::*;
+use crate::WriterLayout;
 use crate::attention::{Pane, Region};
 use crate::presentation::print;
 use crate::rules;

@@ -1,5 +1,6 @@
 //! Bounded native components inspect the same trace as the running conversation.
 use super::*;
+use crate::WriterLayout;
 use recite_runtime::preview::PreviewTrace;
 use recite_writer_session::preview::trace::{
     FIELDS, FieldPreview, ListPage, Place, Projection, RECORDS, RecordPage, Section, ValuePage,

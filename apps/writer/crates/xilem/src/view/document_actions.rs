@@ -1,5 +1,6 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::print;
 use xilem::{masonry::properties::LineBreaking, view::portal};
 mod menu;

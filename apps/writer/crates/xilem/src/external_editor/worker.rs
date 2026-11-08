@@ -1,5 +1,4 @@
 use super::*;
-use recite_writer_session::external::Handoff;
 use tokio::sync::mpsc::UnboundedReceiver;
 use xilem::{
     ViewCtx,
@@ -22,7 +21,7 @@ pub(crate) fn worker() -> impl View<Writer, (), ViewCtx, Element = NoElement> {
 }
 async fn serve(proxy: MessageProxy<Output>, mut requests: UnboundedReceiver<Arc<Request>>) {
     while let Some(request) = requests.recv().await {
-        let result = match start(&request) {
+        let result = match request.start() {
             Ok(handoff) => {
                 if proxy.message(Output(Arc::clone(&request), None)).is_err() {
                     return;
@@ -41,11 +40,4 @@ async fn serve(proxy: MessageProxy<Output>, mut requests: UnboundedReceiver<Arc<
             return;
         }
     }
-}
-pub(super) fn start(request: &Request) -> Result<Handoff, String> {
-    let result = request
-        .check_link()
-        .and_then(|()| Handoff::configured(request.path().to_owned(), request.editor.as_ref()));
-    request.finish_link(result.as_ref().map(|_| ()).map_err(Clone::clone));
-    result
 }

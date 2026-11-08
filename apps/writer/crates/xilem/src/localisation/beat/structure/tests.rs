@@ -1,5 +1,5 @@
 use super::super::*;
-use crate::tests::support;
+use crate::test_support as support;
 
 #[test]
 fn mixed_beat_keeps_conditions_effects_plural_fragments_and_continuations_in_source_order() {

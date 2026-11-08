@@ -6,7 +6,7 @@ use xilem::masonry::{
 };
 
 impl InputWidget {
-    pub(super) fn retire_camera_press(&mut self, ctx: &mut EventCtx<'_>, event: &PointerEvent) {
+    pub fn retire_camera_press(&mut self, ctx: &mut EventCtx<'_>, event: &PointerEvent) {
         let superseded = matches!(event, PointerEvent::Scroll(_))
             || matches!(event, PointerEvent::Gesture(event) if matches!(event.gesture, PointerGesture::Pinch(_)));
         if superseded && self.press.take().is_some() {
@@ -17,7 +17,7 @@ impl InputWidget {
             ctx.submit_action::<NativeAction>(Input::Cancel);
         }
     }
-    pub(super) fn track_motion(&mut self, point: Point) {
+    pub fn track_motion(&mut self, point: Point) {
         if let Some(press) = &mut self.press
             && let Motion::ClickCandidate(start) = press.motion
             && (point - start).hypot() > 4.
@@ -25,7 +25,7 @@ impl InputWidget {
             press.motion = Motion::Dragging;
         }
     }
-    pub(super) fn finish_press(
+    pub fn finish_press(
         &mut self,
         ctx: &mut EventCtx<'_>,
         window: Point,

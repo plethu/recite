@@ -1,8 +1,11 @@
-//! Bounded declaration inspection; the shared Session remains the canonical schema/source owner.
+//! Frontend views and native glue over `recite_writer_app::workspaces::declarations`.
 use super::*;
+pub(crate) use recite_writer_app::workspaces::declarations::*;
 mod outcome;
 mod producer;
 mod source;
+#[cfg(test)]
+mod tests;
 use crate::attention::{Pane, Region};
 use crate::presentation::{label, paragraph, radio_button, text_button};
 use recite_writer_session::declarations::SchemaOutputStatus;
@@ -13,84 +16,8 @@ use xilem::{
     style::Style,
     view::{CrossAxisAlignment, flex_col, flex_row, radio_group, text_input},
 };
-const PAGE: usize = 5;
-#[cfg(test)]
-mod tests;
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
-enum Mode {
-    #[default]
-    Inspect,
-    Source,
-    Producer,
-}
-impl Writer {
-    pub(crate) fn show_declaration_source(&mut self) {
-        self.workspaces.declarations.mode = Mode::Source;
-    }
-    pub(crate) fn show_declaration_producer(&mut self) {
-        self.workspaces.declarations.mode = Mode::Producer;
-    }
-}
-pub(crate) struct Row {
-    name: String,
-    kind: String,
-    folded: String,
-    detail: Vec<String>,
-}
-impl Row {
-    pub fn new((name, kind, detail): (String, String, String)) -> Self {
-        let folded = format!("{name} {kind}").to_lowercase();
-        Self {
-            name,
-            kind,
-            folded,
-            detail: super::text::pages(&detail),
-        }
-    }
-}
-#[derive(Default)]
-pub(super) struct Panel {
-    mode: Mode,
-    producer: producer::Panel,
-    pub(in crate::workspaces) source: source::Panel,
-    rows: Vec<Row>,
-    query: String,
-    matches: Vec<usize>,
-    page: usize,
-    selected: Option<usize>,
-    detail_page: usize,
-}
-impl Panel {
-    pub fn describe_producer(&mut self, pages: Vec<String>) {
-        self.producer = producer::Panel { pages, page: 0 };
-    }
-    pub fn replace(&mut self, rows: Vec<Row>) {
-        self.rows = rows;
-        self.filter(self.query.clone());
-    }
-    fn filter(&mut self, query: String) {
-        let needle = query.trim().to_lowercase();
-        self.matches = self
-            .rows
-            .iter()
-            .enumerate()
-            .filter_map(|(index, row)| row.folded.contains(&needle).then_some(index))
-            .collect();
-        self.query = query;
-        self.page = 0;
-        self.selected = self.matches.first().copied();
-        self.detail_page = 0;
-    }
-    fn choose(&mut self, name: &str, kind: &str) {
-        self.selected = self
-            .rows
-            .iter()
-            .position(|row| row.name == name && row.kind == kind);
-        self.detail_page = 0;
-    }
-}
-pub(super) use producer::description as producer_description;
-pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+
+pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
         label(scale, "Declarations").text_size(28. * scale),
@@ -129,6 +56,7 @@ pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .gap(12.px())
     .prop(Region(Some(Pane::Declarations)))
 }
+
 fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations;
@@ -191,6 +119,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
 }
+
 fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.declarations;
     flex_col(
@@ -219,6 +148,7 @@ fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     )
     .cross_axis_alignment(CrossAxisAlignment::Start)
 }
+
 fn declaration_detail(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.declarations;
     let Row {

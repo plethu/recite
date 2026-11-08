@@ -39,13 +39,7 @@ pub(crate) enum Mode {
     Destinations,
     RenameBeat,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Search {
-    Commands,
-    GoTo,
-    ProjectText,
-    Passages,
-}
+pub(crate) use recite_writer_app::shell::Search;
 enum Purpose {
     Search(Search),
     Editor(Box<crate::choices::Request>),

@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let blocked = writer.declaration_action_blocked();
     let invalid = matches!(
@@ -67,7 +67,7 @@ pub(super) fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
 }
-pub(super) fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let blocked = writer.declaration_action_blocked();
     let dirty = writer

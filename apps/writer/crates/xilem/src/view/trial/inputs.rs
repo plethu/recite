@@ -1,5 +1,6 @@
 //! Composed trial settings; only one bounded page of values and languages is mounted.
 use super::*;
+use crate::WriterLayout;
 use recite_writer_session::messages::{MsgId, text};
 use xilem::{masonry::properties, view::checkbox};
 

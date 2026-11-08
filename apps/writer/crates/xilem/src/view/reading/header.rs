@@ -1,5 +1,6 @@
 //! Beat identity and reading actions adapt without replacing the manuscript below.
 use super::*;
+use crate::WriterLayout;
 use xilem::masonry::properties::LineBreaking;
 
 pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use<> {

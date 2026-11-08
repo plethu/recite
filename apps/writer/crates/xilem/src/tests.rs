@@ -184,9 +184,9 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
 fn native_driver_keeps_the_document_lease_and_uses_the_selected_window_identity() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let writer = open(&directory).unwrap();
-    let window_id = writer.window;
-    let (driver, mut windows) =
-        app::application(app::App::with_writer(writer)).into_driver_and_windows(Err);
+    let app = app::App::with_writer(writer);
+    let window_id = app.window_id();
+    let (driver, mut windows) = app::application(app).into_driver_and_windows(Err);
     assert_eq!(windows.len(), 1);
     let window = windows.pop().unwrap();
     assert_eq!(window.id, window_id);

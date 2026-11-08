@@ -1,4 +1,14 @@
+#![allow(unused_imports)]
+use super::super::{
+    Screen, Writer, text,
+    tools::{ExternalAction, ProjectAction},
+};
+use crate::external_editor::Request;
 use crate::{presentation::Theme, tests::support, workspaces::tools::tests::finish};
+use recite_writer_session::{
+    comparison::ComparisonRow,
+    project::{ExternalComparison, ExternalDecision, SourceRepairArtifact},
+};
 use std::{fs, sync::Arc};
 use tokio::sync::mpsc;
 use xilem::{

@@ -1,12 +1,14 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
 use crate::presentation::{excerpt, material, print};
+use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
 use xilem::masonry::{
     kurbo::Rect,
     parley::style::FontWeight,
     properties::{self, BoxShadow},
 };
+use xilem::view::PointerButton;
 use xilem::{peniko::Color, style::Padding};
 
 pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetView<Writer> + use<> {
@@ -49,7 +51,12 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     let focus_id = id.clone();
     let move_id = id.clone();
     let body = button_any_pointer(contents, move |state: &mut Writer, pointer| {
-        state.press_map_beat(id.clone(), pointer);
+        let press = match pointer {
+            None => Press::Keyboard,
+            Some(PointerButton::Primary) => Press::Primary,
+            Some(_) => Press::Secondary,
+        };
+        state.press_map_beat(id.clone(), press);
     })
     .disabled(disabled)
     .prop(properties::Dimensions::fixed(

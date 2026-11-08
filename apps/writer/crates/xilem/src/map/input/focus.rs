@@ -1,37 +1,17 @@
 //! A one-shot native focus request, acknowledged by the local viewport.
 use super::*;
-use std::sync::Arc;
 use xilem::masonry::core::{ActionCtx, ErasedAction};
-use xilem::masonry::kurbo;
 
-#[derive(Clone, Debug)]
-pub(in crate::map) struct FocusToken(Arc<()>);
-impl FocusToken {
-    pub fn new() -> Self {
-        Self(Arc::new(()))
-    }
-}
-impl PartialEq for FocusToken {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
-    }
-}
-#[derive(Clone, Debug, PartialEq)]
-pub(in crate::map) struct FocusRequest {
-    pub token: FocusToken,
-    /// Whole-card bounds in the untransformed viewport's local coordinates.
-    pub bounds: kurbo::Rect,
-}
 #[derive(Debug)]
 struct FocusViewport;
 impl InputWidget {
-    pub(super) fn restore_overview_focus(this: &mut WidgetMut<'_, Self>) {
+    pub fn restore_overview_focus(this: &mut WidgetMut<'_, Self>) {
         // The persistent child outlives detail cards; its action reaches this viewport.
         Self::child_mut(this)
             .ctx
             .submit_untyped_action(Box::new(FocusViewport));
     }
-    pub(super) fn overview_focus_action(
+    pub fn overview_focus_action(
         &self,
         ctx: &mut ActionCtx<'_>,
         action: &ErasedAction,
@@ -46,7 +26,7 @@ impl InputWidget {
             ctx.set_handled();
         }
     }
-    pub(super) fn request_card_focus(&self, ctx: &mut UpdateCtx<'_>) {
+    pub fn request_card_focus(&self, ctx: &mut UpdateCtx<'_>) {
         if self.kind.is_card()
             && let Some(focus) = &self.focus
         {
@@ -56,7 +36,7 @@ impl InputWidget {
             });
         }
     }
-    pub(super) fn configure_focus(this: &mut WidgetMut<'_, Self>, focus: Option<&FocusRequest>) {
+    pub fn configure_focus(this: &mut WidgetMut<'_, Self>, focus: Option<&FocusRequest>) {
         if this.widget.focus.as_ref() == focus {
             return;
         }
@@ -71,7 +51,7 @@ impl InputWidget {
                 });
         }
     }
-    pub(super) fn focus_action(&mut self, ctx: &mut ActionCtx<'_>, action: &ErasedAction) {
+    pub fn focus_action(&mut self, ctx: &mut ActionCtx<'_>, action: &ErasedAction) {
         if !matches!(self.kind, Kind::Viewport(_)) {
             return;
         }

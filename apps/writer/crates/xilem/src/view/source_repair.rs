@@ -1,5 +1,6 @@
 //! Source drafts are repaired in a real editor, then imported through checked Apply.
 use super::*;
+use crate::WriterLayout;
 use xilem::masonry::properties::TextAreaLabel;
 
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {

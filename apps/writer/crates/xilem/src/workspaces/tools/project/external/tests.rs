@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use super::*;
 use crate::{
     attention::{Pane, PaneMotion},
@@ -9,6 +10,7 @@ use crate::{
 };
 use recite_writer_model::View;
 use recite_writer_session::project::ExternalDecision;
+use std::path::PathBuf;
 
 fn compare(writer: &mut Writer, jobs: &mut mpsc::UnboundedReceiver<Job>, root: &std::path::Path) {
     writer

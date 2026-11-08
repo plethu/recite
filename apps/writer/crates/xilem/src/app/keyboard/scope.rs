@@ -13,7 +13,7 @@ pub(super) struct Scope {
     pub(super) keymap: recite_config::Keymap,
 }
 pub(super) struct DocumentScope {
-    window: WindowId,
+    window: recite_writer_app::WindowKey,
     document: DocumentKey,
     view: recite_writer_model::View,
     workspace: crate::map::Workspace,

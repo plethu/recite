@@ -1,5 +1,7 @@
 use super::*;
+use crate::Phase;
 use crate::tests::support::worker::Worker;
+use recite_writer_session::declarations::DeclarationAction;
 
 #[test]
 fn actual_project_worker_completes_declaration_recovery_before_releasing_close_guard() {

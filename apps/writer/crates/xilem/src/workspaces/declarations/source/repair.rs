@@ -1,5 +1,5 @@
 use super::*;
-pub(super) fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+pub fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations.source;
     if !panel.repair_open {

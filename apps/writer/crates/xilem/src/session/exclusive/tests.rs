@@ -1,5 +1,14 @@
+#![allow(unused_imports)]
+use super::super::*;
 use super::*;
 use crate::tests::support;
+use recite_compiler::authoring::{CancellationToken, WorkControl};
+use recite_writer_model::FrozenWorkbench;
+use recite_writer_session::{FileError, ProjectSession};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use xilem::{
     ViewCtx,
     core::View as _,

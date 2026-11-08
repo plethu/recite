@@ -29,10 +29,7 @@ use xilem::winit::dpi;
 use xilem::winit::error;
 use xilem::{AppState, WindowId};
 
-pub(super) enum Request {
-    Search(picker::Search),
-    Workspace,
-}
+pub(super) use recite_writer_app::shell::Request;
 
 pub(super) struct App {
     writer: Option<Writer>,
@@ -71,7 +68,7 @@ pub(super) fn run(app: App) -> Result<(), error::EventLoopError> {
 }
 impl AppState for App {
     fn keep_running(&self) -> bool {
-        !self.closed && self.writer.as_ref().is_none_or(AppState::keep_running)
+        !self.closed && self.writer.as_ref().is_none_or(Writer::keep_running)
     }
 }
 impl App {

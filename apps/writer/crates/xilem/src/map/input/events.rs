@@ -8,7 +8,7 @@ use xilem::masonry::{
 };
 
 impl InputWidget {
-    pub(super) fn pointer(&mut self, ctx: &mut EventCtx<'_>, event: &PointerEvent) {
+    pub fn pointer(&mut self, ctx: &mut EventCtx<'_>, event: &PointerEvent) {
         if self.kind.is_card() {
             match event {
                 PointerEvent::Up(event) => self.clicks = event.state.count,
@@ -102,7 +102,7 @@ impl InputWidget {
             _ => {}
         }
     }
-    pub(super) fn keyboard(&mut self, ctx: &mut EventCtx<'_>, event: &TextEvent) {
+    pub fn keyboard(&mut self, ctx: &mut EventCtx<'_>, event: &TextEvent) {
         if self.kind.is_card() || ctx.is_handled() {
             return;
         }

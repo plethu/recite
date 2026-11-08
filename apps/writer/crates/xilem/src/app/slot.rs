@@ -11,7 +11,7 @@ use xilem::{
 };
 
 pub(super) struct WriterSlot<V> {
-    key: Option<WindowId>,
+    key: Option<recite_writer_app::WindowKey>,
     child: Option<V>,
 }
 pub(super) struct SlotState<T> {

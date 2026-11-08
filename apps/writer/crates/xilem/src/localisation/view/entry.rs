@@ -1,4 +1,5 @@
 use super::*;
+use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::navigation::Target;
 use recite_writer_session::localisation::catalogue::Draft;

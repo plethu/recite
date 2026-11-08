@@ -109,3 +109,15 @@ impl<D: AppDriver> ApplicationHandler<MasonryUserEvent> for Host<D> {
         self.masonry.handle_memory_warning(event_loop);
     }
 }
+
+/// Native services the authoring state borrows from this frontend.
+pub(crate) fn services() -> recite_writer_app::Host {
+    recite_writer_app::Host {
+        choose_repaired_source: || {
+            rfd::FileDialog::new()
+                .set_title("Import repaired source")
+                .add_filter("Source text", &["txt", "recite"])
+                .pick_file()
+        },
+    }
+}

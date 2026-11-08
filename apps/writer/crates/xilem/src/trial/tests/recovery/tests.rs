@@ -102,7 +102,7 @@ fn apply_then_preview_never_starts_after_newer_typing_cancellation_return_or_rep
                 None
             }
             "replace" => {
-                writer.window = xilem::WindowId::next();
+                writer.window = recite_writer_app::WindowKey::next();
                 None
             }
             _ => Some(writer.attention.begin_preedit()),

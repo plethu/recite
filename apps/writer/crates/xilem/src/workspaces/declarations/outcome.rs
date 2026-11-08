@@ -1,6 +1,6 @@
 //! Bounded declaration action feedback is shared by source and producer screens.
 use super::*;
-pub(super) fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+pub fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let page = writer
         .workspaces
         .schema_feedback

@@ -1,5 +1,6 @@
 //! Runtime controls; capture policy and traversal stay in the shared owners.
 use super::*;
+use crate::WriterLayout;
 use crate::{
     attention::{Pane, PaneEntry, Region},
     presentation::{group::named, manuscript_text, print},

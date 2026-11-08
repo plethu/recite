@@ -1,5 +1,6 @@
 //! Both reading aids reuse one bounded read-only block without mounting more editors.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::{group::named, manuscript_text, print};
 use recite_writer_model::{PassageKind, ScriptEntry};
 use recite_writer_session::{choices::display_name, reading::Excerpt};

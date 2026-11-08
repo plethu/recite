@@ -4,10 +4,10 @@
 //! `OVERSCAN` before committing the camera, so routes and the dot grid must already be drawn
 //! past each viewport edge. This canvas leaves clipping to the Map viewport; its accessible node
 //! still reports the visible viewport.
-mod grid;
-pub(super) use grid::Grid;
 
+mod grid;
 use crate::Writer;
+pub(super) use grid::Grid;
 use recite_writer_session::map::topology::OVERSCAN;
 use xilem::{
     Pod, ViewCtx,
@@ -26,7 +26,7 @@ use xilem::{
 
 const DESCRIPTION: &str = "Dialogue routes; use Connections below for their accessible list.";
 
-pub(super) struct RoutesWidget {
+pub(crate) struct RoutesWidget {
     scene: Scene,
     width: Length,
     grid: Grid,
@@ -69,12 +69,12 @@ impl Widget for RoutesWidget {
 }
 
 /// Re-records the routes from accepted Writer state on every rebuild, like Xilem's canvas.
-pub(super) struct Routes {
+pub(crate) struct Routes {
     width: Length,
     grid: Grid,
     draw: fn(&Writer, &mut Scene),
 }
-pub(super) fn routes(width: Length, grid: Grid, draw: fn(&Writer, &mut Scene)) -> Routes {
+pub(crate) fn routes(width: Length, grid: Grid, draw: fn(&Writer, &mut Scene)) -> Routes {
     Routes { width, grid, draw }
 }
 impl ViewMarker for Routes {}

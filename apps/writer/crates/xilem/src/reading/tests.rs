@@ -1,6 +1,10 @@
+#![allow(unused_imports)]
 use super::*;
 use crate::tests::support::{click, labels, open, project};
+use recite_core::DocumentKey;
+use recite_writer_model::{Passage, PassageKind, ScriptBlock, ScriptEntry, View, Workbench};
 use std::fmt::Write;
+use std::sync::Arc;
 
 #[test]
 fn default_beat_metadata_follows_the_selected_authored_beat() {
@@ -272,6 +276,5 @@ fn preserved_source_selection_distinguishes_readable_script_and_repair() {
             .any(|name| name == "Source editing in your editor")
     );
 }
-
 #[path = "inline/tests.rs"]
 mod inline;

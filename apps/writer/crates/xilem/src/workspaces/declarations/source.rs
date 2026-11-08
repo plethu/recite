@@ -1,108 +1,12 @@
-//! Standalone TOML stays in the user's editor; Writer owns validation and publication.
-use super::*;
+//! Frontend views over `recite_writer_app::workspaces::declarations::source`.
+pub(crate) use recite_writer_app::workspaces::declarations::source::*;
 mod actions;
 mod preview;
 mod repair;
-use recite_writer_session::declarations::{DeclarationAction, SourceStatus};
-use std::path::{Path, PathBuf};
-#[derive(Default)]
-enum Validation {
-    #[default]
-    Unchecked,
-    Valid(SourceStatus),
-    Invalid(String),
-}
+use super::*;
+use recite_writer_session::declarations::DeclarationAction;
 
-#[derive(Default)]
-pub(in crate::workspaces) struct Panel {
-    path: String,
-    import: String,
-    preview: Vec<String>,
-    page: usize,
-    artifact: Option<PathBuf>,
-    archive: Option<PathBuf>,
-    validation: Validation,
-    repair_open: bool,
-    preview_open: bool,
-}
-impl Panel {
-    pub fn invalidate_output(&mut self) {
-        if matches!(self.validation, Validation::Valid(_)) {
-            self.validation = Validation::Unchecked;
-        }
-    }
-    pub fn status_message(&self) -> &'static str {
-        if matches!(self.validation, Validation::Invalid(_)) && self.artifact.is_some() {
-            "Recovered draft exported. Open it in your editor, then import the repaired TOML."
-        } else {
-            self.validation.message()
-        }
-    }
-    pub fn retire_export(&mut self) {
-        self.artifact = None;
-    }
-    pub fn toggle_preview(&mut self) {
-        self.preview_open = !self.preview_open;
-    }
-    pub fn binding_path(&self) -> &str {
-        &self.path
-    }
-    pub fn import_path(&self) -> &str {
-        &self.import
-    }
-    pub fn exported(&self) -> Option<&Path> {
-        self.artifact.as_deref()
-    }
-    pub fn record_artifacts(&mut self, archive: Option<PathBuf>, editable: Option<PathBuf>) {
-        if let Some(path) = archive {
-            self.archive = Some(path);
-        }
-        if let Some(path) = editable {
-            self.import = path.to_string_lossy().into_owned();
-            self.artifact = Some(path);
-            self.repair_open = true;
-        }
-    }
-    pub fn replace_preview(
-        &mut self,
-        preview: Vec<String>,
-        validation: &Result<SourceStatus, String>,
-    ) {
-        self.preview = preview;
-        self.page = 0;
-        self.validation = match validation {
-            Ok(status) => Validation::Valid(*status),
-            Err(error) => Validation::Invalid(
-                super::super::text::pages(error)
-                    .into_iter()
-                    .next()
-                    .unwrap_or_default(),
-            ),
-        };
-    }
-}
-impl Validation {
-    fn message(&self) -> &'static str {
-        match self {
-            Self::Unchecked => {
-                "Generated schema changed. Validate this draft to check whether it needs generation."
-            }
-            Self::Valid(SourceStatus::Current) => {
-                "Source validation passed; generated schema is current."
-            }
-            Self::Valid(SourceStatus::NeedsGeneration) => {
-                "Source validation passed. Save and generate to update the schema."
-            }
-            Self::Valid(SourceStatus::DamagedOutput) => {
-                "Source validation passed; generated schema is damaged. Save and generate to repair it."
-            }
-            Self::Invalid(_) => {
-                "Source needs repair. Export the recovered draft to edit it safely."
-            }
-        }
-    }
-}
-pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
         binding(writer),
@@ -122,6 +26,7 @@ pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
 }
+
 fn binding(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     if writer
         .declaration_session()
@@ -142,6 +47,7 @@ fn binding(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             .disabled(blocked || writer.workspaces.declarations.source.path.trim().is_empty()),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px()))
 }
+
 fn bound_source(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let session = writer.declaration_session()?;
     let source = session.source.as_ref()?;

@@ -73,8 +73,12 @@ Hands-on acceptance is tracked in #237.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Xilem is the Writer frontend. The `recite-writer` package owns presentation, focus and interaction;
-source editing belongs to the shared authoring model, and file replacement, conflict protection and
+Xilem is the Writer frontend. `recite-writer-app` owns Writer state, workflows and policy without a
+GUI toolkit: navigation, focus and pane intent, workspaces, localisation work, preview, recovery and
+the worker jobs they publish. The `recite-writer` package renders that state and owns only native
+presentation, input, accessibility, window hosting and the toolkit workers that run app jobs.
+Behaviour that does not need a widget belongs in the app crate, so the frontend stays replaceable.
+Source editing belongs to the shared authoring model, and file replacement, conflict protection and
 recovery belong to `recite-writer-session`. Language, configuration, compiler and runtime ownership
 remains outside the frontend. Toolkit fixes live on pinned forks; exercise regression checks before
 moving a pin. Software rendering is required wherever no usable GPU is available.

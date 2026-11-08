@@ -1,5 +1,6 @@
 //! Reply components consume one resolved editing session.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::{label, paragraph, text_button};
 use xilem::masonry::kurbo;
 use xilem::{

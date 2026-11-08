@@ -1,5 +1,6 @@
 use super::surface::Surface;
 use super::*;
+use crate::WriterLayout;
 use crate::app::{Request, picker::Search};
 use crate::keyed::column;
 use crate::presentation::Icon;
