@@ -14,7 +14,12 @@ COPY --from=mise-tool /usr/local/bin/mise /usr/local/bin/mise
 WORKDIR /workspace
 COPY .config/mise/config.toml ./.config/mise/config.toml
 COPY package.json ./
-RUN mise install node bun
+# The optional token is never stored in an image layer.
+RUN --mount=type=secret,id=github_token,required=false \
+    if [ -s /run/secrets/github_token ]; then \
+      MISE_GITHUB_TOKEN="$(cat /run/secrets/github_token)" && export MISE_GITHUB_TOKEN; \
+    fi && \
+    mise install node bun
 COPY bun.lock bunfig.toml tsconfig.base.json oxfmt.config.mts oxlint.config.mts ./
 COPY docs-site/package.json ./docs-site/package.json
 COPY editors/vscode/package.json ./editors/vscode/package.json

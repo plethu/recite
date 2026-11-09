@@ -9,6 +9,7 @@ mkdir -p docs-site/.browser-artifacts
 
 LOCAL_UID="$(id -u)"
 LOCAL_GID="$(id -g)"
-export LOCAL_UID LOCAL_GID
+MISE_GITHUB_TOKEN="${MISE_GITHUB_TOKEN:-${GITHUB_TOKEN:-}}"
+export LOCAL_UID LOCAL_GID MISE_GITHUB_TOKEN
 docker compose -f docs-site/compose.yaml run --build --quiet-build --rm browsers \
   bun run playwright test "$@"
