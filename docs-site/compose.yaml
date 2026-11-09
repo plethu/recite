@@ -3,6 +3,8 @@ services:
     build:
       context: ..
       dockerfile: docs-site/Dockerfile.playwright
+      secrets:
+        - github_token
     init: true
     ipc: host
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
@@ -11,3 +13,9 @@ services:
       HOME: /tmp
     volumes:
       - ./.browser-artifacts:/workspace/docs-site/.browser-artifacts
+
+secrets:
+  # Lets mise inside the image build resolve tool versions with CI's token instead of the
+  # unauthenticated GitHub API. check-browser.sh exports an empty value when no token is set.
+  github_token:
+    environment: MISE_GITHUB_TOKEN
