@@ -13,7 +13,7 @@ use xilem::{
     },
 };
 
-mod search;
+use recite_writer_app::presentation::emphasis as search;
 #[derive(PartialEq)]
 enum Emphasis {
     ChangedFrom(ArcStr),

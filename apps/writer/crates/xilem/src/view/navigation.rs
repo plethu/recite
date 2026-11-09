@@ -1,5 +1,4 @@
 use super::*;
-use crate::app::Request;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::map::Workspace;
@@ -54,7 +53,7 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .color(state.palette.accent)
                     .prop(LineBreaking::WordWrap)
                     .width((state.drawer_width() - 48.).px()),
-                |state: &mut Writer| state.app_request = Some(Request::Search(Search::ProjectText)),
+                |state: &mut Writer| state.request_search(Search::ProjectText),
             )
             .disabled(blocked || state.session.project().is_none()),
         ),
@@ -66,7 +65,7 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .color(state.palette.accent)
                     .prop(LineBreaking::WordWrap)
                     .width((state.drawer_width() - 48.).px()),
-                |state: &mut Writer| state.app_request = Some(Request::Search(Search::GoTo)),
+                |state: &mut Writer| state.request_search(Search::GoTo),
             )
             .disabled(blocked),
         ),
@@ -329,7 +328,7 @@ fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
                             .prop(LineBreaking::WordWrap),
                             move |state: &mut Writer| state.select_example(index),
                         )
-                        .disabled(state.phase != Phase::Writing),
+                        .disabled(state.phase() != Phase::Writing),
                     )
                 })
                 .collect::<Vec<_>>(),

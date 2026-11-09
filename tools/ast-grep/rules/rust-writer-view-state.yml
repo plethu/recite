@@ -1,0 +1,28 @@
+id: rust-writer-view-state
+language: Rust
+severity: error
+files:
+  - "apps/writer/crates/xilem/src/**/*.rs"
+ignores:
+  - "**/tests.rs"
+  - "**/tests/**"
+  - "apps/writer/crates/xilem/src/specimen.rs"
+  - "apps/writer/crates/xilem/src/specimen/**"
+message: Change Writer or shell state through a named recite-writer-app operation.
+note: |
+  Views may bind a form field, move a page or list cursor, toggle a disclosure, record a native
+  measurement or wire a worker channel; the allowlisted field names below cover those. Any other
+  state change (phase, requests, menus, coordinated fields, workflows) belongs in recite-writer-app
+  so another frontend gets the same behaviour. See docs/spec/tooling.md §15.5.
+rule:
+  any:
+    - kind: assignment_expression
+    - kind: compound_assignment_expr
+  has:
+    field: left
+    kind: field_expression
+    regex: '^(state|writer|app)\.'
+    not:
+      has:
+        field: field
+        regex: '^(\w*page|place|whole|tools|expanded|\w*open|child|child_id|recovery_details|context_details|keyboard|mode|query|path|import|variant|locale|include_drafts|answer|selected|filter|pinned|sender|runtime|viewport|width|height|available|content|actions)$'

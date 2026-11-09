@@ -153,6 +153,8 @@ class ScopeTests(unittest.TestCase):
             "tests/writer-native/atspi.py",
             "tools/ast-grep/rules/rust-writer-palette.yml",
             "tools/ast-grep/tests/rust-writer-palette-test.yml",
+            "tools/ast-grep/rules/rust-writer-view-state.yml",
+            "tools/ast-grep/tests/rust-writer-view-state-test.yml",
         ):
             self.assertEqual(selected(path), {"writer", "maintainability"})
 

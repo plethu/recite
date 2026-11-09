@@ -1,8 +1,12 @@
+#![allow(unused_imports)]
+use super::super::{Phase, Writer, feedback};
 use super::*;
+use crate::external_editor::linked::Link;
 use crate::tests::support::{finish_work, open, project};
+use recite_writer_model::EditOperation;
 use recite_writer_session::project::save::sequence::Work;
 use tokio::sync::mpsc as async_mpsc;
-use xilem::AppState;
+use tokio::sync::mpsc::UnboundedSender;
 
 #[test]
 fn save_stays_responsive_and_retains_typing_that_arrived_after_disk_dispatch() {
@@ -64,7 +68,7 @@ fn typing_during_apply_saves_captured_source_and_preserves_the_live_draft() {
     writer.accept_save_work(receipt);
     finish_work(&mut writer, &mut requests).unwrap();
     assert!(writer.keep_running());
-    assert!(writer.phase == Phase::ConfirmClose);
+    assert!(writer.phase() == Phase::ConfirmClose);
     assert!(!writer.work.busy());
     assert_eq!(
         writer.session.model().draft(),

@@ -1,5 +1,6 @@
 //! The manuscript's place is projected at an accepted reading boundary.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::print;
 use xilem::{
     masonry::{

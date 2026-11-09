@@ -1,4 +1,5 @@
 use super::{Phase, Writer, keyed::keyed};
+use crate::WriterLayout;
 use crate::presentation::{label, paragraph, prose, text_button};
 use recite_writer_model::View;
 use xilem::core::one_of::Either;
@@ -12,7 +13,7 @@ use xilem::view::{
 use xilem::{InsertNewline, WidgetView};
 
 mod manuscript;
-mod surface;
+use recite_writer_app::reading::surface;
 pub(super) mod workspace;
 use workspace::workspace;
 #[derive(Clone, Copy, Default, PartialEq)]

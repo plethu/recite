@@ -1,5 +1,11 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::WindowKey;
+use crate::{Phase, Writer, map::Workspace};
 use crate::{keyed, presentation, tests::support, view};
+use composition::Composition;
+use recite_core::DocumentKey;
+use recite_writer_model::View;
 use std::sync::Arc;
 use tokio::sync::mpsc as async_mpsc;
 use xilem::{

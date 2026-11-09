@@ -58,7 +58,7 @@ fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .prop(LineBreaking::WordWrap)
         .width(if wide { width * 0.52 } else { width }.px()),
         (queue && writer.localisation.has_catalogue()).then(|| {
-            label(writer.ui_scale(), entry::catalogue_caption(writer))
+            label(writer.ui_scale(), writer.localisation.catalogue_caption())
                 .prop(LineBreaking::WordWrap)
                 .width(if wide { width * 0.45 } else { width }.px())
                 .color(writer.palette.muted)
@@ -123,18 +123,11 @@ pub(crate) fn close_details(writer: &Writer) -> Option<impl WidgetView<Writer> +
                 "Reopening this project and catalogue restores these drafts.",
                 640.,
             ),
-            text_button(scale, "Open unsaved translations", |writer: &mut Writer| {
-                writer.phase = Phase::Writing;
-                writer.localisation.keep_editing();
-                writer.work.keep_editing();
-                writer.enter_localisation();
-                writer.localisation.query.filter = Filter::Unsaved;
-                writer.search_catalogue();
-            })
+            text_button(scale, "Open unsaved translations", Writer::open_unsaved_translations)
             .disabled(writer.project_jobs_busy()),
             paragraph(scale, "Discarding translations removes all PO drafts. Unsaved source work stays in recovery.", 640.),
             text_button(scale, "Discard translations and close", Writer::discard_translations_and_close)
-                .disabled(writer.phase != Phase::ConfirmClose || writer.project_jobs_busy() || writer.localisation.slot.read_only() || writer.localisation.saving()),
+                .disabled(writer.phase() != Phase::ConfirmClose || writer.project_jobs_busy() || writer.localisation.slot.read_only() || writer.localisation.saving()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(8.px()),

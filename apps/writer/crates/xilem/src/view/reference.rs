@@ -1,5 +1,6 @@
 //! Both reading aids reuse one bounded read-only block without mounting more editors.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::{group::named, manuscript_text, print};
 use recite_writer_model::{PassageKind, ScriptEntry};
 use recite_writer_session::{choices::display_name, reading::Excerpt};
@@ -40,7 +41,7 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                         } else {
                             "Hide reference"
                         },
-                        state.phase != Phase::Writing,
+                        state.phase() != Phase::Writing,
                         |state: &mut Writer| {
                             if let Some(pinned) = &mut state.reading_context.pinned {
                                 pinned.collapsed = !pinned.collapsed;
@@ -67,7 +68,7 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                     print::action(
                         scale,
                         "Unpin reference",
-                        state.phase != Phase::Writing,
+                        state.phase() != Phase::Writing,
                         |state: &mut Writer| state.reading_context.pinned = None,
                     )
                     .padding(Padding::from_vh(
@@ -135,7 +136,7 @@ pub(crate) fn destination(
                 print::action(
                     state.ui_scale(),
                     format!("Edit {}", display_name(&block.id)),
-                    state.phase != Phase::Writing || state.navigation.busy() || state.work.busy(),
+                    state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
                     move |state: &mut Writer| state.inspect(target.clone()),
                 ),
             ))

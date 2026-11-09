@@ -18,7 +18,7 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 print::action(
                     scale,
                     "Return to writing",
-                    state.phase != Phase::Writing,
+                    state.phase() != Phase::Writing,
                     Writer::return_from_trial,
                 ),
                 print::action(
@@ -28,7 +28,7 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     } else {
                         "Configure preview"
                     },
-                    state.phase != Phase::Writing,
+                    state.phase() != Phase::Writing,
                     |state: &mut Writer| {
                         if state.configuring_trial() {
                             state.close_trial_inputs();
@@ -59,7 +59,7 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
 
 fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing || state.session.read_only();
+    let closing = state.phase() != Phase::Writing || state.session.read_only();
     let unfinished = state.unfinished_trial_edit().is_some();
     let applying = state.navigation.applying_preview();
     flex_row((

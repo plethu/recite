@@ -35,7 +35,7 @@ fn fields(
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
     let key = &translation.key;
-    let blocked = writer.localisation.slot.read_only() || writer.phase != Phase::Writing;
+    let blocked = writer.localisation.slot.read_only() || writer.phase() != Phase::Writing;
     let status = writer.localisation.slot.owner().map_or_else(
         || "Catalogue action in progress".into(),
         |owner| TranslationStatus::entry_label(&owner.catalogue, key.id),

@@ -103,7 +103,7 @@ fn form(
             format!(
                 "{} · {}",
                 entry.details.plural.form_caption(index),
-                catalogue_caption(writer)
+                writer.localisation.catalogue_caption()
             ),
             entry_width(writer),
         ),
@@ -112,27 +112,4 @@ fn form(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())
-}
-pub(in crate::localisation::view) fn catalogue_caption(writer: &Writer) -> String {
-    let catalogue = &writer.localisation;
-    let filename = catalogue
-        .catalogue_path()
-        .and_then(|path| path.file_name())
-        .map(|name| name.to_string_lossy())
-        .unwrap_or_else(|| "PO catalogue".into());
-    let language = catalogue.slot.document().and_then(|document| {
-        document
-            .headers()
-            .iter()
-            .find(|header| header.key().eq_ignore_ascii_case("Language"))
-            .map(|header| header.value())
-    });
-    match language.filter(|language| !language.is_empty()) {
-        Some(language) => format!(
-            "{} · {}",
-            language.chars().take(80).collect::<String>(),
-            filename.chars().take(80).collect::<String>()
-        ),
-        None => filename.chars().take(80).collect(),
-    }
 }

@@ -13,6 +13,7 @@ recite-core.workspace = true
 recite-compiler.workspace = true
 recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }
 recite-runtime.workspace = true
+recite-writer-app.workspace = true
 recite-writer-model.workspace = true
 recite-writer-session.workspace = true
 rfd = "=0.17.2"
@@ -22,6 +23,7 @@ usvg = { version = "=0.47.0", default-features = false }
 xilem = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "d58c5384b99a46cf8dd7308204374fc94f13878e" }
 
 [dev-dependencies]
+recite-writer-app = { workspace = true, features = ["test-support"] }
 accesskit_atspi_common = "0.18.1"
 atspi-common = { version = "0.13", default-features = false }
 tempfile = "3"

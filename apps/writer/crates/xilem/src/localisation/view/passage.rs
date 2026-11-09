@@ -71,7 +71,7 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
                 writer.ui_scale(),
                 format!(
                     "Source, read only · Translation: {}",
-                    entry::catalogue_caption(writer)
+                    writer.localisation.catalogue_caption()
                 ),
                 width,
             ),

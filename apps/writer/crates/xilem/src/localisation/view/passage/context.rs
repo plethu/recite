@@ -25,7 +25,7 @@ pub(super) fn context(
                     writer.ui_scale(),
                     "Previous beat context part",
                     move |writer: &mut Writer| {
-                        if let Some(row) = find(writer, index) {
+                        if let Some(row) = writer.localisation.context_row_mut(index) {
                             row.page = row.page.saturating_sub(1);
                         }
                     },
@@ -35,7 +35,7 @@ pub(super) fn context(
                     writer.ui_scale(),
                     "More beat context",
                     move |writer: &mut Writer| {
-                        if let Some(row) = find(writer, index) {
+                        if let Some(row) = writer.localisation.context_row_mut(index) {
                             row.page = (row.page + 1).min(row.pages.len().saturating_sub(1));
                         }
                     },
@@ -47,16 +47,4 @@ pub(super) fn context(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())
-}
-fn find(writer: &mut Writer, index: usize) -> Option<&mut beat::Context> {
-    writer
-        .localisation
-        .passage
-        .as_mut()?
-        .rows
-        .iter_mut()
-        .find_map(|row| match row {
-            beat::Row::Context(row) if row.index == index => Some(row),
-            _ => None,
-        })
 }

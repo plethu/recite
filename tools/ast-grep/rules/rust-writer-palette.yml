@@ -2,8 +2,10 @@ id: rust-writer-palette
 language: Rust
 severity: error
 files:
+  - "apps/writer/crates/app/src/**/*.rs"
   - "apps/writer/crates/xilem/src/**/*.rs"
 ignores:
+  - "apps/writer/crates/app/src/presentation.rs"
   - "apps/writer/crates/xilem/src/presentation/theme.rs"
   - "apps/writer/crates/xilem/src/presentation.rs"
   - "**/tests.rs"

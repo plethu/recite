@@ -55,7 +55,7 @@ pub(super) fn frame<V: WidgetView<Writer>>(
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .gap(0.px()),
             state
-                .document_menu
+                .document_menu()
                 .is_open()
                 .then(|| document_actions::panel(state)),
         ))
@@ -63,5 +63,5 @@ pub(super) fn frame<V: WidgetView<Writer>>(
         .boxed(),
         document_actions::close_view(state).boxed(),
     ))
-    .active(usize::from(state.phase != Phase::Writing))
+    .active(usize::from(state.phase() != Phase::Writing))
 }

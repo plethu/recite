@@ -127,11 +127,11 @@ fn mounted_unsaved_translation_reentry_and_paged_report_keep_close_recoverable()
         Ok(())
     });
     mounted.activate("Close");
-    assert!(mounted.state.phase == Phase::ConfirmClose);
+    assert!(mounted.state.phase() == Phase::ConfirmClose);
     mounted.activate("Open unsaved translations");
     driver.finish(&mut mounted.state);
     mounted.settle();
-    assert!(mounted.state.phase == Phase::Writing);
+    assert!(mounted.state.phase() == Phase::Writing);
     assert_eq!(form(&mounted.state, &key), "Discard only this translation.");
     let report = format!(
         "Report start\n{}\nReport end",
@@ -151,7 +151,7 @@ fn mounted_unsaved_translation_reentry_and_paged_report_keep_close_recoverable()
     mounted.activate("Close");
     mounted.activate("Discard translations and close");
     driver.finish(&mut mounted.state);
-    assert!(mounted.state.phase == Phase::Closed);
+    assert!(mounted.state.phase() == Phase::Closed);
     assert_eq!(
         fs::read_to_string(directory.path().join("scene.recite")).unwrap(),
         SOURCE

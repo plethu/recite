@@ -1,4 +1,10 @@
-//! Local native input delivery; the widget owns capture, never authoring or file I/O.
+//! Frontend views and native glue over `recite_writer_app::map::input`.
+pub(crate) use recite_writer_app::map::input::*;
+#[cfg(test)]
+mod tests;
+mod view;
+pub(super) use view::input;
+
 use super::Detail;
 use crate::presentation::material::{DotScreen, ScreenCache};
 use std::any::TypeId;
@@ -6,9 +12,6 @@ mod events;
 mod focus;
 mod pan;
 mod press;
-mod view;
-pub(super) use focus::{FocusRequest, FocusToken};
-pub(super) use view::input;
 use xilem::masonry::widgets;
 use xilem::masonry::{
     accesskit::{Action, Node, Role},
@@ -22,35 +25,9 @@ use xilem::masonry::{
     layout::{LenReq, Length},
     properties::{BorderColor, CornerRadius},
 };
-#[derive(Clone, Debug, PartialEq)]
-pub(super) enum Kind {
-    Viewport(Detail),
-    Grip(String),
-    Card { title: String, selected: bool },
-}
-impl Kind {
-    fn is_card(&self) -> bool {
-        matches!(self, Self::Card { .. })
-    }
-}
+
 #[derive(Debug)]
-pub(super) enum Input {
-    Begin(Point),
-    Move(Point),
-    Finish,
-    OverviewClick(Point),
-    Cancel,
-    Pan(Vec2),
-    Zoom { factor: f32, anchor: Point },
-    Direction(Vec2),
-    Open,
-    Search,
-    Focus,
-    Hover(bool),
-    Focused(FocusToken),
-}
-#[derive(Debug)]
-pub(super) enum NativeAction {
+pub enum NativeAction {
     Input(Input),
     FocusTarget {
         target: core::WidgetId,
@@ -72,7 +49,7 @@ enum Motion {
     ClickCandidate(Point),
     Dragging,
 }
-pub(super) struct InputWidget {
+pub struct InputWidget {
     child: WidgetPod<dyn Widget>,
     kind: Kind,
     vim: bool,
@@ -283,6 +260,3 @@ impl Widget for InputWidget {
         }
     }
 }
-
-#[cfg(test)]
-mod tests;

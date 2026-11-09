@@ -1,10 +1,11 @@
 //! Source drafts are repaired in a real editor, then imported through checked Apply.
 use super::*;
+use crate::WriterLayout;
 use xilem::masonry::properties::TextAreaLabel;
 
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let busy = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
+    let busy = state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy();
     let project = state.session.project();
     let exported = state.repair.artifact.as_ref().is_some_and(|artifact| {
         project.is_some_and(|project| project.current().path() == artifact.document)

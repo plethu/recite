@@ -1,14 +1,17 @@
+#![allow(unused_imports)]
+use super::super::super::{ContextUpdate, declarations::producer_description, text};
 use super::super::tests::{finish, fixture};
+use super::super::*;
 use super::*;
+use crate::Phase;
+use crate::external_editor::Request as EditorRequest;
 use crate::{tests::support, workspaces::Screen};
+use recite_writer_session::declarations::DeclarationAction;
+use recite_writer_session::declarations::SourceStatus;
 use std::fs;
 use tokio::sync::mpsc;
 #[path = "metadata/tests.rs"]
-mod metadata;
-#[path = "visual/tests.rs"]
-mod visual;
-#[path = "workflow/tests.rs"]
-mod workflow;
+pub mod metadata;
 
 #[test]
 fn source_binding_keeps_close_guarded_until_the_same_worker_finishes_retirement() {
@@ -28,7 +31,7 @@ fn source_binding_keeps_close_guarded_until_the_same_worker_finishes_retirement(
     assert!(writer.declaration_session().unwrap().busy());
     writer.return_to_writing();
     writer.request_close();
-    assert!(writer.phase == Phase::Writing);
+    assert!(writer.phase() == Phase::Writing);
     let terminal = retirement.finish(request).unwrap();
     assert!(writer.project_jobs_busy());
     writer.accept_tool(terminal);
@@ -134,3 +137,7 @@ fn source_dispatch_failure_releases_both_domain_and_transport_activity() {
     assert!(writer.declaration_session().unwrap().source.is_none());
     assert!(writer.status.contains("worker stopped"));
 }
+#[path = "visual/tests.rs"]
+mod visual;
+#[path = "workflow/tests.rs"]
+mod workflow;

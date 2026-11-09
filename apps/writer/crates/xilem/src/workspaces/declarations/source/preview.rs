@@ -1,5 +1,5 @@
 use super::*;
-pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+pub fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
         text_button(

@@ -1,14 +1,15 @@
 //! Runtime controls; capture policy and traversal stay in the shared owners.
 use super::*;
+use crate::WriterLayout;
 use crate::{
     attention::{Pane, PaneEntry, Region},
     presentation::{group::named, manuscript_text, print},
     trial::Review,
 };
+use recite_writer_app::trial::captions;
 use recite_writer_model::PreviewPage;
 use recite_writer_session::preview::catalogue_stale;
 use xilem::view::{GridExt, GridTrackSize, grid, portal};
-mod captions;
 mod context;
 mod controls;
 mod feedback;
@@ -30,7 +31,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn content(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing || state.session.read_only();
+    let closing = state.phase() != Phase::Writing || state.session.read_only();
     let busy = state.trial.busy();
     let model = state.session.model();
     let page = model.preview_page().filter(|_| state.trial.visible);

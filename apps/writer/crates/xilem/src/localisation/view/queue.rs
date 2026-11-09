@@ -1,4 +1,5 @@
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::{manuscript_text, print};
 use xilem::masonry::kurbo::Axis;
 pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {

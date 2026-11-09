@@ -1,6 +1,7 @@
 use super::surface::Surface;
 use super::*;
-use crate::app::{Request, picker::Search};
+use crate::WriterLayout;
+use crate::app::picker::Search;
 use crate::keyed::column;
 use crate::presentation::Icon;
 use crate::presentation::material;
@@ -32,7 +33,7 @@ pub(super) fn repair(state: &Writer, error: &str) -> impl WidgetView<Writer> + u
         label(state.ui_scale(), "Source editing in your editor"),
         paragraph(state.ui_scale(), "Choose Open in editor to repair the source, then Reload (keep recovery copy). Your source bytes are preserved.", state.script_width()),
         paragraph(state.ui_scale(), error.to_owned(), state.script_width()),
-        state.session.project().map(|_| print::action(state.ui_scale(), "Open in editor", state.phase != Phase::Writing || state.external.busy(), Writer::open_editor)),
+        state.session.project().map(|_| print::action(state.ui_scale(), "Open in editor", state.phase() != Phase::Writing || state.external.busy(), Writer::open_editor)),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
 }
 pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -139,7 +140,7 @@ fn content(state: &Writer, beat: &str, row: &Row, width: f64) -> Box<AnyWidgetVi
 pub(super) fn reply_actions(state: &Writer, id: &str) -> impl WidgetView<Writer> + use<> {
     let rule_id = id.to_owned();
     let route_id = id.to_owned();
-    let disabled = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
+    let disabled = state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy();
     flex_col((
         text_button(
             state.ui_scale(),
@@ -186,7 +187,7 @@ fn continuation(
                     },
                     display_name(&target)
                 ),
-                state.phase != Phase::Writing,
+                state.phase() != Phase::Writing,
                 move |state: &mut Writer| state.toggle_destination_preview(toggle.clone()),
             )
         }),
@@ -198,7 +199,7 @@ fn continuation(
             print::action(
                 state.ui_scale(),
                 "Change continuation…",
-                state.phase != Phase::Writing || state.navigation.busy() || state.work.busy(),
+                state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
                 move |state: &mut Writer| state.choose_destination(owner.clone()),
             )
         }),

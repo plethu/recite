@@ -1,5 +1,6 @@
 //! Optional native child lifecycle; stale messages never need a fabricated Writer.
 use super::*;
+use crate::Writer;
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
@@ -11,7 +12,7 @@ use xilem::{
 };
 
 pub(super) struct WriterSlot<V> {
-    key: Option<WindowId>,
+    key: Option<recite_writer_app::WindowKey>,
     child: Option<V>,
 }
 pub(super) struct SlotState<T> {
@@ -121,18 +122,10 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
         };
         if let Some(text) = writer.pending_clipboard.take() {
             element.ctx.set_clipboard(text);
-            writer.status = "Link sent to clipboard.".into();
+            writer.clipboard_written();
         }
-        writer.refresh_map_if_needed();
-        writer.resume_external_notices();
-        writer.resume_linked_editor();
-        let request = writer.app_request.take();
-        app.open_editor_choices();
-        match request {
-            Some(super::Request::Search(search)) => app.open_picker(search),
-            Some(super::Request::Workspace) => app.workspace_menu = !app.workspace_menu,
-            None => {}
-        }
+        writer.after_native_message();
+        app.apply_writer_requests();
         result
     }
 }

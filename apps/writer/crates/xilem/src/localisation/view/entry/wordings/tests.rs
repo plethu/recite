@@ -2,6 +2,7 @@ use super::*;
 use crate::localisation::tests::{fixture, key};
 use crate::presentation::Theme;
 use crate::tests::support;
+use recite_core::po::PoEntryId;
 use std::{fmt::Write as _, sync::Arc};
 use xilem::{
     ViewCtx,

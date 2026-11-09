@@ -1,5 +1,10 @@
+#![allow(unused_imports)]
+use super::super::*;
 use super::*;
 use crate::tests::support::NoProxy;
+use recite_writer_model::{PreparedSourceRepair, SourceRepairRequest};
+use recite_writer_session::project::save::ordered;
+use recite_writer_session::project::{SourceRepairArtifact, SourceRepairExport};
 use tokio::sync::mpsc as async_mpsc;
 use xilem::{
     ViewCtx,

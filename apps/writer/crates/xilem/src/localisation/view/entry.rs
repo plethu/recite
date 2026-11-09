@@ -1,11 +1,11 @@
 use super::*;
+use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::navigation::Target;
 use recite_writer_session::localisation::catalogue::Draft;
 use recite_writer_session::location::Screen as LinkedScreen;
 use xilem::view::{GridExt, GridTrackSize, grid};
 mod forms;
-pub(super) use forms::catalogue_caption;
 mod plural;
 mod source;
 #[cfg(test)]
@@ -15,7 +15,7 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
     let state = &writer.localisation;
     let entry = state.entry.as_ref()?;
     let draft = state.slot.draft(entry.key.id)?;
-    let blocked = state.slot.read_only() || writer.phase != Phase::Writing;
+    let blocked = state.slot.read_only() || writer.phase() != Phase::Writing;
     Some(
         flex_col((
             navigation(writer, blocked),

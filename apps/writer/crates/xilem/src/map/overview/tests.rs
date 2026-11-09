@@ -1,5 +1,9 @@
+#![allow(unused_imports)]
+use super::super::*;
 use super::*;
 use crate::tests::support::{NoProxy, native_label};
+use kurbo::Rect;
+use recite_writer_session::map::layout::HEIGHT;
 use xilem::{
     ViewCtx,
     core::View,

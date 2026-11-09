@@ -1,7 +1,17 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
 use crate::attention::PaneMotion;
+use crate::attention::{DocumentMenu, EditingTarget, FieldRestoration};
+use crate::session::Session;
 use crate::tests::support;
 use crate::tests::support::NoProxy;
+use recite_config::WriterCommand;
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use xilem::masonry::theme;
 use xilem::{core::DynMessage, masonry::testing::TestHarness};
@@ -33,8 +43,8 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             (300, 100),
         );
         match change {
-            0 => app.show_welcome = true,
-            1 => app.settings_open = true,
+            0 => recite_writer_app::test_support::set_welcome(&mut app.shell, true),
+            1 => recite_writer_app::test_support::set_settings(&mut app.shell, true),
             2 => app.writer = Some(Writer::from_session(Session::examples().unwrap(), None)),
             3 => app
                 .writer
@@ -57,7 +67,10 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             6 => app.writer.as_mut().unwrap().toggle_focus(),
             7 => app.preferences.config.ui.keymap = recite_config::Keymap::Vim,
             8 => app.writer.as_mut().unwrap().focus_pane(PaneMotion::Left),
-            9 => app.writer.as_mut().unwrap().phase = Phase::ConfirmClose,
+            9 => recite_writer_app::test_support::set_phase(
+                app.writer.as_mut().unwrap(),
+                Phase::ConfirmClose,
+            ),
             10 => app.writer.as_mut().unwrap().workspaces.screen = crate::workspaces::Screen::Build,
             12 => app
                 .writer
@@ -81,7 +94,10 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                     .edit(|model| model.select(recite_writer_model::View::Passage(target)))
                     .unwrap();
             }
-            _ => app.writer.as_mut().unwrap().document_menu = DocumentMenu::Open,
+            _ => recite_writer_app::test_support::set_document_menu(
+                app.writer.as_mut().unwrap(),
+                DocumentMenu::Open,
+            ),
         }
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),
@@ -100,7 +116,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         *ctx.environment() = message.finish().0;
         let next = host(&app, xilem::view::label("Keyboard host"));
         harness.edit_root_widget(|root| next.rebuild(&view, &mut state, &mut ctx, root, &mut app));
-        assert_ne!(state.generation, CommandGeneration::default());
+        assert_ne!(state.generations.command, CommandGeneration::default());
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),
             Vec::new(),
@@ -123,7 +139,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                 } else {
                     WriterCommand::Settings
                 }),
-                generation: state.generation,
+                generation: state.generations.command,
             }),
         );
         assert!(matches!(
@@ -133,10 +149,10 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         if change == 5 {
             assert!(app.picker.is_none());
         } else if change == 9 {
-            assert!(!app.settings_open);
+            assert!(!app.settings_open());
             assert!(app.status.contains("Choose how to close"));
         } else {
-            assert!(app.settings_open);
+            assert!(app.settings_open());
         }
     }
 }
@@ -155,9 +171,9 @@ fn queued_save_survives_focus_acknowledgement_and_context_refresh_without_losing
             if blur {
                 writer.attention.set_field(Some(target.clone()));
             } else {
-                writer.phase = Phase::ConfirmClose;
+                recite_writer_app::test_support::set_phase(&mut writer, Phase::ConfirmClose);
                 writer.native_field_focus(Some(EditingTarget::passage(&writer, "rthh7ab".into())));
-                writer.phase = Phase::Writing;
+                recite_writer_app::test_support::set_phase(&mut writer, Phase::Writing);
                 assert_eq!(
                     writer.field_restoration(),
                     Some(FieldRestoration::Passage(target.clone()))
@@ -175,7 +191,7 @@ fn queued_save_survives_focus_acknowledgement_and_context_refresh_without_losing
                 pod.new_widget,
                 (300, 100),
             );
-            let generation = state.generation;
+            let generation = state.generations.command;
             let (sender, mut work) = mpsc::unbounded_channel();
             app.writer.as_mut().unwrap().work.sender = Some(sender);
             let mut message = MessageCtx::new(
@@ -273,7 +289,7 @@ fn clearing_refused_focus_retires_its_request_without_retargeting_a_queued_save(
             pod.new_widget,
             (300, 100),
         );
-        let generation = state.generation;
+        let generation = state.generations.command;
         let (sender, mut work) = mpsc::unbounded_channel();
         app.writer.as_mut().unwrap().work.sender = Some(sender);
         let mut message = MessageCtx::new(
@@ -294,7 +310,7 @@ fn clearing_refused_focus_retires_its_request_without_retargeting_a_queued_save(
         if rebuild {
             harness
                 .edit_root_widget(|root| next.rebuild(&view, &mut state, &mut ctx, root, &mut app));
-            assert_eq!(state.generation, generation);
+            assert_eq!(state.generations.command, generation);
             assert!(
                 harness
                     .root_widget()

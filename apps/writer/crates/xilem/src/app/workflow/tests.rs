@@ -1,4 +1,9 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::session::Session;
 use crate::{
     keyed::keyed,
     map::Workspace,
@@ -7,7 +12,10 @@ use crate::{
 };
 use recite_config::WriterCommand;
 use recite_writer_session::commands;
+use recite_writer_session::startup::{LaunchOptions, Startup};
 use std::fs;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc as async_mpsc;
 use xilem::{WidgetView, masonry::widgets::Passthrough};
 
@@ -177,7 +185,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     }
     mounted.activate("Workspace");
     mounted.activate("Projects");
-    assert!(mounted.state.show_welcome);
+    assert!(mounted.state.show_welcome());
     mounted.activate("Create a new project");
     mounted.type_text(
         "Project folder",
@@ -185,7 +193,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     );
     mounted.type_text("Project name", "A new project");
     mounted.activate("Return to Writer");
-    assert!(!mounted.state.show_welcome);
+    assert!(!mounted.state.show_welcome());
     assert!(mounted.state.keep_running());
     assert_eq!(
         mounted

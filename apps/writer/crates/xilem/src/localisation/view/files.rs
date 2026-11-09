@@ -6,7 +6,7 @@ pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let state = &writer.localisation;
     let queue = matches!(state.destination, Destination::Queue);
     flex_col((
-        state.slot.path().filter(|_| !queue).map(|_| paragraph(scale, entry::catalogue_caption(writer), writer.content_width())),
+        state.slot.path().filter(|_| !queue).map(|_| paragraph(scale, writer.localisation.catalogue_caption(), writer.content_width())),
         queue.then(|| flex_row((
             text_button(scale, if state.files_open { "Hide catalogue files" } else { "Catalogue files" }, |writer: &mut Writer| writer.localisation.files_open = !writer.localisation.files_open),
             state.has_catalogue().then(|| text_button(scale, "Translate current beat", |writer: &mut Writer| writer.open_translation_beat(0)).disabled(writer.project_action_blocked())),

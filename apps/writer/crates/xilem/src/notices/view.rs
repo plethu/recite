@@ -1,6 +1,6 @@
 use super::{Evidence, Target, Writer};
 use crate::{
-    Phase, navigation,
+    Phase,
     presentation::{label, paragraph, text_button},
 };
 use xilem::{
@@ -39,7 +39,7 @@ fn notice(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
         .and_then(|project| path.strip_prefix(project.root()).ok())
         .unwrap_or(path);
     let scale = writer.ui_scale();
-    let blocked = writer.phase != Phase::Writing || writer.project_action_blocked();
+    let blocked = writer.phase() != Phase::Writing || writer.project_action_blocked();
     let current = match evidence {
         Evidence::Source(observed) => writer
             .session
@@ -97,40 +97,5 @@ fn actions(writer: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
         )
     } else {
         Either::B(flex_row(actions).gap(8.px()))
-    }
-}
-impl Writer {
-    pub(super) fn compare_noticed_change(&mut self) {
-        if self.phase != Phase::Writing || self.project_action_blocked() {
-            return;
-        }
-        match self.notices.selected() {
-            Some((Target::Source(path), Evidence::Source(observation)))
-                if self
-                    .session
-                    .project()
-                    .is_some_and(|project| observation.is_current(project.files())) =>
-            {
-                let path = path.clone();
-                if self
-                    .session
-                    .project()
-                    .is_some_and(|project| project.current().path() == path)
-                {
-                    self.compare_disk_changes();
-                } else if let Err(error) =
-                    self.begin_navigation(navigation::Target::CompareFile(path))
-                {
-                    self.status = error;
-                }
-            }
-            Some((_, Evidence::Catalogue(observation)))
-                if observation.is_current(&self.localisation) =>
-            {
-                let scope = observation.scope().clone();
-                self.compare_noticed_catalogue(&scope);
-            }
-            _ => (),
-        }
     }
 }

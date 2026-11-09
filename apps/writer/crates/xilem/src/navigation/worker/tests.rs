@@ -1,5 +1,12 @@
+#![allow(unused_imports)]
+use super::super::*;
 use super::*;
 use crate::tests::support::{self, worker::Worker};
+use recite_writer_model::{EditRequest, PreparedEdit};
+use recite_writer_session::{
+    navigation::{Prepare, Prepared},
+    project::{Checkpoint, PreparedReload, ReadyCheckpoint, ReloadRequest},
+};
 use std::{fs, path::Path};
 
 #[test]

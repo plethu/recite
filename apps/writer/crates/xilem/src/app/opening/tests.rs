@@ -1,5 +1,14 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::session::Session;
 use crate::tests::support::{open, project};
+use recite_config::WriterCommand;
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic;
 use tokio::sync::mpsc as async_mpsc;
 #[path = "workflow/tests.rs"]
@@ -96,7 +105,7 @@ fn obsolete_cold_load_preserves_the_live_writer_and_retires_the_unused_owner() {
             assert_eq!(writer.session.model().draft(), "Keep this newer draft.");
         }
         if action == "close" {
-            assert!(writer.phase != Phase::Writing);
+            assert!(writer.phase() != Phase::Writing);
         }
         assert!(app.status.contains("current work remains open"));
         let unused = retired.try_recv().unwrap().unwrap();

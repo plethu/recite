@@ -1,6 +1,6 @@
 use super::*;
+use crate::WriterLayout;
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
-use recite_writer_session::FileError;
 use xilem::masonry::properties;
 
 pub(super) fn playback(
@@ -23,7 +23,7 @@ pub(super) fn playback(
         .map(|(index, choice)| {
             text_button(scale, choice.text.clone(), move |state: &mut Writer| {
                 let result = state.session.advance_preview(Some(index));
-                report(state, result);
+                state.report_trial_step(result);
             })
             .disabled(disabled)
         })
@@ -76,14 +76,14 @@ pub(super) fn playback(
             flex_row((
                 text_button(scale, "Acknowledge effect", |state: &mut Writer| {
                     let result = state.session.acknowledge_preview(EffectAck::Completed);
-                    report(state, result);
+                    state.report_trial_step(result);
                 })
                 .disabled(disabled),
                 text_button(scale, "Report effect failure", |state: &mut Writer| {
                     let result = state.session.acknowledge_preview(EffectAck::Failed {
                         reason: "Simulated preview failure".into(),
                     });
-                    report(state, result);
+                    state.report_trial_step(result);
                 })
                 .disabled(disabled),
             ))
@@ -109,7 +109,7 @@ pub(super) fn playback(
         can_continue.then(|| {
             text_button(scale, "Continue preview", |state: &mut Writer| {
                 let result = state.session.advance_preview(None);
-                report(state, result);
+                state.report_trial_step(result);
             })
             .disabled(disabled)
         }),
@@ -133,7 +133,7 @@ fn condition(
                     if value { "Answer true" } else { "Answer false" },
                     move |state: &mut Writer| {
                         let result = state.session.answer_preview(ConditionValue::Bool(value));
-                        report(state, result);
+                        state.report_trial_step(result);
                     },
                 )
                 .disabled(disabled)
@@ -153,20 +153,11 @@ fn condition(
                 text_button(scale, "Answer condition", |state: &mut Writer| {
                     let value = ConditionValue::EnumVariant(state.trial.answer.trim().to_owned());
                     let result = state.session.answer_preview(value);
-                    report(state, result);
+                    state.report_trial_step(result);
                 })
                 .disabled(disabled || state.trial.answer.trim().is_empty()),
             ))
             .gap(8.px()),
         ),
     }
-}
-
-fn report(state: &mut Writer, result: Result<(), FileError>) {
-    state.trial.choice_page = 0;
-    state.trial.effect_page = 0;
-    state.trial.status = match result {
-        Ok(()) => String::new(),
-        Err(error) => error.to_string(),
-    };
 }

@@ -1,4 +1,8 @@
+#![allow(unused_imports)]
+use super::super::Detail;
 use super::*;
+use std::sync::Arc;
+use xilem::masonry::kurbo::{Point, Vec2};
 use xilem::masonry::{
     core::{
         PointerButton, PointerEvent, PointerGesture, PointerGestureEvent, PointerId, PointerInfo,

@@ -1,0 +1,29 @@
+id: rust-writer-view-state
+valid:
+  - |
+    fn view() {
+        let next = |state: &mut Writer| state.trial.choice_page += 1;
+        let bind = |app: &mut App, text| app.settings.query = text;
+        let fold = |writer: &mut Writer| writer.trial.trace.open = !writer.trial.trace.open;
+        let wire = |writer: &mut Writer, sender| writer.work.sender = Some(sender);
+        let size = |app: &mut App, size| app.viewport = size;
+        let intent = |state: &mut Writer| state.keep_editing();
+    }
+  - |
+    impl Widget {
+        fn update(&mut self) {
+            self.phase = Phase::Writing;
+            element.widget.width = width;
+        }
+    }
+invalid:
+  - |
+    fn view() { let close = |state: &mut Writer| state.phase = Phase::Writing; }
+  - |
+    fn view() { let menu = |app: &mut App| app.workspace_menu = !app.workspace_menu; }
+  - |
+    fn view() { let request = |state: &mut Writer| state.app_request = None; }
+  - |
+    fn view() { let status = |writer: &mut Writer| writer.status = message; }
+  - |
+    fn view() { let count = |app: &mut App| app.retries += 1; }

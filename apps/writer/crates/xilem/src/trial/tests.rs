@@ -1,8 +1,23 @@
+#![allow(unused_imports)]
+use super::super::{Phase, Writer};
 use super::*;
 use crate::tests::support::{self, click, labels, open, project};
+use crate::{
+    attention::{Pane, PaneMotion},
+    map::Workspace,
+    workspaces::Screen,
+};
+use preparation::{Outcome, Preparation};
 use recite_runtime::{EffectAck, preview::PreviewEvent};
+use recite_writer_model::{PreparedPreview, Preview};
 use recite_writer_session::preview::trace::{Place, ValuePosition};
+use recite_writer_session::preview::{Request, trace::Browser};
+use std::{
+    fmt,
+    sync::{Arc, mpsc},
+};
 use tokio::sync::mpsc as async_mpsc;
+use tokio::sync::mpsc::UnboundedSender;
 
 const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
 
@@ -57,7 +72,7 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
         let request = begin(&mut writer).unwrap();
         match invalidate {
             0 => writer.trial.cancel(),
-            1 => writer.phase = Phase::ConfirmClose,
+            1 => recite_writer_app::test_support::set_phase(&mut writer, Phase::ConfirmClose),
             2 => writer.change(|model| {
                 model.set_draft("Draft".into());
                 Ok(())
@@ -81,7 +96,7 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
             !writer.trial.failed(),
             "cancellation or stale output is not an input validation failure"
         );
-        writer.phase = Phase::Writing;
+        recite_writer_app::test_support::set_phase(&mut writer, Phase::Writing);
         writer.change(|model| {
             model.discard();
             Ok(())

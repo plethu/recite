@@ -22,7 +22,7 @@ mod theme;
 pub(super) use controls::{label, paragraph, prose, text_button};
 pub(super) use radio::radio_button;
 use recite_config::{WriterConfig, WriterPresentationField, WriterTheme};
-use recite_writer_session::palette::{Palette, Rgba};
+use recite_writer_session::palette::Palette;
 use std::sync::Arc;
 use xilem::{masonry::core::DefaultProperties, peniko::Color};
 
@@ -60,12 +60,4 @@ impl Theme {
         }
     }
 }
-pub(super) fn scale(config: &WriterConfig) -> f32 {
-    f32::from(config.presentation.value(WriterPresentationField::UiScale)) / 100.
-}
-pub(super) fn palette(config: &WriterConfig) -> Palette<Color> {
-    Palette::with_mode(config.theme == WriterTheme::Dark, config.monochrome).map(convert)
-}
-fn convert(color: Rgba) -> Color {
-    Color::from_rgba8(color.r, color.g, color.b, color.a)
-}
+pub(super) use recite_writer_app::presentation::{palette, scale};

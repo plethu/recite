@@ -3425,6 +3425,7 @@ dependencies = [
  "recite-config",
  "recite-core",
  "recite-runtime",
+ "recite-writer-app",
  "recite-writer-model",
  "recite-writer-session",
  "rfd",
@@ -3433,6 +3434,22 @@ dependencies = [
  "tracing-subscriber",
  "usvg",
  "xilem",
+]
+
+[[package]]
+name = "recite-writer-app"
+version = "0.0.0"
+dependencies = [
+ "color",
+ "kurbo",
+ "recite-compiler",
+ "recite-config",
+ "recite-core",
+ "recite-runtime",
+ "recite-writer-model",
+ "recite-writer-session",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

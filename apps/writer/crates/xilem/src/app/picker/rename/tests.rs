@@ -1,4 +1,13 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::session::Session;
+use recite_config::WriterCommand;
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 #[test]
 fn rename_beat_choices_keep_native_result_cost_bounded_as_the_scene_grows() {

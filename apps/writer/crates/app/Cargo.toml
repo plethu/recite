@@ -1,0 +1,30 @@
+[package]
+name = "recite-writer-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Deterministic project fixtures and worker drivers shared with frontend tests.
+test-support = ["dep:tempfile", "tokio/rt-multi-thread"]
+
+[dependencies]
+color = "0.3.3"
+kurbo = "0.13.1"
+recite-core.workspace = true
+recite-compiler.workspace = true
+recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }
+recite-runtime.workspace = true
+recite-writer-model.workspace = true
+recite-writer-session.workspace = true
+tempfile = { version = "3", optional = true }
+tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+
+[lints]
+workspace = true

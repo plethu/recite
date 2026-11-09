@@ -9,8 +9,9 @@ use xilem::{
     view::{CrossAxisAlignment, FlexExt, flex_col, indexed_stack, sized_box, zstack},
 };
 pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
+    let width = app.viewport.width;
     if let Some(writer) = &mut app.writer {
-        writer.viewport.width = app.viewport.width;
+        writer.viewport.width = width;
     }
     let slot = slot::writer_slot(app);
     keyboard::host(
@@ -24,10 +25,10 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                         named(
                             "Writer workspace",
                             indexed_stack((welcome::panel(app), slot, settings::settings(app)))
-                                .active(if app.settings_open {
+                                .active(if app.settings_open() {
                                     2
                                 } else {
-                                    usize::from(!app.show_welcome)
+                                    usize::from(!app.show_welcome())
                                 }),
                         )
                         .disabled(app.picker.is_some()),

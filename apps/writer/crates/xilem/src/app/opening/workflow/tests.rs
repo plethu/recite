@@ -1,4 +1,13 @@
+#![allow(unused_imports)]
 use super::*;
+use crate::Phase;
+use crate::Writer;
+use crate::app::picker;
+use crate::session::Session;
+use recite_config::WriterCommand;
+use recite_writer_session::startup::{LaunchOptions, Startup};
+use std::path::PathBuf;
+use std::sync::Arc;
 use xilem::core::{DynMessage, MessageCtx, SendMessage, ViewPathTracker};
 
 fn deliver<V: View<App, (), ViewCtx, Element = NoElement>>(
@@ -61,7 +70,7 @@ fn creating_and_opening_a_project_use_terminal_worker_receipts_and_preserve_exis
             .recv_timeout(std::time::Duration::from_secs(5))
             .unwrap(),
     );
-    assert!(!app.show_welcome);
+    assert!(!app.show_welcome());
     assert!(app.opening.is_none());
     let writer = app.writer.as_ref().unwrap();
     assert_eq!(writer.map.workspace, crate::map::Workspace::Split);

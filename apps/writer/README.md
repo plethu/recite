@@ -28,5 +28,18 @@ Writer bundles Latin, Cyrillic and Greek faces; other scripts use system fonts (
 families listed in [`assets/fonts/FONTS.md`](assets/fonts/FONTS.md)). Right-to-left text is shaped
 within a line, but paragraphs are laid out left to right.
 
+## Crates
+
+- `crates/authoring` (`recite-writer-model`): source-preserving documents, edits and preview.
+- `crates/session` (`recite-writer-session`): files, saves, recovery and configuration.
+- `crates/app` (`recite-writer-app`): Writer state, workflows, policy and the application shell,
+  with no GUI toolkit.
+- `crates/xilem` (`recite-writer`): the native Xilem frontend that renders that state.
+
+Put behaviour that does not need a widget in `crates/app`; the frontend should only present it,
+adapt native input and call named app operations. See [spec §15.5][strategy].
+
+[strategy]: ../../docs/spec/tooling.md#155-native-gui-strategy-and-accessibility-proof
+
 [Packaging](packaging.md) covers native packages, Flatpak and desktop links. Physical-host
 acceptance is tracked in #237.

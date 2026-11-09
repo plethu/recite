@@ -122,7 +122,7 @@ fn project_screen_headers_keep_complete_buttons_inside_the_allocated_window() {
             );
             let mut app = App::with_writer(writer);
             app.preferences.config = config;
-            app.theme.refresh(&app.preferences.config.writer);
+            app.theme.refresh(&app.shell.preferences.config.writer);
             for width in [900, 1280, 2040] {
                 for screen in [Screen::External, Screen::Settings, Screen::Localisation] {
                     app.writer.as_mut().unwrap().workspaces.screen = screen;

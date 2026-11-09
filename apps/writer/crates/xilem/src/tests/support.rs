@@ -1,9 +1,10 @@
 use super::*;
 use crate::navigation::worker::Job as NavigationJob;
 use masonry::testing::TestHarness;
-use recite_writer_session::ProjectSession;
+pub(crate) use recite_writer_app::test_support::{
+    finish_navigation, finish_work, open, project, save,
+};
 use recite_writer_session::project::save::sequence;
-use std::fs;
 use std::sync::Arc;
 use tokio::sync::mpsc as async_mpsc;
 use xilem::core::{
@@ -12,25 +13,6 @@ use xilem::core::{
 use xilem::{ViewCtx, WidgetView};
 pub(crate) mod mounted;
 pub(crate) mod worker;
-
-pub(crate) fn project(source: &str) -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
-    let directory = tempfile::tempdir()?;
-    fs::write(
-        directory.path().join("recite.project.toml"),
-        "format_version = 1\n[project]\ncontent_set = \"test\"\nversion = \"1\"\n",
-    )?;
-    fs::write(directory.path().join("scene.recite"), source)?;
-    Ok(directory)
-}
-
-pub(crate) fn open(directory: &tempfile::TempDir) -> Result<Writer, Box<dyn std::error::Error>> {
-    let session =
-        ProjectSession::open(directory.path(), Some(std::path::Path::new("scene.recite")))?;
-    Ok(Writer::from_session(
-        crate::session::Session::Project(Box::new(session)),
-        None,
-    ))
-}
 
 #[derive(Debug)]
 pub(crate) struct NoProxy;
@@ -101,7 +83,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
         }
         pending.extend(widget.children());
     }
-    if writer.phase == Phase::Writing {
+    if writer.phase() == Phase::Writing {
         harness.focus_on(field);
     }
     for name in names {
@@ -146,7 +128,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
             (&mut requests, &mut navigation_requests),
             view::writer,
         )?;
-        if *name == "Close" && matches!(writer.phase, Phase::ConfirmClose | Phase::ConfirmExit) {
+        if *name == "Close" && matches!(writer.phase(), Phase::ConfirmClose | Phase::ConfirmExit) {
             let mut focused = None;
             for _ in 0..3 {
                 harness.press_tab_key(false);
@@ -161,39 +143,6 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
         }
     }
     Ok(())
-}
-
-pub(crate) fn finish_navigation(
-    writer: &mut Writer,
-    requests: &mut async_mpsc::UnboundedReceiver<NavigationJob>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    while writer.navigation.busy() {
-        let completed = requests.try_recv()?.execute();
-        let request = completed.request.clone();
-        if let Some(retired) = writer.accept_navigation(completed) {
-            retired.retire()?;
-        }
-        writer.navigation_retired(&request);
-    }
-    Ok(())
-}
-
-// Native callbacks schedule owned work; this harness executes it deterministically.
-pub(crate) fn finish_work(
-    writer: &mut Writer,
-    requests: &mut async_mpsc::UnboundedReceiver<sequence::Work>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    while writer.work.busy() {
-        let work = requests.try_recv()?;
-        writer.accept_save_work(work.execute());
-    }
-    Ok(())
-}
-pub(crate) fn save(writer: &mut Writer) -> Result<(), Box<dyn std::error::Error>> {
-    let (sender, mut requests) = async_mpsc::unbounded_channel();
-    writer.work.sender = Some(sender);
-    writer.save();
-    finish_work(writer, &mut requests)
 }
 
 // Read stable public node locations rather than the upstream harness's raw-memory ID adapter.

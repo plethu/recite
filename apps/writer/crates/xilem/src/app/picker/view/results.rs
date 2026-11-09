@@ -85,35 +85,22 @@ pub(super) fn pagination(
 ) -> Option<impl WidgetView<App> + use<>> {
     (count > PAGE || picker.is_some_and(|picker| picker.total > count)).then(|| {
         flex_row((
-            text_button(scale, "Previous results", App::previous_picker_page).disabled(page == 0),
-            text_button(scale, "Next results", App::next_picker_page)
-                .disabled((page + 1) * PAGE >= count),
+            text_button(scale, "Previous results", |app: &mut App| {
+                app.previous_picker_page()
+            })
+            .disabled(page == 0),
+            text_button(scale, "Next results", |app: &mut App| {
+                app.next_picker_page()
+            })
+            .disabled((page + 1) * PAGE >= count),
             picker
                 .filter(|picker| picker.total > picker.entries.len())
-                .map(|_| text_button(scale, "Load more matches", App::load_picker_matches)),
+                .map(|_| {
+                    text_button(scale, "Load more matches", |app: &mut App| {
+                        app.load_picker_matches()
+                    })
+                }),
         ))
         .gap(8.px())
     })
-}
-
-pub(super) fn result_count(picker: Option<&Picker>, page: usize, count: usize) -> String {
-    if count <= PAGE && picker.is_none_or(|picker| picker.total <= count) {
-        return format!("{count} {}", if count == 1 { "result" } else { "results" });
-    }
-    let total = picker
-        .filter(|picker| picker.total > count)
-        .map_or_else(String::new, |picker| format!(" of {}", picker.total));
-    format!(
-        "{count}{total} results · page {} of {}",
-        page + 1,
-        count.div_ceil(PAGE).max(1)
-    )
-}
-
-pub(super) fn empty_message(mode: Mode, picker: Option<&Picker>) -> &'static str {
-    if mode == Mode::ProjectText && picker.is_some_and(|picker| picker.query.trim().is_empty()) {
-        "Enter words to search the saved project."
-    } else {
-        "No matching results."
-    }
 }

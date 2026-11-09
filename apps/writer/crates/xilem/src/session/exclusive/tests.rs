@@ -1,5 +1,14 @@
+#![allow(unused_imports)]
+use super::super::*;
 use super::*;
 use crate::tests::support;
+use recite_compiler::authoring::{CancellationToken, WorkControl};
+use recite_writer_model::FrozenWorkbench;
+use recite_writer_session::{FileError, ProjectSession};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use xilem::{
     ViewCtx,
     core::View as _,
@@ -103,7 +112,7 @@ fn checkout_leaves_only_reading_authority_and_restores_the_same_lease_and_edit_h
             .is_err()
     );
     writer.request_close();
-    assert!(writer.phase == crate::Phase::Writing);
+    assert!(writer.phase() == crate::Phase::Writing);
     assert!(matches!(
         ProjectSession::open(directory.path(), None),
         Err(FileError::RecoveryInUse)

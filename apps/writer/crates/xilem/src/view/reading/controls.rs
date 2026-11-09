@@ -12,7 +12,7 @@ pub(in crate::view) fn page_controls(
     (range.len() < total && matches!(surface, Surface::Manuscript { .. } | Surface::Beat { .. }))
         .then(|| {
             let blocked =
-                state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
+                state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy();
             flex_row((
                 print::icon_action(
                     state.ui_scale(),
@@ -38,9 +38,7 @@ pub(in crate::view) fn page_controls(
                     state.ui_scale(),
                     "Find in this beat",
                     blocked,
-                    |state: &mut Writer| {
-                        state.app_request = Some(Request::Search(Search::Passages))
-                    },
+                    |state: &mut Writer| state.request_search(Search::Passages),
                 ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)

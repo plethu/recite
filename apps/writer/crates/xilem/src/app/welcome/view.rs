@@ -103,20 +103,14 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                     scale,
                     "Open an existing project",
                     !app.creating,
-                    |app: &mut App| {
-                        app.creating = false;
-                        app.clear_project_problem();
-                    },
+                    |app: &mut App| app.choose_project_action(false),
                 )
                 .disabled(busy),
                 radio_button(
                     scale,
                     "Create a new project",
                     app.creating,
-                    |app: &mut App| {
-                        app.creating = true;
-                        app.clear_project_problem();
-                    },
+                    |app: &mut App| app.choose_project_action(true),
                 )
                 .disabled(busy),
             ))
@@ -151,9 +145,7 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
         ),
         flex_row((
             text_input(app.path.clone(), |app: &mut App, text| {
-                app.clear_project_problem();
-                app.path = text;
-                app.native_path = None;
+                app.edit_project_path(text)
             })
             .placeholder("Project folder")
             .text_size(14. * scale)
@@ -161,7 +153,7 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             .prop(TextAreaLabel::new("Project folder"))
             .prop(ProjectField(true))
             .width(field_width.px()),
-            text_button(scale, "Browse folders", App::browse).disabled(busy),
+            text_button(scale, "Browse folders", |app: &mut App| app.browse()).disabled(busy),
         ))
         .direction(direction)
         .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -180,7 +172,7 @@ fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     } = layout;
     flex_col((
         label(scale, "Project name"),
-        text_input(app.name.clone(), |app: &mut App, text| { app.name = text; app.clear_project_problem(); })
+        text_input(app.name.clone(), |app: &mut App, text| app.edit_project_name(text))
             .placeholder("Project name").text_size(14. * scale)
             .disabled(app.opening.is_some() || app.auxiliary)
             .prop(TextAreaLabel::new("Project name")).prop(ProjectField(true))
@@ -217,13 +209,17 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                     },
                     &app.theme.palette,
                     !app.project_form_ready(),
-                    App::open_selected,
+                    |app: &mut App| app.open_selected(),
                 ),
-                app.opening
-                    .as_ref()
-                    .map(|_| text_button(scale, "Cancel opening", App::cancel_open)),
-                text_button(scale, "Try temporary examples", App::show_examples).disabled(busy),
-                text_button(scale, "Close Writer", App::request_close).disabled(app.auxiliary),
+                app.opening.as_ref().map(|_| {
+                    text_button(scale, "Cancel opening", |app: &mut App| app.cancel_open())
+                }),
+                text_button(scale, "Try temporary examples", |app: &mut App| {
+                    app.show_examples()
+                })
+                .disabled(busy),
+                text_button(scale, "Close Writer", |app: &mut App| app.request_close())
+                    .disabled(app.auxiliary),
             ))
             .direction(direction)
             .cross_axis_alignment(CrossAxisAlignment::Start)
