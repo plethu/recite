@@ -121,7 +121,7 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
             )
         }),
         print::action(scale, "Project", blocked, |state: &mut Writer| {
-            state.document_menu().toggle()
+            state.toggle_document_menu()
         }),
         state.session.project().map(|_| {
             text_button(scale, "Save", Writer::save)

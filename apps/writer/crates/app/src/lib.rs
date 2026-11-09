@@ -312,6 +312,10 @@ impl Writer {
     pub fn close_document_menu(&mut self) {
         self.document_menu = attention::DocumentMenu::Closed;
     }
+    /// Open or close document actions from their toolbar control.
+    pub fn toggle_document_menu(&mut self) {
+        self.document_menu.toggle();
+    }
     /// Dismiss document actions without choosing one.
     pub fn dismiss_document_menu(&mut self) {
         self.document_menu = attention::DocumentMenu::Dismissed;

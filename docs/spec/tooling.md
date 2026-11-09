@@ -79,13 +79,13 @@ the worker jobs they publish, and the application shell (welcome, project openin
 search and command routing). The `recite-writer` package renders that state and owns only native
 presentation, input, accessibility, window hosting and the toolkit workers that run app jobs. Views
 may bind a form field, move a page cursor, toggle a disclosure or record a native measurement; any
-other state change goes through a named app operation. Behaviour that does not need a widget
-belongs in the app crate, whose public API is limited to what the frontend uses, so the frontend
-stays replaceable.
-Source editing belongs to the shared authoring model, and file replacement, conflict protection and
-recovery belong to `recite-writer-session`. Language, configuration, compiler and runtime ownership
-remains outside the frontend. Toolkit fixes live on pinned forks; exercise regression checks before
-moving a pin. Software rendering is required wherever no usable GPU is available.
+other state change goes through a named app operation. Behaviour that does not need a widget belongs
+in the app crate, whose public API is limited to what the frontend uses, so the frontend stays
+replaceable. Source editing belongs to the shared authoring model, and file replacement, conflict
+protection and recovery belong to `recite-writer-session`. Language, configuration, compiler and
+runtime ownership remains outside the frontend. Toolkit fixes live on pinned forks; exercise
+regression checks before moving a pin. Software rendering is required wherever no usable GPU is
+available.
 
 The Writer holds these contracts across every workspace; the crate tests are their executable form:
 
