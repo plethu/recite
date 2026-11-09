@@ -10,3 +10,5 @@ cd "$repo_root"
 cargo deny --locked --all-features check advisories bans licenses sources
 cargo deny --locked --manifest-path editors/zed/Cargo.toml --all-features \
   check advisories bans licenses sources
+cargo deny --locked --manifest-path apps/writer/Cargo.toml --all-features \
+  check advisories bans licenses sources
