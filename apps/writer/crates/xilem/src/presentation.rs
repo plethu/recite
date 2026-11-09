@@ -18,6 +18,8 @@ pub(crate) mod material;
 pub(crate) mod print;
 pub(crate) use icons::Icon;
 mod radio;
+mod shaped_text;
+pub(crate) use shaped_text::ShapedText;
 mod theme;
 pub(super) use controls::{label, paragraph, prose, text_button};
 pub(super) use radio::radio_button;

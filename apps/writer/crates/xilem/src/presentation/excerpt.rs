@@ -1,4 +1,5 @@
 //! Native map excerpts abbreviate only their visual layout, retaining complete accessible text.
+use super::ShapedText;
 use std::num::NonZeroUsize;
 use xilem::{
     Pod, ViewCtx,
@@ -7,7 +8,6 @@ use xilem::{
         core::{ArcStr, StyleProperty},
         parley::LineHeight,
         properties::LineBreaking,
-        widgets::Label,
     },
 };
 
@@ -28,10 +28,10 @@ pub(crate) fn excerpt(text: impl Into<ArcStr>, zoom: f32) -> Excerpt {
 }
 impl ViewMarker for Excerpt {}
 impl<S: 'static> View<S, (), ViewCtx> for Excerpt {
-    type Element = Pod<Label>;
+    type Element = Pod<ShapedText>;
     type ViewState = ();
     fn build(&self, _: &mut ViewCtx, _: &mut S) -> (Self::Element, ()) {
-        let label = Label::new(self.text.clone())
+        let label = ShapedText::new(self.text.clone())
             .with_style(StyleProperty::FontFamily("Literata".into()))
             .with_style(StyleProperty::FontSize(self.size))
             .with_style(StyleProperty::LineHeight(LineHeight::FontSizeRelative(
@@ -49,13 +49,13 @@ impl<S: 'static> View<S, (), ViewCtx> for Excerpt {
         _: &mut S,
     ) {
         if self.text != previous.text {
-            Label::set_text(&mut label, self.text.clone());
+            ShapedText::set_text(&mut label, self.text.clone());
         }
         if self.size != previous.size {
-            Label::insert_style(&mut label, StyleProperty::FontSize(self.size));
+            ShapedText::insert_style(&mut label, StyleProperty::FontSize(self.size));
         }
         if self.lines != previous.lines {
-            Label::set_max_lines(&mut label, Some(self.lines));
+            ShapedText::set_max_lines(&mut label, Some(self.lines));
         }
     }
     fn teardown(&self, _: &mut (), _: &mut ViewCtx, _: Mut<'_, Self::Element>) {}

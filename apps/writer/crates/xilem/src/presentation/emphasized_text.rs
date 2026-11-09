@@ -1,4 +1,5 @@
 //! Native emphasis preserves text order, shaping and accessibility for comparisons and search.
+use super::ShapedText;
 use super::styled_text::Family;
 use recite_writer_session::comparison::changed_range;
 use std::ops::Range;
@@ -9,7 +10,6 @@ use xilem::{
         core::{ArcStr, StyleProperty},
         parley::FontWeight,
         properties::LineBreaking,
-        widgets::Label,
     },
 };
 
@@ -76,10 +76,10 @@ impl EmphasizedText {
 }
 impl ViewMarker for EmphasizedText {}
 impl<State: 'static> View<State, (), ViewCtx> for EmphasizedText {
-    type Element = Pod<Label>;
+    type Element = Pod<ShapedText>;
     type ViewState = ();
     fn build(&self, _: &mut ViewCtx, _: &mut State) -> (Self::Element, ()) {
-        let label = Label::new(self.text.clone())
+        let label = ShapedText::new(self.text.clone())
             .with_style(StyleProperty::FontSize(self.size))
             .with_style(StyleProperty::FontFamily(self.family.name().into()))
             .with_ranged_styles(self.styles());
@@ -94,17 +94,17 @@ impl<State: 'static> View<State, (), ViewCtx> for EmphasizedText {
         _: &mut State,
     ) {
         if self.text != previous.text || self.emphasis != previous.emphasis {
-            Label::set_text(&mut element, self.text.clone());
-            Label::set_ranged_styles(&mut element, self.styles());
+            ShapedText::set_text(&mut element, self.text.clone());
+            ShapedText::set_ranged_styles(&mut element, self.styles());
         }
         if self.family != previous.family {
-            Label::insert_style(
+            ShapedText::insert_style(
                 &mut element,
                 StyleProperty::FontFamily(self.family.name().into()),
             );
         }
         if self.size != previous.size {
-            Label::insert_style(&mut element, StyleProperty::FontSize(self.size));
+            ShapedText::insert_style(&mut element, StyleProperty::FontSize(self.size));
         }
     }
     fn teardown(&self, _: &mut (), _: &mut ViewCtx, _: Mut<'_, Self::Element>) {}

@@ -1,5 +1,6 @@
+use crate::presentation::ShapedText;
 use std::num::NonZeroUsize;
-use xilem::masonry::{core::StyleProperty, kurbo::Affine, widgets::Label};
+use xilem::masonry::{core::StyleProperty, kurbo::Affine};
 use xilem::masonry::{
     core::{NewWidget, Widget, WidgetId, WindowEvent},
     parley::LineHeight,
@@ -15,7 +16,7 @@ fn harness(text: &str, width: u32, limit: Option<NonZeroUsize>) -> (TestHarness<
     // fonts. Name it explicitly so unsupported scripts still get glyph runs;
     // these are text-retention tests, not evidence of Arabic/CJK font shaping.
     let label = NewWidget::new(
-        Label::new(text)
+        ShapedText::new(text)
             .with_style(StyleProperty::FontFamily("Roboto".into()))
             .with_style(StyleProperty::FontSize(15.))
             .with_style(StyleProperty::LineHeight(LineHeight::Absolute(22.)))
@@ -63,7 +64,10 @@ fn clamp_keeps_natural_height_and_full_accessible_text() {
         ("One\nTwo\nThree\nFour", 3, true),
     ] {
         let (harness, id) = harness(text, 240, NonZeroUsize::new(3));
-        let label = harness.get_widget_with_id(id).downcast::<Label>().unwrap();
+        let label = harness
+            .get_widget_with_id(id)
+            .downcast::<ShapedText>()
+            .unwrap();
         assert_eq!(label.ctx().border_box().height(), f64::from(lines) * 22.);
         assert_eq!(label.get_debug_text().unwrap().ends_with('…'), omitted);
         assert_original(&harness, id, text);
@@ -86,9 +90,9 @@ fn clamp_reflows_width_text_styles_and_limit_without_stale_cache_results() {
         narrow
     );
     harness.edit_widget_with_id(id, |mut widget| {
-        let mut label = widget.downcast::<Label>();
-        Label::set_text(&mut label, "Changed\nMore\nLast");
-        Label::set_max_lines(&mut label, NonZeroUsize::new(1));
+        let mut label = widget.downcast::<ShapedText>();
+        ShapedText::set_text(&mut label, "Changed\nMore\nLast");
+        ShapedText::set_max_lines(&mut label, NonZeroUsize::new(1));
     });
     assert!(
         harness
@@ -98,9 +102,9 @@ fn clamp_reflows_width_text_styles_and_limit_without_stale_cache_results() {
             .ends_with('…')
     );
     harness.edit_widget_with_id(id, |mut widget| {
-        let mut label = widget.downcast::<Label>();
-        Label::insert_style(&mut label, StyleProperty::FontSize(25.));
-        Label::set_max_lines(&mut label, None);
+        let mut label = widget.downcast::<ShapedText>();
+        ShapedText::insert_style(&mut label, StyleProperty::FontSize(25.));
+        ShapedText::set_max_lines(&mut label, None);
     });
     assert_eq!(
         harness.get_widget_with_id(id).get_debug_text().as_deref(),
@@ -120,9 +124,12 @@ fn shaped_ellipsis_handles_unicode_hard_breaks_and_long_unbroken_text() {
         let (ordinary, ordinary_id) = harness(&text, 160, None);
         assert_original(&ordinary, ordinary_id, &text);
         let (harness, id) = harness(&text, 160, NonZeroUsize::new(3));
-        let label = harness.get_widget_with_id(id).downcast::<Label>().unwrap();
+        let label = harness
+            .get_widget_with_id(id)
+            .downcast::<ShapedText>()
+            .unwrap();
         assert!(label.ctx().border_box().height() <= 66.01);
-        let shapes = label.debug_abbreviation_shapes();
+        let shapes = label.abbreviation_shapes();
         assert!(label.get_debug_text().unwrap().ends_with('…'));
         assert_original(&harness, id, &text);
         assert!(
@@ -137,9 +144,9 @@ fn ordinary_labels_and_unchanged_transforms_do_not_shape_abbreviations() {
     assert_eq!(
         ordinary
             .get_widget_with_id(id)
-            .downcast::<Label>()
+            .downcast::<ShapedText>()
             .unwrap()
-            .debug_abbreviation_shapes(),
+            .abbreviation_shapes(),
         0
     );
     let (mut harness, id) = harness(
@@ -149,9 +156,9 @@ fn ordinary_labels_and_unchanged_transforms_do_not_shape_abbreviations() {
     );
     let before = harness
         .get_widget_with_id(id)
-        .downcast::<Label>()
+        .downcast::<ShapedText>()
         .unwrap()
-        .debug_abbreviation_shapes();
+        .abbreviation_shapes();
     assert!(before > 0);
     for step in 0..32 {
         harness.edit_root_widget(|mut root| {
@@ -163,9 +170,9 @@ fn ordinary_labels_and_unchanged_transforms_do_not_shape_abbreviations() {
     assert_eq!(
         harness
             .get_widget_with_id(id)
-            .downcast::<Label>()
+            .downcast::<ShapedText>()
             .unwrap()
-            .debug_abbreviation_shapes(),
+            .abbreviation_shapes(),
         before,
         "camera transforms must reuse shaped text"
     );

@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::ShapedText;
 use crate::presentation::Theme;
 use recite_config::WriterPresentationField;
 use std::sync::Arc;
@@ -21,7 +22,10 @@ pub(super) fn reveal<W: Widget>(harness: &mut TestHarness<W>, caption: &str) {
             .is_some_and(|text| text.text() == caption);
         let label = widget
             .downcast::<Label>()
-            .is_some_and(|text| text.text().as_ref() == caption);
+            .is_some_and(|text| text.text().as_ref() == caption)
+            || widget
+                .downcast::<ShapedText>()
+                .is_some_and(|text| text.text().as_ref() == caption);
         if !widget.ctx().is_stashed()
             && (text
                 || label

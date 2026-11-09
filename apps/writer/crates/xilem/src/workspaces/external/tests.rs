@@ -4,6 +4,7 @@ use super::super::{
     tools::{ExternalAction, ProjectAction},
 };
 use crate::external_editor::Request;
+use crate::presentation::ShapedText;
 use crate::{presentation::Theme, tests::support, workspaces::tools::tests::finish};
 use recite_writer_session::{
     comparison::ComparisonRow,
@@ -31,6 +32,9 @@ fn reveal<W: Widget>(harness: &mut TestHarness<W>, caption: &str) {
         let matches = widget
             .downcast::<Label>()
             .is_some_and(|label| label.text().as_ref() == caption)
+            || widget
+                .downcast::<ShapedText>()
+                .is_some_and(|label| label.text().as_ref() == caption)
             || widget
                 .downcast::<TextArea<false>>()
                 .is_some_and(|text| text.text() == caption);
@@ -101,7 +105,7 @@ fn comparison_pages_are_bounded_and_render_pending_draft_and_merge_actions_at_bo
         let mut compared = 0;
         while let Some(widget) = pending.pop() {
             if !widget.ctx().is_stashed()
-                && widget.downcast::<Label>().is_some_and(|text| {
+                && widget.downcast::<ShapedText>().is_some_and(|text| {
                     let text = text.text();
                     text.contains("Original manuscript.")
                         || text.contains("Inspected external manuscript.")
