@@ -14,7 +14,7 @@ pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + 
     state
         .recovery_copy
         .as_ref()
-        .filter(|_| state.phase == Phase::Writing)
+        .filter(|_| state.phase() == Phase::Writing)
         .map(|path| {
             flex_col((
                 text_button(
@@ -38,9 +38,9 @@ pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + 
 
 pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = state.ui_scale();
-    let ordinary_exit = state.phase == Phase::ConfirmExit;
+    let ordinary_exit = state.phase() == Phase::ConfirmExit;
     matches!(
-        state.phase,
+        state.phase(),
         Phase::ConfirmClose | Phase::ConfirmExit | Phase::Closing
     )
     .then(|| {
@@ -48,7 +48,7 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
             flex_col((
                 label(
                     scale,
-                    if state.phase == Phase::Closing {
+                    if state.phase() == Phase::Closing {
                         "Finishing recovery before closing"
                     } else if ordinary_exit {
                         "Close Recite Writer?"
@@ -68,7 +68,7 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
                     text_button(scale, "Keep editing", Writer::keep_editing),
                     (state.session.project().is_some()
                         && !ordinary_exit
-                        && state.phase != Phase::Closing)
+                        && state.phase() != Phase::Closing)
                         .then(|| {
                             text_button(scale, "Save all and close", Writer::save_and_close)
                                 .disabled(

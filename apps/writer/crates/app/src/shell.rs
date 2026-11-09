@@ -43,10 +43,10 @@ pub struct Shell {
     pub host: Host,
     pub writer: Option<Writer>,
     pub preferences: recite_writer_session::preferences::Preferences,
-    pub settings_open: bool,
+    pub(crate) settings_open: bool,
     pub settings: settings::Settings,
     pub picker: Option<picker::Picker>,
-    pub show_welcome: bool,
+    pub(crate) show_welcome: bool,
     pub(crate) closed: bool,
     pub path: String,
     pub native_path: Option<PathBuf>,
@@ -56,7 +56,7 @@ pub struct Shell {
     pub auxiliary: bool,
     pub status: String,
     pub pane_hint: bool,
-    pub workspace_menu: bool,
+    pub(crate) workspace_menu: bool,
     pub viewport: Size,
     pub(crate) initial: Option<LaunchOptions>,
     pub opening: Option<Opening>,
@@ -315,6 +315,19 @@ impl Shell {
             Some(Request::Workspace) => self.toggle_workspace_menu(),
             None => {}
         }
+    }
+}
+
+/// Read access to overlay state whose changes go through named operations.
+impl Shell {
+    pub fn settings_open(&self) -> bool {
+        self.settings_open
+    }
+    pub fn show_welcome(&self) -> bool {
+        self.show_welcome
+    }
+    pub fn workspace_menu(&self) -> bool {
+        self.workspace_menu
     }
 }
 

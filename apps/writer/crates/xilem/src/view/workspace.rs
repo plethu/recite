@@ -155,7 +155,7 @@ pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> 
                         state.palette.ink
                     })
                     .disabled(
-                        state.phase != Phase::Writing
+                        state.phase() != Phase::Writing
                             || (workspace == Workspace::Split && !split_available)
                             || (workspace != Workspace::Script
                                 && (state.navigation.busy() || state.work.busy())),

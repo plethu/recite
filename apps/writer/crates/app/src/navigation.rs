@@ -384,3 +384,10 @@ impl Writer {
         Ok(())
     }
 }
+
+impl Writer {
+    /// Report that an accepted reload could not clean up its recovery copy.
+    pub fn reload_cleanup_failed(&mut self, message: String) {
+        self.status = message;
+    }
+}

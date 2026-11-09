@@ -62,7 +62,7 @@ pub(super) fn draft_actions(
     axis: kurbo::Axis,
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing || state.session.read_only();
+    let closing = state.phase() != Phase::Writing || state.session.read_only();
     let has_draft = state.session.model().has_draft();
     flex_row((
         edit_button(
@@ -101,7 +101,7 @@ fn edit_button(
     .disabled(!enabled)
 }
 fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase != Phase::Writing
+    let closing = state.phase() != Phase::Writing
         || state.session.read_only()
         || state.navigation.busy()
         || state.work.busy();

@@ -11,7 +11,7 @@ use xilem::{
 pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = (state.viewport.width - state.navigation_width() - 32.).max(280.);
     let wide = width >= 1120. * f64::from(state.ui_scale());
-    let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
+    let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     grid((
         history(state).grid_pos(0, 0),
         workspace::workspace_tabs(state).grid_pos(u16::from(wide), u16::from(!wide)),
@@ -40,7 +40,7 @@ pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
+    let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     let key = state.session.model().document().key().as_str();
     flex_row((
         print::icon_action(
@@ -121,7 +121,7 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
             )
         }),
         print::action(scale, "Project", blocked, |state: &mut Writer| {
-            state.document_menu.toggle()
+            state.document_menu().toggle()
         }),
         state.session.project().map(|_| {
             text_button(scale, "Save", Writer::save)

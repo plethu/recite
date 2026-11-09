@@ -204,7 +204,9 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
                 .color(state.palette.teal_text),
                 move |state: &mut Writer| state.toggle_destination_preview(target.clone()),
             )
-            .disabled(state.phase != Phase::Writing || state.work.busy() || state.navigation.busy())
+            .disabled(
+                state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy(),
+            )
             .background_color(state.palette.surface),
         ))
         .width(width.px()),

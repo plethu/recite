@@ -43,8 +43,8 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             (300, 100),
         );
         match change {
-            0 => app.show_welcome = true,
-            1 => app.settings_open = true,
+            0 => recite_writer_app::test_support::set_welcome(&mut app.shell, true),
+            1 => recite_writer_app::test_support::set_settings(&mut app.shell, true),
             2 => app.writer = Some(Writer::from_session(Session::examples().unwrap(), None)),
             3 => app
                 .writer
@@ -67,7 +67,10 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             6 => app.writer.as_mut().unwrap().toggle_focus(),
             7 => app.preferences.config.ui.keymap = recite_config::Keymap::Vim,
             8 => app.writer.as_mut().unwrap().focus_pane(PaneMotion::Left),
-            9 => app.writer.as_mut().unwrap().phase = Phase::ConfirmClose,
+            9 => recite_writer_app::test_support::set_phase(
+                app.writer.as_mut().unwrap(),
+                Phase::ConfirmClose,
+            ),
             10 => app.writer.as_mut().unwrap().workspaces.screen = crate::workspaces::Screen::Build,
             12 => app
                 .writer
@@ -91,7 +94,10 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                     .edit(|model| model.select(recite_writer_model::View::Passage(target)))
                     .unwrap();
             }
-            _ => app.writer.as_mut().unwrap().document_menu = DocumentMenu::Open,
+            _ => recite_writer_app::test_support::set_document_menu(
+                app.writer.as_mut().unwrap(),
+                DocumentMenu::Open,
+            ),
         }
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),
@@ -143,10 +149,10 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         if change == 5 {
             assert!(app.picker.is_none());
         } else if change == 9 {
-            assert!(!app.settings_open);
+            assert!(!app.settings_open());
             assert!(app.status.contains("Choose how to close"));
         } else {
-            assert!(app.settings_open);
+            assert!(app.settings_open());
         }
     }
 }
@@ -165,9 +171,9 @@ fn queued_save_survives_focus_acknowledgement_and_context_refresh_without_losing
             if blur {
                 writer.attention.set_field(Some(target.clone()));
             } else {
-                writer.phase = Phase::ConfirmClose;
+                recite_writer_app::test_support::set_phase(&mut writer, Phase::ConfirmClose);
                 writer.native_field_focus(Some(EditingTarget::passage(&writer, "rthh7ab".into())));
-                writer.phase = Phase::Writing;
+                recite_writer_app::test_support::set_phase(&mut writer, Phase::Writing);
                 assert_eq!(
                     writer.field_restoration(),
                     Some(FieldRestoration::Passage(target.clone()))

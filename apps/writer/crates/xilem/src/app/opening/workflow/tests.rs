@@ -70,7 +70,7 @@ fn creating_and_opening_a_project_use_terminal_worker_receipts_and_preserve_exis
             .recv_timeout(std::time::Duration::from_secs(5))
             .unwrap(),
     );
-    assert!(!app.show_welcome);
+    assert!(!app.show_welcome());
     assert!(app.opening.is_none());
     let writer = app.writer.as_ref().unwrap();
     assert_eq!(writer.map.workspace, crate::map::Workspace::Split);

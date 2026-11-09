@@ -120,7 +120,10 @@ fn rejected_activation_replies_without_changing_the_manuscript_or_editor() {
             request.cancelled.store(true, atomic::Ordering::Release);
         }
         if case == "busy" {
-            app.writer.as_mut().unwrap().phase = Phase::ConfirmClose;
+            recite_writer_app::test_support::set_phase(
+                app.writer.as_mut().unwrap(),
+                Phase::ConfirmClose,
+            );
         }
         app.accept_activation(request);
         assert!(response.try_recv().unwrap().is_err(), "{case}");
@@ -130,7 +133,7 @@ fn rejected_activation_replies_without_changing_the_manuscript_or_editor() {
             before
         );
         assert!(app.writer.as_ref().unwrap().editor.is_none());
-        app.writer.as_mut().unwrap().phase = Phase::Writing;
+        recite_writer_app::test_support::set_phase(app.writer.as_mut().unwrap(), Phase::Writing);
     }
 }
 
@@ -139,8 +142,8 @@ fn same_project_launch_updates_literal_editor_options_and_checked_navigation_rep
 {
     let directory = support::project(recite_writer_model::FIXTURE).unwrap();
     let mut app = App::with_writer(support::open(&directory).unwrap());
-    app.show_welcome = true;
-    app.settings_open = true;
+    recite_writer_app::test_support::set_welcome(&mut app.shell, true);
+    recite_writer_app::test_support::set_settings(&mut app.shell, true);
     let editor = EditorCommand {
         program: "my editor".into(),
         args: vec!["--literal=$HOME".into()],
@@ -149,7 +152,7 @@ fn same_project_launch_updates_literal_editor_options_and_checked_navigation_rep
     incoming.editor = Some(editor.clone());
     app.accept_activation(incoming);
     assert!(response.try_recv().unwrap().is_ok());
-    assert!(!app.show_welcome && !app.settings_open);
+    assert!(!app.show_welcome() && !app.settings_open());
     assert_eq!(app.writer.as_ref().unwrap().editor, Some(editor));
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let (sender, mut jobs) = async_mpsc::unbounded_channel();

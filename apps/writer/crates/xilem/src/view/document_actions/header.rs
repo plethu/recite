@@ -4,7 +4,7 @@ use crate::presentation::Icon;
 use xilem::view::{GridExt, GridTrackSize, grid};
 
 pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
+    let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     let scale = state.ui_scale();
     let wide = state.content_width()
         >= if state.compact_chrome() { 520. } else { 760. } * f64::from(scale);
@@ -14,7 +14,7 @@ pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer>
             print::action(
                 scale,
                 "Return to writing",
-                state.phase != Phase::Writing,
+                state.phase() != Phase::Writing,
                 Writer::return_to_writing,
             ),
             print::action(
@@ -57,11 +57,11 @@ pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> +
         temporary_notice(state),
         flex_row((
             text_button(state.ui_scale(), "Exit focus", Writer::toggle_focus).disabled(
-                state.phase != Phase::Writing || state.navigation.busy() || state.work.busy(),
+                state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
             ),
             state.session.project().map(|_| {
                 text_button(state.ui_scale(), "Save file", Writer::save).disabled(
-                    state.phase != Phase::Writing
+                    state.phase() != Phase::Writing
                         || state.navigation.busy()
                         || state.work.busy()
                         || state.localisation.saving()
@@ -69,7 +69,7 @@ pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> +
                 )
             }),
             text_button(state.ui_scale(), "Close", Writer::request_close)
-                .disabled(state.phase != Phase::Writing),
+                .disabled(state.phase() != Phase::Writing),
             copy_link(state),
         ))
         .gap(8.px()),
@@ -89,7 +89,7 @@ fn temporary_notice(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
 
 fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing;
+    let closing = state.phase() != Phase::Writing;
     flex_row((
         print::icon_action(
             scale,
@@ -131,5 +131,5 @@ fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn copy_link(state: &Writer) -> impl WidgetView<Writer> + use<> {
     text_button(state.ui_scale(), "Copy link", Writer::copy_link)
-        .disabled(state.phase != Phase::Writing || state.project_action_blocked())
+        .disabled(state.phase() != Phase::Writing || state.project_action_blocked())
 }

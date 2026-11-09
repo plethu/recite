@@ -31,7 +31,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn content(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing || state.session.read_only();
+    let closing = state.phase() != Phase::Writing || state.session.read_only();
     let busy = state.trial.busy();
     let model = state.session.model();
     let page = model.preview_page().filter(|_| state.trial.visible);

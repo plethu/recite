@@ -7,7 +7,7 @@ pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use
     let scale = state.ui_scale();
     let compact = state.compact_chrome();
     let wide = state.script_width() >= 240. * f64::from(scale);
-    let blocked = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
+    let blocked = state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy();
     let replies = if state.reading.replies == 1 {
         "1 reply".to_owned()
     } else {

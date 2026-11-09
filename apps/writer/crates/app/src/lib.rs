@@ -59,7 +59,7 @@ pub struct Writer {
     pub editor: Option<recite_writer_session::startup::EditorCommand>,
     pub external: external_editor::ExternalEditor,
     pub window: WindowKey,
-    pub phase: Phase,
+    pub(crate) phase: Phase,
     pub status: String,
     pub beat_page: usize,
     pub file_page: usize,
@@ -82,13 +82,13 @@ pub struct Writer {
     pub localisation: localisation::Localisation,
     pub notices: notices::Notices,
     pub viewport: kurbo::Size,
-    pub document_menu: attention::DocumentMenu,
+    pub(crate) document_menu: attention::DocumentMenu,
     pub reading_context: reading_context::Context,
     pub config: recite_config::UserConfig,
     pub palette: recite_writer_session::palette::Palette<presentation::Color>,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
     Writing,
     ConfirmClose,
@@ -325,5 +325,16 @@ impl Writer {
         self.refresh_map_if_needed();
         self.resume_external_notices();
         self.resume_linked_editor();
+    }
+}
+
+/// Read access to state whose changes go through named operations.
+impl Writer {
+    /// Whether the window is writing, confirming a close or exit, or closing.
+    pub fn phase(&self) -> Phase {
+        self.phase
+    }
+    pub fn document_menu(&self) -> attention::DocumentMenu {
+        self.document_menu
     }
 }

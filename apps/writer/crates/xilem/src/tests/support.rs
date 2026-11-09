@@ -83,7 +83,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
         }
         pending.extend(widget.children());
     }
-    if writer.phase == Phase::Writing {
+    if writer.phase() == Phase::Writing {
         harness.focus_on(field);
     }
     for name in names {
@@ -128,7 +128,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
             (&mut requests, &mut navigation_requests),
             view::writer,
         )?;
-        if *name == "Close" && matches!(writer.phase, Phase::ConfirmClose | Phase::ConfirmExit) {
+        if *name == "Close" && matches!(writer.phase(), Phase::ConfirmClose | Phase::ConfirmExit) {
             let mut focused = None;
             for _ in 0..3 {
                 harness.press_tab_key(false);

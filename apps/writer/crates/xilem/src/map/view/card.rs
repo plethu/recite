@@ -20,7 +20,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         title.push_str(" · end");
     }
     let selected = scene.selected.as_deref() == Some(&block.id);
-    let disabled = state.phase != crate::Phase::Writing
+    let disabled = state.phase() != crate::Phase::Writing
         || !scene
             .projection
             .is_current(state.session.model().document());
@@ -132,7 +132,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
                 },
             )
             .disabled(
-                state.phase != crate::Phase::Writing
+                state.phase() != crate::Phase::Writing
                     || state.navigation.busy()
                     || state.work.busy(),
             )

@@ -105,7 +105,7 @@ fn obsolete_cold_load_preserves_the_live_writer_and_retires_the_unused_owner() {
             assert_eq!(writer.session.model().draft(), "Keep this newer draft.");
         }
         if action == "close" {
-            assert!(writer.phase != Phase::Writing);
+            assert!(writer.phase() != Phase::Writing);
         }
         assert!(app.status.contains("current work remains open"));
         let unused = retired.try_recv().unwrap().unwrap();

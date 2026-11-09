@@ -189,6 +189,8 @@ def lanes_for_path(path, *, base=None, head=None):
     if path.startswith(("apps/writer/", "tests/writer-native/")) or path in {
         "tools/ast-grep/rules/rust-writer-palette.yml",
         "tools/ast-grep/tests/rust-writer-palette-test.yml",
+        "tools/ast-grep/rules/rust-writer-view-state.yml",
+        "tools/ast-grep/tests/rust-writer-view-state-test.yml",
     }:
         lanes = {"writer", "maintainability"}
         if path.startswith("apps/writer/crates/authoring/"):

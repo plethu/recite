@@ -200,7 +200,7 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
                 .writer
                 .as_ref()
                 .unwrap()
-                .document_menu
+                .document_menu()
                 .is_open()
         );
         assert_eq!(mounted.find("Manuscript"), field);

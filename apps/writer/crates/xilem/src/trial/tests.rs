@@ -72,7 +72,7 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
         let request = begin(&mut writer).unwrap();
         match invalidate {
             0 => writer.trial.cancel(),
-            1 => writer.phase = Phase::ConfirmClose,
+            1 => recite_writer_app::test_support::set_phase(&mut writer, Phase::ConfirmClose),
             2 => writer.change(|model| {
                 model.set_draft("Draft".into());
                 Ok(())
@@ -96,7 +96,7 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
             !writer.trial.failed(),
             "cancellation or stale output is not an input validation failure"
         );
-        writer.phase = Phase::Writing;
+        recite_writer_app::test_support::set_phase(&mut writer, Phase::Writing);
         writer.change(|model| {
             model.discard();
             Ok(())

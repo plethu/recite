@@ -25,7 +25,7 @@ fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + u
             ),
             state.trial.failed().then(|| {
                 text_button(scale, "Review current inputs", Writer::review_trial_inputs)
-                    .disabled(state.phase != Phase::Writing || state.session.read_only())
+                    .disabled(state.phase() != Phase::Writing || state.session.read_only())
             }),
             state.unfinished_trial_edit().is_some().then(|| {
                 text_button(
@@ -33,7 +33,7 @@ fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + u
                     "Return to unfinished edit",
                     Writer::return_to_trial_edit,
                 )
-                .disabled(state.phase != Phase::Writing || state.session.read_only())
+                .disabled(state.phase() != Phase::Writing || state.session.read_only())
             }),
         ))
         .direction(if wide {

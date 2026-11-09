@@ -68,7 +68,7 @@ fn action_axis(state: &Writer, width: f64) -> Axis {
 
 fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing;
+    let closing = state.phase() != Phase::Writing;
     let axis = action_axis(state, width);
     flex_col((
         state.reading.selected.as_ref().map(|_| {
@@ -150,7 +150,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
 
 fn footer(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing;
+    let closing = state.phase() != Phase::Writing;
     flex_row((
         state.session.project().is_some().then(|| {
             text_button(scale, "Save file", Writer::save).disabled(

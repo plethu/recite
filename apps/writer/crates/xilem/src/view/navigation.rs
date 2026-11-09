@@ -328,7 +328,7 @@ fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
                             .prop(LineBreaking::WordWrap),
                             move |state: &mut Writer| state.select_example(index),
                         )
-                        .disabled(state.phase != Phase::Writing),
+                        .disabled(state.phase() != Phase::Writing),
                     )
                 })
                 .collect::<Vec<_>>(),

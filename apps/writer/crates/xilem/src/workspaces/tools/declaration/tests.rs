@@ -31,7 +31,7 @@ fn source_binding_keeps_close_guarded_until_the_same_worker_finishes_retirement(
     assert!(writer.declaration_session().unwrap().busy());
     writer.return_to_writing();
     writer.request_close();
-    assert!(writer.phase == Phase::Writing);
+    assert!(writer.phase() == Phase::Writing);
     let terminal = retirement.finish(request).unwrap();
     assert!(writer.project_jobs_busy());
     writer.accept_tool(terminal);

@@ -51,7 +51,7 @@ fn build_actions(writer: &Writer, busy: bool, empty: bool) -> impl WidgetView<Wr
     let blocked = writer.declaration_action_blocked()
         || busy
         || empty
-        || writer.phase != Phase::Writing
+        || writer.phase() != Phase::Writing
         || writer.navigation.busy()
         || writer.work.busy();
     flex_row((

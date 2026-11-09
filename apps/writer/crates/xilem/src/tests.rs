@@ -56,7 +56,7 @@ fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
     )));
     assert_eq!(writer.session.model().view(), &selected);
     writer.request_close();
-    assert!(writer.phase == Phase::ConfirmClose);
+    assert!(writer.phase() == Phase::ConfirmClose);
     assert!(writer.keep_running());
     writer.close_with_recovery();
     assert!(!writer.keep_running());
@@ -66,7 +66,7 @@ fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
     support::save(&mut writer).unwrap();
     assert!(!writer.session.dirty());
     writer.request_close();
-    assert!(writer.phase == Phase::ConfirmExit);
+    assert!(writer.phase() == Phase::ConfirmExit);
     click(&mut writer, &["Close Writer"]).unwrap();
     assert!(!writer.keep_running());
     assert!(
@@ -169,7 +169,7 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
         ],
     )
     .unwrap();
-    assert!(writer.phase == Phase::Writing);
+    assert!(writer.phase() == Phase::Writing);
     assert_eq!(writer.session.model().draft(), "Accepted.");
     click(&mut writer, &["Project", "Close", "Save all and close"]).unwrap();
     assert!(!writer.keep_running());
@@ -203,7 +203,7 @@ fn ordinary_exit_preference_does_not_weaken_unsaved_work_protection() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
     writer.request_close();
-    assert!(writer.phase == Phase::ConfirmExit);
+    assert!(writer.phase() == Phase::ConfirmExit);
     assert!(
         labels(&mut writer)
             .unwrap()
@@ -217,7 +217,7 @@ fn ordinary_exit_preference_does_not_weaken_unsaved_work_protection() {
         Ok(())
     });
     writer.request_close();
-    assert!(writer.phase == Phase::ConfirmClose);
+    assert!(writer.phase() == Phase::ConfirmClose);
     click(&mut writer, &["Keep editing", "Project", "Discard draft"]).unwrap();
     writer.session.project_mut().unwrap().checkpoint().unwrap();
     writer.request_close();

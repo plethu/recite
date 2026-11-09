@@ -152,9 +152,12 @@ fn picker_opening_still_rejects_changed_lifetime_document_selection_screen_picke
                     .unwrap();
             }
             6 => app.writer.as_mut().unwrap().map.workspace = Workspace::Map,
-            7 => app.settings_open = true,
-            8 => app.show_welcome = true,
-            9 => app.writer.as_mut().unwrap().phase = Phase::ConfirmClose,
+            7 => recite_writer_app::test_support::set_settings(&mut app.shell, true),
+            8 => recite_writer_app::test_support::set_welcome(&mut app.shell, true),
+            9 => recite_writer_app::test_support::set_phase(
+                app.writer.as_mut().unwrap(),
+                Phase::ConfirmClose,
+            ),
             10 => app.open_picker(picker::Search::Commands),
             11 => app.step_picker(true),
             _ => app.preferences.config.ui.keymap = recite_config::Keymap::Vim,
@@ -202,7 +205,7 @@ fn picker_opening_still_rejects_changed_lifetime_document_selection_screen_picke
 #[test]
 fn accepted_opening_closes_the_document_menu_before_presenting_search() {
     let mut writer = Writer::from_session(Session::examples().unwrap(), None);
-    writer.document_menu = DocumentMenu::Open;
+    recite_writer_app::test_support::set_document_menu(&mut writer, DocumentMenu::Open);
     let mut app = App::with_writer(writer);
     let mut ctx = ViewCtx::new(
         Arc::new(NoProxy),
@@ -233,7 +236,7 @@ fn accepted_opening_closes_the_document_menu_before_presenting_search() {
     assert!(app.picker.is_some());
     app.dismiss_picker();
     assert_eq!(
-        app.writer.as_ref().unwrap().document_menu,
+        app.writer.as_ref().unwrap().document_menu(),
         DocumentMenu::Closed
     );
 }

@@ -90,7 +90,7 @@ fn connection_list(
                         || !scene
                             .projection
                             .is_current(state.session.model().document())
-                        || state.phase != crate::Phase::Writing,
+                        || state.phase() != crate::Phase::Writing,
                 ),
             )
             .width(

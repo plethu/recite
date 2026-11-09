@@ -52,7 +52,7 @@ impl<V: WidgetView<Writer, Widget = TextInput>> View<Writer, (), ViewCtx> for Gu
     ) -> MessageResult<()> {
         if self.target.belongs_to(state)
             && state.session.model().view() == &self.target.view()
-            && state.phase == Phase::Writing
+            && state.phase() == Phase::Writing
             && !state.session.read_only()
         {
             self.input.message(local, message, widget, state)

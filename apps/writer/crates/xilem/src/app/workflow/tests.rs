@@ -185,7 +185,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     }
     mounted.activate("Workspace");
     mounted.activate("Projects");
-    assert!(mounted.state.show_welcome);
+    assert!(mounted.state.show_welcome());
     mounted.activate("Create a new project");
     mounted.type_text(
         "Project folder",
@@ -193,7 +193,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     );
     mounted.type_text("Project name", "A new project");
     mounted.activate("Return to Writer");
-    assert!(!mounted.state.show_welcome);
+    assert!(!mounted.state.show_welcome());
     assert!(mounted.state.keep_running());
     assert_eq!(
         mounted

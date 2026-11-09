@@ -54,7 +54,11 @@ fn writer_requests_reach_the_shell_once() {
     assert!(shell.workspace_menu);
     shell.apply_writer_requests();
     assert!(shell.workspace_menu, "a taken request does not repeat");
-    shell.writer.as_mut().unwrap().request_search(Search::Commands);
+    shell
+        .writer
+        .as_mut()
+        .unwrap()
+        .request_search(Search::Commands);
     shell.apply_writer_requests();
     assert!(shell.picker.is_some());
 }

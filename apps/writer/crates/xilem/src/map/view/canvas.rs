@@ -49,7 +49,7 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
             matches!(scene.gesture, Gesture::Panning { .. }),
         )
         .focus(focus_request(scene))
-        .disabled(state.phase != crate::Phase::Writing)
+        .disabled(state.phase() != crate::Phase::Writing)
         .prop(properties::BorderColor {
             color: state.palette.accent,
         });

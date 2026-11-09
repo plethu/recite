@@ -39,7 +39,7 @@ fn notice(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
         .and_then(|project| path.strip_prefix(project.root()).ok())
         .unwrap_or(path);
     let scale = writer.ui_scale();
-    let blocked = writer.phase != Phase::Writing || writer.project_action_blocked();
+    let blocked = writer.phase() != Phase::Writing || writer.project_action_blocked();
     let current = match evidence {
         Evidence::Source(observed) => writer
             .session

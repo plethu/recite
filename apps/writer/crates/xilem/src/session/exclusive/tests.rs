@@ -112,7 +112,7 @@ fn checkout_leaves_only_reading_authority_and_restores_the_same_lease_and_edit_h
             .is_err()
     );
     writer.request_close();
-    assert!(writer.phase == crate::Phase::Writing);
+    assert!(writer.phase() == crate::Phase::Writing);
     assert!(matches!(
         ProjectSession::open(directory.path(), None),
         Err(FileError::RecoveryInUse)

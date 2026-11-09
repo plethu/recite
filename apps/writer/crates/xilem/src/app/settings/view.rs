@@ -62,7 +62,7 @@ fn navigation(app: &App) -> impl WidgetView<App> + use<> {
         .disabled(app.writer.as_ref().is_none_or(|writer| {
             writer.session.project().is_none()
                 || writer.project_jobs_busy()
-                || writer.phase != crate::Phase::Writing
+                || writer.phase() != crate::Phase::Writing
         })),
     ))
     .direction(if app.viewport.width >= 600. * f64::from(scale) {

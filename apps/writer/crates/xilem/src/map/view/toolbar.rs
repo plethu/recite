@@ -10,7 +10,7 @@ pub(super) fn toolbar(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> 
     let scale = state.ui_scale();
     let width = workspace::Layout::resolve(state).map;
     let blocked =
-        state.phase != crate::Phase::Writing || state.navigation.busy() || state.work.busy();
+        state.phase() != crate::Phase::Writing || state.navigation.busy() || state.work.busy();
     let compact = state.viewport.height < 600. * f64::from(scale);
     let controls = if compact {
         Either::A(compact::toolbar(state, scene, blocked))

@@ -15,7 +15,7 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
     let state = &writer.localisation;
     let entry = state.entry.as_ref()?;
     let draft = state.slot.draft(entry.key.id)?;
-    let blocked = state.slot.read_only() || writer.phase != Phase::Writing;
+    let blocked = state.slot.read_only() || writer.phase() != Phase::Writing;
     Some(
         flex_col((
             navigation(writer, blocked),

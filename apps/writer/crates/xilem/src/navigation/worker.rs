@@ -36,7 +36,7 @@ pub(crate) fn worker() -> impl View<Writer, (), ViewCtx, Element = NoElement> {
                 let _ = retire.send(retired);
             }
             Output::Retired(request) => writer.navigation_retired(&request),
-            Output::ReloadCleanupFailed(message) => writer.status = message,
+            Output::ReloadCleanupFailed(message) => writer.reload_cleanup_failed(message),
         },
     )
 }

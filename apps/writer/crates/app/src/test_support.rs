@@ -72,3 +72,20 @@ impl crate::shell::Shell {
         }
     }
 }
+
+/// Put a Writer into `phase` directly, as a frontend test scenario setup.
+pub fn set_phase(writer: &mut Writer, phase: crate::Phase) {
+    writer.phase = phase;
+}
+/// Put document actions into `menu` directly, as a frontend test scenario setup.
+pub fn set_document_menu(writer: &mut Writer, menu: crate::attention::DocumentMenu) {
+    writer.document_menu = menu;
+}
+/// Show or hide the project welcome overlay directly, as a frontend test scenario setup.
+pub fn set_welcome(shell: &mut crate::shell::Shell, shown: bool) {
+    shell.show_welcome = shown;
+}
+/// Show or hide settings directly, as a frontend test scenario setup.
+pub fn set_settings(shell: &mut crate::shell::Shell, shown: bool) {
+    shell.settings_open = shown;
+}

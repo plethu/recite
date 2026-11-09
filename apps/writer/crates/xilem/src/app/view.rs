@@ -25,10 +25,10 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                         named(
                             "Writer workspace",
                             indexed_stack((welcome::panel(app), slot, settings::settings(app)))
-                                .active(if app.settings_open {
+                                .active(if app.settings_open() {
                                     2
                                 } else {
-                                    usize::from(!app.show_welcome)
+                                    usize::from(!app.show_welcome())
                                 }),
                         )
                         .disabled(app.picker.is_some()),

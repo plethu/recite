@@ -73,7 +73,7 @@ fn field(
                 .font(print::font(FONT_PROSE))
                 .text_size(state.reading_size())
                 .placeholder(name.clone())
-                .disabled(state.phase != Phase::Writing || state.session.read_only())
+                .disabled(state.phase() != Phase::Writing || state.session.read_only())
                 .prop(properties::TextAreaLabel::new(name))
                 .prop(properties::PlaceholderTextSize {
                     size: state.reading_size(),
