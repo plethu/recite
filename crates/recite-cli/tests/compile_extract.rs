@@ -106,6 +106,44 @@ fn compile_refuses_to_overwrite_input_source() {
     );
 }
 
+/// Effect IDs embed the source name, which `compile` takes relative to the directory shared by the
+/// output and its inputs. Hosts that rebuild an effect ID must compile where that name is known;
+/// the FFI locale-lifetime probe (#194) compiles a copy beside its output for this reason.
+#[test]
+fn compile_names_effect_sources_relative_to_the_output_and_inputs() {
+    let temp = TempDir::new().expect("tempdir");
+    let nested = temp.path().join("nested");
+    fs::create_dir(&nested).expect("nested dir");
+    let source = write_recite(
+        &nested,
+        "scene.recite",
+        ":: start default\n> @ffee6p8\n  Hello.\n! blocking finish()\n-> END\n",
+    );
+
+    for (output, expected) in [
+        (
+            temp.path().join("root.recitec"),
+            "effect:nested/scene.recite:4:1",
+        ),
+        (nested.join("beside.recitec"), "effect:scene.recite:4:1"),
+    ] {
+        recite()
+            .arg("compile")
+            .arg("--output")
+            .arg(&output)
+            .arg(&source)
+            .assert_success();
+        let bytes = fs::read(&output).expect("compiled asset written");
+        assert!(
+            bytes
+                .windows(expected.len())
+                .any(|window| window == expected.as_bytes()),
+            "{} should contain {expected}",
+            output.display()
+        );
+    }
+}
+
 #[test]
 fn extract_emits_pot_to_stdout_or_output_after_validation() {
     let temp = TempDir::new().expect("tempdir");

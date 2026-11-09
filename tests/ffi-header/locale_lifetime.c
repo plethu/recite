@@ -251,6 +251,8 @@ int main(int argc, char **argv) {
       !check_status(recite_session_acknowledge_effect(session, effect_id, 1, NULL, &batch),
                     RECITE_STATUS_LOCALISATION, __LINE__) ||
       !end_call(&owner)) {
+    /* -14 here means the compiled asset names the effect differently (#194). */
+    fprintf(stderr, "acknowledged effect id: %s\n", effect_id);
     return 6;
   }
   if (!begin_call(&owner) ||
