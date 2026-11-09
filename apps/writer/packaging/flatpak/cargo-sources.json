@@ -14,8 +14,8 @@
     {
         "type": "git",
         "url": "https://github.com/plethu/xilem",
-        "commit": "e94530b6474720cf0bd9b186da2ffb39ea81b903",
-        "dest": "flatpak-cargo/git/xilem-e94530b"
+        "commit": "f658f59e4f5fe718524d5f99c15b9826e2f2b8c6",
+        "dest": "flatpak-cargo/git/xilem-f658f59"
     },
     {
         "type": "archive",
@@ -2947,7 +2947,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/include_doc_path\" \"cargo/vendor/linebender_include_doc_path\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/include_doc_path\" \"cargo/vendor/linebender_include_doc_path\""
         ]
     },
     {
@@ -3069,7 +3069,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/masonry\" \"cargo/vendor/masonry\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry\" \"cargo/vendor/masonry\""
         ]
     },
     {
@@ -3087,7 +3087,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/masonry_core\" \"cargo/vendor/masonry_core\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_core\" \"cargo/vendor/masonry_core\""
         ]
     },
     {
@@ -3105,7 +3105,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/masonry_imaging\" \"cargo/vendor/masonry_imaging\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_imaging\" \"cargo/vendor/masonry_imaging\""
         ]
     },
     {
@@ -3123,7 +3123,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/masonry_testing\" \"cargo/vendor/masonry_testing\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_testing\" \"cargo/vendor/masonry_testing\""
         ]
     },
     {
@@ -3141,7 +3141,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/masonry_winit\" \"cargo/vendor/masonry_winit\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_winit\" \"cargo/vendor/masonry_winit\""
         ]
     },
     {
@@ -5876,7 +5876,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/tree_arena\" \"cargo/vendor/tree_arena\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/tree_arena\" \"cargo/vendor/tree_arena\""
         ]
     },
     {
@@ -7337,7 +7337,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/xilem\" \"cargo/vendor/xilem\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/xilem\" \"cargo/vendor/xilem\""
         ]
     },
     {
@@ -7355,7 +7355,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/xilem_core\" \"cargo/vendor/xilem_core\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/xilem_core\" \"cargo/vendor/xilem_core\""
         ]
     },
     {
@@ -7373,7 +7373,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-e94530b/xilem_masonry\" \"cargo/vendor/xilem_masonry\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/xilem_masonry\" \"cargo/vendor/xilem_masonry\""
         ]
     },
     {
@@ -7754,7 +7754,7 @@
     },
     {
         "type": "inline",
-        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/plethu/accesskit\"]\ngit = \"https://github.com/plethu/accesskit\"\nreplace-with = \"vendored-sources\"\nrev = \"9fa7febed546dd525f6bbe7291a397014d6528cf\"\n\n[source.\"https://github.com/plethu/copypasta\"]\ngit = \"https://github.com/plethu/copypasta\"\nreplace-with = \"vendored-sources\"\nrev = \"98fba518cc6f6f97ba2fa87d82fb0390c69c7584\"\n\n[source.\"https://github.com/plethu/xilem\"]\ngit = \"https://github.com/plethu/xilem\"\nreplace-with = \"vendored-sources\"\nrev = \"e94530b6474720cf0bd9b186da2ffb39ea81b903\"\n",
+        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/plethu/accesskit\"]\ngit = \"https://github.com/plethu/accesskit\"\nreplace-with = \"vendored-sources\"\nrev = \"9fa7febed546dd525f6bbe7291a397014d6528cf\"\n\n[source.\"https://github.com/plethu/copypasta\"]\ngit = \"https://github.com/plethu/copypasta\"\nreplace-with = \"vendored-sources\"\nrev = \"98fba518cc6f6f97ba2fa87d82fb0390c69c7584\"\n\n[source.\"https://github.com/plethu/xilem\"]\ngit = \"https://github.com/plethu/xilem\"\nreplace-with = \"vendored-sources\"\nrev = \"f658f59e4f5fe718524d5f99c15b9826e2f2b8c6\"\n",
         "dest": "cargo",
         "dest-filename": "config"
     }
