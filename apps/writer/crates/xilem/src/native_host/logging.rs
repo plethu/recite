@@ -2,7 +2,9 @@
 use tracing_subscriber::EnvFilter;
 
 pub(super) fn init() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn"));
+    // The imaging backend is reported once at startup; software adapters select Vello CPU.
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("warn,masonry_imaging=info"));
     // Respect an embedding host's subscriber if one is already installed.
     let _ = tracing_subscriber::fmt()
         .with_env_filter(filter)

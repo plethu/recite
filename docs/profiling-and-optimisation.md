@@ -174,10 +174,13 @@ accessibility polling and profilers outside fair timing segments. Wayland surfac
 measure client frame readiness, not physical presentation or input-to-photon latency. Reconcile both
 software and hardware results before attributing a reported interaction regression.
 
-Distinguish a renderer configuration from a framework limitation. The pinned Writer selects its
-Masonry imaging backend at compile time; WGPU adapter/API variables do not turn Vello/llvmpipe into
-a CPU or Hybrid backend. An alternate backend needs its own compatible feature/integration
-experiment and equivalent output, accessibility and timing checks.
+Distinguish a renderer configuration from a framework limitation. The Writer chooses its Masonry
+imaging backend per adapter at runtime: GPU Vello on hardware adapters and Vello CPU when wgpu
+reports a CPU adapter such as llvmpipe or WARP, because Vello's compute pipeline emulated on the CPU
+is far slower than rasterising directly (#283). The startup log names the choice; set
+`MASONRY_IMAGING_BACKEND` to `vello` or `vello_cpu` to compare both on one host. Any other backend
+needs its own compatible feature/integration experiment and equivalent output, accessibility and
+timing checks.
 
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is memoized independently of camera and hover. Content refresh derives current connections
