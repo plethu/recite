@@ -14,8 +14,8 @@
     {
         "type": "git",
         "url": "https://github.com/plethu/xilem",
-        "commit": "f658f59e4f5fe718524d5f99c15b9826e2f2b8c6",
-        "dest": "flatpak-cargo/git/xilem-f658f59"
+        "commit": "23cd6b69a0e066a08de14857f22cf0e603ccb95d",
+        "dest": "flatpak-cargo/git/xilem-23cd6b6"
     },
     {
         "type": "archive",
@@ -1343,6 +1343,45 @@
         "type": "inline",
         "contents": "{\"package\": \"d8d80a2f4f5b554395e47b5d8305bc3d27813bacb73493eb1001e8f76dae29ea\", \"files\": {}}",
         "dest": "cargo/vendor/criterion-plot-0.8.2",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/crossbeam-channel/crossbeam-channel-0.5.17.crate",
+        "sha256": "98b0cc327b5bc766e7fda9c9260cc0fa81b43a8e240440422dff70788e3f9ef1",
+        "dest": "cargo/vendor/crossbeam-channel-0.5.17"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"98b0cc327b5bc766e7fda9c9260cc0fa81b43a8e240440422dff70788e3f9ef1\", \"files\": {}}",
+        "dest": "cargo/vendor/crossbeam-channel-0.5.17",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/crossbeam-deque/crossbeam-deque-0.8.8.crate",
+        "sha256": "622f3fc73690be383c7214310406f28a90e6edeadc3cea882f9d71e495b9711a",
+        "dest": "cargo/vendor/crossbeam-deque-0.8.8"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"622f3fc73690be383c7214310406f28a90e6edeadc3cea882f9d71e495b9711a\", \"files\": {}}",
+        "dest": "cargo/vendor/crossbeam-deque-0.8.8",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/crossbeam-epoch/crossbeam-epoch-0.9.21.crate",
+        "sha256": "dc74980687109a3b14c72fd458107bf0baa1da1a1a805e178d15501ba9b86d9d",
+        "dest": "cargo/vendor/crossbeam-epoch-0.9.21"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"dc74980687109a3b14c72fd458107bf0baa1da1a1a805e178d15501ba9b86d9d\", \"files\": {}}",
+        "dest": "cargo/vendor/crossbeam-epoch-0.9.21",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -2947,7 +2986,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/include_doc_path\" \"cargo/vendor/linebender_include_doc_path\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/include_doc_path\" \"cargo/vendor/linebender_include_doc_path\""
         ]
     },
     {
@@ -3069,12 +3108,12 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry\" \"cargo/vendor/masonry\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/masonry\" \"cargo/vendor/masonry\""
         ]
     },
     {
         "type": "inline",
-        "contents": "[package]\nname = \"masonry\"\nversion = \"0.4.0\"\ndescription = \"Traits and types of the Masonry toolkit.\"\nkeywords = [\"gui\", \"ui\", \"toolkit\"]\ncategories = [\"gui\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\nexclude = [\"screenshots\", \"examples/assets\"]\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\n\n[features]\ndefault = [\"masonry_core/default\", \"imaging_vello\"]\nimaging_vello = [\"masonry_winit/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry_winit/imaging_vello_hybrid\"]\nimaging_skia = [\"masonry_winit/imaging_skia\"]\ntracy = [\"masonry_core/tracy\"]\ntesting = [\"dep:masonry_testing\"]\n\n[dependencies]\naccesskit = \"0.24.0\"\nsmallvec = \"1.15.1\"\nresvg = \"0.47.0\"\nunderstory_virtual_list = \"0.1.2\"\n\n[dependencies.masonry_core]\nversion = \"0.4.0\"\npath = \"masonry_core\"\ndefault-features = false\n\n[dependencies.masonry_testing]\noptional = true\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_testing\"\n\n[dependencies.tracing]\nfeatures = [\"default\"]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.include_doc_path]\nversion = \"0.1.0\"\npath = \"include_doc_path\"\npackage = \"linebender_include_doc_path\"\n\n[dev-dependencies]\naccesskit_consumer = \"0.35.0\"\ndivan = \"0.1.21\"\n\n[dev-dependencies.float-cmp]\nversion = \"0.10.0\"\nfeatures = [\"std\"]\ndefault-features = false\n\n[dev-dependencies.image]\nfeatures = [\"png\"]\nversion = \"0.25.10\"\ndefault-features = false\n\n[dev-dependencies.insta]\nversion = \"1.46.3\"\n\n[dev-dependencies.masonry_testing]\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_testing\"\n\n[dev-dependencies.masonry_winit]\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_winit\"\n\n[dev-dependencies.profiling]\nversion = \"1.0.17\"\nfeatures = [\"profile-with-tracing\"]\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n\n[[bench]]\nname = \"widget_list\"\nharness = false\ntest = true\n\n[[example]]\nname = \"calc_masonry\"\ndoc-scrape-examples = true\n",
+        "contents": "[package]\nname = \"masonry\"\nversion = \"0.4.0\"\ndescription = \"Traits and types of the Masonry toolkit.\"\nkeywords = [\"gui\", \"ui\", \"toolkit\"]\ncategories = [\"gui\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\nexclude = [\"screenshots\", \"examples/assets\"]\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\n\n[features]\ndefault = [\"masonry_core/default\", \"imaging_vello\"]\nimaging_vello = [\"masonry_winit/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry_winit/imaging_vello_hybrid\"]\nimaging_vello_cpu = [\"masonry_winit/imaging_vello_cpu\"]\nvello_cpu_multithreading = [\"masonry_winit/vello_cpu_multithreading\"]\nvello_cpu_fallback = [\"masonry_winit/vello_cpu_fallback\"]\nimaging_skia = [\"masonry_winit/imaging_skia\"]\ntracy = [\"masonry_core/tracy\"]\ntesting = [\"dep:masonry_testing\"]\n\n[dependencies]\naccesskit = \"0.24.0\"\nsmallvec = \"1.15.1\"\nresvg = \"0.47.0\"\nunderstory_virtual_list = \"0.1.2\"\n\n[dependencies.masonry_core]\nversion = \"0.4.0\"\npath = \"masonry_core\"\ndefault-features = false\n\n[dependencies.masonry_testing]\noptional = true\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_testing\"\n\n[dependencies.tracing]\nfeatures = [\"default\"]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.include_doc_path]\nversion = \"0.1.0\"\npath = \"include_doc_path\"\npackage = \"linebender_include_doc_path\"\n\n[dev-dependencies]\naccesskit_consumer = \"0.35.0\"\ndivan = \"0.1.21\"\n\n[dev-dependencies.float-cmp]\nversion = \"0.10.0\"\nfeatures = [\"std\"]\ndefault-features = false\n\n[dev-dependencies.image]\nfeatures = [\"png\"]\nversion = \"0.25.10\"\ndefault-features = false\n\n[dev-dependencies.insta]\nversion = \"1.46.3\"\n\n[dev-dependencies.masonry_testing]\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_testing\"\n\n[dev-dependencies.masonry_winit]\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_winit\"\n\n[dev-dependencies.profiling]\nversion = \"1.0.17\"\nfeatures = [\"profile-with-tracing\"]\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n\n[[bench]]\nname = \"widget_list\"\nharness = false\ntest = true\n\n[[example]]\nname = \"calc_masonry\"\ndoc-scrape-examples = true\n",
         "dest": "cargo/vendor/masonry",
         "dest-filename": "Cargo.toml"
     },
@@ -3087,7 +3126,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_core\" \"cargo/vendor/masonry_core\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/masonry_core\" \"cargo/vendor/masonry_core\""
         ]
     },
     {
@@ -3105,12 +3144,12 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_imaging\" \"cargo/vendor/masonry_imaging\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/masonry_imaging\" \"cargo/vendor/masonry_imaging\""
         ]
     },
     {
         "type": "inline",
-        "contents": "[package]\nname = \"masonry_imaging\"\nversion = \"0.4.0\"\ndescription = \"Backend adapters for rendering Masonry retained imaging scenes.\"\nkeywords = [\"gui\", \"ui\", \"toolkit\"]\ncategories = [\"gui\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\nreadme = \"README.md\"\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\n\n[features]\ndefault = [\"imaging_vello\"]\nimaging_vello = [\"dep:imaging_vello\"]\nimaging_vello_hybrid = [\"dep:imaging_vello_hybrid\"]\nimaging_vello_cpu = [\"dep:imaging_vello_cpu\"]\nimaging_skia = [\"dep:imaging_skia\"]\n\n[dependencies]\nimaging = \"0.0.1\"\nkurbo = \"0.13.1\"\npeniko = \"0.6.1\"\n\n[dependencies.imaging_vello_cpu]\noptional = true\nversion = \"0.0.1\"\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies]\nwgpu = \"28.0.0\"\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_wgpu]\nversion = \"0.0.1\"\nfeatures = [\"wgpu-28\"]\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_vello]\noptional = true\nversion = \"0.0.1\"\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_vello_hybrid]\noptional = true\nversion = \"0.0.1\"\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_skia]\noptional = true\nversion = \"0.0.1\"\nfeatures = [\"gpu\"]\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n",
+        "contents": "[package]\nname = \"masonry_imaging\"\nversion = \"0.4.0\"\ndescription = \"Backend adapters for rendering Masonry retained imaging scenes.\"\nkeywords = [\"gui\", \"ui\", \"toolkit\"]\ncategories = [\"gui\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\nreadme = \"README.md\"\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\n\n[features]\ndefault = [\"imaging_vello\"]\nimaging_vello = [\"dep:imaging_vello\"]\nimaging_vello_hybrid = [\"dep:imaging_vello_hybrid\"]\nimaging_vello_cpu = [\"dep:imaging_vello_cpu\"]\nvello_cpu_multithreading = [\"imaging_vello_cpu\", \"dep:vello_cpu\", \"vello_cpu/multithreading\"]\nvello_cpu_fallback = [\"imaging_vello\", \"imaging_vello_cpu\", \"dep:tracing\"]\nimaging_skia = [\"dep:imaging_skia\"]\n\n[dependencies]\nimaging = \"0.0.1\"\nkurbo = \"0.13.1\"\npeniko = \"0.6.1\"\n\n[dependencies.imaging_vello_cpu]\noptional = true\nversion = \"0.0.1\"\n\n[dependencies.vello_cpu]\nversion = \"0.0.7\"\ndefault-features = false\noptional = true\n\n[dependencies.tracing]\noptional = true\nversion = \"0.1.44\"\ndefault-features = false\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies]\nwgpu = \"28.0.0\"\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_wgpu]\nversion = \"0.0.1\"\nfeatures = [\"wgpu-28\"]\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_vello]\noptional = true\nversion = \"0.0.1\"\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_vello_hybrid]\noptional = true\nversion = \"0.0.1\"\n\n[target.\"cfg(not(target_arch = \\\"wasm32\\\"))\".dependencies.imaging_skia]\noptional = true\nversion = \"0.0.1\"\nfeatures = [\"gpu\"]\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n",
         "dest": "cargo/vendor/masonry_imaging",
         "dest-filename": "Cargo.toml"
     },
@@ -3123,7 +3162,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_testing\" \"cargo/vendor/masonry_testing\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/masonry_testing\" \"cargo/vendor/masonry_testing\""
         ]
     },
     {
@@ -3141,12 +3180,12 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/masonry_winit\" \"cargo/vendor/masonry_winit\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/masonry_winit\" \"cargo/vendor/masonry_winit\""
         ]
     },
     {
         "type": "inline",
-        "contents": "[package]\nname = \"masonry_winit\"\nversion = \"0.4.0\"\ndescription = \"Data-oriented Rust UI design toolkit.\"\nkeywords = [\"gui\", \"ui\", \"toolkit\"]\ncategories = [\"gui\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\ncargo-args = [\"-Zunstable-options\", \"-Zrustdoc-scrape-examples\"]\n\n[features]\ndefault = [\"imaging_vello\"]\nimaging_vello = [\"masonry_imaging/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry_imaging/imaging_vello_hybrid\"]\nimaging_skia = [\"masonry_imaging/imaging_skia\"]\ntracy = [\"dep:tracing-tracy\", \"dep:vello\", \"dep:wgpu-profiler\", \"wgpu-profiler/tracy\", \"masonry_core/tracy\", \"vello/wgpu-profiler\"]\n\n[dependencies]\nwinit = \"0.30.13\"\npollster = \"0.4.0\"\nwgpu = \"28.0.0\"\ncopypasta = \"0.10.2\"\n\n[dependencies.masonry_core]\nversion = \"0.4.0\"\npath = \"masonry_core\"\ndefault-features = false\n\n[dependencies.tracing]\nfeatures = [\"default\"]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.tracing-tracy]\nversion = \"0.11.4\"\noptional = true\n\n[dependencies.ui-events-winit]\nversion = \"0.3.0\"\ndefault-features = false\n\n[dependencies.accesskit_winit]\nversion = \"0.32.2\"\ndefault-features = false\nfeatures = [\"accesskit_unix\", \"tokio\", \"rwh_06\"]\n\n[dependencies.masonry_imaging]\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_imaging\"\n\n[dependencies.vello]\noptional = true\nversion = \"0.8.0\"\ndefault-features = false\nfeatures = [\"wgpu\"]\n\n[dependencies.wgpu-profiler]\noptional = true\nversion = \"0.26.0\"\ndefault-features = false\n\n[target.\"cfg(target_os = \\\"macos\\\")\".dependencies.wgpu]\nfeatures = [\"metal\"]\nversion = \"28.0.0\"\n\n[dev-dependencies.masonry]\npath = \"../masonry\"\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n",
+        "contents": "[package]\nname = \"masonry_winit\"\nversion = \"0.4.0\"\ndescription = \"Data-oriented Rust UI design toolkit.\"\nkeywords = [\"gui\", \"ui\", \"toolkit\"]\ncategories = [\"gui\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\ncargo-args = [\"-Zunstable-options\", \"-Zrustdoc-scrape-examples\"]\n\n[features]\ndefault = [\"imaging_vello\"]\nimaging_vello = [\"masonry_imaging/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry_imaging/imaging_vello_hybrid\"]\nimaging_vello_cpu = [\"masonry_imaging/imaging_vello_cpu\"]\nvello_cpu_multithreading = [\"masonry_imaging/vello_cpu_multithreading\"]\nvello_cpu_fallback = [\"imaging_vello\", \"imaging_vello_cpu\", \"masonry_imaging/vello_cpu_fallback\"]\nimaging_skia = [\"masonry_imaging/imaging_skia\"]\ntracy = [\"dep:tracing-tracy\", \"masonry_core/tracy\"]\n\n[dependencies]\nwinit = \"0.30.13\"\npollster = \"0.4.0\"\nwgpu = \"28.0.0\"\ncopypasta = \"0.10.2\"\n\n[dependencies.masonry_core]\nversion = \"0.4.0\"\npath = \"masonry_core\"\ndefault-features = false\n\n[dependencies.tracing]\nfeatures = [\"default\"]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.tracing-tracy]\nversion = \"0.11.4\"\noptional = true\n\n[dependencies.ui-events-winit]\nversion = \"0.3.0\"\ndefault-features = false\n\n[dependencies.accesskit_winit]\nversion = \"0.32.2\"\ndefault-features = false\nfeatures = [\"accesskit_unix\", \"tokio\", \"rwh_06\"]\n\n[dependencies.masonry_imaging]\ndefault-features = false\nversion = \"0.4.0\"\npath = \"masonry_imaging\"\n\n[target.\"cfg(target_os = \\\"macos\\\")\".dependencies.wgpu]\nfeatures = [\"metal\"]\nversion = \"28.0.0\"\n\n[dev-dependencies.masonry]\npath = \"../masonry\"\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n",
         "dest": "cargo/vendor/masonry_winit",
         "dest-filename": "Cargo.toml"
     },
@@ -3804,6 +3843,19 @@
         "type": "inline",
         "contents": "{\"package\": \"5df339f526ea9a60e371768d50efc2f2508c7203290731565d1f7a6f71d21747\", \"files\": {}}",
         "dest": "cargo/vendor/orbclient-0.3.55",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/ordered-channel/ordered-channel-1.2.0.crate",
+        "sha256": "95be4d57809897b5a7539fc15a7dfe0e84141bc3dfaa2e9b1b27caa90acf61ab",
+        "dest": "cargo/vendor/ordered-channel-1.2.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"95be4d57809897b5a7539fc15a7dfe0e84141bc3dfaa2e9b1b27caa90acf61ab\", \"files\": {}}",
+        "dest": "cargo/vendor/ordered-channel-1.2.0",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -4480,6 +4532,32 @@
         "type": "inline",
         "contents": "{\"package\": \"20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539\", \"files\": {}}",
         "dest": "cargo/vendor/raw-window-handle-0.6.2",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/rayon/rayon-1.12.0.crate",
+        "sha256": "fb39b166781f92d482534ef4b4b1b2568f42613b53e5b6c160e24cfbfa30926d",
+        "dest": "cargo/vendor/rayon-1.12.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"fb39b166781f92d482534ef4b4b1b2568f42613b53e5b6c160e24cfbfa30926d\", \"files\": {}}",
+        "dest": "cargo/vendor/rayon-1.12.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/rayon-core/rayon-core-1.13.0.crate",
+        "sha256": "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91",
+        "dest": "cargo/vendor/rayon-core-1.13.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91\", \"files\": {}}",
+        "dest": "cargo/vendor/rayon-core-1.13.0",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -5876,7 +5954,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/tree_arena\" \"cargo/vendor/tree_arena\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/tree_arena\" \"cargo/vendor/tree_arena\""
         ]
     },
     {
@@ -7337,12 +7415,12 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/xilem\" \"cargo/vendor/xilem\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/xilem\" \"cargo/vendor/xilem\""
         ]
     },
     {
         "type": "inline",
-        "contents": "[package]\nname = \"xilem\"\nversion = \"0.4.0\"\ndescription = \"A next-generation cross-platform Rust UI framework.\"\nkeywords = [\"gui\", \"ui\", \"native\", \"gpu\", \"performance\"]\ncategories = [\"gui\", \"graphics\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\nexclude = [\"/resources/fonts/roboto_flex/\", \"/resources/data/http_cats_status/\", \"/resources/data/emoji_names/\"]\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\ncargo-args = [\"-Zunstable-options\", \"-Zrustdoc-scrape-examples\"]\n\n[package.metadata.android.application]\ndebuggable = true\n\n[[package.metadata.android.uses_permission]]\nname = \"android.permission.INTERNET\"\n\n[features]\ndefault = [\"masonry/default\", \"masonry_winit/default\", \"imaging_vello\"]\nimaging_vello = [\"masonry/imaging_vello\", \"masonry_winit/imaging_vello\", \"xilem_masonry/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry/imaging_vello_hybrid\", \"masonry_winit/imaging_vello_hybrid\", \"xilem_masonry/imaging_vello_hybrid\"]\nimaging_skia = [\"masonry/imaging_skia\", \"masonry_winit/imaging_skia\", \"xilem_masonry/imaging_skia\"]\n\n[dependencies]\nwinit = \"0.30.13\"\n\n[dependencies.xilem_core]\nversion = \"0.4.0\"\npath = \"xilem_core\"\n\n[dependencies.xilem_masonry]\nversion = \"0.4.0\"\npath = \"xilem_masonry\"\n\n[dependencies.masonry]\nversion = \"0.4.0\"\npath = \"masonry\"\ndefault-features = false\n\n[dependencies.masonry_winit]\nversion = \"0.4.0\"\npath = \"masonry_winit\"\ndefault-features = false\n\n[dependencies.tracing]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.tokio]\nversion = \"1.50.0\"\nfeatures = [\"rt\", \"rt-multi-thread\", \"time\", \"sync\"]\n\n[dev-dependencies]\nusvg = \"0.47.0\"\nanyhow = \"1.0.102\"\n\n[dev-dependencies.time]\nfeatures = [\"local-offset\"]\nversion = \"0.3.47\"\n\n[dev-dependencies.reqwest]\nversion = \"0.12.28\"\ndefault-features = false\nfeatures = [\"rustls-tls\"]\n\n[dev-dependencies.image]\nfeatures = [\"jpeg\"]\nversion = \"0.25.10\"\ndefault-features = false\n\n[dev-dependencies.profiling]\nversion = \"1.0.17\"\nfeatures = [\"profile-with-tracing\"]\n\n[target.\"cfg(target_os = \\\"android\\\")\".dev-dependencies.winit]\nfeatures = [\"android-native-activity\"]\nversion = \"0.30.13\"\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n\n[[example]]\nname = \"mason\"\ndoc-scrape-examples = true\n\n[[example]]\nname = \"calc\"\n\n[[example]]\nname = \"stopwatch\"\n\n[[example]]\nname = \"to_do_mvc\"\n\n[[example]]\nname = \"variable_clock\"\n\n[[example]]\nname = \"emoji_picker\"\ndoc-scrape-examples = false\n\n[[example]]\nname = \"http_cats\"\n\n[[example]]\nname = \"mason_android\"\npath = \"examples/android/mason_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"calc_android\"\npath = \"examples/android/calc_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"stopwatch_android\"\npath = \"examples/android/stopwatch_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"to_do_mvc_android\"\npath = \"examples/android/to_do_mvc_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"variable_clock_android\"\npath = \"examples/android/variable_clock_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"emoji_picker_android\"\npath = \"examples/android/emoji_picker_android.rs\"\ncrate-type = [\"cdylib\"]\ndoc-scrape-examples = false\n\n[[example]]\nname = \"http_cats_android\"\npath = \"examples/android/http_cats_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"canvas\"\n\n[[test]]\nname = \"long_elem_seq\"\npath = \"stress_tests/long_elem_seq.rs\"\n\n[[test]]\nname = \"property_stack\"\npath = \"stress_tests/property_stack.rs\"\n",
+        "contents": "[package]\nname = \"xilem\"\nversion = \"0.4.0\"\ndescription = \"A next-generation cross-platform Rust UI framework.\"\nkeywords = [\"gui\", \"ui\", \"native\", \"gpu\", \"performance\"]\ncategories = [\"gui\", \"graphics\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\nexclude = [\"/resources/fonts/roboto_flex/\", \"/resources/data/http_cats_status/\", \"/resources/data/emoji_names/\"]\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\ncargo-args = [\"-Zunstable-options\", \"-Zrustdoc-scrape-examples\"]\n\n[package.metadata.android.application]\ndebuggable = true\n\n[[package.metadata.android.uses_permission]]\nname = \"android.permission.INTERNET\"\n\n[features]\ndefault = [\"masonry/default\", \"masonry_winit/default\", \"imaging_vello\"]\nimaging_vello = [\"masonry/imaging_vello\", \"masonry_winit/imaging_vello\", \"xilem_masonry/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry/imaging_vello_hybrid\", \"masonry_winit/imaging_vello_hybrid\", \"xilem_masonry/imaging_vello_hybrid\"]\nimaging_skia = [\"masonry/imaging_skia\", \"masonry_winit/imaging_skia\", \"xilem_masonry/imaging_skia\"]\nimaging_vello_cpu = [\"masonry/imaging_vello_cpu\", \"masonry_winit/imaging_vello_cpu\", \"xilem_masonry/imaging_vello_cpu\"]\nvello_cpu_multithreading = [\"imaging_vello_cpu\", \"masonry_winit/vello_cpu_multithreading\"]\nvello_cpu_fallback = [\"imaging_vello\", \"imaging_vello_cpu\", \"masonry_winit/vello_cpu_fallback\"]\n\n[dependencies]\nwinit = \"0.30.13\"\n\n[dependencies.xilem_core]\nversion = \"0.4.0\"\npath = \"xilem_core\"\n\n[dependencies.xilem_masonry]\nversion = \"0.4.0\"\npath = \"xilem_masonry\"\ndefault-features = false\n\n[dependencies.masonry]\nversion = \"0.4.0\"\npath = \"masonry\"\ndefault-features = false\n\n[dependencies.masonry_winit]\nversion = \"0.4.0\"\npath = \"masonry_winit\"\ndefault-features = false\n\n[dependencies.tracing]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.tokio]\nversion = \"1.50.0\"\nfeatures = [\"rt\", \"rt-multi-thread\", \"time\", \"sync\"]\n\n[dev-dependencies]\nusvg = \"0.47.0\"\nanyhow = \"1.0.102\"\n\n[dev-dependencies.time]\nfeatures = [\"local-offset\"]\nversion = \"0.3.47\"\n\n[dev-dependencies.reqwest]\nversion = \"0.12.28\"\ndefault-features = false\nfeatures = [\"rustls-tls\"]\n\n[dev-dependencies.image]\nfeatures = [\"jpeg\"]\nversion = \"0.25.10\"\ndefault-features = false\n\n[dev-dependencies.profiling]\nversion = \"1.0.17\"\nfeatures = [\"profile-with-tracing\"]\n\n[target.\"cfg(target_os = \\\"android\\\")\".dev-dependencies.winit]\nfeatures = [\"android-native-activity\"]\nversion = \"0.30.13\"\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n\n[[example]]\nname = \"mason\"\ndoc-scrape-examples = true\n\n[[example]]\nname = \"calc\"\n\n[[example]]\nname = \"stopwatch\"\n\n[[example]]\nname = \"to_do_mvc\"\n\n[[example]]\nname = \"variable_clock\"\n\n[[example]]\nname = \"emoji_picker\"\ndoc-scrape-examples = false\n\n[[example]]\nname = \"http_cats\"\n\n[[example]]\nname = \"mason_android\"\npath = \"examples/android/mason_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"calc_android\"\npath = \"examples/android/calc_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"stopwatch_android\"\npath = \"examples/android/stopwatch_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"to_do_mvc_android\"\npath = \"examples/android/to_do_mvc_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"variable_clock_android\"\npath = \"examples/android/variable_clock_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"emoji_picker_android\"\npath = \"examples/android/emoji_picker_android.rs\"\ncrate-type = [\"cdylib\"]\ndoc-scrape-examples = false\n\n[[example]]\nname = \"http_cats_android\"\npath = \"examples/android/http_cats_android.rs\"\ncrate-type = [\"cdylib\"]\n\n[[example]]\nname = \"canvas\"\n\n[[test]]\nname = \"long_elem_seq\"\npath = \"stress_tests/long_elem_seq.rs\"\n\n[[test]]\nname = \"property_stack\"\npath = \"stress_tests/property_stack.rs\"\n",
         "dest": "cargo/vendor/xilem",
         "dest-filename": "Cargo.toml"
     },
@@ -7355,7 +7433,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/xilem_core\" \"cargo/vendor/xilem_core\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/xilem_core\" \"cargo/vendor/xilem_core\""
         ]
     },
     {
@@ -7373,12 +7451,12 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-f658f59/xilem_masonry\" \"cargo/vendor/xilem_masonry\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/xilem-23cd6b6/xilem_masonry\" \"cargo/vendor/xilem_masonry\""
         ]
     },
     {
         "type": "inline",
-        "contents": "[package]\nname = \"xilem_masonry\"\nversion = \"0.4.0\"\ndescription = \"Masonry backend for the Xilem Rust UI framework.\"\nkeywords = [\"gui\", \"ui\", \"native\", \"gpu\", \"performance\"]\ncategories = [\"gui\", \"graphics\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\n\n[features]\ndefault = [\"masonry/default\", \"imaging_vello\"]\nimaging_vello = [\"masonry/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry/imaging_vello_hybrid\"]\nimaging_skia = [\"masonry/imaging_skia\"]\n\n[dependencies]\nsmallvec = \"1.15.1\"\nusvg = \"0.47.0\"\n\n[dependencies.xilem_core]\nversion = \"0.4.0\"\npath = \"xilem_core\"\n\n[dependencies.masonry]\nversion = \"0.4.0\"\npath = \"masonry\"\ndefault-features = false\n\n[dependencies.tracing]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.tokio]\nversion = \"1.50.0\"\nfeatures = [\"rt\", \"rt-multi-thread\", \"time\", \"sync\"]\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n",
+        "contents": "[package]\nname = \"xilem_masonry\"\nversion = \"0.4.0\"\ndescription = \"Masonry backend for the Xilem Rust UI framework.\"\nkeywords = [\"gui\", \"ui\", \"native\", \"gpu\", \"performance\"]\ncategories = [\"gui\", \"graphics\", \"internationalization\", \"accessibility\"]\nedition = \"2024\"\nrust-version = \"1.96\"\nlicense = \"Apache-2.0\"\nrepository = \"https://github.com/linebender/xilem\"\n\n[package.metadata.docs.rs]\nall-features = true\ndefault-target = \"x86_64-unknown-linux-gnu\"\ntargets = []\n\n[features]\ndefault = [\"masonry/default\", \"imaging_vello\"]\nimaging_vello = [\"masonry/imaging_vello\"]\nimaging_vello_hybrid = [\"masonry/imaging_vello_hybrid\"]\nimaging_vello_cpu = [\"masonry/imaging_vello_cpu\"]\nimaging_skia = [\"masonry/imaging_skia\"]\n\n[dependencies]\nsmallvec = \"1.15.1\"\nusvg = \"0.47.0\"\n\n[dependencies.xilem_core]\nversion = \"0.4.0\"\npath = \"xilem_core\"\n\n[dependencies.masonry]\nversion = \"0.4.0\"\npath = \"masonry\"\ndefault-features = false\n\n[dependencies.tracing]\nversion = \"0.1.44\"\ndefault-features = false\n\n[dependencies.tokio]\nversion = \"1.50.0\"\nfeatures = [\"rt\", \"rt-multi-thread\", \"time\", \"sync\"]\n\n[lints.rust]\nunsafe_code = \"deny\"\nkeyword_idents_2024 = \"forbid\"\nnon_ascii_idents = \"forbid\"\nnon_local_definitions = \"forbid\"\nunsafe_op_in_unsafe_fn = \"forbid\"\nelided_lifetimes_in_paths = \"warn\"\nmissing_debug_implementations = \"warn\"\nmissing_docs = \"warn\"\ntrivial_numeric_casts = \"warn\"\nunnameable_types = \"warn\"\nunreachable_pub = \"warn\"\nunused_import_braces = \"warn\"\nunused_lifetimes = \"warn\"\nunused_macro_rules = \"warn\"\nunused_qualifications = \"warn\"\n\n[lints.rust.unexpected_cfgs]\nlevel = \"warn\"\ncheck-cfg = [\"cfg(compile_stress_test)\"]\n\n[lints.clippy]\ntoo_many_arguments = \"allow\"\nallow_attributes_without_reason = \"warn\"\ncast_possible_truncation = \"warn\"\ncast_possible_wrap = \"warn\"\ncollection_is_never_read = \"warn\"\ndefault_trait_access = \"warn\"\ndbg_macro = \"warn\"\ndebug_assert_with_mut_call = \"warn\"\ndoc_markdown = \"warn\"\nfn_to_numeric_cast_any = \"warn\"\ninfinite_loop = \"warn\"\nlarge_stack_arrays = \"warn\"\nmismatching_type_param_order = \"warn\"\nmissing_assert_message = \"warn\"\nmissing_fields_in_debug = \"warn\"\nsame_functions_in_if_condition = \"warn\"\nsemicolon_if_nothing_returned = \"warn\"\nshould_panic_without_expect = \"warn\"\ntodo = \"warn\"\nunseparated_literal_suffix = \"warn\"\nuse_self = \"warn\"\ncargo_common_metadata = \"warn\"\nnegative_feature_names = \"warn\"\nredundant_feature_names = \"warn\"\nwildcard_dependencies = \"warn\"\n",
         "dest": "cargo/vendor/xilem_masonry",
         "dest-filename": "Cargo.toml"
     },
@@ -7754,7 +7832,7 @@
     },
     {
         "type": "inline",
-        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/plethu/accesskit\"]\ngit = \"https://github.com/plethu/accesskit\"\nreplace-with = \"vendored-sources\"\nrev = \"9fa7febed546dd525f6bbe7291a397014d6528cf\"\n\n[source.\"https://github.com/plethu/copypasta\"]\ngit = \"https://github.com/plethu/copypasta\"\nreplace-with = \"vendored-sources\"\nrev = \"98fba518cc6f6f97ba2fa87d82fb0390c69c7584\"\n\n[source.\"https://github.com/plethu/xilem\"]\ngit = \"https://github.com/plethu/xilem\"\nreplace-with = \"vendored-sources\"\nrev = \"f658f59e4f5fe718524d5f99c15b9826e2f2b8c6\"\n",
+        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/plethu/accesskit\"]\ngit = \"https://github.com/plethu/accesskit\"\nreplace-with = \"vendored-sources\"\nrev = \"9fa7febed546dd525f6bbe7291a397014d6528cf\"\n\n[source.\"https://github.com/plethu/copypasta\"]\ngit = \"https://github.com/plethu/copypasta\"\nreplace-with = \"vendored-sources\"\nrev = \"98fba518cc6f6f97ba2fa87d82fb0390c69c7584\"\n\n[source.\"https://github.com/plethu/xilem\"]\ngit = \"https://github.com/plethu/xilem\"\nreplace-with = \"vendored-sources\"\nrev = \"23cd6b69a0e066a08de14857f22cf0e603ccb95d\"\n",
         "dest": "cargo",
         "dest-filename": "config"
     }
