@@ -182,6 +182,12 @@ is far slower than rasterising directly (#283). The startup log names the choice
 needs its own compatible feature/integration experiment and equivalent output, accessibility and
 timing checks.
 
+`just writer probe target/writer-native/frame-timing.json frame-timing` reproduces the Writer lane's
+software-rendering check on an owned compositor. Its receipt records the selected backend, typed key
+presses, edit-to-paint and frame-interval percentiles against the §19.8 budgets, and its log keeps
+the client's `WAYLAND_DEBUG` protocol trace. Run it again with `MASONRY_IMAGING_BACKEND=vello` to
+see the llvmpipe path fail those budgets.
+
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is memoized independently of camera and hover. Content refresh derives current connections
 and labels, and reuses geometry when ordered beat IDs and entry flags, ordered connection endpoints

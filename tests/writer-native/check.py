@@ -155,6 +155,8 @@ def run_probe(binary, output, scenario):
             from startup_interactions import run
         elif scenario == "structure":
             from structure_interactions import run
+        elif scenario == "frame-timing":
+            from frame_timing import run
         else:
             from writer_interactions import run
 
@@ -219,6 +221,7 @@ def main():
             "localisation-scale",
             "localisation-sources",
             "localisation-sources-scale",
+            "frame-timing",
         ),
         default="all",
     )
