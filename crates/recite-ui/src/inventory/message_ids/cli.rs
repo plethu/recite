@@ -39,6 +39,22 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliIdsNoCatalogs => Some("cli-ids-no-catalogs"),
         super::MsgId::CliHelpArgSince => Some("cli-help-arg-since"),
         super::MsgId::CliHelpArgAllowRemoved => Some("cli-help-arg-allow-removed"),
+        super::MsgId::CliHelpCommandCatalog => Some("cli-help-command-catalog"),
+        super::MsgId::CliHelpCommandCatalogStatus => Some("cli-help-command-catalog-status"),
+        super::MsgId::CliHelpCommandCatalogRefresh => Some("cli-help-command-catalog-refresh"),
+        super::MsgId::CliHelpArgCatalogInclude => Some("cli-help-arg-catalog-include"),
+        super::MsgId::CliHelpArgCatalogCheck => Some("cli-help-arg-catalog-check"),
+        super::MsgId::CliHelpArgCatalogFormat => Some("cli-help-arg-catalog-format"),
+        super::MsgId::CliCatalogSummary => Some("cli-catalog-summary"),
+        super::MsgId::CliCatalogNoLocale => Some("cli-catalog-no-locale"),
+        super::MsgId::CliCatalogRefreshNeeded => Some("cli-catalog-refresh-needed"),
+        super::MsgId::CliCatalogEntry => Some("cli-catalog-entry"),
+        super::MsgId::CliCatalogStateMissing => Some("cli-catalog-state-missing"),
+        super::MsgId::CliCatalogStateUntranslated => Some("cli-catalog-state-untranslated"),
+        super::MsgId::CliCatalogStateNeedsReview => Some("cli-catalog-state-needs-review"),
+        super::MsgId::CliCatalogStateSourceChanged => Some("cli-catalog-state-source-changed"),
+        super::MsgId::CliCatalogRefreshed => Some("cli-catalog-refreshed"),
+        super::MsgId::CliCatalogCurrent => Some("cli-catalog-current"),
         super::MsgId::CliHelpCommandProjectValidate => Some("cli-help-command-project-validate"),
         super::MsgId::CliHelpCommandProjectCheckFresh => {
             Some("cli-help-command-project-check-fresh")
@@ -237,6 +253,9 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliErrorStableIdCatalogMalformed => {
             Some("cli-error-stable-id-catalog-malformed")
         }
+        super::MsgId::CliErrorCatalogMalformed => Some("cli-error-catalog-malformed"),
+        super::MsgId::CliErrorCatalogRefresh => Some("cli-error-catalog-refresh"),
+        super::MsgId::CliErrorCatalogChanged => Some("cli-error-catalog-changed"),
         super::MsgId::CliErrorMissingFixtureChoice => Some("cli-error-missing-fixture-choice"),
         super::MsgId::CliErrorNoInputs => Some("cli-error-no-inputs"),
         super::MsgId::CliErrorOutputOverwritesInput => Some("cli-error-output-overwrites-input"),

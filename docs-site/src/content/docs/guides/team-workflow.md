@@ -37,6 +37,7 @@ recite validate scenes --schema schema/generated/team.schema.json
 recite id check scenes --since v1
 recite compile scenes --schema schema/generated/team.schema.json -o build/crossing.recitec
 recite project validate .
+recite catalog status --check
 recite trace build/crossing.recitec --block dock --fixture fixture-source.toml
 recite trace build/crossing.recitec --block dock --fixture fixture-fr.toml
 ```
@@ -60,9 +61,9 @@ Two clean checkouts of the same revision compile identical bytes and produce ide
   name, merges cleanly. Validation reports RECITE_VALIDATE007 at the stale link.
 - **Translations of changed lines.** PO changes merge like any text, translator comments included.
   When a writer rewords a line, its translation no longer matches, and the runtime shows the source
-  text rather than an outdated translation. Refreshing the catalogue in Writer marks those entries
-  for review; the CLI does not list them yet, and headless reporting is tracked in
-  [#239](https://github.com/plethu/recite/issues/239).
+  text rather than an outdated translation. `recite catalog status --check` lists that entry as
+  `source changed` and fails until it is reviewed; `recite catalog refresh` marks it fuzzy with the
+  old wording recorded for the translator.
 
 A refused compile leaves the previous asset in place, so a game build never picks up a half-merged
 project.

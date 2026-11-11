@@ -21,3 +21,37 @@ fn invalid_translation_cannot_be_marked_reviewed() -> Result<(), Box<dyn std::er
     assert_eq!(document.source(), source);
     Ok(())
 }
+
+#[test]
+fn review_state_follows_translation_fuzzy_flag_and_previous_source()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_core::po::PoReviewState::{NeedsReview, Reviewed, SourceChanged, Untranslated};
+    let source = concat!(
+        "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n",
+        "msgctxt \"blank\"\nmsgid \"Hello\"\nmsgstr \"\"\n\n",
+        "msgctxt \"done\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
+        "#, fuzzy\nmsgctxt \"draft\"\nmsgid \"Hello\"\nmsgstr \"Salut\"\n\n",
+        "#, fuzzy\n#| msgid \"Hi\"\nmsgctxt \"changed\"\nmsgid \"Hello\"\nmsgstr \"Salut\"\n\n",
+        "msgctxt \"plural\"\nmsgid \"one\"\nmsgid_plural \"many\"\nmsgstr[0] \"un\"\nmsgstr[1] \"\"\n",
+    );
+    let document = PoDocument::parse(source)?;
+    let states: Vec<_> = document
+        .entries()
+        .iter()
+        .filter(|entry| entry.context().is_some())
+        .map(|entry| entry.review_state())
+        .collect();
+    assert_eq!(
+        states,
+        [
+            Untranslated,
+            Reviewed,
+            NeedsReview,
+            SourceChanged,
+            Untranslated
+        ]
+    );
+    assert!(!Reviewed.needs_attention());
+    assert!(SourceChanged.needs_attention());
+    Ok(())
+}

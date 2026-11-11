@@ -88,6 +88,25 @@ cli-ids-renamed = renamed `@{$from}` to `@{$to}` and { $count ->
     }
 cli-ids-reassigned-duplicate = reassigned one header from duplicated `@{$from}` to `@{$to}`; catalogues stay with the remaining header
 cli-ids-no-catalogs = no dialogue catalogues are configured; add [discovery].catalogs to recite.project.toml or pass --catalog
+cli-help-command-catalog = Check and refresh dialogue PO catalogues against current source
+cli-help-command-catalog-status = Report catalogue entries that are missing, untranslated or awaiting review
+cli-help-command-catalog-refresh = Update dialogue PO catalogues from current source; changed source is marked for review
+cli-help-arg-catalog-include = Dialogue PO catalogue to include in addition to [discovery].catalogs. Repeatable
+cli-help-arg-catalog-check = Fail when any entry needs attention or any catalogue needs refreshing
+cli-help-arg-catalog-format = Report as readable text or as deterministic JSON
+cli-catalog-summary = {$catalog} ({$locale}): {$reviewed} reviewed, { $attention ->
+        [one] {$attention} entry needs attention
+       *[other] {$attention} entries need attention
+    }
+cli-catalog-no-locale = no Language header
+cli-catalog-refresh-needed = {"  "}out of date with the source; run `recite catalog refresh`
+cli-catalog-entry = {"  "}{$state}: `{$context}` at {$reference}
+cli-catalog-state-missing = missing
+cli-catalog-state-untranslated = untranslated
+cli-catalog-state-needs-review = needs review
+cli-catalog-state-source-changed = source changed
+cli-catalog-refreshed = refreshed {$catalog}
+cli-catalog-current = {$catalog} is already current
 cli-diagnostic-errors = { $count ->
         [one] { $count } error
        *[other] { $count } errors
@@ -356,6 +375,9 @@ cli-error-stable-id-ambiguous = stable ID `@{$id}` is carried by more than one h
 cli-error-stable-id-target = no stable ID header at {$target}
 cli-error-stable-id-unchanged = stable ID `@{$id}` already has that name
 cli-error-stable-id-catalog-malformed = catalogue {$catalog} is not valid PO; fix it before renaming IDs
+cli-error-catalog-malformed = catalogue {$catalog} is not valid PO: {$detail}
+cli-error-catalog-refresh = cannot refresh catalogue {$catalog}: {$detail}
+cli-error-catalog-changed = catalogue {$catalog} changed during the refresh; run the refresh again
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys
 cli-error-no-inputs = no .recite inputs found
 cli-error-output-overwrites-input = refusing to overwrite input {$input} with output {$output}

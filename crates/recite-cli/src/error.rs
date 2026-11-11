@@ -102,6 +102,17 @@ pub(crate) enum CliError {
         detail: String,
     },
     StableIdEdit(StableIdEditError),
+    CatalogMalformed {
+        catalog: String,
+        detail: String,
+    },
+    CatalogRefresh {
+        catalog: String,
+        detail: String,
+    },
+    CatalogChanged {
+        catalog: String,
+    },
     OutputOverwritesInput {
         output: PathBuf,
         input: PathBuf,
@@ -314,6 +325,16 @@ impl std::fmt::Display for CliError {
                 "cannot read stable IDs at `{reference}`: {detail}"
             ),
             Self::StableIdEdit(refusal) => refusal.fmt(formatter),
+            Self::CatalogMalformed { catalog, detail } => {
+                write!(formatter, "catalogue {catalog} is not valid PO: {detail}")
+            }
+            Self::CatalogRefresh { catalog, detail } => {
+                write!(formatter, "cannot refresh catalogue {catalog}: {detail}")
+            }
+            Self::CatalogChanged { catalog } => write!(
+                formatter,
+                "catalogue {catalog} changed during the refresh; run the refresh again"
+            ),
             Self::OutputOverwritesInput { output, input } => write!(
                 formatter,
                 "refusing to overwrite input {} with output {}",

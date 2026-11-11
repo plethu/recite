@@ -11,10 +11,22 @@ localisation identity.
 recite extract src --schema schema/realistic.schema.json -o dialogue.pot
 ```
 
-The POT gives translators the source text, stable context and source references. Update a PO
-catalogue from that template with your gettext tooling, preserving contexts and reviewing fuzzy or
-missing translations. The example includes `locales/en-US.po`; it is a test catalogue, not a claim
-of additional language coverage.
+The POT gives translators the source text, stable context and source references. List a project's
+catalogues under `[discovery].catalogs` in `recite.project.toml`, then keep them in step with the
+source:
+
+```sh
+recite catalog status
+recite catalog refresh
+```
+
+`status` lists entries that are missing, untranslated or need review, including translations whose
+source wording changed since they were written. `refresh` adds new entries, keeps existing
+translations and marks changed ones fuzzy with the old source recorded, so a translator can see what
+changed. Only a person marks an entry reviewed. In CI, `recite catalog status --check` fails until
+every entry is translated and reviewed. Other gettext tools work too, as long as they preserve
+contexts. The example includes `locales/en-US.po`; it is a test catalogue, not a claim of additional
+language coverage.
 
 The example's `runtime-fixture.toml` selects it explicitly:
 

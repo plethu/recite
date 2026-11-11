@@ -262,6 +262,7 @@ verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun to
 | `id check`, `id assign`, `id rename`, `id reassign`     | stable line and choice IDs                         |
 | `schema inspect`, `schema export`, `schema check-fresh` | schema manifests and their producers               |
 | `project validate`, `project check-fresh`               | `recite.project.toml` and compiled-asset freshness |
+| `catalog status`, `catalog refresh`                     | dialogue PO catalogues and their review state      |
 
 `check-markup` and `check-metadata` are `validate --only markup` and `validate --only metadata`,
 because they filter the same diagnostics run; `--only metadata` requires `--schema`. The released-ID
@@ -417,6 +418,28 @@ The authoring kernel must expose the watch/build result as structured state so t
 integrations do not parse human CLI output. The result must identify the affected project inputs,
 diagnostics, output assets, freshness state, and whether an active session must be restarted
 according to the adapter's declared policy.
+
+### 13.10 `catalog status` and `catalog refresh`
+
+```text
+recite catalog status [PROJECT_ROOT] [--catalog <PATH>]... [--check] [--format text|json]
+recite catalog refresh [PROJECT_ROOT] [--catalog <PATH>]...
+```
+
+Both commands discover the project, extract its current template with the project schema exactly as
+Writer does, and apply the §9.8 source refresh in memory to each catalogue in `[discovery].catalogs`
+and every `--catalog`. An incomplete project, invalid schema, source errors or a malformed catalogue
+stop the command, so status never reports a partial project's entries as removed.
+
+`status` writes nothing. For each catalogue it reports the locale from the `Language` header, the
+count of reviewed entries, every entry needing attention with its state and source reference, and
+whether a refresh is pending. `--format json` emits the same report as deterministic JSON with
+`path`, `locale`, `refresh_needed`, `counts` and `attention` fields. `--check` exits 1 when any
+entry needs attention or any catalogue needs refreshing, so CI can require reviewed catalogues.
+
+`refresh` refreshes every catalogue in memory before writing any, so one refusal writes nothing. It
+writes only catalogues whose text changes, refuses a catalogue changed on disk since it was read,
+and never clears `fuzzy`.
 
 ### 13.9 Future: `generate-bindings`
 
