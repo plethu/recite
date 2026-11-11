@@ -35,6 +35,20 @@ debug = "line-tables-only"
 [profile.dev]
 debug = 0
 
+# Vello CPU renders Writer on software adapters; unoptimized SIMD code drops debug builds to about
+# 6 fps, so its rasteriser stays optimized while Writer's own crates remain debuggable.
+[profile.dev.package.imaging_vello_cpu]
+opt-level = 3
+
+[profile.dev.package.vello_cpu]
+opt-level = 3
+
+[profile.dev.package.vello_common]
+opt-level = 3
+
+[profile.dev.package.fearless_simd]
+opt-level = 3
+
 [patch.crates-io]
 # Forked fixes; see RECITE.md on each branch.
 accesskit_atspi_common = { git = "https://github.com/plethu/accesskit", rev = "9fa7febed546dd525f6bbe7291a397014d6528cf" }

@@ -54,7 +54,7 @@ jobs:
             core) just core-check; just coverage ;;
             hosts) just host-check ;;
             editor-native) just editor-native-check ;;
-            writer) just writer check; just writer coverage; just writer probe target/writer-native/specimen.json specimen ;;
+            writer) just writer check; just writer coverage; just writer probe target/writer-native/specimen.json specimen; just writer probe target/writer-native/frame-timing.json frame-timing ;;
             *) echo "Unknown contract lane: $LANE" >&2; exit 1 ;;
           esac
       - name: Retain coverage evidence
@@ -65,6 +65,7 @@ jobs:
           path: |
             target/coverage/
             apps/writer/target/coverage/
+            target/writer-native/frame-timing*
           retention-days: 14
 
   mutations:

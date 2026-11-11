@@ -317,6 +317,14 @@ profiles, locks, binary/source identities and output parity evidence even on fai
 do not establish elapsed-time or native GUI acceptance; the
 [profiling guide](../profiling-and-optimisation.md) owns local commands and boundaries.
 
+The Writer lane also runs the native `frame-timing` probe on its Linux runner: an owned `cage`
+compositor, Mesa lavapipe as the only adapter, and the debug probe build with its rasteriser crates
+optimized. It types into the Relay Hub Script view and times each key press to the next presented
+frame from the client's Wayland protocol log. It requires a CPU adapter to select Vello CPU, every
+key to paint, a frame interval p50 within 30 ms and an edit-to-paint p50 within 80 ms (#283), and
+retains its receipt. These are client frame-readiness timings for software rendering, not
+input-to-photon latency or release baselines (#109).
+
 Outside those gates, initial review triggers are more than 10% regression in hot runtime paths, more
 than 20% in compiler/LSP paths, accidental O(n^2) work on medium/large fixtures, or unexplained
 hot-path allocation growth. GUI evidence must also record blocking accessibility regressions such as
