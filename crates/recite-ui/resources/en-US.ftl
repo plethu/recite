@@ -191,7 +191,7 @@ play-prompt-line = prompt {$id}: {$text}
 play-prompt = prompt
 play-choice-row = {"  "}[{$index}] {$id}: {$text}{ $available ->
     [true] {""}
-   *[false]  (unavailable)
+   *[false] {" "}(unavailable)
 }
 play-choice-prompt = choice>
 play-condition-prompt = condition {$query} [y/n]>

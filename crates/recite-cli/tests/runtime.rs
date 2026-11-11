@@ -338,6 +338,16 @@ h0hekng = "vs56zr5"
         answer["availability"]["reason_tree"]["value"]["text"],
         "hazel rhea sad 3 1.5 true"
     );
+
+    let run_output = run(recite()
+        .arg("run")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    run_output.assert_success();
+    assert_stdout_sequence(&run_output, ["  [1] answer: Answer. (unavailable)\n"]);
 }
 
 #[test]
