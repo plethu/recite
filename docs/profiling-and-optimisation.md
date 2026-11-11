@@ -175,12 +175,13 @@ measure client frame readiness, not physical presentation or input-to-photon lat
 software and hardware results before attributing a reported interaction regression.
 
 Distinguish a renderer configuration from a framework limitation. The Writer chooses its Masonry
-imaging backend per adapter at runtime: GPU Vello on hardware adapters and Vello CPU when wgpu
-reports a CPU adapter such as llvmpipe or WARP, because Vello's compute pipeline emulated on the CPU
-is far slower than rasterising directly (#283). The startup log names the choice; set
-`MASONRY_IMAGING_BACKEND` to `vello` or `vello_cpu` to compare both on one host. Any other backend
-needs its own compatible feature/integration experiment and equivalent output, accessibility and
-timing checks.
+imaging backend at startup: GPU Vello on hardware adapters, and Vello CPU presented through
+softbuffer when every wgpu adapter is a CPU implementation such as llvmpipe or WARP, or when wgpu
+cannot create a surface. Vello's compute pipeline emulated on the CPU is far slower than rasterising
+directly, and presenting CPU frames through an emulated GPU only adds a copy (#283). The startup log
+names the choice; set `MASONRY_IMAGING_BACKEND` to `vello`, `vello_cpu` (Vello CPU through wgpu) or
+`softbuffer` to compare them on one host. Any other backend needs its own compatible
+feature/integration experiment and equivalent output, accessibility and timing checks.
 
 `just writer probe target/writer-native/frame-timing.json frame-timing` reproduces the Writer lane's
 software-rendering check on an owned compositor. Its receipt records the selected backend, typed key

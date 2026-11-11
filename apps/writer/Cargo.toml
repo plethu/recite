@@ -36,7 +36,14 @@ debug = "line-tables-only"
 debug = 0
 
 # Vello CPU renders Writer on software adapters; unoptimized SIMD code drops debug builds to about
-# 6 fps, so its rasteriser stays optimized while Writer's own crates remain debuggable.
+# 6 fps, so its rasteriser and softbuffer presentation stay optimized while Writer's own crates
+# remain debuggable.
+[profile.dev.package.masonry_winit]
+opt-level = 3
+
+[profile.dev.package.softbuffer]
+opt-level = 3
+
 [profile.dev.package.imaging_vello_cpu]
 opt-level = 3
 
