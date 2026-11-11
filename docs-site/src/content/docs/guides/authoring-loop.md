@@ -19,7 +19,8 @@ validation through traces. Use a configured
 [text editor](https://github.com/plethu/recite/tree/main/editors) or Writer for diagnostics and
 guarded ID actions; fix diagnostics before engine testing. Follow
 [testing dialogue](/guides/testing-dialogue/) for fixture decisions and
-[localisation](/guides/localisation/) for PO preview.
+[localisation](/guides/localisation/) for PO preview. [Working as a team](/guides/team-workflow/)
+covers dividing a project between writers, translators and programmers.
 
 ## Watch and restart
 

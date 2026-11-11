@@ -1,0 +1,10 @@
+# Answers the game would supply on the source-language lantern path.
+[conditions]
+"has_cargo(lantern)" = true
+"trust_of(clerk)" = { enum = "friendly" }
+
+[choices]
+dock_greeting = "dock_lantern"
+
+[effects]
+auto_ack_blocking = true

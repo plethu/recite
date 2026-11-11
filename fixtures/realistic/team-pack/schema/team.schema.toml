@@ -1,0 +1,37 @@
+# Authoritative schema source owned by the programmer role; export it to schema/generated/.
+schema_version = 1
+
+[producer]
+id = "team-pack"
+
+[types.trust]
+kind = "enum"
+values = ["wary", "friendly"]
+
+[registries.cargo]
+values = ["lantern", "ledger", "toolkit"]
+
+[speakers.narrator]
+display_name = "Narrator"
+
+[speakers.pilot]
+display_name = "Pilot"
+
+[speakers.clerk]
+display_name = "Clerk"
+
+[conditions.has_cargo]
+params = [{ name = "item", type = "registry:cargo" }]
+returns = "bool"
+
+[conditions.trust_of]
+params = [{ name = "actor", type = "speaker" }]
+returns = "enum:trust"
+
+[effects.ring_bell]
+modes = ["immediate"]
+params = []
+
+[effects.load_cargo]
+modes = ["blocking"]
+params = [{ name = "item", type = "registry:cargo" }]

@@ -1,0 +1,75 @@
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. file: scenes/deck.recite
+#. block: deck
+#. speaker: pilot
+#: scenes/deck.recite:3:3
+msgctxt "deck_crossing"
+msgid "Keep the lantern low. The current pulls hardest near the old pilings."
+msgstr "Garde la lanterne basse. Le courant tire le plus fort près des vieux pilotis."
+
+#. file: scenes/dock.recite
+#. block: dock
+#. speaker: pilot
+#: scenes/dock.recite:4:3
+msgctxt "dock_greeting"
+msgid "Fog on the river again. The ferry leaves when the bell stops."
+msgstr "Encore du brouillard sur le fleuve. Le bac part quand la cloche se tait."
+
+#. file: scenes/dock.recite
+#. block: dock
+#. speaker: pilot
+#: scenes/dock.recite:6:5
+msgctxt "dock_lantern"
+msgid "Hold up the lantern so the pilot can see the gangway."
+msgstr "Lever la lanterne pour que le pilote voie la passerelle."
+
+#. file: scenes/dock.recite
+#. block: dock
+#. speaker: pilot
+#: scenes/dock.recite:9:5
+msgctxt "dock_ledger"
+msgid "Ask the clerk to check the passenger ledger first."
+msgstr "Demander d'abord au commis de vérifier le registre des passagers."
+
+#. file: scenes/office.recite
+#. block: office
+#. speaker: clerk
+#: scenes/office.recite:5:7
+msgctxt "office_friendly"
+msgid "Your name is here, written in my own hand last spring."
+msgstr "Votre nom est ici, écrit de ma main au printemps dernier."
+
+#. file: scenes/office.recite
+#. block: office
+#. speaker: clerk
+#: scenes/office.recite:8:7
+msgctxt "office_wary"
+msgid "I see a name. Whether it is yours is another question."
+msgstr "Je vois un nom. Qu'il soit le vôtre, c'est une autre question."
+
+#. file: scenes/office.recite
+#. block: arrival
+#. speaker: narrator
+#: scenes/office.recite:13:3
+msgctxt "arrival_line"
+msgid "The far bank appears all at once, as if the fog had been holding it back."
+msgstr "L'autre rive apparaît d'un coup, comme si le brouillard l'avait retenue."
+
+#. speaker display name
+msgctxt "dialogue_speaker:clerk"
+msgid "Clerk"
+msgstr "Commis"
+
+#. speaker display name
+msgctxt "dialogue_speaker:narrator"
+msgid "Narrator"
+msgstr "Narrateur"
+
+#. speaker display name
+msgctxt "dialogue_speaker:pilot"
+msgid "Pilot"
+msgstr "Pilote"

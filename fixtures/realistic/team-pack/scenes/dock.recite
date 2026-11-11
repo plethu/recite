@@ -1,0 +1,10 @@
+:: dock default speaker=narrator
+! immediate ring_bell()
+> speaker=pilot @dock_greeting
+  Fog on the river again. The ferry leaves when the bell stops.
+  ? requires=(has_cargo(lantern)) @dock_lantern
+    Hold up the lantern so the pilot can see the gangway.
+    -> scenes/deck.recite::deck
+  ? @dock_ledger
+    Ask the clerk to check the passenger ledger first.
+    -> scenes/office.recite::office

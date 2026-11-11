@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "producer": {
+    "kind": "standalone",
+    "id": "team-pack"
+  },
+  "producer_fingerprints": [
+    {
+      "id": "team-pack",
+      "kind": "standalone",
+      "algorithm": "blake3",
+      "value": "ad72e840c60794a4990dc5f8f4e62c9609f1cd4f4698697a5eefdd8fcf9fdfc0"
+    }
+  ],
+  "types": {
+    "trust": {
+      "kind": "enum",
+      "values": [
+        "friendly",
+        "wary"
+      ]
+    }
+  },
+  "registries": {
+    "cargo": {
+      "values": [
+        "lantern",
+        "ledger",
+        "toolkit"
+      ]
+    }
+  },
+  "speakers": {
+    "clerk": {
+      "display_name": "Clerk"
+    },
+    "narrator": {
+      "display_name": "Narrator"
+    },
+    "pilot": {
+      "display_name": "Pilot"
+    }
+  },
+  "conditions": {
+    "has_cargo": {
+      "params": [
+        {
+          "name": "item",
+          "type": "registry:cargo"
+        }
+      ],
+      "returns": "bool"
+    },
+    "trust_of": {
+      "params": [
+        {
+          "name": "actor",
+          "type": "speaker"
+        }
+      ],
+      "returns": "enum:trust"
+    }
+  },
+  "availability_reasons": {},
+  "effects": {
+    "load_cargo": {
+      "modes": [
+        "blocking"
+      ],
+      "params": [
+        {
+          "name": "item",
+          "type": "registry:cargo"
+        }
+      ]
+    },
+    "ring_bell": {
+      "modes": [
+        "immediate"
+      ],
+      "params": []
+    }
+  },
+  "metadata_domains": {},
+  "metadata": {},
+  "markup": {},
+  "projection_queries": {},
+  "presentation_projectors": {}
+}

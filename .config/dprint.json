@@ -23,6 +23,7 @@
     "../fixtures/schema/valid/unsorted_manifest.json",
     "../fixtures/synthetic/tiny/**",
     "../fixtures/realistic/v1-pack/**",
+    "../fixtures/realistic/team-pack/**",
     "../fixtures/recite/invalid/**",
     "../editors/recite-tree-sitter/src/**",
     "../editors/vscode/src/*.generated.js",

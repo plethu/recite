@@ -1,0 +1,15 @@
+format_version = 1
+
+[project]
+content_set = "team-pack"
+schema = "schema/generated/team.schema.json"
+
+[discovery]
+source_roots = ["scenes"]
+catalogs = ["locales/*.po"]
+
+[[scenes]]
+id = "crossing"
+asset = "build/crossing.recitec"
+block = "dock"
+participants = ["narrator", "pilot", "clerk"]
