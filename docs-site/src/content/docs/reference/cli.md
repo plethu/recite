@@ -158,18 +158,21 @@ it. Each line is to record, recorded, approved, unvoiced, stale (its text, speak
 changed after recording), not ready (no reviewed translation yet) or obsolete. `--check` fails when
 anything is to record, stale or obsolete; `--format json` adds counts per block and per speaker.
 
-### `recite recording export [PROJECT_ROOT] [--locale <LOCALE>] [--block <BLOCK>]... [--state <STATE>]... [--handoff <NAME>] [--format csv|json] [--output <PATH>]`
+### `recite recording export [PROJECT_ROOT] [OPTIONS]`
 
-Lists the lines a handoff would contain, by default those to record or stale, and writes the script
-only to `--output`. Each row carries the line's ID, block, location, speaker, direction, source and
-recording text, and revision, with empty `take`, `by`, `date` and `note` columns for the studio.
+Options: `--locale <LOCALE>`, `--block <BLOCK>`, `--state <STATE>`, `--handoff <NAME>`, `--format
+csv|json` and `--output <PATH>`; `--block` and `--state` repeat. Lists the lines a handoff would
+contain, by default those to record or stale, and writes the script only to `--output`. Each row
+carries the line's ID, block, location, speaker, direction, source and recording text, and revision,
+with empty `take`, `by`, `date` and `note` columns for the studio.
 
-### `recite recording import <FILE> [PROJECT_ROOT] [--locale <LOCALE>] [--format csv|json] [--apply]`
+### `recite recording import <FILE> [PROJECT_ROOT] [OPTIONS]`
 
-Validates a returned script and reports every refused row: unknown lines, the wrong locale, repeated
-takes, lines changed since the handoff, untranslated lines and takes that are not in the project.
-Only with `--apply`, and only when nothing is refused, does it record the takes in
-`recording/<locale>.toml` (or `recording/source.toml`). Importing the same file again adds nothing.
+Options: `--locale <LOCALE>`, `--format csv|json` and `--apply`. Validates a returned script and
+reports every refused row: unknown lines, the wrong locale, repeated takes, lines changed since the
+handoff, untranslated lines and takes that are not in the project. Only with `--apply`, and only
+when nothing is refused, does it record the takes in `recording/<locale>.toml` (or
+`recording/source.toml`). Importing the same file again adds nothing.
 
 ## Running
 
