@@ -1,7 +1,7 @@
 # Review dependency licenses and sources for the MIT OR Apache-2.0 distribution.
 # No advisory exceptions are accepted by default. Vulnerabilities and yanked crates fail
 # everywhere in the graph; unmaintained notices fail only for direct workspace dependencies,
-# because transitive ones wait on upstream and are reviewed at release (#77).
+# because transitive ones wait on upstream; `just release dependency-review` lists them for release.
 [advisories]
 version = 2
 yanked = "deny"

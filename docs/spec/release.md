@@ -104,6 +104,10 @@ A serious-v1 candidate requires all of the following:
   headlessly in source-only and configured-locale modes, including default/fallback policy and
   blocking-effect re-emission with the same request ID. The source/runtime contracts govern
   structured deterministic output, stable IDs, ordered metadata and markup preservation.
+- `just supply-chain` passes for the root, Zed and Writer Cargo graphs: no vulnerable or yanked
+  crate, unmaintained direct dependency, unapproved licence or unknown source. The release issue
+  records each unmaintained transitive dependency that `just release dependency-review` reports,
+  with its upstream path and fix condition; none is waived silently.
 - [Serialization policy](../serialization-compatibility.md) is accepted, with compiled-asset,
   snapshot, FFI and condition-payload migration boundaries documented per artifact.
 - CLI, LSP, text editors, Writer and preview use the shared authoring kernel rather than competing
