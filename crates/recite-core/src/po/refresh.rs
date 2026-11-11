@@ -76,7 +76,10 @@ impl PoDocument {
                 continue;
             }
             // A variant does not satisfy the base entry: retain a default translation too.
-            source.push_str(self.line_ending);
+            // Separate the new entry from the previous one by exactly one blank line.
+            if !source.is_empty() && !source.ends_with(self.line_ending) {
+                source.push_str(self.line_ending);
+            }
             source.push_str(self.line_ending);
             source.push_str(&new_entry(self, entry)?);
         }

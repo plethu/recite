@@ -159,3 +159,24 @@ fn refreshing_the_same_template_still_normalizes_extractor_comments() {
     assert_ne!(refreshed, original);
     assert_eq!(refreshed.refreshed(&original).unwrap(), refreshed);
 }
+
+#[test]
+fn appended_entries_follow_one_blank_line_whether_or_not_the_catalogue_ends_in_a_newline() {
+    let template = PoDocument::parse("msgctxt \"bqyvpqq\"\nmsgid \"New\"\nmsgstr \"\"\n").unwrap();
+    for original in [
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"",
+    ] {
+        let refreshed = PoDocument::parse(original)
+            .unwrap()
+            .refreshed(&template)
+            .unwrap();
+        assert!(
+            refreshed
+                .source()
+                .contains("msgstr \"Bonjour\"\n\nmsgctxt \"bqyvpqq\""),
+            "{:?}",
+            refreshed.source()
+        );
+    }
+}
