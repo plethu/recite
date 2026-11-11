@@ -62,12 +62,12 @@ read by mise's native version-file support; `just setup` installs them and locke
 dependencies. The normal test recipe uses nextest; doctests have their own recipe and remain part of
 the complete gate. The Zed extension is a separate Cargo workspace, covered by the format, lint, and
 editor gates. `supply-chain` checks the root, Zed and Writer dependency graphs for advisories,
-licenses, bans, and sources; unmaintained advisories fail only for direct dependencies, and
-`just release dependency-review` lists transitive ones for release review. `unused-deps` checks
-the same workspaces with cargo-machete. The existing Godot bindings and `option-ext` retain their
-MPL-2.0 licenses; the dependency policy names those packages explicitly. Recite's own source remains
-MIT OR Apache-2.0. Distributions must retain dependency notices and the MPL source availability
-obligations described in the [Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
+licenses, bans, and sources; unmaintained advisories fail only for direct dependencies, and `just
+release dependency-review` lists transitive ones for release review. `unused-deps` checks the same
+workspaces with cargo-machete. The existing Godot bindings and `option-ext` retain their MPL-2.0
+licenses; the dependency policy names those packages explicitly. Recite's own source remains MIT OR
+Apache-2.0. Distributions must retain dependency notices and the MPL source availability obligations
+described in the [Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 
 Owned Rust workspaces enable Clippy's `absolute_paths` lint. Import a useful owner instead of
 repeating long crate paths in signatures and expressions; keep names such as `navigation::Target`
