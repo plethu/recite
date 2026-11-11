@@ -255,3 +255,29 @@ Plural translation validation must additionally detect:
 The provider and catalogue loader share one bounded gettext expression parser and evaluator. A
 catalogue's validated `Plural-Forms` expression is the only source of locale-specific arm selection;
 clients do not embed separate locale-specific evaluators.
+
+### 9.8 Catalogue Review
+
+A source refresh updates a PO catalogue from the current extracted template without guessing. It
+matches records by exact `msgctxt`; a variant context follows its base. New entries are appended
+untranslated, entries removed from source become `#~` obsolete, and extractor-owned `#.` and `#:`
+comments are replaced. A record whose `msgid` or `msgid_plural` changed keeps its translation, gains
+the gettext `fuzzy` flag and records the previous source as `#|` values. Translator comments, other
+flags and unknown fields are preserved. Ambiguous contexts and singular/plural shape changes fail
+without writing. A changed speaker or other extracted comment updates the comment only; it does not
+put the translation up for review.
+
+`recite-core::po` owns the review state of a saved record, shared by Writer and headless checks:
+
+| State            | Saved record                                                        |
+| ---------------- | ------------------------------------------------------------------- |
+| `untranslated`   | A singular record has no translation, or a translated form is blank |
+| `source_changed` | `fuzzy` with recorded previous source                               |
+| `needs_review`   | `fuzzy` without recorded previous source                            |
+| `reviewed`       | Every form translated and not `fuzzy`                               |
+
+Headless status reports these states for the catalogue as a refresh would leave it, plus `missing`
+for entries the catalogue does not have yet, and whether a refresh is pending. A successful refresh
+is not editorial approval: only a person clears `fuzzy`, and a runtime falls back to source text for
+a record whose `msgid` no longer matches. Writer adds unsaved-draft states on top of the shared
+ones.

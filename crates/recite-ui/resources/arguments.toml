@@ -707,3 +707,31 @@ catalog = "string"
 
 [arguments."lsp-rename-id-catalog-unreadable"]
 catalog = "string"
+
+[arguments."cli-catalog-summary"]
+catalog = "string"
+locale = "string"
+reviewed = "integer"
+attention = "integer"
+
+[arguments."cli-catalog-entry"]
+state = "string"
+context = "string"
+reference = "string"
+
+[arguments."cli-catalog-refreshed"]
+catalog = "string"
+
+[arguments."cli-catalog-current"]
+catalog = "string"
+
+[arguments."cli-error-catalog-malformed"]
+catalog = "string"
+detail = "string"
+
+[arguments."cli-error-catalog-refresh"]
+catalog = "string"
+detail = "string"
+
+[arguments."cli-error-catalog-changed"]
+catalog = "string"

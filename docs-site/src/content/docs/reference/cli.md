@@ -20,7 +20,8 @@ exists where a thing has two or more operations of its own, so related work sits
 
 | Group              | Commands                                                                                        |
 | ------------------ | ----------------------------------------------------------------------------------------------- |
-| `id`               | `check`, `assign`                                                                               |
+| `id`               | `check`, `assign`, `rename`, `reassign`                                                         |
+| `catalog`          | `status`, `refresh`                                                                             |
 | `schema`           | `inspect`, `export`, `check-fresh`                                                              |
 | `project`          | `validate`, `check-fresh`                                                                       |
 | Top-level commands | `validate`, `compile`, `extract`, `watch`, `run`, `trace`, `play`, `bench`, `import`, `explain` |
@@ -134,6 +135,21 @@ to editor diagnostics.
 Extracts gettext POT entries. Each entry's `msgctxt` is the stable ID, and comments carry file,
 block and speaker context for translators.
 
+### `recite catalog status [PROJECT_ROOT] [--catalog <PATH>]... [--check] [--format text|json]`
+
+Compares each project catalogue with the current source, as a refresh would leave it. It lists every
+entry that is missing, untranslated, needs review, or whose source changed since it was translated,
+with its source location, and says whether the catalogue needs a refresh. Nothing is written.
+`--check` exits 1 when anything needs attention, and `--format json` gives a deterministic report
+for CI tools. Catalogues come from `[discovery].catalogs` plus any `--catalog`.
+
+### `recite catalog refresh [PROJECT_ROOT] [--catalog <PATH>]...`
+
+Updates each catalogue from the current source, as Writer's refresh does: new entries are added
+untranslated, removed entries become obsolete, and a translation whose source changed is kept but
+marked fuzzy with the previous source recorded. It never marks anything reviewed. One catalogue that
+cannot be refreshed stops the command before any file is written.
+
 ## Running
 
 ### `recite run --block <BLOCK> --fixture <FIXTURE> <ASSET>`
@@ -191,6 +207,7 @@ recite id check dialogue/
 recite validate dialogue/ --only metadata --schema schema/recite.schema.json
 recite compile dialogue/ -o build/scenes.recitec --schema schema/recite.schema.json
 recite project check-fresh .
+recite catalog status --check
 recite trace build/scenes.recitec --block main --fixture tests/golden.toml
 ```
 

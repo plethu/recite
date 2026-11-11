@@ -116,6 +116,7 @@ impl Command {
                 | IdCommand::Rename(_)
                 | IdCommand::Reassign(_),
             )
+            | Self::Catalog(_)
             | Self::Schema(SchemaCommand::Inspect(_) | SchemaCommand::CheckFresh(_))
             | Self::Project(ProjectCommand::Validate(_) | ProjectCommand::CheckFresh(_))
             | Self::Explain(_)

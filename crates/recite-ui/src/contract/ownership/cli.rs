@@ -28,6 +28,22 @@ macro_rules! cli_message_ids {
         | MsgId::CliIdsNoCatalogs
         | MsgId::CliHelpArgSince
         | MsgId::CliHelpArgAllowRemoved
+        | MsgId::CliHelpCommandCatalog
+        | MsgId::CliHelpCommandCatalogStatus
+        | MsgId::CliHelpCommandCatalogRefresh
+        | MsgId::CliHelpArgCatalogInclude
+        | MsgId::CliHelpArgCatalogCheck
+        | MsgId::CliHelpArgCatalogFormat
+        | MsgId::CliCatalogSummary
+        | MsgId::CliCatalogNoLocale
+        | MsgId::CliCatalogRefreshNeeded
+        | MsgId::CliCatalogEntry
+        | MsgId::CliCatalogStateMissing
+        | MsgId::CliCatalogStateUntranslated
+        | MsgId::CliCatalogStateNeedsReview
+        | MsgId::CliCatalogStateSourceChanged
+        | MsgId::CliCatalogRefreshed
+        | MsgId::CliCatalogCurrent
         | MsgId::CliHelpCommandProjectValidate
         | MsgId::CliHelpCommandProjectCheckFresh
         | MsgId::CliHelpCommandSchemaInspect
@@ -247,6 +263,9 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorStableIdTarget
         | MsgId::CliErrorStableIdUnchanged
         | MsgId::CliErrorStableIdCatalogMalformed
+        | MsgId::CliErrorCatalogMalformed
+        | MsgId::CliErrorCatalogRefresh
+        | MsgId::CliErrorCatalogChanged
         | MsgId::CliErrorMissingFixtureChoice
         | MsgId::CliErrorNoInputs
         | MsgId::CliErrorOutputOverwritesInput

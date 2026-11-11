@@ -56,7 +56,7 @@ const COMMAND_GROUPS: [(MsgId, &[&str]); 5] = [
         MsgId::CliHelpGroupBuilding,
         &["compile", "project", "schema", "watch"],
     ),
-    (MsgId::CliHelpGroupLocalisation, &["extract"]),
+    (MsgId::CliHelpGroupLocalisation, &["extract", "catalog"]),
     (
         MsgId::CliHelpGroupRunning,
         &["run", "trace", "play", "bench"],

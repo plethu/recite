@@ -176,6 +176,41 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
                 messages.text(MsgId::CliHelpCommandSchemaCheckFresh),
             );
         }
+        "catalog status" | "catalog refresh" => {
+            let about = if path == "catalog status" {
+                MsgId::CliHelpCommandCatalogStatus
+            } else {
+                MsgId::CliHelpCommandCatalogRefresh
+            };
+            set_about(command, messages.text(about));
+            set_positional_arg_help(
+                command,
+                "project_root",
+                messages.text(MsgId::CliHelpArgProjectRoot),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "catalogs",
+                messages.text(MsgId::CliHelpArgCatalogInclude),
+                messages,
+            );
+            if path == "catalog status" {
+                set_arg_help(
+                    command,
+                    "check",
+                    messages.text(MsgId::CliHelpArgCatalogCheck),
+                    messages,
+                );
+                set_arg_help(
+                    command,
+                    "format",
+                    messages.text(MsgId::CliHelpArgCatalogFormat),
+                    messages,
+                );
+            }
+        }
+        "catalog" => localise_group(command, messages, MsgId::CliHelpCommandCatalog, &path),
         "id" => localise_group(command, messages, MsgId::CliHelpCommandId, &path),
         "project" => localise_group(command, messages, MsgId::CliHelpCommandProject, &path),
         "schema" => localise_group(command, messages, MsgId::CliHelpCommandSchema, &path),

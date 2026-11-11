@@ -196,6 +196,9 @@ def independent_contributions(team, writer_a, writer_b, localiser):
     ci = team.clone("ci-integrated")
     build(team, ci)
     team.recite(ci, "project", "check-fresh", ".")
+    status = json.loads(team.recite(ci, "catalog", "status", "--format", "json"))
+    attention = {item["context"]: item["state"] for item in status["catalogs"][0]["attention"]}
+    assert attention == {"office_wary": "source_changed", "deck_gulls": "missing"}, attention
     source = trace(team, ci, "fixture-source.toml")
     assert line_text(source, "deck_gulls").startswith("Gulls settle"), "writer A's line is lost"
     french = trace(team, ci, "fixture-fr.toml")

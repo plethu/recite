@@ -3,7 +3,7 @@ use super::{
     catalogue::Catalogue,
     messages::{MsgId, text},
 };
-use recite_core::po::PoEntryId;
+use recite_core::po::{PoEntryId, PoReviewState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TranslationStatus {
@@ -26,6 +26,15 @@ impl TranslationStatus {
         let Some(entry) = catalogue.document.entry(id) else {
             return Self::Untranslated;
         };
+        if !catalogue.changed(id) {
+            return match entry.review_state() {
+                PoReviewState::Untranslated => Self::Untranslated,
+                PoReviewState::Reviewed => Self::Reviewed,
+                PoReviewState::SourceChanged => Self::SourceChanged,
+                _ => Self::NeedsReview,
+            };
+        }
+        // Unsaved drafts keep their own review choice until they are written.
         if (!entry.is_plural() && entry.translation().is_none() && !catalogue.changed(id))
             || catalogue.forms(id).any(|text| text.trim().is_empty())
         {
