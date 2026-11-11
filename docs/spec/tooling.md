@@ -85,8 +85,8 @@ replaceable. Source editing belongs to the shared authoring model, and file repl
 protection and recovery belong to `recite-writer-session`. Language, configuration, compiler and
 runtime ownership remains outside the frontend. Toolkit fixes live on pinned forks; exercise
 regression checks before moving a pin. Software rendering is required wherever no usable GPU is
-available: the Writer selects Vello CPU when wgpu offers only a software adapter and logs its
-choice.
+available: when wgpu offers only software adapters, or none, the Writer rasterises with Vello CPU,
+presents through softbuffer and logs its choice.
 
 The Writer holds these contracts across every workspace; the crate tests are their executable form:
 

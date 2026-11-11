@@ -29,6 +29,7 @@ LINE = re.compile(
     r"^\[\s*(\d+)\.(\d+)\]\s+(?:\{[^}]*\}\s+)?(->\s+)?([a-z_0-9]+)@(\d+)\.([a-z_0-9]+)\((.*)\)"
 )
 SELECTION = re.compile(r'Selected Masonry imaging backend backend="([^"]+)".*?device_type=(\w+)')
+PRESENTER = re.compile(r'Selected Masonry imaging backend .*?presenter="([^"]+)"')
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 # libwayland stamps CLOCK_REALTIME microseconds modulo 2**32, printed as milliseconds.
 WRAP_MS = 2**32 / 1000
@@ -195,6 +196,8 @@ def run(api, bus, registry, binary, output):
         selection = SELECTION.search(ANSI.sub("", text))
         results["imaging_backend"] = selection.group(1) if selection else None
         results["adapter_device_type"] = selection.group(2) if selection else None
+        presenter = PRESENTER.search(ANSI.sub("", text))
+        results["presenter"] = presenter.group(1) if presenter else "wgpu"
         failures = []
         if selection is None:
             failures.append("Writer did not report its imaging backend")
