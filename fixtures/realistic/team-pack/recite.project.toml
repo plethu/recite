@@ -13,3 +13,6 @@ id = "crossing"
 asset = "build/crossing.recitec"
 block = "dock"
 participants = ["narrator", "pilot", "clerk"]
+
+[recording]
+direction = ["tone"]

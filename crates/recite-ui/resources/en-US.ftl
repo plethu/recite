@@ -107,6 +107,45 @@ cli-catalog-state-needs-review = needs review
 cli-catalog-state-source-changed = source changed
 cli-catalog-refreshed = refreshed {$catalog}
 cli-catalog-current = {$catalog} is already current
+cli-help-command-recording = Report, export and import recording handoffs
+cli-help-command-recording-status = Report which lines need recording, are recorded, or changed since they were recorded
+cli-help-command-recording-export = Export a recording script for selected lines as CSV or JSON
+cli-help-command-recording-import = Validate returned takes and record them in the recording sidecar
+cli-help-arg-recording-locale = Dialogue locale to record; omit it for the source language
+cli-help-arg-recording-check = Fail when any line needs recording, is stale or is obsolete
+cli-help-arg-recording-block = Export only lines in this block. Repeatable
+cli-help-arg-recording-state = Export lines in this state; defaults to to-record and stale. Repeatable
+cli-help-arg-recording-handoff = Name recorded with each returned take
+cli-help-arg-recording-format = Handoff file format
+cli-help-arg-recording-output = Write the handoff here; without it nothing is written
+cli-help-arg-recording-file = Returned handoff file
+cli-help-arg-recording-apply = Update the recording sidecar; without it the import is only validated
+cli-recording-source-language = source language
+cli-recording-summary = {$language}: {$recorded} recorded, {$approved} approved, {$unvoiced} unvoiced, {$not_ready} not ready; { $attention ->
+        [one] {$attention} item needs attention
+       *[other] {$attention} items need attention
+    }
+cli-recording-entry = {"  "}{$state}: `{$id}` in {$block} at {$reference}
+cli-recording-obsolete = {"  "}obsolete: `{$id}` is no longer in the source
+cli-recording-state-to-record = to record
+cli-recording-state-stale = stale
+cli-recording-export-selected = { $count ->
+        [one] {$count} item
+       *[other] {$count} items
+    } selected for {$language}
+cli-recording-export-item = {"  "}`{$id}` ({$state})
+cli-recording-export-preview = nothing written; pass --output to write the handoff
+cli-recording-export-written = wrote {$output}
+cli-recording-import-refused = row {$row}: `{$id}` {$reason}
+cli-recording-reason-unknown-id = is not a line in the source
+cli-recording-reason-wrong-locale = belongs to locale `{$found}`, not this import's
+cli-recording-reason-duplicate-take = repeats take {$take}
+cli-recording-reason-not-ready = has no reviewed translation to record
+cli-recording-reason-stale = was handed off before the line changed; its current revision is {$current}
+cli-recording-reason-missing-media = names take {$take}, which is not in the project
+cli-recording-import-summary = {$added} new takes, {$present} already recorded
+cli-recording-import-preview = nothing applied; pass --apply to update {$sidecar}
+cli-recording-import-applied = updated {$sidecar}
 cli-diagnostic-errors = { $count ->
         [one] { $count } error
        *[other] { $count } errors
@@ -378,6 +417,9 @@ cli-error-stable-id-catalog-malformed = catalogue {$catalog} is not valid PO; fi
 cli-error-catalog-malformed = catalogue {$catalog} is not valid PO: {$detail}
 cli-error-catalog-refresh = cannot refresh catalogue {$catalog}: {$detail}
 cli-error-catalog-changed = catalogue {$catalog} changed during the refresh; run the refresh again
+cli-error-recording-locale = no catalogue declares Language `{$locale}`; add one to [discovery].catalogs
+cli-error-recording-sidecar = recording sidecar {$sidecar} is invalid: {$detail}
+cli-error-recording-handoff = handoff {$file} is invalid: {$detail}
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys
 cli-error-no-inputs = no .recite inputs found
 cli-error-output-overwrites-input = refusing to overwrite input {$input} with output {$output}

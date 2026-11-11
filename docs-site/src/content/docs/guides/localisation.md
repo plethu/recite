@@ -61,6 +61,34 @@ Recite Writer can edit PO entries while retaining comments, contexts and unknown
 review and language quality remain human work. Engine catalogue installation is covered by the
 corresponding adapter guide.
 
+## Recording voice
+
+Name the line metadata that directs a performance in `recite.project.toml`:
+
+```toml
+[recording]
+direction = ["tone"]
+```
+
+Then hand lines to a studio and bring the takes back:
+
+```sh
+recite recording status --locale fr
+recite recording export --locale fr --handoff fr-session-1 --output fr-session-1.csv
+recite recording import fr-session-1.csv --locale fr --apply
+```
+
+The script opens in any spreadsheet. The studio fills in the `take` column with each recording's
+path or URL, and optionally `by`, `date` and `note`. Recite checks every row before recording
+anything, so a line reworded since the handoff, a missing audio file or a mistyped ID stops the
+import instead of being guessed. Takes are kept in `recording/fr.toml` with the revision they were
+recorded against.
+
+A line needs a new recording when its text, its speaker or one of its direction values changes;
+status then lists it as stale. A translation goes to review only when the source wording changes, so
+a direction change does not trouble translators. Leave out `--locale` to record the source language.
+Only reviewed translations are handed off.
+
 ## Dialogue in other scripts
 
 Recite stores dialogue as UTF-8 and leaves shaping to the host, so any script a game can render

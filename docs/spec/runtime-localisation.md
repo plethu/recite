@@ -281,3 +281,78 @@ for entries the catalogue does not have yet, and whether a refresh is pending. A
 is not editorial approval: only a person clears `fuzzy`, and a runtime falls back to source text for
 a record whose `msgid` no longer matches. Writer adds unsaved-draft states on top of the shared
 ones.
+
+### 9.9 Recording Handoffs
+
+Recording state is production information about authored lines, kept outside compiled assets and
+runtime data. It never changes compiled semantics, and a recorded take is not editorial approval.
+
+A recording item is one compiled line, identified by its stable ID, in one recording language: the
+source language or a dialogue locale with a catalogue. Choices are not recording items in v1. Each
+item carries its block, source location, speaker (the line's speaker or its block's default), the
+values of the project's direction keys, its source text and, for a locale, the reviewed translation
+from that locale's catalogue. An item whose translation is missing, untranslated or still `fuzzy` is
+`not_ready`; Recite never hands off a translation a person has not reviewed.
+
+The project names its direction keys, the line metadata that directs a performance, in
+`recite.project.toml`:
+
+```toml
+[recording]
+direction = ["tone", "camera"]
+```
+
+An item's revision is `r1-` followed by the first 16 lowercase hexadecimal digits of the BLAKE3 hash
+of its canonical JSON identity: the text forms being recorded, the speaker ID or `null`, and the
+direction key and value pairs in declared key order. Rewording, retranslating, changing the speaker
+or changing a direction value changes the revision; other metadata, comments and moves do not.
+Speaker and direction changes therefore require recording review without putting translations up for
+review (§9.8).
+
+Recording state lives in one sidecar per language, `recording/source.toml` or
+`recording/<locale>.toml`, keyed by stable ID:
+
+```toml
+format_version = 1
+locale = "fr"
+
+[items.deck_crossing]
+status = "recorded"
+revision = "r1-0123456789abcdef"
+
+[[items.deck_crossing.takes]]
+reference = "audio/fr/deck_crossing_01.wav"
+revision = "r1-0123456789abcdef"
+handoff = "fr-session-1"
+by = "Studio A"
+date = "2026-11-11"
+```
+
+The stored `status` is `recorded`, `approved` or `unvoiced`; a person sets `approved` and `unvoiced`
+by editing the sidecar. Takes keep the revision they were recorded against and are never deleted by
+Recite, so old provenance stays inspectable after the line changes. Reports derive each item's
+state:
+
+| State       | Meaning                                                      |
+| ----------- | ------------------------------------------------------------ |
+| `not_ready` | A locale item has no reviewed translation yet                |
+| `to_record` | Ready, with no sidecar entry                                 |
+| `recorded`  | Recorded against the current revision                        |
+| `approved`  | Approved against the current revision                        |
+| `unvoiced`  | Explicitly not voiced                                        |
+| `stale`     | Recorded or approved against an older revision; needs review |
+| `obsolete`  | The sidecar names an ID the source no longer has             |
+
+A handoff exports selected ready items as rows with `id`, `locale`, `block`, `file`, `line`,
+`speaker`, `direction`, `source_text`, `text`, `revision` and `state`, plus empty `take`, `by`,
+`date` and `note` columns for the collaborator to fill in. The row model is shared; CSV (RFC 4180,
+UTF-8, header row) and JSON are its first formats, and both are deterministic. An export shows what
+would leave the project and writes only to an explicit output.
+
+An import reads returned rows that carry a `take` reference and validates every row before applying
+any. Unknown IDs, a locale other than the import's, duplicate takes within the file, a row revision
+that no longer matches the current item, an item that is not ready, and a relative take reference
+that does not exist under the project root are itemized refusals; nothing is applied by guessing,
+and a file with any refusal applies nothing. Applying records the take with its revision and handoff
+provenance and sets the item `recorded` at that revision. Reimporting the same file adds nothing: a
+take is identified by its reference.

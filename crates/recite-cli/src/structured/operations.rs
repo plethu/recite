@@ -102,6 +102,7 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
             | IdCommand::Reassign(_),
         )
         | Command::Catalog(_)
+        | Command::Recording(_)
         | Command::Schema(SchemaCommand::Inspect(_) | SchemaCommand::CheckFresh(_))
         | Command::Project(ProjectCommand::Validate(_) | ProjectCommand::CheckFresh(_))
         | Command::Explain(_)

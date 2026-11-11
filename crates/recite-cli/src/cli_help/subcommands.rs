@@ -2,6 +2,8 @@
 use super::{assign_headings, help_arg, help_template};
 use crate::i18n::{Messages, MsgId};
 
+mod recording;
+
 /// Localise `command` and, for noun groups, everything beneath it. Entries are keyed by the full
 /// command path (`schema check-fresh`), so the same verb can exist under two nouns.
 pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent: &str) {
@@ -211,6 +213,10 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             }
         }
         "catalog" => localise_group(command, messages, MsgId::CliHelpCommandCatalog, &path),
+        "recording" => localise_group(command, messages, MsgId::CliHelpCommandRecording, &path),
+        "recording status" | "recording export" | "recording import" => {
+            recording::localise(command, messages, &path);
+        }
         "id" => localise_group(command, messages, MsgId::CliHelpCommandId, &path),
         "project" => localise_group(command, messages, MsgId::CliHelpCommandProject, &path),
         "schema" => localise_group(command, messages, MsgId::CliHelpCommandSchema, &path),

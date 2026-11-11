@@ -1,5 +1,5 @@
 :: deck speaker=pilot
-> @deck_crossing
+> tone="hushed" @deck_crossing
   Keep the lantern low. The current pulls hardest near the old pilings.
 ! blocking load_cargo(lantern)
 -> scenes/office.recite::arrival

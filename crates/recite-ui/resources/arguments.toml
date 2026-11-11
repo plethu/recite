@@ -735,3 +735,69 @@ detail = "string"
 
 [arguments."cli-error-catalog-changed"]
 catalog = "string"
+
+[arguments."cli-recording-summary"]
+language = "string"
+recorded = "integer"
+approved = "integer"
+unvoiced = "integer"
+not_ready = "integer"
+attention = "integer"
+
+[arguments."cli-recording-entry"]
+state = "string"
+id = "string"
+block = "string"
+reference = "string"
+
+[arguments."cli-recording-obsolete"]
+id = "string"
+
+[arguments."cli-recording-export-selected"]
+count = "integer"
+language = "string"
+
+[arguments."cli-recording-export-item"]
+id = "string"
+state = "string"
+
+[arguments."cli-recording-export-written"]
+output = "string"
+
+[arguments."cli-recording-import-refused"]
+row = "integer"
+id = "string"
+reason = "string"
+
+[arguments."cli-recording-reason-wrong-locale"]
+found = "string"
+
+[arguments."cli-recording-reason-duplicate-take"]
+take = "string"
+
+[arguments."cli-recording-reason-stale"]
+current = "string"
+
+[arguments."cli-recording-reason-missing-media"]
+take = "string"
+
+[arguments."cli-recording-import-summary"]
+added = "integer"
+present = "integer"
+
+[arguments."cli-recording-import-preview"]
+sidecar = "string"
+
+[arguments."cli-recording-import-applied"]
+sidecar = "string"
+
+[arguments."cli-error-recording-locale"]
+locale = "string"
+
+[arguments."cli-error-recording-sidecar"]
+sidecar = "string"
+detail = "string"
+
+[arguments."cli-error-recording-handoff"]
+file = "string"
+detail = "string"

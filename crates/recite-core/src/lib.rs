@@ -76,6 +76,7 @@ pub mod compiled;
 pub mod markup;
 pub mod po;
 pub mod project;
+pub mod recording;
 pub mod schema;
 
 mod diagnostic;

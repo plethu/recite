@@ -22,6 +22,7 @@ exists where a thing has two or more operations of its own, so related work sits
 | ------------------ | ----------------------------------------------------------------------------------------------- |
 | `id`               | `check`, `assign`, `rename`, `reassign`                                                         |
 | `catalog`          | `status`, `refresh`                                                                             |
+| `recording`        | `status`, `export`, `import`                                                                    |
 | `schema`           | `inspect`, `export`, `check-fresh`                                                              |
 | `project`          | `validate`, `check-fresh`                                                                       |
 | Top-level commands | `validate`, `compile`, `extract`, `watch`, `run`, `trace`, `play`, `bench`, `import`, `explain` |
@@ -149,6 +150,26 @@ Updates each catalogue from the current source, as Writer's refresh does: new en
 untranslated, removed entries become obsolete, and a translation whose source changed is kept but
 marked fuzzy with the previous source recorded. It never marks anything reviewed. One catalogue that
 cannot be refreshed stops the command before any file is written.
+
+### `recite recording status [PROJECT_ROOT] [--locale <LOCALE>] [--check] [--format text|json]`
+
+Reports which lines need recording in the source language, or in one locale whose catalogue declares
+it. Each line is to record, recorded, approved, unvoiced, stale (its text, speaker or direction
+changed after recording), not ready (no reviewed translation yet) or obsolete. `--check` fails when
+anything is to record, stale or obsolete; `--format json` adds counts per block and per speaker.
+
+### `recite recording export [PROJECT_ROOT] [--locale <LOCALE>] [--block <BLOCK>]... [--state <STATE>]... [--handoff <NAME>] [--format csv|json] [--output <PATH>]`
+
+Lists the lines a handoff would contain, by default those to record or stale, and writes the script
+only to `--output`. Each row carries the line's ID, block, location, speaker, direction, source and
+recording text, and revision, with empty `take`, `by`, `date` and `note` columns for the studio.
+
+### `recite recording import <FILE> [PROJECT_ROOT] [--locale <LOCALE>] [--format csv|json] [--apply]`
+
+Validates a returned script and reports every refused row: unknown lines, the wrong locale, repeated
+takes, lines changed since the handoff, untranslated lines and takes that are not in the project.
+Only with `--apply`, and only when nothing is refused, does it record the takes in
+`recording/<locale>.toml` (or `recording/source.toml`). Importing the same file again adds nothing.
 
 ## Running
 

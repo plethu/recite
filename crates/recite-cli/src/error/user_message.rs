@@ -156,18 +156,7 @@ impl CliError {
             ),
             Self::NoInputs => messages.text(MsgId::CliErrorNoInputs),
             Self::StableIdEdit(refusal) => refusal.to_user_message(messages),
-            Self::CatalogMalformed { catalog, detail } => messages.format(
-                MsgId::CliErrorCatalogMalformed,
-                [("catalog", catalog.clone()), ("detail", detail.clone())],
-            ),
-            Self::CatalogRefresh { catalog, detail } => messages.format(
-                MsgId::CliErrorCatalogRefresh,
-                [("catalog", catalog.clone()), ("detail", detail.clone())],
-            ),
-            Self::CatalogChanged { catalog } => messages.format(
-                MsgId::CliErrorCatalogChanged,
-                [("catalog", catalog.clone())],
-            ),
+            Self::Localisation(error) => error.to_user_message(messages),
             Self::StableIdBaseline { reference, detail } => messages.format(
                 MsgId::CliErrorStableIdBaseline,
                 [("reference", reference.clone()), ("detail", detail.clone())],
