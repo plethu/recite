@@ -199,10 +199,8 @@ def independent_contributions(team, writer_a, writer_b, localiser):
     source = trace(team, ci, "fixture-source.toml")
     assert line_text(source, "deck_gulls").startswith("Gulls settle"), "writer A's line is lost"
     french = trace(team, ci, "fixture-fr.toml")
-    assert (
-        line_text(french, "office_wary")
-        == "I see a name. Whether it is yours is a separate question."
-    )
+    reworded = "I see a name. Whether it is yours is a separate question."
+    assert line_text(french, "office_wary") == reworded, "writer B's wording is lost"
     assert line_text(french, "dock_greeting").startswith("Encore la brume"), "translation lost"
     po = (ci / "locales/fr.po").read_text()
     assert "# Translator: brume reads as softer river fog." in po, "translator comment lost"
@@ -212,11 +210,10 @@ def independent_contributions(team, writer_a, writer_b, localiser):
 
 def same_line_conflict(team, writer_a, writer_b):
     """Both writers reword the greeting; Git stops and Recite refuses committed markers."""
-    edit(
-        writer_a, "scenes/dock.recite", "Fog on the river again.", "Fog on the river, thick again."
-    )
+    greeting = "Fog on the river again."
+    edit(writer_a, "scenes/dock.recite", greeting, "Fog on the river, thick again.")
     team.share(writer_a, "Thicken the fog")
-    edit(writer_b, "scenes/dock.recite", "Fog on the river again.", "River fog again.")
+    edit(writer_b, "scenes/dock.recite", greeting, "River fog again.")
     team.git(writer_b, "commit", "--quiet", "--all", "--message", "Shorten the greeting")
     team.git(writer_b, "pull", "--quiet", "--no-edit", "origin", "main", success=False)
     text = (writer_b / "scenes/dock.recite").read_text()
@@ -284,12 +281,8 @@ def broken_reference(team, writer_a, writer_b):
     team.git(writer_a, "commit", "--quiet", "--all", "--message", "Let the player wait")
     team.git(writer_a, "pull", "--quiet", "--no-edit", "origin", "main")
     refused(team, writer_a, "RECITE_VALIDATE007")
-    edit(
-        writer_a,
-        "scenes/dock.recite",
-        "-> scenes/office.recite::arrival",
-        "-> scenes/office.recite::far_bank",
-    )
+    stale_link, renamed = "-> scenes/office.recite::arrival", "-> scenes/office.recite::far_bank"
+    edit(writer_a, "scenes/dock.recite", stale_link, renamed)
     build(team, writer_a)
     team.share(writer_a, "Follow the renamed arrival block")
     team.update(writer_b)
@@ -303,9 +296,8 @@ def removed_frozen_id(team, writer_b):
     team.recite(writer_b, "validate", "scenes", "--schema", SCHEMA)
     output = team.recite(writer_b, "id", "check", "scenes", "--since", "v1", success=False)
     assert "office_wary" in output, output
-    team.recite(
-        writer_b, "id", "check", "scenes", "--since", "v1", "--allow-removed", "office_wary"
-    )
+    consent = ["--since", "v1", "--allow-removed", "office_wary"]
+    team.recite(writer_b, "id", "check", "scenes", *consent)
     team.git(writer_b, "checkout", "--quiet", "--", "scenes/office.recite")
 
 
@@ -319,16 +311,8 @@ def schema_change(team, programmer, writer_b):
     export = ["schema", "export", "--schema", SCHEMA_SOURCE, "--producer-kind", "standalone"]
     export += ["--producer-id", "team-pack", "--output"]
     team.recite(programmer, *export, str(fresh))
-    stale = team.recite(
-        programmer,
-        "schema",
-        "check-fresh",
-        "--expected",
-        SCHEMA,
-        "--actual",
-        str(fresh),
-        success=False,
-    )
+    compare = ["schema", "check-fresh", "--expected", SCHEMA, "--actual", str(fresh)]
+    stale = team.recite(programmer, *compare, success=False)
     assert json.loads(stale)["status"] == "mismatch", stale
     # Regeneration is an explicit step; it changes the generated file reviewers see.
     team.recite(programmer, *export, SCHEMA)
@@ -367,17 +351,9 @@ def structured_failures(team, checkout):
     team.git(checkout, "checkout", "--quiet", "--", "scenes/deck.recite")
     unanswered = checkout / "build/unanswered.toml"
     unanswered.write_text('[conditions]\n"has_cargo(lantern)" = true\n')
+    unanswered_trace = ["trace", ASSET, "--block", "dock", "--fixture", str(unanswered)]
     result = team.recite(
-        checkout,
-        "trace",
-        ASSET,
-        "--block",
-        "dock",
-        "--fixture",
-        str(unanswered),
-        "--output-format",
-        "structured",
-        success=False,
+        checkout, *unanswered_trace, "--output-format", "structured", success=False
     )
     statuses = [json.loads(line).get("status") for line in result.splitlines() if line]
     assert any(status and status != "succeeded" for status in statuses), result
