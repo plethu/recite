@@ -6,6 +6,7 @@ set default-list
 workflow:
     cargo build --locked -p recite-cli
     python3 scripts/check-workflow.py --recite target/debug/recite
+    python3 scripts/check-team-workflow.py --recite target/debug/recite
     cargo test --locked -p recite-bevy --test workflow_project
 
 # Run Bevy App tests and a clean consumer of local packages.

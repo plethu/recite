@@ -1,0 +1,14 @@
+:: office speaker=clerk
+:match trust_of(clerk)
+  :case friendly
+    > @office_friendly
+      Your name is here, written in my own hand last spring.
+  :case wary
+    > @office_wary
+      I see a name. Whether it is yours is another question.
+-> arrival
+
+:: arrival speaker=narrator
+> @arrival_line
+  The far bank appears all at once, as if the fog had been holding it back.
+-> END

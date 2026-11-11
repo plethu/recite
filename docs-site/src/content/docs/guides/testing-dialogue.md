@@ -41,9 +41,10 @@ cargo test --locked -p recite-cli --test migration
 ```
 
 `just engines workflow` creates a fresh copy and verifies source/schema checks, extraction,
-run/trace, stale-build recovery and Bevy save/refresh. The repository's normal project gate includes
-it. A project's own CI can run the documented `recite` commands after building the CLI at a pinned
-revision.
+run/trace, stale-build recovery and Bevy save/refresh. It also replays the
+[team workflow](/guides/team-workflow/) across separate clones. The repository's normal project gate
+includes it. A project's own CI can run the documented `recite` commands after building the CLI at a
+pinned revision.
 
 Use the existing [package checks](/guides/distribution/) for installation and upgrade evidence.
 Rendering, input feel, assistive technology and editor interaction require their own host checks; a

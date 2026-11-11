@@ -1,0 +1,16 @@
+# Answers for the French ledger path through the clerk's office.
+[dialogue]
+locale = "fr"
+
+[dialogue.catalogs]
+fr = ["locales/fr.po"]
+
+[conditions]
+"has_cargo(lantern)" = false
+"trust_of(clerk)" = { enum = "wary" }
+
+[choices]
+dock_greeting = "dock_ledger"
+
+[effects]
+auto_ack_blocking = true
