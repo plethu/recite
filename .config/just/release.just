@@ -25,6 +25,22 @@ set-version version:
     mise -E release exec -- cargo release replace --manifest-path apps/writer/Cargo.toml --package recite-writer --isolated --config "$PWD/apps/writer/packaging/release.toml" --execute --no-confirm
     mise -E quality exec -- dprint fmt apps/writer/packaging/common.json
 
+# `just supply-chain` fails on unmaintained direct dependencies only; record these in the release issue.
+# List unmaintained advisories anywhere in the root, Zed and Writer graphs; fails while any remain.
+dependency-review:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    config=$(mktemp "${TMPDIR:-/tmp}/recite-deny.XXXXXX")
+    trap 'rm -f -- "$config"' EXIT
+    sed 's/^unmaintained = "workspace"$/unmaintained = "all"/' .cargo/deny.toml > "$config"
+    grep -qx 'unmaintained = "all"' "$config" || { echo 'The dependency policy changed; update this review.' >&2; exit 1; }
+    status=0
+    for manifest in Cargo.toml editors/zed/Cargo.toml apps/writer/Cargo.toml; do
+        echo "Reviewing $manifest"
+        cargo deny --locked --manifest-path "$manifest" --all-features --config "$config" check advisories || status=1
+    done
+    exit "$status"
+
 # Produce local CLI/LSP artifacts using cargo-dist's archive and checksum machinery.
 build target:
     mkdir -p target/distrib
