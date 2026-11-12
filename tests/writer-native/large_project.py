@@ -4,12 +4,18 @@ The project comes from `recite-fixturegen` (`fixtures/synthetic/profiles.toml`).
 when the probe sends its input and stops when the accessibility tree first shows the result, polled
 every 10 ms, so it includes Writer's work, its frame, the AT-SPI update and up to one poll. Frame
 readiness after typing comes from the client's own Wayland log, as in `frame_timing.py`.
+
+Writer opens the project several times; every open but the last closes once diagnostics appear,
+and the last continues through navigation, search and repeated edit/undo cycles. Budgets live in
+`large_budgets.py`. Set RECITE_LARGE_PERF to a `perf` binary to sample the last open under its own
+pid, with phase boundaries in CLOCK_MONOTONIC seconds.
 """
 
 import json
 import os
 import re
 import shutil
+import signal
 import statistics
 import subprocess
 import tempfile
@@ -18,6 +24,7 @@ import traceback
 from pathlib import Path
 
 from frame_timing import protocol_events, timings, unwrap, wayland_ms
+from large_budgets import check
 from native_window import attach, key
 from project_interactions import manuscript
 from startup_interactions import fill
@@ -30,6 +37,9 @@ TYPED = "steady "
 KEY_DELAY_MS = 60
 SWITCHES = 4
 SEARCHES = 3
+OPENS = int(os.environ.get("RECITE_LARGE_OPENS", "3"))
+EDIT_CYCLES = 3
+PERF_ARM_SECONDS = 3
 
 
 def fixturegen():
@@ -148,10 +158,110 @@ def showing(window, text):
     return condition
 
 
+def start_perf(perf, pid, output):
+    """Sample Writer with `perf` when RECITE_LARGE_PERF names the perf binary."""
+    return subprocess.Popen(
+        [
+            perf,
+            "record",
+            "-e",
+            "cpu-clock",
+            "-F",
+            "999",
+            "-k",
+            "CLOCK_MONOTONIC",
+            "--call-graph",
+            "dwarf,16384",
+            "-p",
+            str(pid),
+            "-o",
+            str(output.with_suffix(".perf.data")),
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def launch(command, environment, log, output, profile):
+    """Start Writer, optionally under perf, and time its first line and diagnostics."""
+    perf = os.environ.get("RECITE_LARGE_PERF") if profile else None
+    if perf:
+        # Stop before exec so perf samples startup under Writer's own pid.
+        command = ["sh", "-c", 'kill -STOP $$; exec "$@"', "sh", *command]
+    process = subprocess.Popen(command, env=environment, stdout=log, stderr=subprocess.STDOUT)
+    profiler = None
+    if perf:
+        while Path(f"/proc/{process.pid}/stat").read_text().split(") ")[1][0] != "T":
+            time.sleep(POLL_SECONDS)
+        profiler = start_perf(perf, process.pid, output)
+        time.sleep(PERF_ARM_SECONDS)
+        os.kill(process.pid, signal.SIGCONT)
+    return process, profiler, wayland_ms(), time.monotonic()
+
+
+def opened(api, bus, registry, process, started, first):
+    window = attach(api, bus, registry, process)
+    window.process = process
+    timed(window, showing(window, first["text"]), "first manuscript line")
+    first_line = round((time.monotonic() - started) * 1000, 1)
+    timed(window, lambda: window.find_text("no problems", contains=True), "project diagnostics")
+    return window, first_line, round((time.monotonic() - started) * 1000, 1)
+
+
+def switch_scenes(window, lines, files):
+    switches = []
+    for index in range(1, SWITCHES + 1):
+        target = next(
+            line for line in lines if line["file"] == files[index * (len(files) - 1) // SWITCHES]
+        )
+        key("p", control=True)
+        query = f"{Path(target['file']).stem} {target['block'].removeprefix('block_')}"
+        fill(window, "Search query", query)
+        key("Return")
+        header = f"{target['file']}  ::  {target['block']}"
+        _, elapsed = timed(
+            window, lambda header=header: window.find_text(header, prefix=True), "scene switch"
+        )
+        switches.append(elapsed)
+    return switches
+
+
+def search_lines(window, lines):
+    searches = []
+    for index in range(SEARCHES):
+        target = lines[len(lines) * (index + 1) // (SEARCHES + 1)]
+        window.workspace_action("Find project text")
+        fill(window, "Search query", target["text"])
+        key("Return")
+        _, elapsed = timed(window, showing(window, target["text"]), "search reveal")
+        searches.append(elapsed)
+    return searches, target
+
+
+def edit_cycle(window, original, pid):
+    """Type at the end of the passage, undo back to the saved text and sample memory."""
+    window.focus(manuscript(window))
+    key("End", control=True)
+    time.sleep(1.0)
+    start = wayland_ms()
+    subprocess.run(["wtype", "-d", str(KEY_DELAY_MS), "--", TYPED * 6], check=True, timeout=120)
+    end = wayland_ms()
+    _, settle = timed(
+        window,
+        lambda: window.text(manuscript(window)).endswith(TYPED * 6),
+        "typed text in the accessibility tree",
+    )
+    for _ in range(len(TYPED) * 6):
+        key("z", control=True)
+    timed(window, lambda: window.text(manuscript(window)) == original, "undo to the original text")
+    return {"settle_ms": settle, **memory(pid)}, (start, end)
+
+
 def run(api, bus, registry, binary, output):
     profile = os.environ.get("RECITE_LARGE_PROFILE", "large")
     results = {"scenario": "large-project", "profile": profile, "binary": str(binary)}
-    process = window = None
+    process = None
+    phases = {}
     try:
         with tempfile.TemporaryDirectory(prefix="recite-large-", dir="/tmp") as temporary:
             directory = Path(temporary)
@@ -172,96 +282,58 @@ def run(api, bus, registry, binary, output):
             first = next(line for line in lines if line["file"] == files[0])
             environment = dict(os.environ, RECITE_CONFIG=str(config), WAYLAND_DEBUG="client")
             environment.pop("RUST_LOG", None)
+            command = [str(binary), "--project", str(project), "--document", first["file"]]
+            first_lines, diagnostics = [], []
+            for _ in range(OPENS - 1):
+                process, _, _, started = launch(
+                    command, environment, subprocess.DEVNULL, output, False
+                )
+                _, first_line, ready = opened(api, bus, registry, process, started, first)
+                first_lines.append(first_line)
+                diagnostics.append(ready)
+                process.terminate()
+                process.wait(timeout=10)
+                process = None
             log_path = output.with_suffix(".writer.log")
             with log_path.open("w") as log:
-                launched = wayland_ms()
-                started = time.monotonic()
-                process = subprocess.Popen(
-                    [str(binary), "--project", str(project), "--document", first["file"]],
-                    env=environment,
-                    stdout=log,
-                    stderr=subprocess.STDOUT,
+                process, profiler, launched, started = launch(
+                    command, environment, log, output, True
                 )
-                window = attach(api, bus, registry, process)
-                window.process = process
-                _, _ = timed(window, showing(window, first["text"]), "first manuscript line")
-                results["cold_open_to_first_line_ms"] = round(
-                    (time.monotonic() - started) * 1000, 1
-                )
-                _, diagnostics = timed(
-                    window,
-                    lambda: window.find_text("no problems", contains=True),
-                    "project diagnostics",
-                )
-                results["cold_open_to_diagnostics_ms"] = round(
-                    results["cold_open_to_first_line_ms"] + diagnostics, 1
-                )
+                window, first_line, ready = opened(api, bus, registry, process, started, first)
+                phases["open"] = (started, started + first_line / 1000)
+                first_lines.append(first_line)
+                diagnostics.append(ready)
+                results["cold_open_to_first_line_ms"] = summary(first_lines)
+                results["cold_open_to_diagnostics_ms"] = summary(diagnostics)
                 results["memory_after_open"] = memory(process.pid)
 
-                switches = []
-                for index in range(1, SWITCHES + 1):
-                    target = next(
-                        line
-                        for line in lines
-                        if line["file"] == files[index * (len(files) - 1) // SWITCHES]
-                    )
-                    key("p", control=True)
-                    fill(
-                        window,
-                        "Search query",
-                        f"{Path(target['file']).stem} {target['block'].removeprefix('block_')}",
-                    )
-                    key("Return")
-                    header = f"{target['file']}  ::  {target['block']}"
-                    _, elapsed = timed(
-                        window,
-                        lambda header=header: window.find_text(header, prefix=True),
-                        "scene switch",
-                    )
-                    switches.append(elapsed)
-                results["scene_switch_ms"] = summary(switches)
-
-                searches = []
-                for index in range(SEARCHES):
-                    target = lines[len(lines) * (index + 1) // (SEARCHES + 1)]
-                    window.workspace_action("Find project text")
-                    fill(window, "Search query", target["text"])
-                    key("Return")
-                    _, elapsed = timed(window, showing(window, target["text"]), "search reveal")
-                    searches.append(elapsed)
+                phase = time.monotonic()
+                results["scene_switch_ms"] = summary(switch_scenes(window, lines, files))
+                phases["switch"] = (phase, time.monotonic())
+                phase = time.monotonic()
+                searches, target = search_lines(window, lines)
                 results["search_to_passage_ms"] = summary(searches)
+                phases["search"] = (phase, time.monotonic())
                 results["memory_after_navigation"] = memory(process.pid)
 
-                node = manuscript(window)
-                window.focus(node)
-                key("End", control=True)
-                time.sleep(1.0)
-                start = wayland_ms()
-                subprocess.run(
-                    ["wtype", "-d", str(KEY_DELAY_MS), "--", TYPED * 6], check=True, timeout=120
-                )
-                end = wayland_ms()
-                _, settle = timed(
-                    window,
-                    lambda: window.text(manuscript(window)).endswith(TYPED * 6),
-                    "typed text in the accessibility tree",
-                )
-                results["typing_settle_ms"] = settle
-                results["memory_after_typing"] = memory(process.pid)
-                for _ in range(len(TYPED) * 6):
-                    key("z", control=True)
-                timed(
-                    window,
-                    lambda: window.text(manuscript(window)) == target["text"],
-                    "undo to the original text",
-                )
-                results["memory_after_undo"] = memory(process.pid)
+                cycles = []
+                for index in range(EDIT_CYCLES):
+                    cycle, window_ms = edit_cycle(window, target["text"], process.pid)
+                    cycles.append(cycle)
+                    if index == 0:
+                        start, end = window_ms
+                results["edit_cycles"] = cycles
                 results["total_seconds"] = round(time.monotonic() - started, 1)
                 process.terminate()
                 process.wait(timeout=10)
                 process = None
-            text = log_path.read_text(errors="replace")
-            events = protocol_events(text)
+                if profiler is not None:
+                    profiler.wait(timeout=120)
+                    results["perf"] = {
+                        "data": str(output.with_suffix(".perf.data")),
+                        "phases": phases,
+                    }
+            events = protocol_events(log_path.read_text(errors="replace"))
             base = events[0]["t"]
             commits = [
                 event["t"]
@@ -282,13 +354,15 @@ def run(api, bus, registry, binary, output):
                 }
             )
             shutil.rmtree(project, ignore_errors=True)
-        results["passed"] = True
+        failures = check(profile, results)
+        results["budget_failures"] = failures
+        results["passed"] = not failures
     except Exception:
         results["passed"] = False
         results["error"] = traceback.format_exc()
     finally:
         if process is not None and process.poll() is None:
-            process.terminate()
+            process.kill()
             process.wait(timeout=10)
         output.write_text(json.dumps(results, indent=2) + "\n")
     return results["passed"]

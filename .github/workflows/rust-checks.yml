@@ -17,7 +17,7 @@ jobs:
   check:
     name: ${{ inputs.lane }} contracts
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: ${{ inputs.lane == 'writer' && 60 || 45 }}
     env:
       MISE_ENV: ${{ inputs.lane == 'hosts' && 'godot' || 'maintainability' }}
       MISE_EXEC_AUTO_INSTALL: "false"
@@ -49,12 +49,15 @@ jobs:
       - name: Check selected contracts
         env:
           LANE: ${{ inputs.lane }}
+          FULL: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.ref != '' }}
         run: |
           case "$LANE" in
             core) just core-check; just coverage ;;
             hosts) just host-check ;;
             editor-native) just editor-native-check ;;
-            writer) just writer check; just writer coverage; just writer probe target/writer-native/specimen.json specimen; just writer probe target/writer-native/frame-timing.json frame-timing ;;
+            writer) just writer check; just writer coverage; just writer probe target/writer-native/specimen.json specimen; just writer probe target/writer-native/frame-timing.json frame-timing
+              # Optimized large-project timings and memory run on scheduled, manual and release verification (#109).
+              if [[ "$FULL" == true ]]; then just writer probe-large large target/writer-native/large-project.json; fi ;;
             *) echo "Unknown contract lane: $LANE" >&2; exit 1 ;;
           esac
       - name: Retain coverage evidence
@@ -66,6 +69,7 @@ jobs:
             target/coverage/
             apps/writer/target/coverage/
             target/writer-native/frame-timing*
+            target/writer-native/large-project*
           retention-days: 14
 
   mutations:

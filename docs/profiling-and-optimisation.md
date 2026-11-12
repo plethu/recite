@@ -189,6 +189,25 @@ presses, edit-to-paint and frame-interval percentiles against the §19.8 budgets
 the client's `WAYLAND_DEBUG` protocol trace. Run it again with `MASONRY_IMAGING_BACKEND=vello` to
 see the llvmpipe path fail those budgets.
 
+`just writer probe-large` builds `recite-fixturegen` and an optimized Writer, generates the `large`
+synthetic profile (pass `medium` for a quicker run) and times the native open, navigation, search
+and editing journey in §19.5 against the §19.8 budgets. Its receipt keeps every sample, the budgets
+beside their measurements and RSS checkpoints. `RECITE_LARGE_BUDGET_SCALE=0.1` shows the gate
+failing. Set `RECITE_LARGE_PERF` to a `perf` binary to sample the last open from its first
+instruction: the probe starts Writer stopped, attaches `perf record` with DWARF call graphs and
+`CLOCK_MONOTONIC` timestamps, and records each phase's boundaries for `perf script --time`.
+
+On the 4-core development VM, cold open of the `large` profile was dominated by two sequential
+passes over every document: the search index and the authoring analysis. Both now fan out across
+documents with `map_in_order`, which keeps results in document order and stops at the first
+interruption; inputs under 128 KiB stay on the calling thread. Alternating control and candidate
+runs moved the first line from 0.93-1.01 s to 0.56-0.62 s and diagnostics from 1.02-1.12 s to
+0.66-0.74 s, while RSS after open grew from 272 to 304 MiB through per-thread allocator arenas.
+Headless, the 50,000-passage workload's `index` fell from 133 to 44 ms and `open_project_document`
+from 256 to 129 ms. Switch and search timings match the `medium` profile; they are rendering and
+accessibility costs, not project-size costs. The remaining open is the serial project fact index
+(about 100 ms) and the first frame (about 200 ms).
+
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is memoized independently of camera and hover. Content refresh derives current connections
 and labels, and reuses geometry when ordered beat IDs and entry flags, ordered connection endpoints
