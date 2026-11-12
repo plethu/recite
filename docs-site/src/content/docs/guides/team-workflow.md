@@ -22,6 +22,7 @@ One workable layout gives each role its own files:
 - `schema/generated/team.schema.json` is exported from it and committed, so reviewers see
   declaration changes. Nobody edits it by hand.
 - `locales/*.po` belong to translators, one catalogue per locale.
+- `recording/*.toml` record which lines have takes, written by `recite recording import`.
 - `fixture-*.toml` hold the answers a game would give on each tested path.
 - `build/` holds compiled output and stays out of version control.
 

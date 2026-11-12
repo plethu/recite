@@ -35,3 +35,7 @@ params = []
 [effects.load_cargo]
 modes = ["blocking"]
 params = [{ name = "item", type = "registry:cargo" }]
+
+[metadata.tone]
+targets = ["line"]
+type = "string"

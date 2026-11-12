@@ -25,6 +25,8 @@ mod bench;
 mod catalog;
 mod id;
 mod project;
+mod project_files;
+mod recording;
 mod schema;
 mod validate;
 use bench::bench_command;
@@ -40,6 +42,7 @@ pub(crate) fn run_command(
         Command::Compile(args) => compile_command(args, stderr, messages),
         Command::Extract(args) => extract_command(args, stdout, stderr, messages),
         Command::Catalog(command) => catalog::run(command, stdout, stderr, messages),
+        Command::Recording(command) => recording::run(command, stdout, stderr, messages),
         Command::Id(command) => id::run(command, stderr, messages),
         Command::Schema(command) => schema::run(command, stdout, stderr, messages),
         Command::Project(command) => project::run(command, stderr, messages),

@@ -1,6 +1,12 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
+
+mod localisation;
+pub(crate) use localisation::{
+    CatalogCommand, CatalogProjectArgs, CatalogStatusArgs, ExportState, HandoffFormat,
+    RecordingCommand, RecordingExportArgs, RecordingImportArgs, RecordingStatusArgs, ReportFormat,
+};
 use recite_core::DiagnosticCategory;
 
 #[derive(Debug, Parser)]
@@ -18,6 +24,9 @@ pub(crate) enum Command {
     /// Dialogue PO catalogues and their review state.
     #[command(subcommand)]
     Catalog(CatalogCommand),
+    /// Recording handoffs and returned takes.
+    #[command(subcommand)]
+    Recording(RecordingCommand),
     /// Stable line and choice IDs.
     #[command(subcommand)]
     Id(IdCommand),
@@ -35,40 +44,6 @@ pub(crate) enum Command {
     Bench(BenchArgs),
     /// Inspect a bounded migration; write only with --output-dir.
     Import(crate::migration::ImportArgs),
-}
-
-#[derive(Debug, Subcommand)]
-pub(crate) enum CatalogCommand {
-    Status(CatalogStatusArgs),
-    Refresh(CatalogProjectArgs),
-}
-
-/// The project whose sources and catalogues are compared.
-#[derive(Debug, Args)]
-pub(crate) struct CatalogProjectArgs {
-    /// Project root containing recite.project.toml.
-    #[arg(value_name = "PROJECT_ROOT", default_value = ".")]
-    pub(crate) project_root: PathBuf,
-    /// Dialogue PO catalogue to include besides `[discovery].catalogs`.
-    #[arg(long = "catalog", value_name = "PATH")]
-    pub(crate) catalogs: Vec<PathBuf>,
-}
-
-#[derive(Debug, Args)]
-pub(crate) struct CatalogStatusArgs {
-    #[command(flatten)]
-    pub(crate) project: CatalogProjectArgs,
-    /// Fail when an entry needs attention or a catalogue needs refreshing.
-    #[arg(long)]
-    pub(crate) check: bool,
-    #[arg(long, value_enum, default_value_t = CatalogFormat::Text)]
-    pub(crate) format: CatalogFormat,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
-pub(crate) enum CatalogFormat {
-    Text,
-    Json,
 }
 
 #[derive(Debug, Subcommand)]

@@ -44,6 +44,39 @@ macro_rules! cli_message_ids {
         | MsgId::CliCatalogStateSourceChanged
         | MsgId::CliCatalogRefreshed
         | MsgId::CliCatalogCurrent
+        | MsgId::CliHelpCommandRecording
+        | MsgId::CliHelpCommandRecordingStatus
+        | MsgId::CliHelpCommandRecordingExport
+        | MsgId::CliHelpCommandRecordingImport
+        | MsgId::CliHelpArgRecordingLocale
+        | MsgId::CliHelpArgRecordingCheck
+        | MsgId::CliHelpArgRecordingBlock
+        | MsgId::CliHelpArgRecordingState
+        | MsgId::CliHelpArgRecordingHandoff
+        | MsgId::CliHelpArgRecordingFormat
+        | MsgId::CliHelpArgRecordingOutput
+        | MsgId::CliHelpArgRecordingFile
+        | MsgId::CliHelpArgRecordingApply
+        | MsgId::CliRecordingSourceLanguage
+        | MsgId::CliRecordingSummary
+        | MsgId::CliRecordingEntry
+        | MsgId::CliRecordingObsolete
+        | MsgId::CliRecordingStateToRecord
+        | MsgId::CliRecordingStateStale
+        | MsgId::CliRecordingExportSelected
+        | MsgId::CliRecordingExportItem
+        | MsgId::CliRecordingExportPreview
+        | MsgId::CliRecordingExportWritten
+        | MsgId::CliRecordingImportRefused
+        | MsgId::CliRecordingReasonUnknownId
+        | MsgId::CliRecordingReasonWrongLocale
+        | MsgId::CliRecordingReasonDuplicateTake
+        | MsgId::CliRecordingReasonNotReady
+        | MsgId::CliRecordingReasonStale
+        | MsgId::CliRecordingReasonMissingMedia
+        | MsgId::CliRecordingImportSummary
+        | MsgId::CliRecordingImportPreview
+        | MsgId::CliRecordingImportApplied
         | MsgId::CliHelpCommandProjectValidate
         | MsgId::CliHelpCommandProjectCheckFresh
         | MsgId::CliHelpCommandSchemaInspect
@@ -266,6 +299,9 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorCatalogMalformed
         | MsgId::CliErrorCatalogRefresh
         | MsgId::CliErrorCatalogChanged
+        | MsgId::CliErrorRecordingLocale
+        | MsgId::CliErrorRecordingSidecar
+        | MsgId::CliErrorRecordingHandoff
         | MsgId::CliErrorMissingFixtureChoice
         | MsgId::CliErrorNoInputs
         | MsgId::CliErrorOutputOverwritesInput

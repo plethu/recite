@@ -156,7 +156,16 @@ struct RawProjectManifest {
     #[serde(default)]
     discovery: RawProjectDiscovery,
     #[serde(default)]
+    recording: RawProjectRecording,
+    #[serde(default)]
     scenes: Vec<RawProjectScene>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawProjectRecording {
+    #[serde(default)]
+    direction: Vec<String>,
 }
 
 #[derive(Default, Deserialize)]
@@ -186,6 +195,9 @@ impl RawProjectManifest {
                     .unwrap_or_else(|| ProjectDiscovery::default().source_roots),
                 excludes: self.discovery.excludes,
                 catalogs: self.discovery.catalogs,
+            },
+            recording: super::ProjectRecording {
+                direction: self.recording.direction,
             },
             scenes: self
                 .scenes

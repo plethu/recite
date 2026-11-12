@@ -9,7 +9,7 @@
       "id": "team-pack",
       "kind": "standalone",
       "algorithm": "blake3",
-      "value": "ad72e840c60794a4990dc5f8f4e62c9609f1cd4f4698697a5eefdd8fcf9fdfc0"
+      "value": "7017100f9afb4e2d351f552f6e89bb24b084c890b5a49d89073dd896f76cbe73"
     }
   ],
   "types": {
@@ -82,7 +82,15 @@
     }
   },
   "metadata_domains": {},
-  "metadata": {},
+  "metadata": {
+    "tone": {
+      "targets": [
+        "line"
+      ],
+      "type": "string",
+      "repeatable": false
+    }
+  },
   "markup": {},
   "projection_queries": {},
   "presentation_projectors": {}

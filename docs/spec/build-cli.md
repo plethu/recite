@@ -31,6 +31,9 @@ enumeration:
   and read only by operations that edit them, such as stable-ID rename (§5.4.2); editors
   re-enumerate them per operation so a catalogue added later is not missed.
 
+An optional `[recording]` table has one key, `direction`: an ordered list of line metadata keys
+whose values direct a performance and therefore belong to a recording item's revision (§9.9).
+
 The shared discovery report retains valid documents alongside typed diagnostics and marks coverage
 complete or partial. CLI project commands fail on partial coverage; LSP clients may retain usable
 documents while publishing the diagnostics. The LSP owns URIs, versions, overlays, and protocol
@@ -254,15 +257,16 @@ scriptable. Binding generation is deferred beyond v1.
 pipeline. A noun group exists when a thing has two or more operations of its own. Groups are
 verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun top-level names.
 
-| Command                                                 | Group                                              |
-| ------------------------------------------------------- | -------------------------------------------------- |
-| `validate`, `compile`, `extract`, `watch`               | top-level; source and project pipeline             |
-| `run`, `trace`, `play`, `bench`                         | top-level; running compiled assets                 |
-| `import`, `explain`                                     | top-level; migration and diagnostic help           |
-| `id check`, `id assign`, `id rename`, `id reassign`     | stable line and choice IDs                         |
-| `schema inspect`, `schema export`, `schema check-fresh` | schema manifests and their producers               |
-| `project validate`, `project check-fresh`               | `recite.project.toml` and compiled-asset freshness |
-| `catalog status`, `catalog refresh`                     | dialogue PO catalogues and their review state      |
+| Command                                                    | Group                                              |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| `validate`, `compile`, `extract`, `watch`                  | top-level; source and project pipeline             |
+| `run`, `trace`, `play`, `bench`                            | top-level; running compiled assets                 |
+| `import`, `explain`                                        | top-level; migration and diagnostic help           |
+| `id check`, `id assign`, `id rename`, `id reassign`        | stable line and choice IDs                         |
+| `schema inspect`, `schema export`, `schema check-fresh`    | schema manifests and their producers               |
+| `project validate`, `project check-fresh`                  | `recite.project.toml` and compiled-asset freshness |
+| `catalog status`, `catalog refresh`                        | dialogue PO catalogues and their review state      |
+| `recording status`, `recording export`, `recording import` | recording handoffs and returned takes              |
 
 `check-markup` and `check-metadata` are `validate --only markup` and `validate --only metadata`,
 because they filter the same diagnostics run; `--only metadata` requires `--schema`. The released-ID
@@ -440,6 +444,30 @@ entry needs attention or any catalogue needs refreshing, so CI can require revie
 `refresh` refreshes every catalogue in memory before writing any, so one refusal writes nothing. It
 writes only catalogues whose text changes, refuses a catalogue changed on disk since it was read,
 and never clears `fuzzy`.
+
+### 13.11 `recording status`, `recording export` and `recording import`
+
+```text
+recite recording status [PROJECT_ROOT] [--locale <LOCALE>] [--check] [--format text|json]
+recite recording export [PROJECT_ROOT] [--locale <LOCALE>] [--block <BLOCK>]... [--state <STATE>]...
+                        [--handoff <NAME>] [--format csv|json] [--output <PATH>]
+recite recording import <FILE> [PROJECT_ROOT] [--locale <LOCALE>] [--format csv|json] [--apply]
+```
+
+Each command compiles the discovered project with its schema and reads the language's catalogue and
+sidecar (§9.9). Without `--locale` the language is the source; a locale selects the catalogue whose
+`Language` header matches it. Source errors, an incomplete project or a malformed sidecar stop the
+command.
+
+`status` reports counts by state and lists items needing attention, `to_record`, `stale` and
+`obsolete`, with their block and source location; `--format json` adds per-block and per-speaker
+counts. `--check` exits 1 when any item needs attention; `not_ready` items are the catalogue's
+concern (§13.10).
+
+`export` selects ready items, by default `to_record` and `stale`, optionally narrowed by block and
+state. It prints the selection's size and IDs and writes the handoff only to `--output`. `import`
+validates the returned file and reports every refusal; it changes the sidecar only with `--apply`
+and only when no row is refused.
 
 ### 13.9 Future: `generate-bindings`
 

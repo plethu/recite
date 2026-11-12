@@ -201,9 +201,7 @@ pub(crate) fn structured_error(
             ErrorOperation::Validate,
             fallback_path,
         ),
-        CliError::CatalogMalformed { .. }
-        | CliError::CatalogRefresh { .. }
-        | CliError::CatalogChanged { .. } => input(
+        CliError::Localisation(_) => input(
             ErrorCode::DialogueCatalogInvalid,
             ErrorOperation::Validate,
             fallback_path,

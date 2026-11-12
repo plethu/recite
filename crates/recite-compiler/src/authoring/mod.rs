@@ -6,6 +6,7 @@ mod engine;
 mod input;
 mod input_state;
 mod query;
+mod recording;
 mod schema_summary;
 mod snapshot;
 mod state;
@@ -46,6 +47,10 @@ pub use query::{
     MetadataValueDetail, NavigationResult, QueryClass, QueryResult, QueryUnavailableReason,
     SemanticFact, SemanticSymbolKind, SymbolIdentity, SymbolKind, SymbolLocation,
     SymbolQueryOptions, SymbolRole,
+};
+pub use recording::{
+    ImportPlan, ImportRefusal, RecordingEntry, RecordingItem, RecordingState, RowRefusal,
+    handoff_rows, plan_import, recording_items, recording_report,
 };
 pub use schema_summary::{
     AuthoringSchemaSummary, AvailabilityReasonSummary, ConditionSummary, EffectSummary,

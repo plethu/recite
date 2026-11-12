@@ -39,7 +39,15 @@ pub struct ProjectManifest {
     pub project: ProjectManifestMetadata,
     /// Filesystem discovery configuration for project-owned source files.
     pub discovery: ProjectDiscovery,
+    pub recording: ProjectRecording,
     pub scenes: Vec<ProjectScene>,
+}
+
+/// `[recording]`: production settings for recording handoffs (spec §9.9).
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ProjectRecording {
+    /// Line metadata keys that direct a performance, in declared order.
+    pub direction: Vec<String>,
 }
 
 /// Project-owned source discovery settings.
