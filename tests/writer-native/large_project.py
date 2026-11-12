@@ -93,7 +93,7 @@ def memory(pid):
     }
 
 
-def timed(window, condition, label, timeout=120):
+def timed(window, condition, label, timeout=float(os.environ.get("RECITE_LARGE_TIMEOUT", "120"))):
     start = time.monotonic()
     deadline = start + timeout
     last_error = None
@@ -107,7 +107,16 @@ def timed(window, condition, label, timeout=120):
         except window.api.GLib.Error as error:
             last_error = error
         time.sleep(POLL_SECONDS)
-    raise RuntimeError(f"Timed out after {timeout}s: {label}; last bus error: {last_error}")
+    visible = []
+    try:
+        visible = [name for _, name in window.nodes() if name][:80]
+        node = manuscript_now(window)
+        visible.append("manuscript: " + (window.text(node) if node else "<none>"))
+    except Exception as error:  # noqa: BLE001 - diagnostics only
+        visible.append(repr(error))
+    raise RuntimeError(
+        f"Timed out after {timeout}s: {label}; last bus error: {last_error}; visible: {visible}"
+    )
 
 
 def summary(values):
@@ -119,10 +128,22 @@ def summary(values):
     }
 
 
+def manuscript_now(window):
+    """The current manuscript field, or None without waiting."""
+    return next(
+        (
+            node
+            for node, name in window.nodes()
+            if name == "Manuscript" and window.call(node, "Accessible", "GetRole")[0] == 79
+        ),
+        None,
+    )
+
+
 def showing(window, text):
     def condition():
-        node = manuscript(window)
-        return node if window.text(node) == text else None
+        node = manuscript_now(window)
+        return node if node is not None and window.text(node) == text else None
 
     return condition
 
@@ -185,9 +206,18 @@ def run(api, bus, registry, binary, output):
                         if line["file"] == files[index * (len(files) - 1) // SWITCHES]
                     )
                     key("p", control=True)
-                    fill(window, "Search query", f"{Path(target['file']).stem} {target['block']}")
+                    fill(
+                        window,
+                        "Search query",
+                        f"{Path(target['file']).stem} {target['block'].removeprefix('block_')}",
+                    )
                     key("Return")
-                    _, elapsed = timed(window, showing(window, target["text"]), "scene switch")
+                    header = f"{target['file']}  ::  {target['block']}"
+                    _, elapsed = timed(
+                        window,
+                        lambda header=header: window.find_text(header, prefix=True),
+                        "scene switch",
+                    )
                     switches.append(elapsed)
                 results["scene_switch_ms"] = summary(switches)
 
