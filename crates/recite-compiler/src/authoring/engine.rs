@@ -35,30 +35,33 @@ pub(super) fn rebuild_analyses(
 > {
     let mut project_changed = BTreeSet::new();
     let mut analyses = BTreeMap::new();
+    let mut fresh = Vec::new();
     for (key, document) in new_effective {
         control.checkpoint()?;
         let previous = old.get(*key);
-        let analysis = match previous {
+        match previous {
             Some(previous)
                 if old_effective.get(key).is_some_and(|old| {
                     Arc::ptr_eq(old.text, document.text) || old.text == document.text
                 }) =>
             {
-                previous.clone()
+                analyses.insert((*key).clone(), previous.clone());
             }
-            previous => {
-                let next = analyze(document, previous, schema, control)?;
-                control.checkpoint()?;
-                if previous
-                    .as_ref()
-                    .is_none_or(|old| old.project_facts != next.project_facts)
-                {
-                    project_changed.insert((*key).clone());
-                }
-                next
-            }
-        };
-        analyses.insert((*key).clone(), analysis);
+            previous => fresh.push((document, previous)),
+        }
+    }
+    let analyzed = super::map_in_order(
+        &fresh,
+        |(document, _)| document.text.len(),
+        control,
+        |(document, previous)| analyze(document, *previous, schema, control),
+    )?;
+    control.checkpoint()?;
+    for ((document, previous), next) in fresh.into_iter().zip(analyzed) {
+        if previous.is_none_or(|old| old.project_facts != next.project_facts) {
+            project_changed.insert(document.key.clone());
+        }
+        analyses.insert(document.key.clone(), next);
     }
     project_changed.extend(
         old.keys()

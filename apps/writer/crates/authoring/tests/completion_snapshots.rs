@@ -1,7 +1,7 @@
 use recite_compiler::authoring::{AuthoringError, CancellationToken, SavedDocument, WorkControl};
 use recite_core::{DocumentKey, SourcePosition};
 use recite_writer_model::{CompletionSnapshot, Document, EditError, ProjectContext};
-use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 const ACCEPTED: &str = ":: start default\n-> END\n";
 const DRAFT: &str = ":: start default\n-> dest\n:: destination\n-> END\n";
@@ -66,13 +66,12 @@ fn context_identity_invalidates_same_byte_queries_without_a_revision_change()
 }
 
 struct Control {
-    calls: Cell<usize>,
+    calls: AtomicUsize,
     stop: usize,
 }
 impl WorkControl for Control {
     fn checkpoint(&self) -> Result<(), recite_compiler::authoring::Interrupted> {
-        let call = self.calls.get();
-        self.calls.set(call + 1);
+        let call = self.calls.fetch_add(1, Ordering::Relaxed);
         if call >= self.stop {
             Err(recite_compiler::authoring::Interrupted)
         } else {
@@ -87,16 +86,16 @@ fn captured_queries_can_be_interrupted_at_every_checkpoint()
     let snapshot = document.completion_snapshot();
     for draft in [ACCEPTED, DRAFT] {
         let control = Control {
-            calls: Cell::new(0),
+            calls: AtomicUsize::new(0),
             stop: usize::MAX,
         };
         let cursor = SourcePosition::new(2, 4)?;
         let completed = snapshot.complete(draft, cursor, &control)?;
         assert_eq!(completed.source(), draft);
-        assert!(control.calls.get() >= 3);
-        for stop in 0..control.calls.get() {
+        assert!(control.calls.load(Ordering::Relaxed) >= 3);
+        for stop in 0..control.calls.load(Ordering::Relaxed) {
             let control = Control {
-                calls: Cell::new(0),
+                calls: AtomicUsize::new(0),
                 stop,
             };
             assert!(matches!(

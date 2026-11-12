@@ -3,6 +3,7 @@ use recite_compiler::authoring::{
     QueryUnavailableReason, SavedDocument, WorkControl,
 };
 use recite_core::DocumentKey;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
 fn borrowed_block_names_preserve_document_and_source_order()
@@ -82,7 +83,7 @@ fn borrowed_block_names_stop_at_each_checkpoint_without_changing_the_snapshot()
         [],
     ))?;
     for cutoff in 0..4 {
-        let control = StopAfter(std::cell::Cell::new(cutoff));
+        let control = StopAfter(AtomicUsize::new(cutoff));
         assert_eq!(
             kernel.snapshot().query(&control).project_block_names(),
             QueryResult::Unavailable(vec![QueryUnavailableReason::Interrupted]),
@@ -100,16 +101,15 @@ fn borrowed_block_names_stop_at_each_checkpoint_without_changing_the_snapshot()
     Ok(())
 }
 
-struct StopAfter(std::cell::Cell<usize>);
+struct StopAfter(AtomicUsize);
 
 impl WorkControl for StopAfter {
     fn checkpoint(&self) -> Result<(), Interrupted> {
-        match self.0.get().checked_sub(1) {
-            Some(remaining) => {
-                self.0.set(remaining);
-                Ok(())
-            }
-            None => Err(Interrupted),
-        }
+        self.0
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+                left.checked_sub(1)
+            })
+            .map(drop)
+            .map_err(|_| Interrupted)
     }
 }

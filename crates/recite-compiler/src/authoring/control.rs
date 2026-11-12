@@ -4,8 +4,9 @@ use std::sync::{
 };
 
 /// Host-owned interruption policy. The compiler knows neither protocol reasons
-/// nor clocks, queues, or executors. Implementations must keep checkpoints cheap.
-pub trait WorkControl {
+/// nor clocks, queues, or executors. Implementations must keep checkpoints cheap
+/// and may be checked from several worker threads at once.
+pub trait WorkControl: Sync {
     fn checkpoint(&self) -> Result<(), Interrupted>;
 }
 
@@ -46,6 +47,9 @@ impl WorkControl for CancellationToken {
         self.checkpoint()
     }
 }
+
+mod parallel;
+pub use parallel::map_in_order;
 
 #[cfg(test)]
 mod tests;

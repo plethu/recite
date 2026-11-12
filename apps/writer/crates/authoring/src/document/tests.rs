@@ -1,14 +1,13 @@
 use super::*;
-use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 struct Control {
-    calls: Cell<usize>,
+    calls: AtomicUsize,
     stop_at: usize,
 }
 impl WorkControl for Control {
     fn checkpoint(&self) -> Result<(), recite_compiler::authoring::Interrupted> {
-        let call = self.calls.get();
-        self.calls.set(call + 1);
+        let call = self.calls.fetch_add(1, Ordering::Relaxed);
         if call >= self.stop_at {
             Err(recite_compiler::authoring::Interrupted)
         } else {
@@ -18,7 +17,7 @@ impl WorkControl for Control {
 }
 fn control(stop_at: usize) -> Control {
     Control {
-        calls: Cell::new(0),
+        calls: AtomicUsize::new(0),
         stop_at,
     }
 }
@@ -166,8 +165,8 @@ fn sibling_interruption_never_changes_the_original() -> Result<(), EditError> {
     let source = ":: answer\n-> a.recite::start\n";
     let complete = control(usize::MAX);
     original.open_sibling_with_control(key.clone(), source, context()?, &complete)?;
-    assert!(complete.calls.get() > 1);
-    for stop_at in 0..complete.calls.get() {
+    assert!(complete.calls.load(Ordering::Relaxed) > 1);
+    for stop_at in 0..complete.calls.load(Ordering::Relaxed) {
         assert!(matches!(
             original.open_sibling_with_control(key.clone(), source, context()?, &control(stop_at)),
             Err(EditError::Authoring(AuthoringError::Interrupted(_)))
@@ -238,8 +237,8 @@ fn retained_analysis_does_not_publish_an_interrupted_acceptance() -> Result<(), 
     let mut reference = Document::new(crate::FIXTURE)?;
     let complete = control(usize::MAX);
     reference.accept_with_control(next.clone().into(), &complete)?;
-    assert!(complete.calls.get() > 1);
-    for stop_at in 0..complete.calls.get() {
+    assert!(complete.calls.load(Ordering::Relaxed) > 1);
+    for stop_at in 0..complete.calls.load(Ordering::Relaxed) {
         let mut document = Document::new(crate::FIXTURE)?;
         let retained = document.completion_snapshot();
         let script = document.script_snapshot()?;

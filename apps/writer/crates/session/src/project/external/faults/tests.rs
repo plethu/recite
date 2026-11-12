@@ -1,6 +1,6 @@
 use super::*;
 use recite_compiler::authoring::{Interrupted, WorkControl};
-use std::cell::Cell;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 enum AfterArchive {
     Cancel,
@@ -9,7 +9,7 @@ enum AfterArchive {
 struct Control {
     root: PathBuf,
     action: AfterArchive,
-    used: Cell<bool>,
+    used: AtomicBool,
 }
 impl WorkControl for Control {
     fn checkpoint(&self) -> Result<(), Interrupted> {
@@ -20,7 +20,7 @@ impl WorkControl for Control {
                 .to_string_lossy()
                 .starts_with(".recite-recovered-")
         });
-        if archived && !self.used.replace(true) {
+        if archived && !self.used.swap(true, Ordering::Relaxed) {
             match self.action {
                 AfterArchive::Cancel => return Err(Interrupted),
                 AfterArchive::ReplaceDisk => {
@@ -42,7 +42,7 @@ fn cancellation_and_disk_change_after_archiving_preserve_the_live_owner_and_reco
         let control = Control {
             root: directory.path().to_owned(),
             action,
-            used: Cell::new(false),
+            used: AtomicBool::new(false),
         };
         assert!(
             files
@@ -53,7 +53,7 @@ fn cancellation_and_disk_change_after_archiving_preserve_the_live_owner_and_reco
                 )
                 .is_err()
         );
-        assert!(control.used.get());
+        assert!(control.used.load(Ordering::Relaxed));
         assert_eq!(model.recovery(), before);
         assert_eq!(files.saved.as_ref(), SOURCE);
         assert!(!model.document().can_undo());

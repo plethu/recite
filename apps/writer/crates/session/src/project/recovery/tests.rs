@@ -1,17 +1,18 @@
 use super::*;
 use crate::recovery::Recovery;
 use recite_compiler::authoring::Interrupted;
-use std::{cell::Cell, collections::BTreeMap, fs};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{collections::BTreeMap, fs};
 
 struct Control {
-    calls: Cell<usize>,
+    calls: AtomicUsize,
     stop_at: usize,
 }
 
 impl Control {
     fn new(stop_at: usize) -> Self {
         Self {
-            calls: Cell::new(0),
+            calls: AtomicUsize::new(0),
             stop_at,
         }
     }
@@ -19,8 +20,7 @@ impl Control {
 
 impl WorkControl for Control {
     fn checkpoint(&self) -> Result<(), Interrupted> {
-        let call = self.calls.get();
-        self.calls.set(call + 1);
+        let call = self.calls.fetch_add(1, Ordering::Relaxed);
         if call >= self.stop_at {
             Err(Interrupted)
         } else {
@@ -59,8 +59,8 @@ fn interrupted_replay_preserves_both_drafts_at_every_checkpoint()
     let (_dir, mut files) = pending_project()?;
     let complete = Control::new(usize::MAX);
     files.workbench_with_control(None, &complete)?;
-    assert!(complete.calls.get() > 2);
-    for stop_at in 0..complete.calls.get() {
+    assert!(complete.calls.load(Ordering::Relaxed) > 2);
+    for stop_at in 0..complete.calls.load(Ordering::Relaxed) {
         let (dir, mut files) = pending_project()?;
         let authored = ["a.recite", "b.recite"]
             .map(|name| fs::read_to_string(dir.path().join(name)))
