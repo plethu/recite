@@ -57,7 +57,7 @@ jobs:
             editor-native) just editor-native-check ;;
             writer) just writer check; just writer coverage; just writer probe target/writer-native/specimen.json specimen; just writer probe target/writer-native/frame-timing.json frame-timing
               # Optimized large-project timings and memory run on scheduled, manual and release verification (#109).
-              if [[ "$FULL" == true ]]; then just writer probe-large large target/writer-native/large-project.json; fi ;;
+              if [[ "$FULL" == true ]]; then just writer probe target/writer-native/large-project.json large-project; fi ;;
             *) echo "Unknown contract lane: $LANE" >&2; exit 1 ;;
           esac
       - name: Retain coverage evidence

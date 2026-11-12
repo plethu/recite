@@ -189,13 +189,14 @@ presses, edit-to-paint and frame-interval percentiles against the §19.8 budgets
 the client's `WAYLAND_DEBUG` protocol trace. Run it again with `MASONRY_IMAGING_BACKEND=vello` to
 see the llvmpipe path fail those budgets.
 
-`just writer probe-large` builds `recite-fixturegen` and an optimized Writer, generates the `large`
-synthetic profile (pass `medium` for a quicker run) and times the native open, navigation, search
-and editing journey in §19.5 against the §19.8 budgets. Its receipt keeps every sample, the budgets
-beside their measurements and RSS checkpoints. `RECITE_LARGE_BUDGET_SCALE=0.1` shows the gate
-failing. Set `RECITE_LARGE_PERF` to a `perf` binary to sample the last open from its first
-instruction: the probe starts Writer stopped, attaches `perf record` with DWARF call graphs and
-`CLOCK_MONOTONIC` timestamps, and records each phase's boundaries for `perf script --time`.
+`just writer probe target/writer-native/large-project.json large-project` builds `recite-fixturegen`
+and an optimized Writer, generates the `large` synthetic profile (`RECITE_LARGE_PROFILE=medium`
+gives a quicker local run) and times the native open, navigation, search and editing journey in
+§19.5 against the §19.8 budgets. Its receipt keeps every sample, the budgets beside their
+measurements and RSS checkpoints. `RECITE_LARGE_BUDGET_SCALE=0.1` shows the gate failing. Set
+`RECITE_LARGE_PERF` to a `perf` binary to sample the last open from its first instruction: the probe
+starts Writer stopped, attaches `perf record` with DWARF call graphs and `CLOCK_MONOTONIC`
+timestamps, and records each phase's boundaries for `perf script --time`.
 
 On the 4-core development VM, cold open of the `large` profile was dominated by two sequential
 passes over every document: the search index and the authoring analysis. Both now fan out across two

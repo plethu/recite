@@ -8,15 +8,17 @@ run *args:
     cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer -- "$@"
 
 # Probe AT-SPI on an owned headless Wayland host; needs Cage, wtype, grim, wl-clipboard, python3-gi and D-Bus.
+# The large-project scenario times an optimized build on a generated project against its budgets (#109).
 probe output="target/writer-native/result.json" scenario="all":
-    cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
-    /usr/bin/python3 tests/writer-native/check.py apps/writer/target/debug/recite-writer "{{ output }}" --scenario "{{ scenario }}"
-
-# Time an optimized native Writer on a generated large project against its budgets (#109).
-probe-large profile="large" output="target/writer-native/large-project.json":
-    cargo build --locked --release -p recite-fixturegen
-    cargo build --locked --profile bench --manifest-path apps/writer/Cargo.toml -p recite-writer
-    RECITE_LARGE_PROFILE="{{ profile }}" /usr/bin/python3 tests/writer-native/check.py apps/writer/target/release/recite-writer "{{ output }}" --scenario large-project
+    if [[ "$2" == large-project ]]; then \
+      cargo build --locked --release -p recite-fixturegen; \
+      cargo build --locked --profile bench --manifest-path apps/writer/Cargo.toml -p recite-writer; \
+      binary=apps/writer/target/release/recite-writer; \
+    else \
+      cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer; \
+      binary=apps/writer/target/debug/recite-writer; \
+    fi; \
+    /usr/bin/python3 tests/writer-native/check.py "$binary" "$1" --scenario "$2"
 
 # Verify the maintained writer and its source-editing model.
 check:
