@@ -6,11 +6,14 @@ use super::{Interrupted, WorkControl};
 
 /// Below this many input bytes, thread start-up costs more than it saves.
 const PARALLEL_MIN_BYTES: usize = 128 * 1024;
-const MAX_WORKERS: usize = 8;
+/// Each worker's allocator arena keeps its own peak working set, about 7.5 MiB
+/// per extra worker on the large synthetic project. Two workers keep peak RSS
+/// within the LSP regression budget while cutting its index time by a third.
+const MAX_WORKERS: usize = 2;
 
 /// Applies `work` to every item and returns the results in item order.
 ///
-/// Items run on scoped worker threads when there are at least two and their
+/// Items run on two scoped worker threads when there are at least two and their
 /// combined `bytes` reach a threshold; otherwise they run in order on the
 /// caller's thread. Results never depend on scheduling. The first
 /// interruption stops the remaining items and is returned; no partial result

@@ -198,15 +198,18 @@ instruction: the probe starts Writer stopped, attaches `perf record` with DWARF 
 `CLOCK_MONOTONIC` timestamps, and records each phase's boundaries for `perf script --time`.
 
 On the 4-core development VM, cold open of the `large` profile was dominated by two sequential
-passes over every document: the search index and the authoring analysis. Both now fan out across
-documents with `map_in_order`, which keeps results in document order and stops at the first
-interruption; inputs under 128 KiB stay on the calling thread. Alternating control and candidate
-runs moved the first line from 0.93-1.01 s to 0.56-0.62 s and diagnostics from 1.02-1.12 s to
-0.66-0.74 s, while RSS after open grew from 272 to 304 MiB through per-thread allocator arenas.
-Headless, the 50,000-passage workload's `index` fell from 133 to 44 ms and `open_project_document`
-from 256 to 129 ms. Switch and search timings match the `medium` profile; they are rendering and
-accessibility costs, not project-size costs. The remaining open is the serial project fact index
-(about 100 ms) and the first frame (about 200 ms).
+passes over every document: the search index and the authoring analysis. Both now fan out across two
+worker threads with `map_in_order`, which keeps results in document order and stops at the first
+interruption; inputs under 128 KiB stay on the calling thread. Each worker's allocator arena keeps
+its own peak working set, about 7.5 MiB per extra worker on this project: with up to eight workers
+the LSP comparison's index readiness fell from 529 to 226 ms but its peak RSS rose 28%, beyond the
+§19.8 memory limit, and a single allocator arena restored the memory but serialized the workers. Two
+workers moved LSP index readiness from 509 to 324 ms within that limit (+15 MiB). In alternating
+native runs, the first line moved from 1.07-1.17 s to 0.70-0.73 s and diagnostics from 1.22-1.32 s
+to 0.80-0.85 s, with RSS after open 273 to 288 MiB. Switch and search timings match the `medium`
+profile; they are rendering and accessibility costs, not project-size costs. The remaining open is
+the serial project fact index (about 100 ms) and the first frame (about 200 ms). Revisit the worker
+count if per-document analysis allocates less or the memory limit changes.
 
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is memoized independently of camera and hover. Content refresh derives current connections
