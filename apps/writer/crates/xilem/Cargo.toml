@@ -9,6 +9,8 @@ publish.workspace = true
 [dependencies]
 accesskit_winit = { version = "=0.32.2", default-features = false }
 masonry_winit = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "8fb3b5a4b9d6597a319b9e77681ec22a2778895c" }
+# Decodes the identity grain tile; already in the tree through Masonry's SVG renderer.
+png = "0.18"
 recite-core.workspace = true
 recite-compiler.workspace = true
 recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }

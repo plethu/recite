@@ -48,7 +48,6 @@ pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer>
     .rows([GridTrackSize::Auto; 2])
     .gap(4.px())
     .padding(xilem::style::Padding::from_vh(4.px(), 16.px()))
-    .background_color(state.palette.surface)
 }
 
 pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {

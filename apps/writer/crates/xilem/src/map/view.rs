@@ -83,7 +83,6 @@ pub(crate) fn panel(state: &Writer) -> Box<AnyWidgetView<Writer>> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
-    .background_color(state.palette.canvas)
     .prop(Region(Some(Pane::Map)))
     .boxed()
 }

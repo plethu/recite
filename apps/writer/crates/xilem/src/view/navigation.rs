@@ -8,6 +8,7 @@ use crate::presentation::{group::named, print};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
+use xilem::peniko::Color;
 use xilem::view::{button, portal};
 use xilem::{
     masonry::{
@@ -39,7 +40,6 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .constrain_horizontal(true),
     ))
     .width(state.drawer_width().px())
-    .background_color(state.palette.canvas)
     .prop(Region(Some(Pane::Navigation)))
 }
 fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -136,8 +136,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .width((state.drawer_width() - 48.).px()),
                     move |state: &mut Writer| state.switch(&path),
                 )
-                .disabled(closing)
-                .background_color(state.palette.canvas),
+                .disabled(closing),
             )
         })
         .collect::<Vec<_>>();
@@ -238,7 +237,7 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .background_color(if current {
                     state.palette.plate
                 } else {
-                    state.palette.canvas
+                    Color::TRANSPARENT
                 }),
             )
         })

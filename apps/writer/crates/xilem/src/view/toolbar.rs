@@ -36,7 +36,6 @@ pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
     .gap(8.px())
     .padding(xilem::style::Padding::from_vh(4.px(), 16.px()))
-    .background_color(state.palette.surface)
 }
 fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();

@@ -4,6 +4,8 @@ pub use rgba::Rgba;
 
 pub const STAMP_HOVER: f32 = 0.12;
 pub const STAMP_PRESSED: f32 = 0.22;
+/// The grain tile's peak alpha; `assets/identity/grain.png` never exceeds it.
+pub const GRAIN_PEAK: f32 = 0.07;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Palette<C = Rgba> {
@@ -44,6 +46,10 @@ pub struct Palette<C = Rgba> {
     pub status_text: C,
     /// Mint on the status bar in both modes, for a clean diagnostics state.
     pub status_signal: C,
+    /// The hard shadow under the Script sheet: decorative, never a control boundary.
+    pub stock: C,
+    /// Paper-grain ink, painted at the tile's own alpha on desk surfaces only.
+    pub grain: C,
 }
 impl Palette<Rgba> {
     pub fn with_mode(dark: bool, monochrome: bool) -> Self {
@@ -76,6 +82,8 @@ impl Palette<Rgba> {
                 &mut p.status_edge,
                 &mut p.status_text,
                 &mut p.status_signal,
+                &mut p.stock,
+                &mut p.grain,
             ] {
                 *c = c.monochrome();
             }
@@ -91,8 +99,9 @@ impl Palette<Rgba> {
         let muted = color(dark, (83, 69, 81), (207, 192, 203));
         let rule = Rgba::mix(surface, ink, 0.14);
         let overprint = Rgba::from_rgb(0, 32, 53);
+        let canvas = color(dark, (239, 233, 225), (27, 24, 30));
         Self {
-            canvas: color(dark, (239, 233, 225), (27, 24, 30)),
+            canvas,
             surface,
             inset: color(dark, (243, 237, 229), (29, 26, 33)),
             floating,
@@ -132,7 +141,15 @@ impl Palette<Rgba> {
                 Rgba::from_rgb(243, 233, 223)
             },
             status_signal: Rgba::from_rgb(130, 216, 213),
+            stock: Rgba::mix(canvas, ink, 0.20),
+            // The identity print recipe's grain ink; the dark variant is a later pass.
+            grain: Rgba::from_rgb(64, 46, 51),
         }
+    }
+
+    /// The darkest point of the grained desk, where text on the desk is checked.
+    pub fn grained_desk(&self) -> Rgba {
+        Rgba::mix(self.canvas, self.grain, GRAIN_PEAK)
     }
 
     /// Reply destinations use text-safe teal, except on a pressed fill where it fails contrast.
@@ -177,6 +194,8 @@ impl<C> Palette<C> {
             status_edge: convert(self.status_edge),
             status_text: convert(self.status_text),
             status_signal: convert(self.status_signal),
+            stock: convert(self.stock),
+            grain: convert(self.grain),
         }
     }
 }

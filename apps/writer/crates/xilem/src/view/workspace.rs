@@ -6,6 +6,7 @@ use crate::presentation::group::named;
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::masonry::{layout::Dim, properties::CheckmarkSize};
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
+mod sheet;
 
 pub(crate) struct Layout {
     pub map: f64,
@@ -13,6 +14,8 @@ pub(crate) struct Layout {
     script_pane: f64,
     pub compact_split: bool,
     pub split_available: bool,
+    /// Whether Script reads as a bordered sheet on the desk rather than full-bleed paper.
+    pub sheet: bool,
     available: f64,
 }
 impl Layout {
@@ -50,6 +53,9 @@ impl Layout {
             script_pane: if full_script { available } else { script },
             compact_split,
             split_available,
+            sheet: workspace == Workspace::Script
+                && state.viewport.width >= sheet::MINIMUM_WINDOW
+                && script + sheet::EXTENT <= available,
             available,
         }
     }
@@ -75,14 +81,10 @@ pub(super) fn workspace(
                 "Script pane",
                 super::reading::viewport::follow_reading(
                     state,
-                    portal(
-                        flex_row((manuscript(state, surface),))
-                            .main_axis_alignment(xilem::view::MainAxisAlignment::Center)
-                            .cross_axis_alignment(CrossAxisAlignment::Start)
-                            .width(layout.script_pane.px()),
-                    )
-                    .constrain_horizontal(true)
-                    .prop(ReadingViewport::capture(state)),
+                    portal(sheet::paper(state, &layout, manuscript(state, surface)))
+                        .constrain_horizontal(true)
+                        .background_color(sheet::ground(state, &layout))
+                        .prop(ReadingViewport::capture(state)),
                 ),
             )
             .flex(1.),

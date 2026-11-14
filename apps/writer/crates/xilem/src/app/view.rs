@@ -1,6 +1,6 @@
 mod chrome;
 use super::*;
-use crate::presentation::group::named;
+use crate::presentation::{group::named, material::desk};
 use chrome::app_bar;
 use xilem::{
     WidgetView,
@@ -19,30 +19,33 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
         xilem::core::fork(
             xilem::view::resize_observer(
                 |app: &mut App, size| app.viewport = size,
-                flex_col((
-                    app_bar(app),
-                    zstack((
-                        named(
-                            "Writer workspace",
-                            indexed_stack((welcome::panel(app), slot, settings::settings(app)))
-                                .active(if app.settings_open() {
-                                    2
-                                } else {
-                                    usize::from(!app.show_welcome())
-                                }),
-                        )
-                        .disabled(app.picker.is_some()),
-                        indexed_stack((
-                            picker::view::picker(app),
-                            sized_box(flex_col(())).dims((0.px(), 0.px())),
+                desk(
+                    app.theme.grain.clone(),
+                    flex_col((
+                        app_bar(app),
+                        zstack((
+                            named(
+                                "Writer workspace",
+                                indexed_stack((welcome::panel(app), slot, settings::settings(app)))
+                                    .active(if app.settings_open() {
+                                        2
+                                    } else {
+                                        usize::from(!app.show_welcome())
+                                    }),
+                            )
+                            .disabled(app.picker.is_some()),
+                            indexed_stack((
+                                picker::view::picker(app),
+                                sized_box(flex_col(())).dims((0.px(), 0.px())),
+                            ))
+                            .active(usize::from(app.picker.is_none())),
                         ))
-                        .active(usize::from(app.picker.is_none())),
+                        .alignment(UnitPoint::CENTER)
+                        .flex(1.),
                     ))
-                    .alignment(UnitPoint::CENTER)
-                    .flex(1.),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(0.px())
+                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                    .gap(0.px()),
+                )
                 .background_color(app.theme.palette.canvas),
             ),
             opening::worker(),
