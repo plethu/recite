@@ -23,6 +23,8 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     text::<TextArea<false>>(&mut properties, p);
     // Prose copies its own colours into its text area, overriding the text-area defaults.
     text::<Prose>(&mut properties, p);
+    // Writer's own shaped text (map excerpts, abbreviations) otherwise falls back to black.
+    text::<ShapedText>(&mut properties, p);
     control::<Button>(&mut properties, p, scale);
     control::<TextInput>(&mut properties, p, scale);
     control::<Checkbox>(&mut properties, p, scale);

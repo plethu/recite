@@ -180,7 +180,7 @@ fn primary_controls_keep_their_target_and_show_distinct_focus_and_disabled_state
 }
 
 #[test]
-fn prose_text_takes_the_palette_ink_rather_than_the_toolkit_default() {
+fn prose_and_shaped_text_take_the_palette_ink_rather_than_the_toolkit_default() {
     use xilem::masonry::{properties::ContentColor, widgets::Prose};
     for dark in [false, true] {
         let config = WriterConfig {
@@ -205,6 +205,17 @@ fn prose_text_takes_the_palette_ink_rather_than_the_toolkit_default() {
                 .color,
             palette.ink,
             "dark={dark}"
+        );
+        let shaped = NewWidget::new(ShapedText::new("The lower gate is stuck open."));
+        let id = shaped.id();
+        let harness = TestHarness::create_with_size(properties(&palette, 1.), shaped, (400, 100));
+        assert_eq!(
+            harness
+                .get_widget_with_id(id)
+                .get_prop::<ContentColor>()
+                .color,
+            palette.ink,
+            "shaped text, dark={dark}"
         );
     }
 }
