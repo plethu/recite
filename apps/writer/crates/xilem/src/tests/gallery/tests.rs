@@ -16,6 +16,9 @@ const EXTREMES: &[&str] = &[
     "overlay.close",
 ];
 
+/// Transitions whose meaning depends on contrast alone.
+const MONO_TRANSITIONS: &[&str] = &["flow.tab-walk"];
+
 #[test]
 #[ignore = "renders the design gallery; run it with `just writer gallery`"]
 fn capture_gallery() {
@@ -32,6 +35,10 @@ fn capture_gallery() {
         record.limit((!full).then_some(EXTREMES));
         scenes::stills(&mut record, variant);
         if full {
+            scenes::transitions(&mut record, variant, &settings);
+        } else if variant.id == "mono" {
+            // Focus rings must hold without hue, so the Tab walk also runs in monochrome.
+            record.limit(Some(MONO_TRANSITIONS));
             scenes::transitions(&mut record, variant, &settings);
         }
         // Control states, filled focus rings included, must hold in monochrome too.

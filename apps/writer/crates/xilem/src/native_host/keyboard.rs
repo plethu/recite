@@ -7,7 +7,7 @@ mod panes;
 mod picker;
 mod project;
 mod reading;
-mod tab;
+pub(crate) mod tab;
 mod vim;
 use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
 use crate::app::picker::Search;
@@ -15,7 +15,11 @@ use recite_config::WriterCommand;
 use recite_writer_session::commands::keybindings::{self, Input, Key, Modifiers, PhysicalKey};
 use xilem::winit::keyboard;
 use xilem::{
-    masonry::{app::RenderRoot, core::WidgetId, widgets::TextInput},
+    masonry::{
+        app::RenderRoot,
+        core::{Widget, WidgetId},
+        widgets::TextInput,
+    },
     winit::{
         event::{ElementState, Ime, KeyEvent, WindowEvent},
         keyboard::{ModifiersState, NamedKey},
@@ -176,7 +180,10 @@ impl Keyboard {
                 .modifiers
                 .intersects(ModifiersState::CONTROL | ModifiersState::ALT | ModifiersState::SUPER)
         {
-            self.tab.request(root.focused_widget());
+            self.tab.request(
+                root.focused_widget(),
+                self.modifiers.contains(ModifiersState::SHIFT),
+            );
         }
         consumed
     }
