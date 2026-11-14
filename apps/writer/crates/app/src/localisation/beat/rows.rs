@@ -28,6 +28,8 @@ pub struct Context {
     pub groups: Arc<[String]>,
     pub pages: Vec<String>,
     pub page: usize,
+    /// A continuation line, which the frontend sets in interface type so its arrow renders.
+    pub continuation: bool,
 }
 #[derive(Clone, PartialEq)]
 pub enum RowIdentity {
@@ -58,7 +60,11 @@ impl Row {
             }),
             Content::Heading(text) | Content::Note(text) => Self::context(row, index, text),
             Content::Continuation(target) => {
-                Self::context(row, index, &format!("Continue → {target}"))
+                let mut context = Self::context(row, index, &format!("Continue → {target}"));
+                if let Self::Context(context) = &mut context {
+                    context.continuation = true;
+                }
+                context
             }
         }
     }
@@ -68,6 +74,7 @@ impl Row {
             groups: row.groups.clone(),
             pages: text::reading_pages(text),
             page: 0,
+            continuation: false,
         })
     }
     pub fn passage(&self) -> Option<&PassageRow> {
