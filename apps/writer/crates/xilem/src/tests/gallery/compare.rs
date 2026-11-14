@@ -62,7 +62,7 @@ pub(crate) fn compare(current: &Path, manifest: &Value, baseline: &Path) -> Opti
         match pixels(
             &file(baseline, old),
             &file(current, new),
-            &diffs.join(format!("{name}.png")),
+            &diffs.join(format!("{name}.webp")),
         ) {
             Some(0.) => report.unchanged += 1,
             Some(ratio) => report.changed.push((name.clone(), ratio)),
@@ -120,7 +120,7 @@ fn pixels(before: &Path, after: &Path, diff: &Path) -> Option<f64> {
         );
     }
     if changed > 0 {
-        let _ = highlight.save(diff);
+        super::record::save_image(&highlight, diff);
     }
     Some(changed as f64 / f64::from(after.width() * after.height()))
 }
@@ -244,7 +244,7 @@ fn write(root: &Path, report: &Report) {
     let changed: Vec<_> = report
         .changed
         .iter()
-        .map(|(name, ratio)| format!("{name}: {:.2}% of pixels (diff/{name}.png)", ratio * 100.))
+        .map(|(name, ratio)| format!("{name}: {:.2}% of pixels (diff/{name}.webp)", ratio * 100.))
         .collect();
     section(&mut text, "Visual changes", &changed);
     section(&mut text, "Missing frames", &report.missing);

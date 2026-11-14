@@ -56,17 +56,11 @@ opt-level = 3
 [profile.dev.package.fearless_simd]
 opt-level = 3
 
-# The design gallery encodes and optimises hundreds of PNG frames in test builds.
-[profile.dev.package.oxipng]
+# The design gallery encodes and decodes hundreds of lossless WebP frames in test builds.
+[profile.dev.package.libwebp-sys]
 opt-level = 3
 
-[profile.dev.package.libdeflate-sys]
-opt-level = 3
-
-[profile.dev.package.png]
-opt-level = 3
-
-[profile.dev.package.fdeflate]
+[profile.dev.package.image-webp]
 opt-level = 3
 
 [profile.dev.package.image]

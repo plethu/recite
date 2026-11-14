@@ -74,7 +74,7 @@ fn write_capture(root: &std::path::Path, nodes: serde_json::Value, lint: serde_j
         root.join("manifest.json"),
         json!({ "entries": [{ "id": "scene--light", "frames": [{
             "name": "scene--light--00",
-            "file": "frames/scene--light--00.png",
+            "file": "frames/scene--light--00.webp",
             "a11y": "a11y/scene--light--00.json",
             "lint": lint,
         }]}]})
@@ -146,4 +146,23 @@ fn variant_ids_are_unique_and_extremes_are_core_scenes() {
     ids.dedup();
     assert_eq!(ids.len(), Variant::ALL.len());
     assert!(EXTREMES.iter().all(|id| id.contains('.')));
+}
+
+#[test]
+fn saved_frames_decode_to_identical_pixels() {
+    let mut frame = image::RgbaImage::new(97, 61);
+    for (x, y, pixel) in frame.enumerate_pixels_mut() {
+        // Grain-like noise and flat ink areas, the two kinds of content frames hold.
+        let noise = (x * 7919 + y * 104_729) % 251;
+        *pixel = image::Rgba([
+            noise as u8,
+            (x * 3) as u8,
+            if y < 30 { 0x68 } else { 0xf3 },
+            255,
+        ]);
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("frame.webp");
+    super::record::save_image(&frame, &path);
+    assert_eq!(image::open(&path).unwrap().to_rgba8(), frame);
 }
