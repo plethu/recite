@@ -166,3 +166,26 @@ fn saved_frames_decode_to_identical_pixels() {
     super::record::save_image(&frame, &path);
     assert_eq!(image::open(&path).unwrap().to_rgba8(), frame);
 }
+
+#[test]
+fn an_open_writer_takes_the_variant_like_a_project_opened_with_those_preferences() {
+    for variant in Variant::ALL {
+        let app = crate::app::App::with_writer(scenes::examples("relay_hub.recite"));
+        let stage = scenes::stage(app, variant);
+        let writer = stage.state.writer.as_ref().unwrap();
+        let mut config = recite_config::WriterConfig::default();
+        variant.configure(&mut config);
+        assert_eq!(
+            writer.palette,
+            crate::presentation::palette(&config),
+            "{}",
+            variant.id
+        );
+        assert_eq!(
+            writer.ui_scale(),
+            crate::presentation::scale(&config),
+            "{}",
+            variant.id
+        );
+    }
+}
