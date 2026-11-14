@@ -13,7 +13,7 @@ use xilem::masonry::{
         CheckmarkStrokeWidth, ContentColor, CornerRadius, Padding, PlaceholderColor,
         PlaceholderTextSize, SelectionColor,
     },
-    widgets::{Button, Checkbox, Label, RadioButton, TextArea, TextInput},
+    widgets::{Button, Checkbox, Label, Prose, RadioButton, TextArea, TextInput},
 };
 
 pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
@@ -21,6 +21,8 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     text::<Label>(&mut properties, p);
     text::<TextArea<true>>(&mut properties, p);
     text::<TextArea<false>>(&mut properties, p);
+    // Prose copies its own colours into its text area, overriding the text-area defaults.
+    text::<Prose>(&mut properties, p);
     control::<Button>(&mut properties, p, scale);
     control::<TextInput>(&mut properties, p, scale);
     control::<Checkbox>(&mut properties, p, scale);
@@ -37,6 +39,8 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     properties.insert::<TextArea<true>, _>(CaretColor { color: p.ink });
     properties.insert::<TextArea<true>, _>(SelectionColor { color: p.selection });
     properties.insert::<TextArea<false>, _>(SelectionColor { color: p.selection });
+    properties.insert::<Prose, _>(SelectionColor { color: p.selection });
+    properties.insert::<Prose, _>(CaretColor { color: p.ink });
     properties
 }
 fn indicators<W: Widget>(properties: &mut DefaultProperties, scale: f32) {
