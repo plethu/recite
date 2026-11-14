@@ -8,11 +8,6 @@ pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use
     let compact = state.compact_chrome();
     let wide = state.script_width() >= 240. * f64::from(scale);
     let blocked = state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy();
-    let replies = if state.reading.replies == 1 {
-        "1 reply".to_owned()
-    } else {
-        format!("{} replies", state.reading.replies)
-    };
     flex_col((
         flex_row((
             print::title(scale, display_name(id))
@@ -29,51 +24,26 @@ pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(8.px())
         .width(state.script_width().px()),
-        flex_row((
-            print::meta(
-                scale,
-                if workspace::Layout::resolve(state).compact_split {
-                    "Script shown · widen the window for Split".to_owned()
-                } else if compact {
-                    format!(
-                        "{}{}",
-                        if state.reading.is_default {
-                            "Start · "
-                        } else {
-                            ""
-                        },
-                        replies
-                    )
-                } else {
-                    format!(
-                        "{}  ::  {id}    {}{}",
-                        state.session.model().document().key(),
-                        if state.reading.is_default {
-                            "default  "
-                        } else {
-                            ""
-                        },
-                        replies
-                    )
-                },
-            )
-            .prop(LineBreaking::WordWrap)
-            .color(state.palette.muted)
-            .flex(1.),
-            workspace::Layout::resolve(state).compact_split.then(|| {
+        // The folio carries the file and beat; only a hidden Split explains itself here.
+        workspace::Layout::resolve(state).compact_split.then(|| {
+            flex_row((
+                print::meta(scale, "Script shown · widen the window for Split")
+                    .prop(LineBreaking::WordWrap)
+                    .color(state.palette.muted)
+                    .flex(1.),
                 print::action(scale, "Open map", blocked, |state: &mut Writer| {
                     state.show_workspace(crate::map::Workspace::Map)
-                })
-            }),
-        ))
-        .direction(if wide {
-            Axis::Horizontal
-        } else {
-            Axis::Vertical
-        })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
-        .width(state.script_width().px()),
+                }),
+            ))
+            .direction(if wide {
+                Axis::Horizontal
+            } else {
+                Axis::Vertical
+            })
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(8.px())
+            .width(state.script_width().px())
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())

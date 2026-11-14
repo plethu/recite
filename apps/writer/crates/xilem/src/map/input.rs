@@ -6,8 +6,8 @@ mod view;
 pub(super) use view::input;
 
 use super::Detail;
-use crate::presentation::material::{DotScreen, ScreenCache};
 use std::any::TypeId;
+use xilem::peniko::Color;
 mod events;
 mod focus;
 mod pan;
@@ -49,6 +49,22 @@ enum Motion {
     ClickCandidate(Point),
     Dragging,
 }
+/// The keyboard focus ring colour of a beat card, whose own border shows selection instead.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct CardFocus(pub Color);
+impl core::Property for CardFocus {
+    fn static_default() -> &'static Self {
+        static NONE: CardFocus = CardFocus(Color::TRANSPARENT);
+        &NONE
+    }
+}
+impl Default for CardFocus {
+    fn default() -> Self {
+        *<Self as core::Property>::static_default()
+    }
+}
+impl core::UsesProperty<CardFocus> for InputWidget {}
+
 pub struct InputWidget {
     child: WidgetPod<dyn Widget>,
     kind: Kind,
@@ -56,7 +72,6 @@ pub struct InputWidget {
     press: Option<PointerPress>,
     focus: Option<FocusRequest>,
     clicks: u8,
-    print: ScreenCache,
     pan: pan::LocalPan,
 }
 impl InputWidget {
@@ -68,7 +83,6 @@ impl InputWidget {
             press: None,
             focus: None,
             clicks: 0,
-            print: ScreenCache::default(),
             pan: pan::LocalPan::default(),
         }
     }
@@ -83,11 +97,10 @@ impl InputWidget {
         this.widget.vim = vim;
     }
 }
-impl core::UsesProperty<DotScreen> for InputWidget {}
 impl Widget for InputWidget {
     type Action = NativeAction;
     fn property_changed(&mut self, ctx: &mut UpdateCtx<'_>, property_type: TypeId) {
-        if property_type == TypeId::of::<DotScreen>() {
+        if property_type == TypeId::of::<CardFocus>() {
             ctx.request_paint_only();
         }
     }
@@ -194,8 +207,6 @@ impl Widget for InputWidget {
         props: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        let screen = props.get::<DotScreen>(ctx.property_cache());
-        self.print.paint(screen, painter);
         // Paint the card frame without reserving a second border inside the native
         // Button's hit box. Its accessibility and pointer bounds remain the full card.
         if self.kind.is_card() {
@@ -211,7 +222,7 @@ impl Widget for InputWidget {
         }
         if ctx.is_focus_target() || (self.kind.is_card() && ctx.has_focus_target()) {
             let color = if self.kind.is_card() {
-                screen.ink
+                props.get::<CardFocus>(ctx.property_cache()).0
             } else {
                 props.get::<BorderColor>(ctx.property_cache()).color
             };

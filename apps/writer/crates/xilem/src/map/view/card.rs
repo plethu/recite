@@ -1,10 +1,9 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
-use crate::presentation::{excerpt, material, print};
+use crate::presentation::{excerpt, print};
 use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
 use xilem::masonry::{
-    kurbo::Rect,
     parley::style::FontWeight,
     properties::{self, BoxShadow},
 };
@@ -111,15 +110,8 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         scene.node(index).width.px(),
         HEIGHT.px(),
     ))
-    .prop(material::DotScreen::new(
-        state.palette.accent,
-        selected.then_some(Rect::new(
-            12.,
-            12.,
-            width - 12.,
-            12. + f64::from(16_f32.max(14. / zoom)) * 1.45,
-        )),
-    ));
+    // Selection is the plum offset and border; no dot screen sits behind the title.
+    .prop(input::CardFocus(state.palette.accent));
     let grip = (selected || scene.hovered.as_deref() == Some(&block.id)).then(|| {
         placed::placed(
             Affine::translate((width - 30., 6.)),

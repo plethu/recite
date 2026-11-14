@@ -12,6 +12,37 @@ use xilem::view::button;
 #[cfg(test)]
 mod tests;
 
+/// The destination column at the end of a reply's measure.
+const DESTINATION: f64 = 168.;
+/// Below this row width, destinations wrap under their reply instead.
+const DESTINATION_MEASURE: f64 = 420.;
+/// Destination text relative to the reading size: 14px beside 20px prose.
+const DESTINATION_TEXT: f32 = 0.7;
+
+/// The speaker margin left of the text column; narrow rows set speakers above instead.
+fn speaker_margin(state: &Writer, width: f64) -> f64 {
+    let scale = f64::from(state.ui_scale());
+    if width >= 560. * scale {
+        (96. * scale).min(width * 0.15)
+    } else {
+        0.
+    }
+}
+
+/// Where dialogue text starts in a row of `width`, for actions that line up with it.
+pub(in crate::view) fn text_column(state: &Writer, width: f64) -> f64 {
+    let margin = speaker_margin(state, width);
+    if margin > 0. { margin + 8. } else { 0. }
+}
+
+fn reply_count(replies: usize) -> String {
+    if replies == 1 {
+        "1 reply".to_owned()
+    } else {
+        format!("{replies} replies")
+    }
+}
+
 pub(super) fn row(
     state: &Writer,
     number: PassageNumber,
@@ -21,26 +52,25 @@ pub(super) fn row(
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let caption_size = 0.6 * state.reading_size();
-    let wide = width >= 560. * f64::from(scale);
-    let margin = if wide {
-        (96. * f64::from(scale)).min(width * 0.15)
-    } else {
-        0.
-    };
-    let destination = if reply.is_some() && wide {
-        (148. * f64::from(scale)).min(width * 0.25)
-    } else {
-        0.
-    };
+    let margin = speaker_margin(state, width);
+    let wide = margin > 0.;
+    // Destinations share one left-aligned column at the end of the measure, until the measure is
+    // too narrow to keep both readable.
+    let column = reply.is_some() && width >= DESTINATION_MEASURE;
+    let destination = if column { DESTINATION } else { 0. };
     let number_width = if reply.is_some() {
         16. * f64::from(scale)
     } else {
         0.
     };
     let number_gap = if reply.is_some() { 8. } else { 0. };
-    let measure =
-        (width - margin - destination - if wide { 16. } else { 0. } - number_width - number_gap)
-            .max(120.);
+    let measure = (width
+        - margin
+        - if wide { 8. } else { 0. }
+        - number_width
+        - number_gap
+        - if column { destination + 8. } else { 0. })
+    .max(120.);
     let speaker = match &passage.kind {
         PassageKind::Dialogue { speaker } => speaker.as_deref().unwrap_or("").to_uppercase(),
         PassageKind::Choice { .. } => {
@@ -52,22 +82,34 @@ pub(super) fn row(
         }
     };
     let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
-    let stacked_reply = !wide
+    let stacked_reply = !column
         && matches!(&passage.kind, PassageKind::Choice { destination: Some(target) } if target != "END");
     let content_gap = if !wide && speaker.is_empty() { 0. } else { 8. };
+    let alignment = if wide {
+        TextAlign::End
+    } else {
+        TextAlign::Start
+    };
     flex_col((
         flex_row((
             indexed_stack((
-                print::caps(scale, speaker.clone())
-                    .text_size(caption_size)
-                    .letter_spacing(0.066 * state.reading_size())
-                    .text_alignment(if wide {
-                        TextAlign::End
-                    } else {
-                        TextAlign::Start
-                    })
-                    .color(state.palette.accent)
-                    .width(if wide { margin } else { width }.px()),
+                flex_col((
+                    print::caps(scale, speaker.clone())
+                        .text_size(caption_size)
+                        .letter_spacing(0.066 * state.reading_size())
+                        .text_alignment(alignment)
+                        .color(state.palette.accent)
+                        .width(if wide { margin } else { width }.px()),
+                    (reply == Some(1)).then(|| {
+                        // 12px beside 20px prose, scaled with the manuscript like its caption.
+                        label(1., reply_count(state.reading.replies))
+                            .text_size(caption_size)
+                            .text_alignment(alignment)
+                            .color(state.palette.muted)
+                            .width(if wide { margin } else { width }.px())
+                    }),
+                ))
+                .gap(2.px()),
                 flex_col(()).dims((0.px(), 0.px())),
             ))
             .active(usize::from(!wide && speaker.is_empty())),
@@ -79,12 +121,13 @@ pub(super) fn row(
                         .color(state.palette.muted)
                 }),
                 super::super::manuscript::passage_editor(state, passage, number, measure),
+                column
+                    .then(|| route(state, passage, destination))
+                    .flatten()
+                    .map(|route| sized_box(route).padding(Padding::left(8.px()))),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(number_gap.px()),
-            (!stacked_reply)
-                .then(|| route(state, passage, if wide { destination } else { width }))
-                .flatten(),
         ))
         .direction(if wide {
             Axis::Horizontal
@@ -190,7 +233,7 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
             ControlStyle::Action,
             button(
                 label(
-                    state.ui_scale(),
+                    1.,
                     format!(
                         "{} {}",
                         if state.destination_expanded(destination) {
@@ -200,6 +243,15 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
                         },
                         display_name(destination)
                     ),
+                )
+                // Sized with the manuscript it belongs to, not with the interface chrome.
+                .text_size(DESTINATION_TEXT * state.reading_size())
+                .prop(LineBreaking::WordWrap)
+                // Fill the button's content box so the text starts at the column's left edge.
+                .width(
+                    (width - 2. * (12. * f64::from(state.ui_scale()) + 1.))
+                        .max(24.)
+                        .px(),
                 )
                 .color(state.palette.teal_text),
                 move |state: &mut Writer| state.toggle_destination_preview(target.clone()),

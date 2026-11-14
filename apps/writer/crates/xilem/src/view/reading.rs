@@ -13,11 +13,12 @@ use recite_writer_session::choices::display_name;
 mod controls;
 mod header;
 mod passage;
+pub(super) use passage::text_column;
 mod refusal;
 pub(super) mod viewport;
 use xilem::{
     AnyWidgetView,
-    masonry::{kurbo::Axis, layout::UnitPoint, properties::ContentColor},
+    masonry::{kurbo::Axis, properties::ContentColor},
     style::Padding,
     view::divider,
 };
@@ -38,15 +39,17 @@ pub(super) fn repair(state: &Writer, error: &str) -> impl WidgetView<Writer> + u
 }
 pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        xilem::view::zstack((
+        // Halftone marks what is not yet written; it sits beside the heading, never behind it.
+        flex_row((
+            label(state.ui_scale(), "No beats yet").text_size(22. * state.ui_scale()),
             material::halftone(
-                state.script_width(),
-                32. * f64::from(state.ui_scale()),
+                96. * f64::from(state.ui_scale()),
+                20. * f64::from(state.ui_scale()),
                 state.palette.accent,
             ),
-            label(state.ui_scale(), "No beats yet").text_size(22. * state.ui_scale()),
         ))
-        .alignment(UnitPoint::TOP_LEFT),
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(12.px()),
         prose(
             state.ui_scale(),
             "Add a beat to start writing. Comments and existing source are preserved.",
@@ -76,7 +79,7 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
         .collect();
     flex_col((
         header::heading(state, id),
-        column(entries).gap(12.px()),
+        column(entries).gap(16.px()),
         rows.is_empty().then(|| {
             prose(
                 scale,
