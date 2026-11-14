@@ -54,7 +54,8 @@ state it asked for, so its frame may not show what its caption says.
 The comparison reports, per frame, visual changes for review and accessibility changes in two
 tiers. **Regressions** block sign-off: a control that loses keyboard focusability, a target that
 shrinks below the minimum, or a new automatic finding. **Changes to justify** need a stated reason:
-a control that disappears or is renamed, appears fewer times, or becomes disabled. Set
+a control that disappears or is renamed, appears fewer times, or becomes disabled, and a frame
+whose keyboard focus lands on a different control. Set
 `RECITE_WRITER_GALLERY_STRICT=1` to fail the run on any regression.
 
 ## Limits

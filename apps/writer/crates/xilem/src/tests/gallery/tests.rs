@@ -89,13 +89,17 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
         json!({ "role": "Button", "label": label, "interactive": true, "focusable": focusable,
                 "disabled": false, "bounds": [0., 0., width, 32.] })
     };
+    let focused = |mut node: serde_json::Value| {
+        node["focused"] = json!(true);
+        node
+    };
     let baseline = tempfile::tempdir().unwrap();
     write_capture(
         baseline.path(),
         json!([
             control("Save", true, 64.),
             control("Map", true, 48.),
-            control("Close", true, 32.)
+            focused(control("Close", true, 32.))
         ]),
         json!([]),
     );
@@ -104,7 +108,7 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
         current.path(),
         json!([
             control("Save", false, 64.),
-            control("Map", true, 18.),
+            focused(control("Map", true, 18.)),
             control("Exit", true, 32.)
         ]),
         json!(["unnamed Button at [0.0, 0.0, 10.0, 10.0]"]),
@@ -134,7 +138,10 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
     );
     assert_eq!(
         report.review,
-        ["scene--light--00: Button \"Close\" is gone or renamed"]
+        [
+            "scene--light--00: keyboard focus is on Button \"Map\" instead of Button \"Close\"",
+            "scene--light--00: Button \"Close\" is gone or renamed",
+        ]
     );
     assert!(current.path().join("report.md").exists());
 }
