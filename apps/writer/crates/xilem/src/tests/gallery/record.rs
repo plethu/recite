@@ -259,7 +259,7 @@ fn accessibility(harness: &TestHarness<Passthrough>, scale: f64) -> (Vec<Value>,
             "value": value,
             "interactive": interactive,
             "focusable": data.supports_action(Action::Focus),
-            "focused": node.is_focused(),
+            "focused": node.is_focused_in_tree(),
             "disabled": node.is_disabled(),
             "bounds": bounds,
         }));

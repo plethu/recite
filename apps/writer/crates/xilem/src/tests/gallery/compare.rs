@@ -143,6 +143,26 @@ fn controls(snapshot: &Value) -> BTreeMap<Control, Vec<Value>> {
     controls
 }
 
+fn focused(snapshot: &Value) -> Option<Control> {
+    snapshot["nodes"]
+        .as_array()?
+        .iter()
+        .find(|node| node["focused"].as_bool() == Some(true))
+        .map(|node| {
+            (
+                node["role"].as_str().unwrap_or("").to_owned(),
+                node["label"].as_str().unwrap_or("").to_owned(),
+            )
+        })
+}
+
+fn describe(control: Option<&Control>) -> String {
+    control.map_or_else(
+        || "nothing".into(),
+        |(role, label)| format!("{role} {label:?}"),
+    )
+}
+
 fn size(node: &Value) -> Option<(f64, f64)> {
     let bounds = node["bounds"].as_array()?;
     let at = |index: usize| bounds.get(index).and_then(Value::as_f64);
@@ -168,6 +188,14 @@ fn accessibility(
     new: &Value,
     report: &mut Report,
 ) {
+    let (was, now) = (focused(before), focused(after));
+    if was.is_some() && was != now {
+        report.review.push(format!(
+            "{name}: keyboard focus is on {} instead of {}",
+            describe(now.as_ref()),
+            describe(was.as_ref())
+        ));
+    }
     let (before, after) = (controls(before), controls(after));
     for ((role, label), nodes) in &before {
         let Some(current) = after.get(&(role.clone(), label.clone())) else {
