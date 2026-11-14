@@ -78,7 +78,7 @@ fn open(path: &Path, document: &str) -> Writer {
     Writer::from_session(Session::Project(Box::new(session)), None)
 }
 
-fn examples(document: &str) -> Writer {
+pub(super) fn examples(document: &str) -> Writer {
     let mut writer = Writer::from_session(Session::examples().expect("examples"), None);
     writer
         .follow_location(&Location {
@@ -89,11 +89,16 @@ fn examples(document: &str) -> Writer {
     writer
 }
 
-fn stage(
+pub(super) fn stage(
     mut app: App,
     variant: Variant,
 ) -> Stage<App, impl WidgetView<App, Widget = Passthrough> + use<>> {
     variant.configure(&mut app.preferences.config.writer);
+    // Opening a project hands the Writer the shell's preferences; an already open one needs them too.
+    let config = app.preferences.config.clone();
+    if let Some(writer) = app.writer.as_mut() {
+        writer.configure(config);
+    }
     Stage::new(app, gallery_page, App::gallery_look, variant.frame)
 }
 
