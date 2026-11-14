@@ -32,7 +32,15 @@ fn compact_split_keeps_the_manuscript_visible_and_retains_the_requested_workspac
     assert!(manuscript(&mounted.harness).is_some());
     assert!(!mounted.contains_text("Scene map"));
     assert!(mounted.contains_text("Script shown · widen the window for Split"));
-    assert!(mounted.contains_text("Split unavailable"));
+    // The Split segment keeps its name and is disabled; the status line says why.
+    assert!(mounted.contains_text("Split needs a wider window"));
+    assert!(
+        mounted
+            .harness
+            .get_widget_with_id(mounted.find("Split"))
+            .ctx()
+            .is_disabled()
+    );
     mounted.find("Open map");
     assert_eq!(mounted.state.map.workspace, Workspace::Split);
 }

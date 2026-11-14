@@ -28,7 +28,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.settle();
     let (sender, mut requests) = async_mpsc::unbounded_channel();
     mounted.state.trial.sender = Some(sender);
-    mounted.activate("Project");
+    mounted.activate("Workspace");
     mounted.activate("Configure preview");
     mounted.type_text("Find preview language", "fr-CA");
     mounted.activate("Search preview languages");

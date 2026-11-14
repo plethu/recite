@@ -11,6 +11,8 @@ const MARGIN: f64 = 56.;
 const DESK: f64 = 24.;
 /// The hard offset of the sheet's shadow, right and down.
 const SHADOW: f64 = 3.;
+/// Paper either side of the measure when Script is full-bleed.
+pub(super) const BLEED: f64 = 16.;
 /// Below this window width, in logical pixels, Script is full-bleed.
 pub(super) const MINIMUM_WINDOW: f64 = 900.;
 /// The width a sheet adds to the script measure: margins, border and shadow.
@@ -28,7 +30,7 @@ pub(super) fn paper<V: WidgetView<Writer>>(
         .padding(if sheet {
             Padding::from_vh(32.px(), MARGIN.px())
         } else {
-            Padding::from_vh(16.px(), 0.px())
+            Padding::from_vh(16.px(), BLEED.px())
         })
         .background_color(state.palette.surface)
         .border_color(if sheet {

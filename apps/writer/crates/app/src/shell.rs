@@ -26,7 +26,10 @@ use tokio::sync::mpsc::UnboundedSender;
 /// Work the shell performs outside the authoring session.
 pub enum Request {
     Search(Search),
-    Workspace,
+    /// Switch to the project welcome screen from the Writer's Workspace menu.
+    Projects,
+    /// Open settings from the Writer's Workspace menu.
+    Settings,
 }
 
 /// The search surfaces the shell can open.
@@ -312,7 +315,8 @@ impl Shell {
         self.open_editor_choices();
         match request {
             Some(Request::Search(search)) => self.open_picker(search),
-            Some(Request::Workspace) => self.toggle_workspace_menu(),
+            Some(Request::Projects) => self.toggle_projects(),
+            Some(Request::Settings) => self.settings_from_menu(),
             None => {}
         }
     }

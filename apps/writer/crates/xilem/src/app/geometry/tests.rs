@@ -55,10 +55,7 @@ fn compact_mode_border(
             let mut children: Vec<_> = node.children().collect();
             while let Some(child) = children.pop() {
                 if child.role() == Role::RadioButton
-                    && matches!(
-                        child.label().as_deref(),
-                        Some("Split" | "Split unavailable")
-                    )
+                    && matches!(child.label().as_deref(), Some("Split"))
                 {
                     assert!(
                         node.bounding_box().unwrap().x1
@@ -128,7 +125,7 @@ fn allocated_window_bounds_control_reflow_and_keep_the_manuscript_across_panes()
                         "enlarged Split must retain its graph"
                     );
                 }
-                for title in ["Commands", "Workspace", "Project", "Copy link"] {
+                for title in ["Commands", "Workspace", "Save", "Copy link"] {
                     let control = mounted.harness.get_widget_with_id(mounted.find(title));
                     let bounds = control
                         .ctx()
@@ -193,7 +190,7 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
             .get_widget_with_id(field)
             .ctx()
             .window_transform();
-        mounted.activate("Project");
+        mounted.activate("Workspace");
         assert!(
             mounted
                 .state
@@ -285,7 +282,7 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
                 .harness
                 .process_window_event(WindowEvent::Resize((width, 720).into()));
             mounted.settle();
-            mounted.activate("Project");
+            mounted.activate("Workspace");
             for label in ["Save file", "Save all", "Focus writing", "Close"] {
                 let control = mounted.harness.get_widget_with_id(mounted.find(label));
                 let bounds = control

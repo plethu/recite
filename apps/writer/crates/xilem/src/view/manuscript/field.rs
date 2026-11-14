@@ -80,7 +80,6 @@ fn field(
                 })
                 .prop(Manuscript(true))
                 .prop(PassageField(Some(target)))
-                .padding(0.px())
                 .background_color(state.palette.surface),
             ),
         ),

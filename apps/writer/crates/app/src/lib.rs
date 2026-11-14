@@ -304,9 +304,13 @@ impl Writer {
     pub fn request_search(&mut self, search: shell::Search) {
         self.app_request = Some(shell::Request::Search(search));
     }
-    /// Ask the shell to toggle its workspace menu.
-    pub fn request_workspace_menu(&mut self) {
-        self.app_request = Some(shell::Request::Workspace);
+    /// Ask the shell to show the project welcome screen.
+    pub fn request_projects(&mut self) {
+        self.app_request = Some(shell::Request::Projects);
+    }
+    /// Ask the shell to open settings.
+    pub fn request_settings(&mut self) {
+        self.app_request = Some(shell::Request::Settings);
     }
     /// Close document actions after a chosen action.
     pub fn close_document_menu(&mut self) {

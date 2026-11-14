@@ -1,5 +1,6 @@
 //! A bounded action panel leaves the writing workspace allocated and retained.
 use super::*;
+use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::presentation::{group::named, print};
 use recite_core::STABLE_ID_FIELD_PREFIX;
@@ -71,6 +72,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase() != Phase::Writing;
     let axis = action_axis(state, width);
     flex_col((
+        workspace_entries(state, axis),
         state.reading.selected.as_ref().map(|_| {
             text_button(scale, "Read beat", Writer::read_current)
                 .disabled(closing || state.navigation.busy() || state.work.busy())
@@ -146,6 +148,29 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+}
+
+/// The app's workspace actions, folded into the same menu as the document's.
+fn workspace_entries(state: &Writer, axis: Axis) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let blocked = state.phase() != Phase::Writing;
+    flex_row((
+        text_button(scale, "Projects", Writer::request_projects).disabled(blocked),
+        text_button(scale, "Settings", Writer::request_settings).disabled(blocked),
+        text_button(scale, "Go to", |state: &mut Writer| {
+            state.request_search(Search::GoTo)
+        })
+        .disabled(blocked),
+        state.session.project().map(|_| {
+            text_button(scale, "Find project text", |state: &mut Writer| {
+                state.request_search(Search::ProjectText)
+            })
+            .disabled(blocked)
+        }),
+    ))
+    .direction(axis)
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(8.px())
 }
 
 fn footer(state: &Writer) -> impl WidgetView<Writer> + use<> {

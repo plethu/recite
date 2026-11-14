@@ -1,6 +1,5 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
-use crate::app::picker::Search;
 use crate::presentation::{Icon, print};
 use recite_writer_session::choices::display_name;
 use xilem::{
@@ -8,20 +7,20 @@ use xilem::{
     view::{GridExt, GridTrackSize, grid},
 };
 
+/// One row from about 760 logical pixels: title and history, workspace modes, then the scene's
+/// tools with Save as the only raised action. Narrower windows move the modes to a second row.
 pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = (state.viewport.width - state.navigation_width() - 32.).max(280.);
-    let wide = width >= 1120. * f64::from(state.ui_scale());
+    let wide = width >= 760. * f64::from(state.ui_scale());
     let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     grid((
         history(state).grid_pos(0, 0),
         workspace::workspace_tabs(state).grid_pos(u16::from(wide), u16::from(!wide)),
-        document_tools(state, blocked).grid_pos(if wide { 2 } else { 1 }, u16::from(!wide)),
-        app_tools(state, blocked).grid_pos(if wide { 3 } else { 1 }, 0),
+        document_tools(state, blocked).grid_pos(if wide { 2 } else { 1 }, 0),
     ))
     .columns(if wide {
         [
             GridTrackSize::FRACTION,
-            GridTrackSize::Auto,
             GridTrackSize::Auto,
             GridTrackSize::Auto,
         ]
@@ -29,7 +28,6 @@ pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
         [
             GridTrackSize::FRACTION,
             GridTrackSize::Auto,
-            GridTrackSize::Fixed(0.px()),
             GridTrackSize::Fixed(0.px()),
         ]
     })
@@ -73,27 +71,6 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .gap(4.px())
 }
-fn app_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    flex_row((
-        (state.compact_chrome() && state.navigation_width() == 0.).then(|| {
-            print::action(scale, "Scenes…", blocked, |state: &mut Writer| {
-                state.request_search(Search::GoTo);
-            })
-        }),
-        print::action(scale, "Commands", blocked, |state: &mut Writer| {
-            state.request_search(Search::Commands)
-        }),
-        (state.viewport.width - state.navigation_width()
-            >= if state.compact_chrome() { 760. } else { 600. } * f64::from(scale))
-        .then(|| workspace::authoring_modes(state)),
-        text_button(scale, "Workspace", |state: &mut Writer| {
-            state.request_workspace_menu()
-        })
-        .disabled(blocked),
-    ))
-    .gap(8.px())
-}
 fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let history = state.viewport.width - state.navigation_width() >= 600. * f64::from(scale);
@@ -119,9 +96,8 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
                 |state: &mut Writer| state.undo_redo(true),
             )
         }),
-        print::action(scale, "Project", blocked, |state: &mut Writer| {
-            state.toggle_document_menu()
-        }),
+        // Workspace holds the project, document and app actions in one menu.
+        print::action(scale, "Workspace", blocked, Writer::toggle_document_menu),
         state.session.project().map(|_| {
             text_button(scale, "Save", Writer::save)
                 .disabled(blocked || state.localisation.saving() || state.source_repair_pending())
@@ -170,6 +146,15 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 state.palette.status_text
             },
         ),
+        (state.workspaces.screen == crate::workspaces::Screen::Write
+            && !workspace::Layout::resolve(state).split_available)
+            .then(|| {
+                (
+                    print::separator(state.ui_scale(), state.palette.status_text),
+                    print::meta(state.ui_scale(), "Split needs a wider window")
+                        .color(state.palette.status_text),
+                )
+            }),
         (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
             (
                 print::separator(state.ui_scale(), state.palette.status_text),
