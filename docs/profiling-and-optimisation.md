@@ -69,11 +69,11 @@ retained-session and map-geometry workloads. The
 operations, reports and fixed-corpus allocation bounds. For example:
 
 ```sh
-mise exec -- just writer bench --passages 100000 --linked --output target/writer-linked.json
-mise exec -- just writer bench --passages 10000 --per-document 10000 --output target/writer-single-scene.json
-mise exec -- just writer bench-sessions 200000 100
-mise exec -- just writer bench-map
-mise exec -- just writer bench-catalogue 100000 20
+mise exec -- just writer bench project --passages 100000 --linked --output target/writer-linked.json
+mise exec -- just writer bench project --passages 10000 --per-document 10000 --output target/writer-single-scene.json
+mise exec -- just writer bench sessions 200000 100
+mise exec -- just writer bench map
+mise exec -- just writer bench catalogue 100000 20
 mise exec -- just writer profile heap 10000 target/writer-heap
 ```
 

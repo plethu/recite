@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Profile the same generated workload used by bench-writer; never profile Cargo.
+# Profile the same generated workload used by `just writer bench project`; never profile Cargo.
 set -euo pipefail
 mode="${1:-cpu}"
 passages="${2:-10000}"
