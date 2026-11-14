@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::{NoProxy, mounted::Mounted};
+use xilem::masonry::accesskit::{Role, Toggled};
 use xilem::masonry::core;
 use xilem::masonry::widgets;
 use xilem::{ViewCtx, core::View, masonry::testing::TestHarness};
@@ -31,7 +32,8 @@ fn compact_split_keeps_the_manuscript_visible_and_retains_the_requested_workspac
     let mounted = Mounted::new(fixture.writer, |writer| native::surface(writer));
     assert!(manuscript(&mounted.harness).is_some());
     assert!(!mounted.contains_text("Scene map"));
-    assert!(mounted.contains_text("Script shown · widen the window for Split"));
+    // No in-sheet hint: the status line explains, and Script shows as the honoured mode.
+    assert!(!mounted.contains_text("Script shown · widen the window for Split"));
     // The Split segment keeps its name and is disabled; the status line says why.
     assert!(mounted.contains_text("Split needs a wider window"));
     assert!(
@@ -41,7 +43,17 @@ fn compact_split_keeps_the_manuscript_visible_and_retains_the_requested_workspac
             .ctx()
             .is_disabled()
     );
-    mounted.find("Open map");
+    let tree = mounted.harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let mut checked = Vec::new();
+    while let Some(node) = pending.pop() {
+        if node.role() == Role::RadioButton && node.toggled() == Some(Toggled::True) {
+            checked.extend(node.label());
+        }
+        pending.extend(node.children());
+    }
+    assert!(checked.iter().any(|label| label == "Script"), "{checked:?}");
+    assert!(!checked.iter().any(|label| label == "Split"), "{checked:?}");
     assert_eq!(mounted.state.map.workspace, Workspace::Split);
 }
 
