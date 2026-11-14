@@ -1,33 +1,39 @@
 //! Bounded, accessible incident-link lists compose below the map canvas.
 use super::*;
 use crate::map::connections::Direction;
-use crate::presentation::print;
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::disclosure;
 use recite_writer_session::choices::display_name;
+use xilem::view::button;
 use xilem::view::portal;
 
 pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        print::action(
-            state.ui_scale(),
-            format!(
-                "{} Connections · {}",
-                if scene.connections.expanded {
-                    "▾"
-                } else {
-                    "▸"
+        styled(
+            ControlStyle::Action,
+            button(
+                disclosure(
+                    state.ui_scale(),
+                    scene.connections.expanded,
+                    state.palette.ink,
+                    label(
+                        state.ui_scale(),
+                        format!(
+                            "Connections · {}",
+                            scene
+                                .selected
+                                .as_deref()
+                                .map(display_name)
+                                .unwrap_or_default()
+                        ),
+                    ),
+                ),
+                |state: &mut Writer| {
+                    if let Some(scene) = state.map_scene_mut() {
+                        scene.connections.expanded = !scene.connections.expanded;
+                    }
                 },
-                scene
-                    .selected
-                    .as_deref()
-                    .map(display_name)
-                    .unwrap_or_default()
             ),
-            false,
-            |state: &mut Writer| {
-                if let Some(scene) = state.map_scene_mut() {
-                    scene.connections.expanded = !scene.connections.expanded;
-                }
-            },
         ),
         scene.connections.expanded.then(|| {
             portal(

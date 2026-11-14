@@ -6,7 +6,7 @@ use widget::NativeIcon;
 use xilem::{
     Pod, ViewCtx,
     core::{MessageCtx, MessageResult, Mut, View, ViewMarker},
-    masonry::kurbo::{Affine, BezPath},
+    masonry::kurbo::{Affine, BezPath, Circle, Shape},
     peniko::Color,
 };
 
@@ -19,8 +19,19 @@ pub(crate) enum Icon {
     Redo,
     Plus,
     Minus,
+    /// A disclosure chevron pointing right: collapsed.
+    Collapsed,
+    /// A disclosure chevron pointing down: expanded.
+    Expanded,
+    /// The identity's colon device: two squares turned on their corners, filled.
+    Colon,
+    /// A move grip: two columns of three dots, filled.
+    Grip,
 }
 impl Icon {
+    fn filled(self) -> bool {
+        matches!(self, Self::Colon | Self::Grip)
+    }
     fn path(self) -> BezPath {
         let mut path = BezPath::new();
         match self {
@@ -33,6 +44,32 @@ impl Icon {
                 path.move_to((outside, 5.));
                 path.line_to((inside, 12.));
                 path.line_to((outside, 19.));
+            }
+            Self::Grip => {
+                for x in [9., 15.] {
+                    for y in [6., 12., 18.] {
+                        path.extend(Circle::new((x, y), 1.8).path_elements(0.1));
+                    }
+                }
+            }
+            Self::Colon => {
+                for centre in [8., 16.] {
+                    path.move_to((12., centre - 3.2));
+                    path.line_to((15.2, centre));
+                    path.line_to((12., centre + 3.2));
+                    path.line_to((8.8, centre));
+                    path.close_path();
+                }
+            }
+            Self::Collapsed => {
+                path.move_to((9., 6.));
+                path.line_to((15., 12.));
+                path.line_to((9., 18.));
+            }
+            Self::Expanded => {
+                path.move_to((6., 9.));
+                path.line_to((12., 15.));
+                path.line_to((18., 9.));
             }
             Self::Plus | Self::Minus => {
                 path.move_to((5., 12.));
@@ -76,6 +113,11 @@ pub(crate) struct Face {
     icon: Icon,
     color: Color,
 }
+/// A decorative face named `name`, for marks that replace a glyph inside other content.
+pub(crate) fn mark(scale: f32, name: &'static str, icon: Icon, color: Color) -> Face {
+    face(scale, name, icon, color)
+}
+
 pub(super) fn face(scale: f32, name: &'static str, icon: Icon, color: Color) -> Face {
     Face {
         scale,

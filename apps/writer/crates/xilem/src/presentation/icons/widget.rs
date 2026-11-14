@@ -38,6 +38,14 @@ impl Widget for NativeIcon {
     }
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
     fn paint(&mut self, _: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+        let transform = Affine::scale(f64::from(self.0.scale) * 20. / 24.);
+        if self.0.icon.filled() {
+            painter
+                .fill(self.0.icon.path(), self.0.color)
+                .transform(transform)
+                .draw();
+            return;
+        }
         painter
             .stroke(
                 self.0.icon.path(),
@@ -46,7 +54,7 @@ impl Widget for NativeIcon {
                     .with_join(Join::Round),
                 self.0.color,
             )
-            .transform(Affine::scale(f64::from(self.0.scale) * 20. / 24.))
+            .transform(transform)
             .draw();
     }
     fn accessibility_role(&self) -> Role {

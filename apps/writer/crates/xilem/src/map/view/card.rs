@@ -1,6 +1,6 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
-use crate::presentation::{excerpt, print};
+use crate::presentation::{Icon, excerpt, mark, print};
 use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
 use xilem::masonry::{
@@ -118,7 +118,8 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             input::input(
                 input::Kind::Grip(title),
                 state.config.ui.keymap == recite_config::Keymap::Vim,
-                label(1., "⠿").text_size(16.).color(state.palette.muted),
+                // A painted grip; the image keeps the glyph's name inside the named control.
+                mark(0.8, "⠿", Icon::Grip, state.palette.muted),
                 move |state: &mut Writer, action| {
                     state.map_input(Source::Grip(move_id.clone()), action)
                 },
