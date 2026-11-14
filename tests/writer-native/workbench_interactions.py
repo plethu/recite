@@ -70,11 +70,12 @@ def run(api, bus, registry, binary, output):
                     )
                     if scale == 200:
                         window.wait(
-                            lambda: window.find("Open map"), "direct constrained Split recovery"
+                            lambda: window.find_text("Split needs a wider window", prefix=True),
+                            "direct constrained Split recovery",
                         )
                         capture_settled(window, output, "-200-split-fallback")
                         result["frames"].append("200-split-fallback")
-                        window.act("Open map")
+                        window.act("Map")
                         window.wait(
                             lambda: window.find_action("Open script"), "map from constrained Split"
                         )

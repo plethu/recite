@@ -133,7 +133,14 @@ pub(super) fn workspace(
     .width(layout.available.px())
 }
 pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let split_available = Layout::resolve(state).split_available;
+    let layout = Layout::resolve(state);
+    let split_available = layout.split_available;
+    // A Split that cannot be honoured shows the Script it falls back to; the status line says why.
+    let honoured = if layout.compact_split {
+        Workspace::Script
+    } else {
+        state.map.workspace
+    };
     let modes = segments(
         &state.palette,
         [
@@ -147,7 +154,7 @@ pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> 
                 state.ui_scale(),
                 &state.palette,
                 title,
-                state.map.workspace == workspace,
+                honoured == workspace,
                 state.phase() != Phase::Writing
                     || (workspace == Workspace::Split && !split_available)
                     || (workspace != Workspace::Script
