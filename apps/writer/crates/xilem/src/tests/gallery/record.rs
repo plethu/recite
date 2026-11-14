@@ -185,13 +185,14 @@ impl Recorder {
     }
 }
 
-/// Lossless WebP at libwebp's slowest method is about half the size of optimised PNG for these
-/// frames, which matters for the committed baseline. `exact` keeps every pixel's value.
+/// Lossless WebP is about half the size of optimised PNG for these frames, which matters for the
+/// committed baseline. Method 4 is within 1% of the slowest method's size at a fraction of its
+/// time; `exact` keeps every pixel's value.
 pub(crate) fn save_image(image: &RgbaImage, path: &Path) {
     let mut config = webp::WebPConfig::new().expect("WebP configuration");
     config.lossless = 1;
     config.quality = 100.;
-    config.method = 6;
+    config.method = 4;
     config.exact = 1;
     let encoded = webp::Encoder::from_rgba(image, image.width(), image.height())
         .encode_advanced(&config)
