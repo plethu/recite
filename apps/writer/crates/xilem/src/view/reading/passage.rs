@@ -1,7 +1,7 @@
 //! A passage occupies the same manuscript row while its single draft is edited.
 use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::print;
+use crate::presentation::{disclosure_width, print, route_toggle};
 use crate::reading::PassageNumber;
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, PassageKind};
@@ -232,28 +232,25 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
         sized_box(styled(
             ControlStyle::Action,
             button(
-                label(
-                    1.,
-                    format!(
-                        "{} {}",
-                        if state.destination_expanded(destination) {
-                            "▾"
-                        } else {
-                            "→"
-                        },
-                        display_name(destination)
-                    ),
-                )
-                // Sized with the manuscript it belongs to, not with the interface chrome.
-                .text_size(DESTINATION_TEXT * state.reading_size())
-                .prop(LineBreaking::WordWrap)
-                // Fill the button's content box so the text starts at the column's left edge.
-                .width(
-                    (width - 2. * (12. * f64::from(state.ui_scale()) + 1.))
-                        .max(24.)
-                        .px(),
-                )
-                .color(state.palette.teal_text),
+                route_toggle(
+                    DESTINATION_TEXT * state.reading_size() / 14.,
+                    state.destination_expanded(destination),
+                    state.palette.teal_text,
+                    DESTINATION_TEXT * state.reading_size(),
+                    label(1., display_name(destination))
+                        // Sized with the manuscript it belongs to, not with the interface chrome.
+                        .text_size(DESTINATION_TEXT * state.reading_size())
+                        .prop(LineBreaking::WordWrap)
+                        // Fill the content box so the text starts at the column's left edge.
+                        .width(
+                            (width
+                                - 2. * (12. * f64::from(state.ui_scale()) + 1.)
+                                - disclosure_width(DESTINATION_TEXT * state.reading_size() / 14.))
+                            .max(24.)
+                            .px(),
+                        )
+                        .color(state.palette.teal_text),
+                ),
                 move |state: &mut Writer| state.toggle_destination_preview(target.clone()),
             )
             .disabled(

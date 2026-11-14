@@ -4,12 +4,15 @@ use crate::WriterLayout;
 use crate::app::picker::Search;
 use crate::keyed::column;
 use crate::presentation::Icon;
+use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::material;
 use crate::presentation::print;
+use crate::presentation::route_toggle;
 use crate::reading::{Content, Row};
 use recite_core::DocumentKey;
 use recite_writer_model::{AnalysisStamp, RouteOwner};
 use recite_writer_session::choices::display_name;
+use xilem::view::button;
 mod controls;
 mod header;
 mod passage;
@@ -92,13 +95,10 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
                 Some(Content::Continuation(_))
             ))
         .then(|| {
-            divider(
-                Axis::Horizontal,
-                print::meta(scale, "◆ END ◆").color(state.palette.muted),
-            )
-            .dash_pattern(&[1.px(), 3.px()])
-            .prop(ContentColor::new(state.palette.rule))
-            .width(state.script_width().px())
+            divider(Axis::Horizontal, print::end_mark(scale, &state.palette))
+                .dash_pattern(&[1.px(), 3.px()])
+                .prop(ContentColor::new(state.palette.rule))
+                .width(state.script_width().px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -177,21 +177,22 @@ fn continuation(
     let target = target.to_owned();
     let toggle = target.clone();
     flex_col((
-        end.then(|| print::meta(state.ui_scale(), "◆ END ◆").color(state.palette.muted)),
+        end.then(|| print::end_mark(state.ui_scale(), &state.palette)),
         (!end).then(|| {
-            print::action(
-                state.ui_scale(),
-                format!(
-                    "{} {}",
-                    if state.destination_expanded(&target) {
-                        "▾"
-                    } else {
-                        "→"
-                    },
-                    display_name(&target)
-                ),
-                state.phase() != Phase::Writing,
-                move |state: &mut Writer| state.toggle_destination_preview(toggle.clone()),
+            let scale = state.ui_scale();
+            styled(
+                ControlStyle::Action,
+                button(
+                    route_toggle(
+                        scale,
+                        state.destination_expanded(&target),
+                        state.palette.ink,
+                        14. * scale,
+                        label(scale, display_name(&target)),
+                    ),
+                    move |state: &mut Writer| state.toggle_destination_preview(toggle.clone()),
+                )
+                .disabled(state.phase() != Phase::Writing),
             )
         }),
         (!end)

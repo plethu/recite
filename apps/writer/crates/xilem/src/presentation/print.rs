@@ -94,6 +94,26 @@ pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send +
     )
 }
 
+/// The end of a beat: "END" between two colon devices in the second ink. The devices are
+/// images named `◆`, so the announced mark is unchanged.
+pub(crate) fn end_mark<S: 'static>(
+    scale: f32,
+    palette: &Palette<Color>,
+) -> impl WidgetView<S> + use<S> {
+    use xilem::{
+        masonry::layout::{AsUnit, Dim},
+        view::CrossAxisAlignment,
+    };
+    let colon = || super::icons::face(scale * 0.6, "◆", super::Icon::Colon, palette.teal);
+    // Sized to its content, so a divider can draw its rules either side.
+    view::sized_box(
+        view::flex_row((colon(), meta(scale, "END").color(palette.muted), colon()))
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .gap((4. * f64::from(scale)).px()),
+    )
+    .width(Dim::MaxContent)
+}
+
 /// Keep the ordinary native button and its name when the compact face is an icon.
 pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,

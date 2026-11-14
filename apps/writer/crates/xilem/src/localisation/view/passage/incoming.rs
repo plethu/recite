@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::disclosure;
+use xilem::view::button;
 pub(super) fn incoming(
     writer: &Writer,
     beat: &beat::Beat,
@@ -34,12 +36,15 @@ pub(super) fn incoming(
         .collect::<Vec<_>>();
     Some(
         flex_col((
-            text_button(
-                scale,
-                format!(
-                    "{} Incoming prompts ({})",
-                    if incoming.expanded { "▾" } else { "▸" },
-                    incoming.links.len()
+            button(
+                disclosure(
+                    scale,
+                    incoming.expanded,
+                    writer.palette.ink,
+                    label(
+                        scale,
+                        format!("Incoming prompts ({})", incoming.links.len()),
+                    ),
                 ),
                 |writer: &mut Writer| {
                     if let Some(beat) = &mut writer.localisation.passage {

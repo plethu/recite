@@ -5,6 +5,8 @@ mod fit_content;
 pub(crate) use excerpt::excerpt;
 pub(crate) use fit_content::fit_content;
 mod controls;
+mod disclosure;
+pub(crate) use disclosure::{disclosure, disclosure_width, route_toggle};
 mod styled_text;
 pub(crate) use emphasized_text::{
     manuscript_comparison, manuscript_search, search_label, source_comparison,
@@ -16,7 +18,7 @@ mod icons;
 pub(crate) mod identity;
 pub(crate) mod material;
 pub(crate) mod print;
-pub(crate) use icons::Icon;
+pub(crate) use icons::{Icon, mark};
 mod radio;
 pub(crate) mod segments;
 mod shaped_text;

@@ -4,7 +4,7 @@ use crate::attention::{Pane, Region};
 use crate::map::Workspace;
 use crate::navigation::rail::{FILE_PAGE, beat_page_size};
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::{group::named, print};
+use crate::presentation::{disclosure, disclosure_width, group::named, print};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
@@ -109,6 +109,11 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                         .as_deref()
                         == Some(title.as_str())
             });
+            let ink = if current {
+                state.palette.accent
+            } else {
+                state.palette.ink
+            };
             let caption = if ambiguous {
                 format!("{title} · {key}")
             } else {
@@ -117,23 +122,19 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
             styled(
                 ControlStyle::Navigation,
                 button(
-                    label(
+                    disclosure(
                         scale,
-                        format!(
-                            "{}{}{}",
-                            if current { "▾ " } else { "▸ " },
-                            caption,
-                            if dirty { " · Unsaved" } else { "" }
-                        ),
-                    )
-                    .weight(FontWeight::SEMI_BOLD)
-                    .color(if current {
-                        state.palette.accent
-                    } else {
-                        state.palette.ink
-                    })
-                    .prop(LineBreaking::WordWrap)
-                    .width((state.drawer_width() - 48.).px()),
+                        current,
+                        ink,
+                        label(
+                            scale,
+                            format!("{caption}{}", if dirty { " · Unsaved" } else { "" }),
+                        )
+                        .weight(FontWeight::SEMI_BOLD)
+                        .color(ink)
+                        .prop(LineBreaking::WordWrap)
+                        .width((state.drawer_width() - 48. - disclosure_width(scale)).px()),
+                    ),
                     move |state: &mut Writer| state.switch(&path),
                 )
                 .disabled(closing),

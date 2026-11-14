@@ -93,7 +93,9 @@ fn empty_and_effect_only_beats_have_distinct_reading_states() {
     click(&mut writer, &["Start · Start · end"]).unwrap();
     let labels = labels(&mut writer).unwrap();
     assert!(labels.iter().any(|label| label.starts_with("Effect ·")));
-    assert!(labels.iter().any(|label| label == "◆ END ◆"));
+    // The end-mark's colon devices are images named with the glyph they replace.
+    assert!(labels.iter().any(|label| label == "END"));
+    assert_eq!(labels.iter().filter(|label| *label == "◆").count(), 2);
     assert!(
         !labels
             .iter()
