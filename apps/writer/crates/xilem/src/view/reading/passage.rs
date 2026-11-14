@@ -136,16 +136,20 @@ pub(super) fn row(
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(content_gap.px()),
-        metadata(
-            state,
-            passage,
-            active,
-            if stacked_reply {
-                CaptionPlacement::BesideDestination { width }
-            } else {
-                CaptionPlacement::Under { margin }
-            },
-        ),
+        // Only the passage being edited reserves its source-label line, from selection on, so
+        // typing never moves the rows below; resting rows keep the column's 16px rhythm.
+        (stacked_reply || active).then(|| {
+            metadata(
+                state,
+                passage,
+                active,
+                if stacked_reply {
+                    CaptionPlacement::BesideDestination { width }
+                } else {
+                    CaptionPlacement::Under { margin }
+                },
+            )
+        }),
         active
             .then(|| super::refusal::panel(state, measure))
             .flatten()
