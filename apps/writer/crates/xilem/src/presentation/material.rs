@@ -13,8 +13,10 @@ use xilem::{
     view::{canvas, sized_box},
 };
 
+mod grain;
 #[cfg(test)]
 mod tests;
+pub(crate) use grain::{desk, grain};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct DotScreen {

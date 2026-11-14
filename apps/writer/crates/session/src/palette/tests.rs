@@ -127,3 +127,30 @@ fn monochrome_retains_alpha_and_srgb_interpolation_clamps_and_rounds_channels() 
         Rgba::from_argb(128, 128, 128, 128)
     );
 }
+
+#[test]
+fn desk_text_survives_the_grain_and_the_sheet_shadow_stays_decorative() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        let desk = p.grained_desk();
+        // Chrome text on the desk: sidebar captions, tab row, toolbar and welcome copy.
+        for text in [p.ink, p.muted, p.accent, p.teal_text] {
+            assert!(
+                contrast(text, desk) >= 4.5,
+                "desk text: dark={dark} monochrome={monochrome} {text:?}: {}",
+                contrast(text, desk)
+            );
+        }
+        assert!(
+            contrast(p.boundary, desk) >= 3.,
+            "control boundary on the desk: dark={dark} monochrome={monochrome}"
+        );
+        // The sheet's offset shadow is visible against the desk but never carries meaning.
+        let shadow = contrast(p.stock, p.canvas);
+        assert!(
+            (1.3..3.).contains(&shadow),
+            "stock: dark={dark} monochrome={monochrome}: {shadow}"
+        );
+        assert!(contrast(p.stock, p.canvas) < contrast(p.boundary, p.canvas));
+    }
+}

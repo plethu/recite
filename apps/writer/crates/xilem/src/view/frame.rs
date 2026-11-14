@@ -3,6 +3,7 @@ use super::{Phase, Writer, document_actions, navigation, reference, retained, to
 use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, UnitPoint},
+    peniko::Color,
     style::Style,
     view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, portal, zstack},
 };
@@ -11,6 +12,7 @@ pub(super) fn frame<V: WidgetView<Writer>>(
     state: &Writer,
     content: V,
 ) -> impl WidgetView<Writer> + use<V> {
+    let writing = state.workspaces.screen == crate::workspaces::Screen::Write;
     indexed_stack((
         zstack((
             flex_col((
@@ -31,9 +33,13 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                         ),
                         portal(content)
                             .constrain_horizontal(true)
-                            .constrain_vertical(
-                                state.workspaces.screen == crate::workspaces::Screen::Write,
-                            )
+                            .constrain_vertical(writing)
+                            // Writing sits on the desk; tool and Localise panels keep the surface.
+                            .background_color(if writing {
+                                Color::TRANSPARENT
+                            } else {
+                                state.palette.surface
+                            })
                             .flex(1.),
                         retained(
                             flex_col((reference::pinned(state),))
@@ -44,7 +50,6 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                     ))
                     .cross_axis_alignment(CrossAxisAlignment::Stretch)
                     .gap(0.px())
-                    .background_color(state.palette.surface)
                     .flex(1.),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)

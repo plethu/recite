@@ -48,7 +48,6 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
         .gap(8.px()),
     )
     .padding(xilem::style::Padding::from_vh(4.px(), 12.px()))
-    .background_color(app.theme.palette.surface)
 }
 
 fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {

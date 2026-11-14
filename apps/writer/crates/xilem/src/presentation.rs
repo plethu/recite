@@ -26,12 +26,17 @@ pub(super) use radio::radio_button;
 use recite_config::{WriterConfig, WriterPresentationField, WriterTheme};
 use recite_writer_session::palette::Palette;
 use std::sync::Arc;
-use xilem::{masonry::core::DefaultProperties, peniko::Color};
+use xilem::{
+    masonry::core::DefaultProperties,
+    peniko::{Color, ImageBrush},
+};
 
 pub(super) struct Theme {
     key: (WriterTheme, bool, u16),
     pub palette: Palette<Color>,
     pub properties: Arc<DefaultProperties>,
+    /// The desk's grain in this palette's grain ink.
+    pub grain: Option<ImageBrush>,
     wordmark: Result<Arc<usvg::Tree>, String>,
 }
 impl Theme {
@@ -48,6 +53,7 @@ impl Theme {
             ),
             properties: Arc::new(theme::properties(&palette, scale(config))),
             wordmark: identity::load(config),
+            grain: material::grain(palette.grain),
             palette,
         }
     }

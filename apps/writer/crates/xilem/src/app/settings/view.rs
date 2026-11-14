@@ -27,6 +27,8 @@ pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {
         .padding(24.px()),
     )
     .constrain_horizontal(true)
+    // Settings is a page, not the desk: it keeps a flat ground beneath its forms and prose.
+    .background_color(app.theme.palette.canvas)
 }
 mod keyboard;
 mod personal;
