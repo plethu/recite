@@ -16,6 +16,8 @@ mod tests;
 const DESTINATION: f64 = 168.;
 /// Below this row width, destinations wrap under their reply instead.
 const DESTINATION_MEASURE: f64 = 420.;
+/// Space between a reply and its overhanging source label.
+const CAPTION_CLEARANCE: f64 = 4.;
 /// Destination text relative to the reading size: 14px beside 20px prose.
 const DESTINATION_TEXT: f32 = 0.7;
 
@@ -91,63 +93,64 @@ pub(super) fn row(
         TextAlign::Start
     };
     flex_col((
-        flex_row((
-            indexed_stack((
-                flex_col((
-                    print::caps(scale, speaker.clone())
-                        .text_size(caption_size)
-                        .letter_spacing(0.066 * state.reading_size())
-                        .text_alignment(alignment)
-                        .color(state.palette.accent)
-                        .width(if wide { margin } else { width }.px()),
-                    (reply == Some(1)).then(|| {
-                        // 12px beside 20px prose, scaled with the manuscript like its caption.
-                        label(1., reply_count(state.reading.replies))
-                            .text_size(caption_size)
-                            .text_alignment(alignment)
-                            .color(state.palette.muted)
-                            .width(if wide { margin } else { width }.px())
-                    }),
-                ))
-                .gap(2.px()),
-                flex_col(()).dims((0.px(), 0.px())),
-            ))
-            .active(usize::from(!wide && speaker.is_empty())),
+        flex_col((
             flex_row((
-                reply.map(|number| {
-                    print::meta(scale, number.to_string())
-                        .text_size(caption_size)
-                        .width(number_width.px())
-                        .color(state.palette.muted)
-                }),
-                super::super::manuscript::passage_editor(state, passage, number, measure),
-                column
-                    .then(|| route(state, passage, destination))
-                    .flatten()
-                    .map(|route| sized_box(route).padding(Padding::left(8.px()))),
+                indexed_stack((
+                    flex_col((
+                        print::caps(scale, speaker.clone())
+                            .text_size(caption_size)
+                            .letter_spacing(0.066 * state.reading_size())
+                            .text_alignment(alignment)
+                            .color(state.palette.accent)
+                            .width(if wide { margin } else { width }.px()),
+                        (reply == Some(1)).then(|| {
+                            // 12px beside 20px prose, scaled with the manuscript like its caption.
+                            label(1., reply_count(state.reading.replies))
+                                .text_size(caption_size)
+                                .text_alignment(alignment)
+                                .color(state.palette.muted)
+                                .width(if wide { margin } else { width }.px())
+                        }),
+                    ))
+                    .gap(2.px()),
+                    flex_col(()).dims((0.px(), 0.px())),
+                ))
+                .active(usize::from(!wide && speaker.is_empty())),
+                flex_row((
+                    reply.map(|number| {
+                        print::meta(scale, number.to_string())
+                            .text_size(caption_size)
+                            .width(number_width.px())
+                            .color(state.palette.muted)
+                    }),
+                    super::super::manuscript::passage_editor(state, passage, number, measure),
+                    column
+                        .then(|| route(state, passage, destination))
+                        .flatten()
+                        .map(|route| sized_box(route).padding(Padding::left(8.px()))),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(number_gap.px()),
             ))
+            .direction(if wide {
+                Axis::Horizontal
+            } else {
+                Axis::Vertical
+            })
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(number_gap.px()),
+            .gap(content_gap.px()),
+            // The source label paints into the gap below its passage without taking space, so
+            // selecting or typing never moves a row and resting rows keep the 16px rhythm.
+            (!stacked_reply)
+                .then(|| metadata(state, passage, active, CaptionPlacement::Under { margin })),
         ))
-        .direction(if wide {
-            Axis::Horizontal
-        } else {
-            Axis::Vertical
-        })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(content_gap.px()),
-        // Only the passage being edited reserves its source-label line, from selection on, so
-        // typing never moves the rows below; resting rows keep the column's 16px rhythm.
-        (stacked_reply || active).then(|| {
+        .gap(0.px()),
+        stacked_reply.then(|| {
             metadata(
                 state,
                 passage,
                 active,
-                if stacked_reply {
-                    CaptionPlacement::BesideDestination { width }
-                } else {
-                    CaptionPlacement::Under { margin }
-                },
+                CaptionPlacement::BesideDestination { width },
             )
         }),
         active
@@ -216,7 +219,10 @@ fn metadata(
                 ))
                 .gap(8.px()),
             )
-            .height((0.9 * f64::from(state.reading_size())).px()),
+            // Only clearance below the reply's descenders takes space; the caption itself
+            // overhangs into the column gap.
+            .padding(Padding::top(CAPTION_CLEARANCE.px()))
+            .height(CAPTION_CLEARANCE.px()),
         ),
     }
 }

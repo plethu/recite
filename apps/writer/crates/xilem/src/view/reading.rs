@@ -82,7 +82,8 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
         .collect();
     flex_col((
         header::heading(state, id),
-        column(entries).gap(16.px()),
+        // 16px between rows: this gap and each row's 4px source-label clearance.
+        column(entries).gap(12.px()),
         rows.is_empty().then(|| {
             prose(
                 scale,

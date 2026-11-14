@@ -83,7 +83,7 @@ fn destinations_share_one_left_aligned_column_and_the_reply_count_sits_with_its_
 }
 
 #[test]
-fn resting_replies_keep_the_column_rhythm_without_a_reserved_label_line() {
+fn replies_keep_the_column_rhythm_and_never_move_while_one_is_edited() {
     let mut writer = Writer::from_session(crate::session::Session::examples().unwrap(), None);
     writer
         .follow_location(&recite_writer_session::location::Location {
@@ -111,7 +111,8 @@ fn resting_replies_keep_the_column_rhythm_without_a_reserved_label_line() {
         third.y0 - row_end <= 20.,
         "resting rows reserve nothing below themselves: {second:?} {third:?}"
     );
-    // Editing reserves the label line once, at selection; typing then moves nothing below.
+    // The label paints into the gap: neither selecting nor typing moves a row below.
+    let resting = bounds_of(&mounted, "Edit passage 3");
     let reply = mounted
         .state
         .reading
@@ -131,6 +132,7 @@ fn resting_replies_keep_the_column_rhythm_without_a_reserved_label_line() {
         .change(|model| model.select(View::Passage(reply.clone())));
     mounted.settle();
     let selected = bounds_of(&mounted, "Edit passage 3");
+    assert_eq!(selected, resting);
     mounted.state.change(|model| {
         model.set_draft("Anything I can do to help with the relay?".into());
         Ok(())
