@@ -1,6 +1,7 @@
 use super::*;
 use recite_writer_model::View;
 use recite_writer_session::{FileError, ProjectSession};
+pub(crate) mod gallery;
 #[path = "tests/keyed/tests.rs"]
 mod keyed;
 #[path = "tests/navigation/tests.rs"]
