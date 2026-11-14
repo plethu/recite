@@ -178,3 +178,33 @@ fn primary_controls_keep_their_target_and_show_distinct_focus_and_disabled_state
         assert!(harness.pop_action::<ButtonPress>().is_none());
     }
 }
+
+#[test]
+fn prose_text_takes_the_palette_ink_rather_than_the_toolkit_default() {
+    use xilem::masonry::{properties::ContentColor, widgets::Prose};
+    for dark in [false, true] {
+        let config = WriterConfig {
+            theme: if dark {
+                recite_config::WriterTheme::Dark
+            } else {
+                recite_config::WriterTheme::Light
+            },
+            ..WriterConfig::default()
+        };
+        let palette = palette(&config);
+        let prose = NewWidget::new(Prose::new("Guidance for the writer."));
+        let id = prose.id();
+        let mut harness =
+            TestHarness::create_with_size(properties(&palette, 1.), prose, (400, 100));
+        harness.redraw();
+        let area = harness.get_widget_with_id(id).children()[0].id();
+        assert_eq!(
+            harness
+                .get_widget_with_id(area)
+                .get_prop::<ContentColor>()
+                .color,
+            palette.ink,
+            "dark={dark}"
+        );
+    }
+}
