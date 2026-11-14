@@ -130,6 +130,18 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .direction(action_axis(state))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
+    // Quiet actions line their labels up with the manuscript's text column.
+    .padding(Padding::left(
+        if state.reading.rows.is_empty() {
+            0.
+        } else {
+            (super::reading::text_column(state, state.script_width())
+                - 12. * f64::from(state.ui_scale())
+                - 1.)
+                .max(0.)
+        }
+        .px(),
+    ))
 }
 fn action_axis(state: &Writer) -> kurbo::Axis {
     if state.script_width() < 560. * f64::from(state.ui_scale()) {

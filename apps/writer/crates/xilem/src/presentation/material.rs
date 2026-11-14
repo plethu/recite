@@ -3,7 +3,6 @@ use xilem::{
     WidgetView,
     core::memoize,
     masonry::{
-        core::Property,
         imaging::Painter,
         kurbo::{BezPath, Circle, Rect, Shape},
         layout::AsUnit,
@@ -15,8 +14,6 @@ use xilem::{
 
 mod decor;
 mod grain;
-#[cfg(test)]
-mod tests;
 pub(crate) use decor::{Decorated, Decoration};
 pub(crate) use grain::{desk, grain};
 
@@ -25,47 +22,6 @@ pub(crate) fn focus_ring<V>(color: Option<Color>, child: V) -> Decorated<V> {
     Decorated::new(Decoration::Ring(color), child)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct DotScreen {
-    pub ink: Color,
-    bounds: Option<Rect>,
-}
-impl DotScreen {
-    pub fn new(ink: Color, bounds: Option<Rect>) -> Self {
-        Self { ink, bounds }
-    }
-}
-impl Property for DotScreen {
-    fn static_default() -> &'static Self {
-        static NONE: DotScreen = DotScreen {
-            ink: Color::TRANSPARENT,
-            bounds: None,
-        };
-        &NONE
-    }
-}
-impl Default for DotScreen {
-    fn default() -> Self {
-        *Self::static_default()
-    }
-}
-#[derive(Default)]
-pub(crate) struct ScreenCache {
-    bounds: Option<Rect>,
-    path: BezPath,
-}
-impl ScreenCache {
-    pub fn paint(&mut self, screen: &DotScreen, painter: &mut Painter<'_>) {
-        let Some(bounds) = screen.bounds else {
-            return;
-        };
-        if self.bounds != Some(bounds) {
-            self.path = dots(bounds);
-            self.bounds = Some(bounds);
-        }
-        painter.fill(&self.path, screen.ink.with_alpha(0.35)).draw();
-    }
-}
 fn dots(bounds: Rect) -> BezPath {
     let mut dots = BezPath::new();
     let mut y = bounds.y0 + 2.5;
