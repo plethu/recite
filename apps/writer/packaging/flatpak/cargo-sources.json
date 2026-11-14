@@ -2180,6 +2180,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/glob/glob-0.3.4.crate",
+        "sha256": "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b",
+        "dest": "cargo/vendor/glob-0.3.4"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b\", \"files\": {}}",
+        "dest": "cargo/vendor/glob-0.3.4",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/glow/glow-0.16.0.crate",
         "sha256": "c5e5ea60d70410161c8bf5da3fdfeaa1c72ed2c15f8bbb9d19fe3a4fad085f08",
         "dest": "cargo/vendor/glow-0.16.0"
@@ -3025,6 +3038,19 @@
         "type": "inline",
         "contents": "{\"package\": null, \"files\": {}}",
         "dest": "cargo/vendor/linebender_include_doc_path",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/libwebp-sys/libwebp-sys-0.9.6.crate",
+        "sha256": "54cd30df7c7165ce74a456e4ca9732c603e8dc5e60784558c1c6dc047f876733",
+        "dest": "cargo/vendor/libwebp-sys-0.9.6"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"54cd30df7c7165ce74a456e4ca9732c603e8dc5e60784558c1c6dc047f876733\", \"files\": {}}",
+        "dest": "cargo/vendor/libwebp-sys-0.9.6",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -6786,6 +6812,19 @@
         "type": "inline",
         "contents": "{\"package\": \"5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb\", \"files\": {}}",
         "dest": "cargo/vendor/web-time-1.1.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/webp/webp-0.3.1.crate",
+        "sha256": "c071456adef4aca59bf6a583c46b90ff5eb0b4f758fc347cea81290288f37ce1",
+        "dest": "cargo/vendor/webp-0.3.1"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"c071456adef4aca59bf6a583c46b90ff5eb0b4f758fc347cea81290288f37ce1\", \"files\": {}}",
+        "dest": "cargo/vendor/webp-0.3.1",
         "dest-filename": ".cargo-checksum.json"
     },
     {
