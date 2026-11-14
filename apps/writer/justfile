@@ -12,6 +12,17 @@ probe output="target/writer-native/result.json" scenario="all":
     cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
     /usr/bin/python3 tests/writer-native/check.py apps/writer/target/debug/recite-writer "{{ output }}" --scenario "{{ scenario }}"
 
+# Render every Writer surface with accessibility snapshots, then compare with design/baseline.
+gallery output="target/writer-gallery" only="" scale="1":
+    RECITE_WRITER_GALLERY="$(realpath -m "$1")" RECITE_WRITER_GALLERY_ONLY="$2" RECITE_WRITER_GALLERY_SCALE="$3" cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib tests::gallery::tests::capture_gallery -- --ignored --exact --nocapture
+
+# Replace design/baseline with a complete 1x capture; only after the maintainer signs off.
+gallery-bless output="target/writer-gallery":
+    python3 -c 'import json, sys; s = json.load(open(sys.argv[1]))["settings"]; sys.exit("bless needs a complete 1x capture without motion frames" if s["scale"] != 1 or s["only"] or s["motion_ms"] else 0)' "$1/manifest.json"
+    rm -rf apps/writer/design/baseline
+    mkdir -p apps/writer/design/baseline
+    cp -R "$1/manifest.json" "$1/frames" "$1/a11y" apps/writer/design/baseline/
+
 # Verify the maintained writer and its source-editing model.
 check:
     mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-palette$'

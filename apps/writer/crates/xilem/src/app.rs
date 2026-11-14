@@ -90,4 +90,4 @@ pub(super) fn application(
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
