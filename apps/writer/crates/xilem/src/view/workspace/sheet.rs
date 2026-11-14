@@ -2,8 +2,8 @@
 use super::*;
 use xilem::masonry::{properties::BoxShadow, widgets::Flex};
 use xilem::peniko::Color;
-use xilem::view::MainAxisAlignment;
 use xilem::style::Padding;
+use xilem::view::MainAxisAlignment;
 
 /// Paper either side of the script measure, inside the sheet.
 const MARGIN: f64 = 56.;

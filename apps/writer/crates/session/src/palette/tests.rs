@@ -154,3 +154,37 @@ fn desk_text_survives_the_grain_and_the_sheet_shadow_stays_decorative() {
         assert!(contrast(p.stock, p.canvas) < contrast(p.boundary, p.canvas));
     }
 }
+
+#[test]
+fn hover_ink_beats_the_grain_and_filled_focus_rings_contrast_with_their_fill() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        let desk = p.grained_desk();
+        for base in [desk, p.canvas, p.surface] {
+            let hover = p.hover_over(base);
+            assert!(
+                contrast(p.ink, hover) >= 9.,
+                "hover ink: dark={dark} monochrome={monochrome} {base:?}: {}",
+                contrast(p.ink, hover)
+            );
+            for text in [p.muted, p.accent] {
+                assert!(
+                    contrast(text, hover) >= 4.5,
+                    "hover text: {text:?} on {base:?}"
+                );
+            }
+            // The hover must read as more than the grain's own variation.
+            assert!(contrast(hover, base) > contrast(desk, p.canvas));
+        }
+        assert!(contrast(p.teal_text, p.hover_over(p.surface)) >= 4.5);
+        // A filled face's ring is its own text colour, never a border close to the fill.
+        assert!(contrast(p.on_accent, p.accent) >= 4.5);
+        for amount in [0., STAMP_HOVER, STAMP_PRESSED] {
+            assert!(contrast(p.on_stamp, p.stamp_state(amount)) >= 4.5);
+        }
+        assert!(
+            contrast(p.accent, p.stamp) < 3.,
+            "why the accent is not the ring on a stamp"
+        );
+    }
+}

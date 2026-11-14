@@ -33,6 +33,10 @@ fn capture_gallery() {
         scenes::stills(&mut record, variant);
         if full {
             scenes::transitions(&mut record, variant, &settings);
+        }
+        // Control states, filled focus rings included, must hold in monochrome too.
+        if full || variant.id == "mono" {
+            record.limit(None);
             scenes::specimen(&mut record, variant);
         }
     }

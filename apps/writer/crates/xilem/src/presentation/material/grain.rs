@@ -4,16 +4,10 @@
 //! it, so the reading surface and prose never sit on texture.
 #[cfg(test)]
 mod tests;
-mod widget;
+use super::decor::{Decorated, Decoration};
 use std::{io::Cursor, sync::Arc, sync::OnceLock};
-use widget::Desk;
-use xilem::{
-    Pod, ViewCtx, WidgetView,
-    core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
-    masonry::properties::Dimensions,
-    peniko::{
-        Blob, Color, Extend, ImageAlphaType, ImageBrush, ImageData, ImageFormat, ImageQuality,
-    },
+use xilem::peniko::{
+    Blob, Color, Extend, ImageAlphaType, ImageBrush, ImageData, ImageFormat, ImageQuality,
 };
 
 const TILE: &[u8] = include_bytes!("../../../../../../../assets/identity/grain.png");
@@ -60,70 +54,6 @@ pub(crate) fn grain(ink: Color) -> Option<ImageBrush> {
 }
 
 /// A desk surface: grain painted over the background and beneath `child`.
-pub(crate) fn desk<V>(grain: Option<ImageBrush>, child: V) -> Grained<V> {
-    Grained { grain, child }
-}
-pub(crate) struct Grained<V> {
-    grain: Option<ImageBrush>,
-    child: V,
-}
-impl<V> ViewMarker for Grained<V> {}
-impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Grained<V> {
-    type Element = Pod<Desk>;
-    type ViewState = V::ViewState;
-    fn build(&self, ctx: &mut ViewCtx, state: &mut S) -> (Self::Element, Self::ViewState) {
-        let (child, local) = ctx.with_id(ViewId::new(0), |ctx| self.child.build(ctx, state));
-        (
-            Pod::new_with_props(
-                Desk::new(self.grain.clone(), child.new_widget),
-                Dimensions::AUTO,
-            ),
-            local,
-        )
-    }
-    fn rebuild(
-        &self,
-        previous: &Self,
-        local: &mut Self::ViewState,
-        ctx: &mut ViewCtx,
-        mut pod: Mut<'_, Self::Element>,
-        state: &mut S,
-    ) {
-        if self.grain != previous.grain {
-            Desk::set_grain(&mut pod, self.grain.clone());
-        }
-        ctx.with_id(ViewId::new(0), |ctx| {
-            self.child.rebuild(
-                &previous.child,
-                local,
-                ctx,
-                Desk::child_mut(&mut pod).downcast(),
-                state,
-            );
-        });
-    }
-    fn teardown(
-        &self,
-        local: &mut Self::ViewState,
-        ctx: &mut ViewCtx,
-        mut pod: Mut<'_, Self::Element>,
-    ) {
-        ctx.with_id(ViewId::new(0), |ctx| {
-            self.child
-                .teardown(local, ctx, Desk::child_mut(&mut pod).downcast())
-        });
-    }
-    fn message(
-        &self,
-        local: &mut Self::ViewState,
-        message: &mut MessageCtx,
-        mut pod: Mut<'_, Self::Element>,
-        state: &mut S,
-    ) -> MessageResult<()> {
-        if message.take_first() != Some(ViewId::new(0)) {
-            return MessageResult::Stale;
-        }
-        self.child
-            .message(local, message, Desk::child_mut(&mut pod).downcast(), state)
-    }
+pub(crate) fn desk<V>(grain: Option<ImageBrush>, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Grain(grain), child)
 }

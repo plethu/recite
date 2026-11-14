@@ -1,10 +1,9 @@
 //! Stable pane slots change placement without replacing mounted editor state.
 use super::*;
 use crate::map::Workspace;
-use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::group::named;
+use crate::presentation::segments::{segment, segments};
 use recite_config::{WriterPaneSide, WriterPresentationField};
-use xilem::masonry::{layout::Dim, properties::CheckmarkSize};
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
 mod sheet;
 
@@ -128,109 +127,56 @@ pub(super) fn workspace(
 }
 pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let split_available = Layout::resolve(state).split_available;
-    let modes = xilem::view::radio_group(
-        flex_row(
-            [
-                ("Script", Workspace::Script),
-                ("Map", Workspace::Map),
-                (
-                    if split_available {
-                        "Split"
-                    } else {
-                        "Split unavailable"
-                    },
-                    Workspace::Split,
-                ),
-            ]
-            .map(|(title, workspace)| {
-                styled(
-                    ControlStyle::Segment,
-                    crate::presentation::radio_button(
-                        state.ui_scale(),
-                        title,
-                        state.map.workspace == workspace,
-                        move |state: &mut Writer| state.show_workspace(workspace),
-                    )
-                    .label_color(if state.map.workspace == workspace {
-                        state.palette.on_stamp
-                    } else {
-                        state.palette.ink
-                    })
-                    .disabled(
-                        state.phase() != Phase::Writing
-                            || (workspace == Workspace::Split && !split_available)
-                            || (workspace != Workspace::Script
-                                && (state.navigation.busy() || state.work.busy())),
-                    )
-                    .prop(CheckmarkSize {
-                        side: 0.px(),
-                        gap: 0.px(),
-                    })
-                    .background_color(if state.map.workspace == workspace {
-                        state.palette.stamp
-                    } else {
-                        state.palette.surface
-                    }),
-                )
-            }),
-        )
-        .gap(2.px()),
+    let modes = segments(
+        &state.palette,
+        [
+            ("Script", Workspace::Script),
+            ("Map", Workspace::Map),
+            (
+                if split_available {
+                    "Split"
+                } else {
+                    "Split unavailable"
+                },
+                Workspace::Split,
+            ),
+        ]
+        .map(|(title, workspace)| {
+            segment(
+                state.ui_scale(),
+                &state.palette,
+                title,
+                state.map.workspace == workspace,
+                state.phase() != Phase::Writing
+                    || (workspace == Workspace::Split && !split_available)
+                    || (workspace != Workspace::Script
+                        && (state.navigation.busy() || state.work.busy())),
+                move |state: &mut Writer| state.show_workspace(workspace),
+            )
+        }),
     );
-    flex_row((
-        sized_box(modes)
-            .width(Dim::MaxContent)
-            .padding(2.px())
-            .border_color(state.palette.muted)
-            .border_width(1.px()),
-        flex_col(()).flex(1.),
-    ))
-    .gap(0.px())
+    flex_row((modes, flex_col(()).flex(1.))).gap(0.px())
 }
 
 pub(super) fn authoring_modes(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let localise = state.workspaces.screen == crate::workspaces::Screen::Localisation;
-    sized_box(xilem::view::radio_group(
-        flex_row(
-            [("Write", false), ("Localize", true)].map(|(title, selected)| {
-                let active = selected == localise;
-                styled(
-                    ControlStyle::Segment,
-                    crate::presentation::radio_button(
-                        state.ui_scale(),
-                        title,
-                        active,
-                        move |state: &mut Writer| {
-                            if selected {
-                                state.open_localisation();
-                            } else {
-                                state.return_to_writing();
-                            }
-                        },
-                    )
-                    .disabled(
-                        state.project_action_blocked()
-                            || (selected && state.session.project().is_none()),
-                    )
-                    .label_color(if active {
-                        state.palette.on_stamp
+    segments(
+        &state.palette,
+        [("Write", false), ("Localize", true)].map(|(title, selected)| {
+            segment(
+                state.ui_scale(),
+                &state.palette,
+                title,
+                selected == localise,
+                state.project_action_blocked() || (selected && state.session.project().is_none()),
+                move |state: &mut Writer| {
+                    if selected {
+                        state.open_localisation();
                     } else {
-                        state.palette.ink
-                    })
-                    .prop(CheckmarkSize {
-                        side: 0.px(),
-                        gap: 0.px(),
-                    })
-                    .background_color(if active {
-                        state.palette.stamp
-                    } else {
-                        state.palette.surface
-                    }),
-                )
-            }),
-        )
-        .gap(2.px()),
-    ))
-    .padding(2.px())
-    .border_color(state.palette.muted)
-    .border_width(1.px())
+                        state.return_to_writing();
+                    }
+                },
+            )
+        }),
+    )
 }

@@ -108,6 +108,18 @@ pub(crate) fn gallery(record: &mut Recorder, variant: Variant) {
             if stage.focus("Find a destination") {
                 stage.shot(record, "Search field focused");
             }
+            // Filled faces show focus as a ring in their own text colour, also under the pointer.
+            for (caption, state) in [
+                ("Try scene", "Primary action focused and hovered"),
+                ("Script", "Selected segment focused"),
+            ] {
+                if stage.focus(caption) {
+                    if caption == "Try scene" {
+                        stage.hover(caption);
+                    }
+                    stage.shot(record, state);
+                }
+            }
         },
     );
 }

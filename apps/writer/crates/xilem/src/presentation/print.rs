@@ -63,26 +63,34 @@ pub(crate) fn action<S: 'static>(
     )
 }
 
+/// The one filled action on a surface. Its focus is a ring inside the fill, in the text colour.
 pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,
     text: T,
     palette: &Palette<Color>,
     disabled: bool,
     callback: F,
-) -> impl WidgetView<S, Widget = Button> + use<S, T, F> {
-    styled(
-        ControlStyle::Primary,
-        view::button(
-            label(scale, text)
-                .weight(FontWeight::SEMI_BOLD)
-                .color(if disabled {
-                    palette.muted
-                } else {
-                    palette.on_accent
-                }),
-            callback,
-        )
-        .disabled(disabled),
+) -> impl WidgetView<S> + use<S, T, F> {
+    super::material::focus_ring(
+        Some(palette.on_accent),
+        styled(
+            ControlStyle::Primary,
+            view::button(
+                label(scale, text)
+                    .weight(if disabled {
+                        FontWeight::NORMAL
+                    } else {
+                        FontWeight::SEMI_BOLD
+                    })
+                    .color(if disabled {
+                        palette.muted
+                    } else {
+                        palette.on_accent
+                    }),
+                callback,
+            )
+            .disabled(disabled),
+        ),
     )
 }
 
@@ -95,9 +103,8 @@ pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     disabled: bool,
     callback: F,
 ) -> impl WidgetView<S, Widget = Button> + use<S, F> {
-    use xilem::{masonry::layout::AsUnit, style::Style};
     styled(
-        ControlStyle::Action,
+        ControlStyle::Icon,
         view::button(
             super::icons::face(
                 scale,
@@ -111,7 +118,6 @@ pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
             ),
             callback,
         )
-        .disabled(disabled)
-        .padding(xilem::style::Padding::all((4. * f64::from(scale)).px())),
+        .disabled(disabled),
     )
 }

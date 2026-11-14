@@ -1,24 +1,23 @@
 //! Native text, radio and checkbox controls retain their ordinary keyboard behavior.
 use super::*;
-use crate::presentation::radio_button;
-use xilem::{
-    InsertNewline,
-    masonry::properties::TextAreaLabel,
-    view::{radio_group, text_input},
-};
+use crate::presentation::segments::{segment, segments};
+use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
 
 pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     let scale = state.scale();
+    let palette = &state.theme.palette;
     let choices = [Workspace::Script, Workspace::Map, Workspace::Split].map(|workspace| {
         let caption = match workspace {
             Workspace::Script => "Script",
             Workspace::Map => "Map",
             Workspace::Split => "Split",
         };
-        radio_button(
+        segment(
             scale,
+            palette,
             caption,
             state.workspace == workspace,
+            false,
             move |state: &mut Specimen| state.workspace = workspace,
         )
     });
@@ -34,7 +33,7 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         .collect::<Vec<_>>();
     flex_col((
         label(scale, "Fields and selection").text_size(22. * scale),
-        radio_group(flex_row(choices).gap(12.px())),
+        segments(palette, choices),
         label(scale, "Find a destination"),
         flex_row((
             text_input(state.query.clone(), |state: &mut Specimen, text| {

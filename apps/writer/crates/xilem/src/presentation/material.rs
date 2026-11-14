@@ -13,10 +13,17 @@ use xilem::{
     view::{canvas, sized_box},
 };
 
+mod decor;
 mod grain;
 #[cfg(test)]
 mod tests;
+pub(crate) use decor::{Decorated, Decoration};
 pub(crate) use grain::{desk, grain};
+
+/// Filled controls show keyboard focus as a ring of `color` inside their edge.
+pub(crate) fn focus_ring<V>(color: Option<Color>, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Ring(color), child)
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct DotScreen {
