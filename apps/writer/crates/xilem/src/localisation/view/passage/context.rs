@@ -1,5 +1,7 @@
 //! Structural manuscript context never acquires source-mutating controls here.
 use super::*;
+use xilem::core::one_of::Either;
+use xilem::masonry::properties::LineBreaking;
 pub(super) fn context(
     writer: &Writer,
     row: &beat::Context,
@@ -14,11 +16,23 @@ pub(super) fn context(
                 width,
             )
         }),
-        paragraph(
-            writer.ui_scale(),
-            row.pages.get(row.page).cloned().unwrap_or_default(),
-            width,
-        ),
+        // Continuations are one short line in interface type, whose fonts carry the arrow.
+        if row.continuation {
+            Either::A(
+                label(
+                    writer.ui_scale(),
+                    row.pages.get(row.page).cloned().unwrap_or_default(),
+                )
+                .prop(LineBreaking::WordWrap)
+                .width(width.px()),
+            )
+        } else {
+            Either::B(paragraph(
+                writer.ui_scale(),
+                row.pages.get(row.page).cloned().unwrap_or_default(),
+                width,
+            ))
+        },
         (row.pages.len() > 1).then(|| {
             flex_row((
                 text_button(
