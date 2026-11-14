@@ -41,6 +41,7 @@ pub(super) struct Theme {
     /// The desk's grain in this palette's grain ink.
     pub grain: Option<ImageBrush>,
     wordmark: Result<Arc<usvg::Tree>, String>,
+    hero: Result<Arc<usvg::Tree>, String>,
 }
 impl Theme {
     pub fn initial_properties(&self) -> DefaultProperties {
@@ -56,6 +57,7 @@ impl Theme {
             ),
             properties: Arc::new(theme::properties(&palette, scale(config))),
             wordmark: identity::load(config),
+            hero: identity::load_hero(config),
             grain: material::grain(palette.grain),
             palette,
         }

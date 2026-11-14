@@ -148,6 +148,15 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Stage<S, V> {
                 changed = true;
             }
             self.rebuild();
+            // Layout during the rebuild can report sizes that the view lays out from, such as
+            // the welcome form's measured height; those need another round.
+            while let Some((action, source)) = self.harness.pop_action_erased() {
+                let Some(path) = self.context.get_id_path(source).cloned() else {
+                    continue;
+                };
+                self.deliver(path.to_vec(), DynMessage(action));
+                changed = true;
+            }
             if !changed {
                 return;
             }
