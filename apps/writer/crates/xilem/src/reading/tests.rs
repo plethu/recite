@@ -47,7 +47,7 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
         model.set_draft("An opening line.".into());
         Ok(())
     });
-    click(&mut writer, &["Project", "Apply draft", "Add reply"]).unwrap();
+    click(&mut writer, &["Workspace", "Apply draft", "Add reply"]).unwrap();
     let reply = writer.session.model().view().clone();
     assert_ne!(first, reply);
     let source = writer.session.model().document().source();
@@ -113,7 +113,13 @@ fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_synt
     });
     click(
         &mut writer,
-        &["Add line", "Add reply", "Project", "Read beat", "Add beat"],
+        &[
+            "Add line",
+            "Add reply",
+            "Workspace",
+            "Read beat",
+            "Add beat",
+        ],
     )
     .unwrap();
     assert_eq!(writer.session.model().view(), &selection);
@@ -126,7 +132,7 @@ fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_synt
         model.set_draft("-> syntax".into());
         Ok(())
     });
-    click(&mut writer, &["Project", "Apply draft"]).unwrap();
+    click(&mut writer, &["Workspace", "Apply draft"]).unwrap();
     assert!(writer.status.contains("your editor"));
     assert_eq!(writer.session.model().draft(), "-> syntax");
 }
@@ -161,7 +167,7 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     source.push_str("-> END\n");
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["Project", "Read beat"]).unwrap();
+    click(&mut writer, &["Workspace", "Read beat"]).unwrap();
     let rows = writer.reading.rows.clone();
     let source = writer.reading.source.clone().unwrap();
     assert_eq!(rows.len(), 10_001);
@@ -189,9 +195,9 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     click(
         &mut writer,
         &[
-            "Project",
+            "Workspace",
             "Discard draft",
-            "Project",
+            "Workspace",
             "Read beat",
             "Next beat entries",
         ],
@@ -223,7 +229,7 @@ fn paged_conditional_entries_keep_their_context_and_plural_fragments_stay_read_o
     click(
         &mut writer,
         &[
-            "Project",
+            "Workspace",
             "Read beat",
             "Next beat entries",
             "Next beat entries",

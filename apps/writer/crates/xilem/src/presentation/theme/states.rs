@@ -191,18 +191,31 @@ pub(super) fn pressable<W: Widget>(
 }
 
 /// Text inputs and checkboxes: opaque hover so a field never shows the desk, and no sinking.
+/// Manuscript fields have no frame at rest and a hairline of padding for the 2px focus border.
 pub(super) fn field<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, scale: f64) {
-    let look = Look {
-        rest: None,
-        hover: (p.hover, p.boundary),
-        pressed: (p.pressed, p.boundary),
+    let look = |rest, border: Color, padding| Look {
+        rest,
+        hover: (p.hover, border),
+        pressed: (p.pressed, border),
         focus: Some(p.accent),
-        disabled: (p.inset, p.rule),
+        disabled: (
+            rest.map_or(p.inset, |(fill, _)| fill),
+            rest.map_or(p.rule, |(_, border)| border),
+        ),
         border: 1.,
         sinks: false,
-        padding: (6. * scale, 12. * scale),
+        padding,
     };
     let mut stack = PropertyStack::new();
-    look.push(&mut stack, &Selector::new());
+    look(None, p.boundary, (6. * scale, 12. * scale)).push(&mut stack, &Selector::new());
+    look(
+        Some((Color::TRANSPARENT, Color::TRANSPARENT)),
+        Color::TRANSPARENT,
+        (1., 1.),
+    )
+    .push(
+        &mut stack,
+        &Selector::classes(&[ControlStyle::Manuscript.class()]),
+    );
     properties.insert_stack::<W>(stack);
 }

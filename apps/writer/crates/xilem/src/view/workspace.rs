@@ -46,15 +46,22 @@ impl Layout {
         } else {
             available
         };
+        let script_pane = if full_script { available } else { script };
+        let sheet = workspace == Workspace::Script
+            && state.viewport.width >= sheet::MINIMUM_WINDOW
+            && script + sheet::EXTENT <= available;
         Self {
             map,
-            script,
-            script_pane: if full_script { available } else { script },
+            // Full-bleed paper keeps a margin of paper either side of the measure.
+            script: if sheet {
+                script
+            } else {
+                script.min(script_pane - 2. * sheet::BLEED)
+            },
+            script_pane,
             compact_split,
             split_available,
-            sheet: workspace == Workspace::Script
-                && state.viewport.width >= sheet::MINIMUM_WINDOW
-                && script + sheet::EXTENT <= available,
+            sheet,
             available,
         }
     }
@@ -132,14 +139,8 @@ pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> 
         [
             ("Script", Workspace::Script),
             ("Map", Workspace::Map),
-            (
-                if split_available {
-                    "Split"
-                } else {
-                    "Split unavailable"
-                },
-                Workspace::Split,
-            ),
+            // Disabled when the window is too narrow; the status line gives the reason.
+            ("Split", Workspace::Split),
         ]
         .map(|(title, workspace)| {
             segment(
@@ -156,27 +157,4 @@ pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> 
         }),
     );
     flex_row((modes, flex_col(()).flex(1.))).gap(0.px())
-}
-
-pub(super) fn authoring_modes(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let localise = state.workspaces.screen == crate::workspaces::Screen::Localisation;
-    segments(
-        &state.palette,
-        [("Write", false), ("Localize", true)].map(|(title, selected)| {
-            segment(
-                state.ui_scale(),
-                &state.palette,
-                title,
-                selected == localise,
-                state.project_action_blocked() || (selected && state.session.project().is_none()),
-                move |state: &mut Writer| {
-                    if selected {
-                        state.open_localisation();
-                    } else {
-                        state.return_to_writing();
-                    }
-                },
-            )
-        }),
-    )
 }

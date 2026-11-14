@@ -39,7 +39,7 @@ fn configuring_preview_uses_the_workspace_and_restores_retained_writing_and_refe
         let field = mounted.find("Manuscript");
         assert!(mounted.contains_text("Pinned snapshot"));
         mounted.replace_text("Manuscript", "Keep pending writing.");
-        mounted.activate("Project");
+        mounted.activate("Workspace");
         mounted.activate("Configure preview");
         let expanded = preview_bounds(&mounted);
         assert!(expanded.height() > 320., "{scale}%: {expanded:?}");
@@ -79,7 +79,7 @@ fn configuring_preview_uses_the_workspace_and_restores_retained_writing_and_refe
         assert_eq!(writer.session.model().draft(), "Keep pending writing.");
         assert!(!writer.trial.visible);
         assert!(!writer.trial.settings.open);
-        mounted.activate("Project");
+        mounted.activate("Workspace");
         mounted.activate("Configure preview");
         mounted.activate("Return to writing");
         assert_eq!(mounted.find("Manuscript"), field);
@@ -103,7 +103,7 @@ fn current_run_precedes_configuration_and_focus_retains_the_collapsed_reference(
     let mut mounted = Mounted::new(App::with_writer(writer), page);
     let manuscript = mounted.find("Manuscript");
     let reference = mounted.find("Unpin reference");
-    mounted.activate("Project");
+    mounted.activate("Workspace");
     mounted.activate("Configure preview");
     let bounds = |name| {
         let widget = mounted.harness.get_widget_with_id(mounted.find(name));

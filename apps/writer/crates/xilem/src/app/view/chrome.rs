@@ -1,4 +1,5 @@
 //! Window identity and workspace commands live outside the manuscript's reading measure.
+use crate::presentation::segments::{segment, segments};
 use crate::presentation::{identity, label, paragraph, print};
 use crate::{
     Phase, Writer,
@@ -8,7 +9,7 @@ use xilem::{
     WidgetView,
     masonry::{kurbo::Axis, layout::AsUnit, parley::style::FontWeight},
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, sized_box},
+    view::{CrossAxisAlignment, flex_col, flex_row, sized_box},
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
@@ -18,20 +19,10 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
             .writer
             .as_ref()
             .is_some_and(|writer| writer.phase() != Phase::Writing);
-    let compact_writing = !app.show_welcome()
-        && !app.settings_open()
-        && app.writer.as_ref().is_some_and(|writer| {
-            writer.compact_chrome()
-                && writer.workspaces.screen == crate::workspaces::Screen::Write
-                && !writer.attention.is_focused()
-        });
+    // The tab row stays at every window size and interface scale.
     sized_box(
         flex_col((
-            indexed_stack((
-                identity_bar(app, scale, blocked),
-                flex_col(()).dims((0.px(), 0.px())),
-            ))
-            .active(usize::from(compact_writing)),
+            identity_bar(app, scale, blocked),
             app.workspace_menu()
                 .then(|| workspace_actions(app, scale, searching)),
             (!app.status.is_empty() && (!app.show_welcome() || app.settings_open()))
@@ -125,11 +116,14 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             }),
         app.writer
             .as_ref()
-            .filter(|_| !writing && !app.show_welcome() && !app.settings_open())
-            .map(|_| {
-                print::action(scale, "Commands", blocked, |app: &mut App| {
-                    app.open_picker(picker::Search::Commands)
-                })
+            .filter(|_| !app.show_welcome() && !app.settings_open())
+            .map(|writer| {
+                (
+                    authoring_modes(writer, app.picker.is_some()),
+                    print::action(scale, "Commands", blocked, |app: &mut App| {
+                        app.open_picker(picker::Search::Commands)
+                    }),
+                )
             }),
         (!writing).then(|| {
             print::action(scale, "Workspace", blocked, |app: &mut App| {
@@ -138,6 +132,34 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
         }),
     ))
     .gap(8.px())
+}
+
+/// Writing and localising are the app's two modes, chosen from the tab row.
+fn authoring_modes(writer: &Writer, searching: bool) -> impl WidgetView<App> + use<> {
+    let localise = writer.workspaces.screen == crate::workspaces::Screen::Localisation;
+    segments(
+        &writer.palette,
+        [("Write", false), ("Localise", true)].map(|(title, selected)| {
+            segment(
+                writer.ui_scale(),
+                &writer.palette,
+                title,
+                selected == localise,
+                searching
+                    || writer.project_action_blocked()
+                    || (selected && writer.session.project().is_none()),
+                move |app: &mut App| {
+                    if let Some(writer) = &mut app.writer {
+                        if selected {
+                            writer.open_localisation();
+                        } else {
+                            writer.return_to_writing();
+                        }
+                    }
+                },
+            )
+        }),
+    )
 }
 
 fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<App> + use<> {
@@ -167,7 +189,7 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
             .map(|writer| {
                 print::action(
                     scale,
-                    "Localize",
+                    "Localise",
                     searching
                         || writer.project_action_blocked()
                         || writer.session.project().is_none(),

@@ -49,11 +49,12 @@ fn writer_requests_reach_the_shell_once() {
     let directory = test_support::project(SOURCE).unwrap();
     let writer = test_support::open(&directory).unwrap();
     let mut shell = Shell::with_writer(writer);
-    shell.writer.as_mut().unwrap().request_workspace_menu();
+    shell.writer.as_mut().unwrap().request_settings();
     shell.apply_writer_requests();
-    assert!(shell.workspace_menu);
+    assert!(shell.settings_open());
+    shell.close_settings();
     shell.apply_writer_requests();
-    assert!(shell.workspace_menu, "a taken request does not repeat");
+    assert!(!shell.settings_open(), "a taken request does not repeat");
     shell
         .writer
         .as_mut()
@@ -61,6 +62,9 @@ fn writer_requests_reach_the_shell_once() {
         .request_search(Search::Commands);
     shell.apply_writer_requests();
     assert!(shell.picker.is_some());
+    shell.writer.as_mut().unwrap().request_projects();
+    shell.apply_writer_requests();
+    assert!(shell.show_welcome() && !shell.settings_open());
 }
 
 #[test]

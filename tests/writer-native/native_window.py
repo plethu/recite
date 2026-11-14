@@ -115,7 +115,7 @@ class NativeWindow:
 
         def open_menu():
             if self.find_action(label) is None and self.find("Document actions menu") is None:
-                self.act("Project")
+                self.act("Workspace")
             return True
 
         self.wait(open_menu, "document action or open menu: " + label)

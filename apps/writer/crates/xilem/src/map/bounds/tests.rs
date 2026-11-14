@@ -270,8 +270,9 @@ fn panning_across_mount_boundaries_retains_surviving_native_cards() {
             selected,
             "a surviving card must not remount when its vector slot changes"
         );
+        // A one-row toolbar leaves this 1280×1000 window room for a seventh card.
         assert!(
-            scene.mounted_indices().count() <= 6,
+            scene.mounted_indices().count() <= 7,
             "mount work stays bounded by this fixed viewport"
         );
         assert!(Arc::ptr_eq(&graph, &scene.projection.graph));
