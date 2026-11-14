@@ -3,17 +3,17 @@ use recite_core::DocumentKey;
 use recite_writer_model::{
     Document, EditError, ProjectContext, SearchIndex, Workbench, WorkbenchError,
 };
-use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 struct Control {
-    calls: Cell<usize>,
+    calls: AtomicUsize,
     stop_at: usize,
 }
 
 impl Control {
     fn new(stop_at: usize) -> Self {
         Self {
-            calls: Cell::new(0),
+            calls: AtomicUsize::new(0),
             stop_at,
         }
     }
@@ -21,8 +21,7 @@ impl Control {
 
 impl WorkControl for Control {
     fn checkpoint(&self) -> Result<(), Interrupted> {
-        let call = self.calls.get();
-        self.calls.set(call + 1);
+        let call = self.calls.fetch_add(1, Ordering::Relaxed);
         if call >= self.stop_at {
             Err(Interrupted)
         } else {
@@ -48,8 +47,11 @@ fn initial_analysis_can_stop_at_each_checkpoint() -> Result<(), Box<dyn std::err
     let complete = Control::new(usize::MAX);
     let document = Document::in_project_with_control(key.clone(), source, context()?, &complete)?;
     assert!(document.diagnostics().is_empty());
-    assert!(complete.calls.get() > 1, "analysis must check beyond entry");
-    for stop_at in 0..complete.calls.get() {
+    assert!(
+        complete.calls.load(Ordering::Relaxed) > 1,
+        "analysis must check beyond entry"
+    );
+    for stop_at in 0..complete.calls.load(Ordering::Relaxed) {
         assert!(
             matches!(
                 Document::in_project_with_control(
@@ -72,8 +74,8 @@ fn interrupted_refresh_preserves_draft_preview_and_analysis()
     let complete = Control::new(usize::MAX);
     let mut reference = Workbench::new(recite_writer_model::FIXTURE)?;
     reference.refresh_project_with_control(context()?, &complete)?;
-    assert!(complete.calls.get() > 1);
-    for stop_at in 0..complete.calls.get() {
+    assert!(complete.calls.load(Ordering::Relaxed) > 1);
+    for stop_at in 0..complete.calls.load(Ordering::Relaxed) {
         let mut workbench = Workbench::new(recite_writer_model::FIXTURE)?;
         workbench.start_preview()?;
         workbench.set_draft("Unapplied prose.".into());
@@ -116,7 +118,7 @@ fn search_cancellation_never_returns_a_partial_index() -> Result<(), Box<dyn std
         controlled.search("would", 10),
         SearchIndex::build(&documents).search("would", 10)
     );
-    for stop_at in 0..complete.calls.get() {
+    for stop_at in 0..complete.calls.load(Ordering::Relaxed) {
         assert!(matches!(
             SearchIndex::build_with_control(&documents, &Control::new(stop_at)),
             Err(Interrupted)
@@ -147,7 +149,7 @@ fn large_document_search_stops_between_roots() -> Result<(), Box<dyn std::error:
             SearchIndex::build_with_control(&documents, &control),
             Err(Interrupted)
         ));
-        assert_eq!(control.calls.get(), stop_at + 1);
+        assert_eq!(control.calls.load(Ordering::Relaxed), stop_at + 1);
     }
     Ok(())
 }

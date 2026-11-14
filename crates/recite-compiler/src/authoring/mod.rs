@@ -80,6 +80,6 @@ pub use summary::{
     StableIdKind, StableIdSummary,
 };
 
-pub use control::{CancellationToken, Interrupted, WorkControl};
+pub use control::{CancellationToken, Interrupted, WorkControl, map_in_order};
 
 pub use query::AuthoringQuery;

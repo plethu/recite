@@ -277,6 +277,15 @@ Measure Writer on every declared platform with the same representative fixture: 
 project open/index, edit-to-diagnostics, schema/catalogue refresh, preview, graph navigation and
 idle/active memory. Headless LSP measurements do not establish those native GUI costs.
 
+The native [large-project probe](../../tests/writer-native/large_project.py) opens a generated
+`large` profile (20 files, 50,000 lines, about 9 MB of source and a 9.5 MB catalogue) in an
+optimized Writer on an owned compositor. It records three cold opens to the first line and to
+project diagnostics, scene switches through the picker, project search reveals, typing
+edit-to-paint, and RSS after open, navigation and each of three type-and-undo cycles. Its timers end
+when the accessibility tree shows the result, so they include the frame and AT-SPI update. It does
+not yet time catalogue refresh, preview or graph navigation; the headless Writer workloads remain
+the evidence for those.
+
 ### 19.6 Engine Adapter Benchmarks
 
 Measure asset loading/conversion, event and typed-wrapper conversion, active-session update, and
@@ -324,6 +333,12 @@ frame from the client's Wayland protocol log. It requires a CPU adapter to selec
 key to paint, a frame interval p50 within 30 ms and an edit-to-paint p50 within 80 ms (#283), and
 retains its receipt. These are client frame-readiness timings for software rendering, not
 input-to-photon latency or release baselines (#109).
+
+Scheduled, manual and release CI also runs the large-project probe on that runner with budgets of
+several times the timings measured on a 4-core development machine: cold open to diagnostics
+(median) 4 s, scene switch and search reveal (median) 1 s, typing edit-to-paint p95 80 ms, RSS after
+open 640 MiB, and RSS growth across the edit cycles 48 MiB. They catch order-of-magnitude
+regressions on shared runners; release baselines need a stable reference machine (#109).
 
 Outside those gates, initial review triggers are more than 10% regression in hot runtime paths, more
 than 20% in compiler/LSP paths, accidental O(n^2) work on medium/large fixtures, or unexplained

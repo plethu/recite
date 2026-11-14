@@ -189,6 +189,29 @@ presses, edit-to-paint and frame-interval percentiles against the §19.8 budgets
 the client's `WAYLAND_DEBUG` protocol trace. Run it again with `MASONRY_IMAGING_BACKEND=vello` to
 see the llvmpipe path fail those budgets.
 
+`just writer probe target/writer-native/large-project.json large-project` builds `recite-fixturegen`
+and an optimized Writer, generates the `large` synthetic profile (`RECITE_LARGE_PROFILE=medium`
+gives a quicker local run) and times the native open, navigation, search and editing journey in
+§19.5 against the §19.8 budgets. Its receipt keeps every sample, the budgets beside their
+measurements and RSS checkpoints. `RECITE_LARGE_BUDGET_SCALE=0.1` shows the gate failing. Set
+`RECITE_LARGE_PERF` to a `perf` binary to sample the last open from its first instruction: the probe
+starts Writer stopped, attaches `perf record` with DWARF call graphs and `CLOCK_MONOTONIC`
+timestamps, and records each phase's boundaries for `perf script --time`.
+
+On the 4-core development VM, cold open of the `large` profile was dominated by two sequential
+passes over every document: the search index and the authoring analysis. Both now fan out across two
+worker threads with `map_in_order`, which keeps results in document order and stops at the first
+interruption; inputs under 128 KiB stay on the calling thread. Each worker's allocator arena keeps
+its own peak working set, about 7.5 MiB per extra worker on this project: with up to eight workers
+the LSP comparison's index readiness fell from 529 to 226 ms but its peak RSS rose 28%, beyond the
+§19.8 memory limit, and a single allocator arena restored the memory but serialized the workers. Two
+workers moved LSP index readiness from 509 to 324 ms within that limit (+15 MiB). In alternating
+native runs, the first line moved from 1.07-1.17 s to 0.70-0.73 s and diagnostics from 1.22-1.32 s
+to 0.80-0.85 s, with RSS after open 273 to 288 MiB. Switch and search timings match the `medium`
+profile; they are rendering and accessibility costs, not project-size costs. The remaining open is
+the serial project fact index (about 100 ms) and the first frame (about 200 ms). Revisit the worker
+count if per-document analysis allocates less or the memory limit changes.
+
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is memoized independently of camera and hover. Content refresh derives current connections
 and labels, and reuses geometry when ordered beat IDs and entry flags, ordered connection endpoints

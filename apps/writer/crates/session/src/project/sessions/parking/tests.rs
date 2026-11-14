@@ -2,14 +2,17 @@ use super::two_scenes;
 use crate::recovery::RecoveryStore;
 use recite_compiler::authoring::{Interrupted, WorkControl};
 use recite_writer_model::{EditError, View};
-use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-struct AfterFirst(Cell<usize>);
+struct AfterFirst(AtomicUsize);
 impl WorkControl for AfterFirst {
     fn checkpoint(&self) -> Result<(), Interrupted> {
-        let left = self.0.get().checked_sub(1).ok_or(Interrupted)?;
-        self.0.set(left);
-        Ok(())
+        self.0
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+                left.checked_sub(1)
+            })
+            .map(drop)
+            .map_err(|_| Interrupted)
     }
 }
 
@@ -29,7 +32,7 @@ fn failed_or_cancelled_navigation_restarts_the_original_recovery_owner()
                 &other,
                 None,
                 |_| Ok(()),
-                &AfterFirst(Cell::new(1)),
+                &AfterFirst(AtomicUsize::new(1)),
             )
         } else {
             files.switch(&mut current, &other, None, |_| {

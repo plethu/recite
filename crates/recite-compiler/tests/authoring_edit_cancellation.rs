@@ -1,16 +1,19 @@
-use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use recite_compiler::authoring::{
     AuthoringEditError, AuthoringKernel, AuthoringRequest, Interrupted, SavedDocument, WorkControl,
 };
 use recite_core::{DocumentKey, SourcePosition};
 
-struct Budget(Cell<usize>);
+struct Budget(AtomicUsize);
 impl WorkControl for Budget {
     fn checkpoint(&self) -> Result<(), Interrupted> {
-        let remaining = self.0.get().checked_sub(1).ok_or(Interrupted)?;
-        self.0.set(remaining);
-        Ok(())
+        self.0
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+                left.checked_sub(1)
+            })
+            .map(drop)
+            .map_err(|_| Interrupted)
     }
 }
 
@@ -29,7 +32,7 @@ fn large_plan_validation_stops_between_edits_and_retains_snapshot()
     let plan = snapshot.plan_rename_block(&key, SourcePosition::new(1, 4)?, "renamed")?;
     assert_eq!(plan.edits().len(), 1001);
     for allowance in [0, 2, 100, 500, 1000] {
-        let budget = Budget(Cell::new(allowance));
+        let budget = Budget(AtomicUsize::new(allowance));
         assert!(matches!(
             plan.validate_with_control(&snapshot.query(&budget)),
             Err(AuthoringEditError::Interrupted(_))

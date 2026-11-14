@@ -157,6 +157,8 @@ def run_probe(binary, output, scenario):
             from structure_interactions import run
         elif scenario == "frame-timing":
             from frame_timing import run
+        elif scenario == "large-project":
+            from large_project import run
         else:
             from writer_interactions import run
 
@@ -222,6 +224,7 @@ def main():
             "localisation-sources",
             "localisation-sources-scale",
             "frame-timing",
+            "large-project",
         ),
         default="all",
     )
@@ -326,7 +329,9 @@ def main():
         )
         try:
             code = process.wait(
-                timeout=120
+                timeout=900
+                if args.scenario == "large-project"
+                else 120
                 if args.scenario
                 in (
                     "all",

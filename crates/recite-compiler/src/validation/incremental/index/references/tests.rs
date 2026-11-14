@@ -5,14 +5,18 @@ use crate::authoring::{
 use crate::validation::incremental::VALIDATED_DOCUMENTS;
 use recite_core::{DocumentKey, StableIdGenerator, StatementHeader};
 use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{collections::BTreeSet, sync::Arc};
 
-struct Budget(Cell<usize>);
+struct Budget(AtomicUsize);
 impl WorkControl for Budget {
     fn checkpoint(&self) -> Result<(), Interrupted> {
-        let next = self.0.get().checked_sub(1).ok_or(Interrupted)?;
-        self.0.set(next);
-        Ok(())
+        self.0
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+                left.checked_sub(1)
+            })
+            .map(drop)
+            .map_err(|_| Interrupted)
     }
 }
 
@@ -79,7 +83,7 @@ fn every_reference_checkpoint_cancels_without_publishing_and_retries_exactly() {
             .unwrap();
         let mut committed = false;
         for cutoff in 0..256 {
-            match kernel.apply_with_control(request.clone(), &Budget(Cell::new(cutoff))) {
+            match kernel.apply_with_control(request.clone(), &Budget(AtomicUsize::new(cutoff))) {
                 Err(AuthoringError::Interrupted(_)) => {
                     assert_eq!(kernel.snapshot(), &before);
                     let retry = kernel

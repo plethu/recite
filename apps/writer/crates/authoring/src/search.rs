@@ -66,18 +66,18 @@ impl SearchIndex {
         control: &dyn WorkControl,
     ) -> Result<Self, Interrupted> {
         control.checkpoint()?;
-        let mut index = Self {
-            documents: Vec::with_capacity(documents.len()),
-        };
-        for document in documents {
-            control.checkpoint()?;
-            let shard = DocumentIndex::build_with_control(document, control)?;
-            index
-                .documents
-                .push((document.key().as_str().to_owned(), Arc::new(shard)));
-            control.checkpoint()?;
-        }
-        Ok(index)
+        let shards = recite_compiler::authoring::map_in_order(
+            documents,
+            |document| document.text().len(),
+            control,
+            |document| {
+                control.checkpoint()?;
+                let shard = DocumentIndex::build_with_control(document, control)?;
+                control.checkpoint()?;
+                Ok((document.key().as_str().to_owned(), Arc::new(shard)))
+            },
+        )?;
+        Ok(Self { documents: shards })
     }
 
     fn add_document(&mut self, document: &SavedDocument) {

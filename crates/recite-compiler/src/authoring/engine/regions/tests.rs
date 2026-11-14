@@ -1,4 +1,5 @@
 use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::authoring::{
     AuthoringKernel, AuthoringRequest, Interrupted, SavedDocument, WorkControl,
@@ -135,11 +136,15 @@ fn typing_and_line_insertion_parse_only_the_changed_region() {
     );
 }
 
-struct Budget(Cell<usize>);
+struct Budget(AtomicUsize);
 impl WorkControl for Budget {
     fn checkpoint(&self) -> Result<(), Interrupted> {
-        self.0.set(self.0.get().checked_sub(1).ok_or(Interrupted)?);
-        Ok(())
+        self.0
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+                left.checked_sub(1)
+            })
+            .map(drop)
+            .map_err(|_| Interrupted)
     }
 }
 
@@ -160,8 +165,10 @@ fn interrupted_region_candidates_leave_committed_analysis_unchanged() {
     let edited = source.replace("Hello.", "New\n  paragraph.");
     let mut completed = false;
     for allowance in 0..300 {
-        let result =
-            kernel.apply_with_control(request(&kernel, &edited), &Budget(Cell::new(allowance)));
+        let result = kernel.apply_with_control(
+            request(&kernel, &edited),
+            &Budget(AtomicUsize::new(allowance)),
+        );
         if result.is_ok() {
             completed = true;
             break;
