@@ -48,6 +48,7 @@ exercised.
 | Rust implementation and maintainability                  | [Rust quality](.agents/skills/recite-rust-quality/SKILL.md)                   |
 | Parser, compiler, runtime, schema and language semantics | [Core language](.agents/skills/recite-core-language/SKILL.md)                 |
 | Tests, fixtures, diagnostics, LSP and benchmarks         | [Testing and diagnostics](.agents/skills/recite-testing-diagnostics/SKILL.md) |
+| Writer visual design, UX passes and UI regression review | [Writer design council](.agents/skills/recite-writer-design-council/SKILL.md) |
 | GitHub planning, milestone integration and merge checks  | [GitHub workflow](.agents/skills/recite-github-pm/SKILL.md)                   |
 
 Load relevant skills only. For reviews, use the relevant domain skill and inspect the final diff,
