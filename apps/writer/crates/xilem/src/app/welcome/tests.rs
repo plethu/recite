@@ -61,7 +61,6 @@ fn project_actions_stay_visible_at_both_scales_without_replacing_folder_fields()
                         "Open selected project"
                     },
                     "Try temporary examples",
-                    "Close Writer",
                 ] {
                     let control = mounted.harness.get_widget_with_id(mounted.find(name));
                     let bounds = control
@@ -172,4 +171,28 @@ fn project_failure_leads_with_recovery_and_discloses_the_original_diagnostic() {
     assert_eq!(mounted.find("Project folder"), folder);
     assert!(mounted.state.welcome_problem.is_none());
     assert!(mounted.state.status.is_empty());
+}
+
+#[test]
+fn creating_a_project_shows_its_name_field_above_the_actions() {
+    let mut mounted = Mounted::new(App::empty(), page);
+    mounted
+        .harness
+        .process_window_event(WindowEvent::Resize((1200, 800).into()));
+    mounted.settle();
+    mounted.activate("Create a new project");
+    mounted.settle();
+    let bounds = |name: &str| {
+        let control = mounted.harness.get_widget_with_id(mounted.find(name));
+        control
+            .ctx()
+            .window_transform()
+            .transform_rect_bbox(control.ctx().border_box())
+    };
+    let field = bounds("Project name");
+    let action = bounds("Create project");
+    assert!(
+        field.y1 <= action.y0,
+        "the name field must not sit under the actions: {field:?} {action:?}"
+    );
 }
