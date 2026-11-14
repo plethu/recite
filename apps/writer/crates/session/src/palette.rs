@@ -4,6 +4,9 @@ pub use rgba::Rgba;
 
 pub const STAMP_HOVER: f32 = 0.12;
 pub const STAMP_PRESSED: f32 = 0.22;
+/// Hovered controls lay this much ink over whatever surface they sit on, desk or sheet. At 10%
+/// ink text keeps 9:1 even over the grain's darkest point.
+pub const INK_HOVER: f32 = 0.10;
 /// The grain tile's peak alpha; `assets/identity/grain.png` never exceeds it.
 pub const GRAIN_PEAK: f32 = 0.07;
 
@@ -145,6 +148,11 @@ impl Palette<Rgba> {
             // The identity print recipe's grain ink; the dark variant is a later pass.
             grain: Rgba::from_rgb(64, 46, 51),
         }
+    }
+
+    /// A hovered control's fill: ink laid over `base`.
+    pub fn hover_over(&self, base: Rgba) -> Rgba {
+        Rgba::mix(base, self.ink, INK_HOVER)
     }
 
     /// The darkest point of the grained desk, where text on the desk is checked.

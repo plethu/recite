@@ -18,6 +18,7 @@ pub(crate) mod material;
 pub(crate) mod print;
 pub(crate) use icons::Icon;
 mod radio;
+pub(crate) mod segments;
 mod shaped_text;
 pub(crate) use shaped_text::ShapedText;
 mod theme;

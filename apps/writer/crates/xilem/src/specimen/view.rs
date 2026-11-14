@@ -2,7 +2,7 @@
 mod inputs;
 mod samples;
 use super::*;
-use crate::presentation::{label, paragraph, text_button};
+use crate::presentation::{label, material::desk, paragraph, print, text_button};
 use xilem::masonry::properties::LineBreaking;
 use xilem::{
     WidgetView,
@@ -12,7 +12,7 @@ use xilem::{
 };
 
 pub(super) fn specimen(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
-    portal(
+    let page = portal(
         sized_box(
             flex_col((
                 header(state),
@@ -24,10 +24,11 @@ pub(super) fn specimen(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(24.px()),
         )
-        .padding(24.px())
-        .background_color(state.theme.palette.canvas),
+        .padding(24.px()),
     )
-    .constrain_horizontal(true)
+    .constrain_horizontal(true);
+    // The specimen sits on the same grained desk as Writer, so hover is judged against grain.
+    desk(state.theme.grain.clone(), page).background_color(state.theme.palette.canvas)
 }
 fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     flex_col((
@@ -82,15 +83,20 @@ fn actions(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     flex_col((
         label(state.scale(), "Actions and navigation").text_size(22. * state.scale()),
         flex_col((
-            text_button(state.scale(), "Try scene", |state: &mut Specimen| {
-                state.message = "Primary action activated.".into()
-            }),
+            print::primary_action(
+                state.scale(),
+                "Try scene",
+                &state.theme.palette,
+                false,
+                |state: &mut Specimen| state.message = "Primary action activated.".into(),
+            ),
             text_button(state.scale(), "Add beat", |state: &mut Specimen| {
                 state.message = "Secondary action activated.".into()
             }),
-            text_button(
+            print::action(
                 state.scale(),
                 "Arrange automatically",
+                false,
                 |state: &mut Specimen| state.message = "Quiet action activated.".into(),
             ),
             text_button(state.scale(), "Save changes", |_: &mut Specimen| {}).disabled(true),

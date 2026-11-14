@@ -10,7 +10,11 @@ pub(crate) enum ControlStyle {
     Action,
     Navigation,
     Segment,
+    /// The chosen segment of a group: a solid stamp.
+    Selected,
     Manuscript,
+    /// A compact icon face with even padding.
+    Icon,
 }
 impl ControlStyle {
     pub fn class(self) -> &'static str {
@@ -19,7 +23,9 @@ impl ControlStyle {
             Self::Action => "writer-action",
             Self::Navigation => "writer-navigation",
             Self::Segment => "writer-segment",
+            Self::Selected => "writer-selected",
             Self::Manuscript => "writer-manuscript",
+            Self::Icon => "writer-icon",
         }
     }
 }
