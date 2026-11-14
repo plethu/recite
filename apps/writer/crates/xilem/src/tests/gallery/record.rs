@@ -101,7 +101,7 @@ impl Recorder {
             "intent": entry.intent,
             "variant": entry.variant,
             "kind": if entry.frames.len() > 1 { "sequence" } else { "still" },
-            "strip": (entry.frames.len() > 1).then(|| format!("strips/{}.png", entry.id)),
+            "strip": (entry.frames.len() > 1).then(|| format!("strips/{}.webp", entry.id)),
             "frames": entry.frames,
         }));
     }
@@ -118,8 +118,8 @@ impl Recorder {
             return;
         };
         let name = format!("{}--{:02}", entry.id, entry.frames.len());
-        let file = format!("frames/{name}.png");
-        save_png(&image, &self.root.join(&file));
+        let file = format!("frames/{name}.webp");
+        save_image(&image, &self.root.join(&file));
         let (nodes, lint) = accessibility(harness, frame.scale);
         let a11y = format!("a11y/{name}.json");
         // One node per line keeps snapshots small and their diffs readable.
@@ -164,7 +164,7 @@ impl Recorder {
             imageops::overlay(&mut strip, frame, i64::from(x), i64::from(gap));
             x += frame.width() + gap;
         }
-        save_png(&strip, &self.root.join(format!("strips/{}.png", entry.id)));
+        save_image(&strip, &self.root.join(format!("strips/{}.webp", entry.id)));
     }
 
     /// Write the manifest and contact sheet; returns the manifest for comparison.
@@ -185,16 +185,18 @@ impl Recorder {
     }
 }
 
-fn save_png(image: &RgbaImage, path: &Path) {
-    let mut bytes = std::io::Cursor::new(vec![]);
-    image
-        .write_to(&mut bytes, image::ImageFormat::Png)
+/// Lossless WebP at libwebp's slowest method is about half the size of optimised PNG for these
+/// frames, which matters for the committed baseline. `exact` keeps every pixel's value.
+pub(crate) fn save_image(image: &RgbaImage, path: &Path) {
+    let mut config = webp::WebPConfig::new().expect("WebP configuration");
+    config.lossless = 1;
+    config.quality = 100.;
+    config.method = 6;
+    config.exact = 1;
+    let encoded = webp::Encoder::from_rgba(image, image.width(), image.height())
+        .encode_advanced(&config)
         .expect("encode frame");
-    let bytes = bytes.into_inner();
-    // Committed baselines stay small; fall back to the plain encoding if optimisation fails.
-    let bytes =
-        oxipng::optimize_from_memory(&bytes, &oxipng::Options::from_preset(2)).unwrap_or(bytes);
-    fs::write(path, bytes).expect("write frame");
+    fs::write(path, &*encoded).expect("write frame");
 }
 
 /// The accessibility tree in reading order, plus automatic findings for interactive nodes.

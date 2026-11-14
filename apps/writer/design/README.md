@@ -41,11 +41,11 @@ example `16,120,300`): each transition step then also records frames at those ti
 | --------------- | ------------------------------------------------------------------------- |
 | `index.html`    | Contact sheet grouped by surface, with captions, findings and links       |
 | `manifest.json` | Entries, frames, variants, intents, warnings and accessibility findings   |
-| `frames/*.png`  | One image per frame, named `<scene>--<variant>--<step>.png`               |
+| `frames/*.webp` | One lossless image per frame, named `<scene>--<variant>--<step>.webp`     |
 | `a11y/*.json`   | The accessibility tree in reading order: role, name, value, focus, bounds |
-| `strips/*.png`  | Each transition's frames side by side at half size                        |
+| `strips/*.webp` | Each transition's frames side by side at half size                        |
 | `report.md`     | Comparison with the baseline, when one exists                             |
-| `diff/*.png`    | Changed pixels in magenta over a faded current frame                      |
+| `diff/*.webp`   | Changed pixels in magenta over a faded current frame                      |
 
 Frame findings are automatic: an interactive node with no accessible name, or an enabled target
 smaller than 24×24 logical pixels (WCAG 2.2 §2.5.8). Warnings mean a scene could not reach the
