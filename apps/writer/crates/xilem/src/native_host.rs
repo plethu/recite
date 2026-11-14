@@ -1,6 +1,6 @@
 //! Single-window host forwarding; command chords are handled before native text input.
 mod accessibility;
-mod keyboard;
+pub(crate) mod keyboard;
 mod logging;
 use keyboard::Keyboard;
 use masonry_winit::{

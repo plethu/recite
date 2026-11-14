@@ -1,5 +1,6 @@
 //! A real Xilem view loop with live workers, the Writer's own theme and fonts, and a rendered frame.
 use super::record::Recorder;
+use crate::native_host::keyboard::tab::past_panes;
 use crate::tests::support::native_label;
 use masonry::testing::{TestHarness, TestHarnessParams};
 use std::sync::{Arc, mpsc};
@@ -291,6 +292,8 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Stage<S, V> {
     }
     pub fn tab(&mut self, backwards: bool) {
         self.harness.press_tab_key(backwards);
+        // The native host passes over unnamed scroll panes; the gallery walks Tab the same way.
+        past_panes(self.harness.render_root(), backwards);
         self.settle();
     }
     pub fn park_pointer(&mut self) {
