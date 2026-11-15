@@ -68,4 +68,12 @@ fn a_chosen_later_beat_comes_to_the_top_and_the_running_head_follows_the_scroll(
         head_shown(&mut mounted),
         "the scene title has left the sheet"
     );
+    let root = mounted.harness.render_root();
+    let portal = reading::manuscript(root, None).unwrap();
+    let heading = heading_offset(&portal).unwrap() - scrolled;
+    assert_eq!(
+        heading,
+        HEAD + LEAD,
+        "the heading sits clear of the running head"
+    );
 }

@@ -15,7 +15,7 @@ use xilem::{
         },
         imaging::Painter,
         kurbo::{Axis, Point, Size},
-        layout::{AsUnit, LenReq, Length},
+        layout::{AsUnit, LenDef, LenReq, Length},
     },
 };
 
@@ -63,10 +63,15 @@ impl Widget for RunningHead {
         _: LenReq,
         cross: Option<Length>,
     ) -> Length {
-        if !self.shown && axis == Axis::Vertical {
-            return 0.px();
+        match axis {
+            // Hidden, the line takes no height; shown, only its own, however tall the sheet.
+            Axis::Vertical if !self.shown => 0.px(),
+            Axis::Vertical => {
+                let context = ctx.context_size();
+                ctx.compute_length(&mut self.child, LenDef::MaxContent, context, axis, cross)
+            }
+            Axis::Horizontal => ctx.redirect_measurement(&mut self.child, axis, cross),
         }
-        ctx.redirect_measurement(&mut self.child, axis, cross)
     }
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, size: Size) {
         if self.shown {

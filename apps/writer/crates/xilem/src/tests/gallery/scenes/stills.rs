@@ -113,6 +113,74 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
     );
     record.scene(
         Meta {
+            id: "script.galley",
+            group: "Script",
+            title: "Script, galley at a later beat",
+            intent: "The continuous scene: a later beat brought to the top under the running head, read-only beats around it, and a focused beat heading.",
+        },
+        |record| {
+            let directory = sample();
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "relay_hub.recite")),
+                variant,
+            );
+            stage.act(|app| {
+                if let Some(writer) = app.writer.as_mut() {
+                    writer.edit_beat(5);
+                }
+            });
+            stage.shot(record, "Station history under the running head");
+            stage.focus("Edit beat Station Answer, 7 of 9");
+            stage.shot(record, "Next beat heading focused");
+        },
+    );
+    record.scene(
+        Meta {
+            id: "script.marks",
+            group: "Script",
+            title: "Script, margin marks",
+            intent: "Unsaved work and a problem in the margin, repeated in the scene list: the halftone bar, the error wedge, the current bar.",
+        },
+        |record| {
+            let directory = sample();
+            // A reply that leads nowhere gives the next beat a problem.
+            fs::write(
+                directory.path().join("relay_hub.recite"),
+                RELAY.replacen("-> pump_house", "-> pump_room", 1),
+            )
+            .expect("broken sample scene");
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "relay_hub.recite")),
+                variant,
+            );
+            stage.act(|app| {
+                if let Some(writer) = app.writer.as_mut() {
+                    writer.edit_beat(1);
+                }
+            });
+            draft(&mut stage, "I'm looking for the courier. Have you seen her?");
+            stage.shot(record, "Unsaved line beside a problem wedge");
+        },
+    );
+    record.scene(
+        Meta {
+            id: "script.small-type",
+            group: "Script",
+            title: "Script, smallest reading size",
+            intent: "The galley grid at the smallest reading size: margin, measure and destination columns keep their proportions and floors.",
+        },
+        |record| {
+            let directory = sample();
+            let mut app = App::with_writer(open(directory.path(), "relay_hub.recite"));
+            let presentation = &mut app.preferences.config.writer.presentation;
+            if let Ok(small) = presentation.with_value(WriterPresentationField::ReadingSize, 14) {
+                *presentation = small;
+            }
+            stage(app, variant).shot(record, "Relay hub at 14px");
+        },
+    );
+    record.scene(
+        Meta {
             id: "map.sample",
             group: "Map",
             title: "Map, branching scene",

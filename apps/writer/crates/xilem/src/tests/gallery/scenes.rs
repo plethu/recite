@@ -14,7 +14,7 @@ use crate::Writer;
 use crate::app::{App, tests::gallery_page};
 use crate::session::Session;
 use crate::specimen::tests::gallery as specimen_gallery;
-use recite_config::WriterCommand;
+use recite_config::{WriterCommand, WriterPresentationField};
 use recite_writer_app::shell::Search;
 use recite_writer_session::ProjectSession;
 use recite_writer_session::location::{Location, Screen};

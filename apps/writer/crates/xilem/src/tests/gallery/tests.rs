@@ -9,6 +9,7 @@ const EXTREMES: &[&str] = &[
     "start.welcome",
     "script.sample",
     "script.draft",
+    "script.small-type",
     "map.split",
     "localise.beat",
     "overlay.settings",
