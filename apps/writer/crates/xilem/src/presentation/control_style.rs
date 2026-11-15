@@ -38,6 +38,8 @@ pub(crate) enum ControlStyle {
     /// An icon toggle that is on: the pressed sink held, with its ink edge, so the state shows by
     /// shape as well as fill.
     IconOn,
+    /// A checkbox row whose box sits on its row's leading edge, in line with labelled rows.
+    Flush,
     /// An action on the status bar: quiet on the overprint, with a mint focus border.
     Status,
 }
@@ -60,6 +62,7 @@ impl ControlStyle {
             Self::Entry => "writer-entry",
             Self::Row => "writer-row",
             Self::RowSelected => "writer-row-selected",
+            Self::Flush => "writer-flush",
             Self::Status => "writer-status",
         }
     }

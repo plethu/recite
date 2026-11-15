@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::segments::{segment_named, segments};
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, print, space};
@@ -192,9 +193,12 @@ fn check_row<F: Fn(&mut App, bool) + Send + Sync + 'static>(
     checked: bool,
     edit: F,
 ) -> impl WidgetView<App> + use<F> {
-    checkbox(caption, checked, edit)
-        .text_size(Type::Body.size(scale))
-        .dims((width.px(), (size::ROW * f64::from(scale)).px()))
+    styled(
+        ControlStyle::Flush,
+        checkbox(caption, checked, edit)
+            .text_size(Type::Body.size(scale))
+            .dims((width.px(), (size::ROW * f64::from(scale)).px())),
+    )
 }
 
 /// A preference with two choices, labelled on the left: one compact segmented track on the

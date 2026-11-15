@@ -94,5 +94,15 @@ pub(in super::super) fn check<W: Widget>(
 ) {
     let mut stack = PropertyStack::new();
     indicator(p, scale).push(&mut stack, &Selector::new(), STRONG);
+    Look {
+        // The least that leaves room for the focus and pressed border.
+        padding: (6. * scale, 2.),
+        ..indicator(p, scale)
+    }
+    .push(
+        &mut stack,
+        &Selector::classes(&[crate::presentation::control_style::ControlStyle::Flush.class()]),
+        STRONG,
+    );
     properties.insert_stack::<W>(stack);
 }
