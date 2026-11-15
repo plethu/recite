@@ -14,7 +14,7 @@ impl Action {
                 files.review_rename(model, block, name)?;
                 control.checkpoint()?;
                 Ok(Success::message(
-                    "Rename reviewed. Inspect every change, then Apply project rename.",
+                    "Rename reviewed. Inspect every change, then Stage rename.",
                 ))
             }
             Self::ApplyRename => {

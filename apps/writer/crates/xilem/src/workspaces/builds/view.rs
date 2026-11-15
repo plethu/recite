@@ -57,15 +57,23 @@ fn build_actions(writer: &Writer, busy: bool, empty: bool) -> impl WidgetView<Wr
         || writer.phase() != Phase::Writing
         || writer.navigation.busy()
         || writer.work.busy();
+    // The sheet's own action is its one primary; Save stays tonal in the toolbar.
     flex_row((
-        text_button(writer.ui_scale(), "Build saved", Writer::build_saved).disabled(blocked),
         text_button(
             writer.ui_scale(),
             "Save all and build",
             Writer::save_and_build,
         )
         .disabled(blocked),
+        print::primary_action(
+            writer.ui_scale(),
+            "Build saved",
+            &writer.palette,
+            blocked,
+            Writer::build_saved,
+        ),
     ))
+    .gap(space::SIBLINGS.px())
 }
 fn pagination(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let count = writer.session.project()?.files().builds.targets.len();

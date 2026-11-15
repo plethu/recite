@@ -118,8 +118,8 @@ def run(api, bus, registry, binary, output):
                 assert source.read_text() == before and other.read_text() == reference
                 assert manifest.read_text() == original
                 results["review_covers_references_and_manifest_without_writing_sources"] = True
-                window.reveal_start("Apply project rename")
-                window.act("Apply project rename")
+                window.reveal_start("Stage rename")
+                window.act("Stage rename")
                 window.wait(
                     lambda: window.find_text("Project rename staged.", prefix=True),
                     "grouped rename",

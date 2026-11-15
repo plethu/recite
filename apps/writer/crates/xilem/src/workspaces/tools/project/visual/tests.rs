@@ -109,7 +109,7 @@ fn rename_review_and_recovery_states_render_at_personal_scales() {
                 reveal(
                     &mut harness,
                     match stage {
-                        Stage::Review => "Apply project rename",
+                        Stage::Review => "Stage rename",
                         Stage::Busy => "Cancel project action",
                         Stage::Retry => "Retry project edit recovery",
                         Stage::Reopen => "New beat name",

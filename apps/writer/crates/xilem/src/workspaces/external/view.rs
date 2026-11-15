@@ -2,7 +2,7 @@ use super::*;
 use crate::presentation::space;
 use crate::{
     attention::{Pane, Region},
-    presentation::{label, manuscript_text, paragraph, source_comparison, text_button},
+    presentation::{label, manuscript_text, paragraph, print, source_comparison, text_button},
 };
 use xilem::{
     WidgetView,
@@ -17,7 +17,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         return Either::A(resolved::panel(writer, resolved));
     }
     Either::B(flex_col((
-        crate::view::tool_head(writer, "Compare disk changes", ()),
+        crate::view::tool_head(writer, "Compare disk changes", resolution(writer)),
         paragraph(writer.ui_scale(), "Review the versions before choosing a resolution. Each decision keeps a complete recovery copy. Save writes the accepted result.", 640.),
         report(writer),
         comparison(writer),
@@ -27,21 +27,40 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px()).prop(Region(Some(Pane::External))))
 }
 mod resolved;
+/// The resolution choice in the sheet's head: inspect, keep, or the primary, adopt the inspected
+/// disk version.
+fn resolution(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let blocked = writer.project_action_blocked();
+    let stale = !writer.external_comparison_current();
+    let scale = writer.ui_scale();
+    flex_row((
+        text_button(
+            scale,
+            "Inspect current disk version",
+            Writer::compare_disk_changes,
+        )
+        .disabled(blocked),
+        text_button(scale, "Keep Writer version", Writer::keep_writer_version)
+            .disabled(blocked || stale),
+        print::primary_action(
+            scale,
+            "Use inspected disk version",
+            &writer.palette,
+            blocked || stale,
+            Writer::use_inspected_disk,
+        ),
+    ))
+    .gap(space::SIBLINGS.px())
+}
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
     let stale = !writer.external_comparison_current();
     let scale = writer.ui_scale();
     flex_col((
-        text_button(scale, "Inspect current disk version", Writer::compare_disk_changes).disabled(blocked),
-        flex_col((
-            text_button(scale, "Keep Writer version", Writer::keep_writer_version).disabled(blocked || stale),
-            paragraph(scale, "Preserves the accepted document, field draft and Undo history. Your next Save replaces the inspected disk version.", 640.),
-            text_button(scale, "Use inspected disk version", Writer::use_inspected_disk).disabled(blocked || stale),
-            paragraph(scale, "Archives the complete current session, then adopts the inspected disk version as one Undo step.", 640.),
-            text_button(scale, "Export merge draft", Writer::export_merge_draft).disabled(blocked || stale),
-            paragraph(scale, "Combine versions in your IDE, then import the reviewed merge below.", 640.),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px()),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px())
+        paragraph(scale, "Keep Writer version preserves the accepted document, field draft and Undo history; your next Save replaces the inspected disk version. Use inspected disk version archives the complete current session, then adopts the disk version as one Undo step.", 640.),
+        text_button(scale, "Export merge draft", Writer::export_merge_draft).disabled(blocked || stale),
+        paragraph(scale, "Combine versions in your IDE, then import the reviewed merge below.", 640.),
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
 }
 fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.external;

@@ -5,7 +5,7 @@ use super::*;
 use crate::session::RecoveryReason;
 use crate::{
     attention::{Pane, PaneEntry, Region},
-    presentation::{label, paragraph, text_button},
+    presentation::{label, paragraph, print, text_button},
 };
 use comparison::comparison;
 use xilem::{
@@ -19,7 +19,12 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     let width = writer.content_width();
     let reviewing = !writer.workspaces.rename.changes.is_empty();
     flex_col((
-        crate::view::tool_head(writer, "Rename project beat", ()),
+        crate::view::tool_head(
+            writer,
+            "Rename project beat",
+            head_actions(writer, reviewing),
+        )
+        .prop(PaneEntry(reviewing)),
         paragraph(
             writer.ui_scale(),
             "Review references before staging. One project Undo step; Save all writes the files.",
@@ -28,8 +33,6 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         report(writer),
         history(writer),
         indexed_stack((proposal(writer), summary(writer))).active(usize::from(reviewing)),
-        review_action(writer, reviewing),
-        actions(writer),
         comparison(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -109,46 +112,43 @@ fn summary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     })
     .gap(space::KINDS.px())
 }
-fn review_action(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + use<> {
+/// The sheet's own actions: Review is its primary while proposing; once reviewed, Stage rename is,
+/// beside a tonal way back to the proposal.
+fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
-    text_button(
-        writer.ui_scale(),
-        if reviewing {
-            "Edit rename proposal"
-        } else {
-            "Review project rename"
-        },
-        move |writer: &mut Writer| {
-            if reviewing {
-                writer.discard_rename_review();
-            } else {
-                writer.review_project_rename();
-            }
-        },
-    )
-    .disabled(
-        writer.project_action_blocked()
-            || (!reviewing
-                && (panel.block.trim().is_empty()
-                    || panel.name.trim().is_empty()
-                    || panel.block.trim() == panel.name.trim())),
-    )
-}
-fn actions(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let blocked = writer.project_action_blocked();
+    let scale = writer.ui_scale();
     let review = writer
         .session
         .project()
         .is_some_and(|project| project.files().rename_review.is_some());
-    (!writer.workspaces.rename.changes.is_empty()).then(|| {
-        flex_row((text_button(
-            writer.ui_scale(),
-            "Apply project rename",
-            Writer::apply_project_rename,
-        )
-        .disabled(blocked || !review),))
-        .prop(PaneEntry(true))
-    })
+    let incomplete = panel.block.trim().is_empty()
+        || panel.name.trim().is_empty()
+        || panel.block.trim() == panel.name.trim();
+    flex_row((
+        reviewing.then(|| {
+            text_button(scale, "Edit rename proposal", Writer::discard_rename_review)
+                .disabled(blocked)
+        }),
+        print::primary_action(
+            scale,
+            if reviewing {
+                "Stage rename"
+            } else {
+                "Review project rename"
+            },
+            &writer.palette,
+            blocked || if reviewing { !review } else { incomplete },
+            move |writer: &mut Writer| {
+                if reviewing {
+                    writer.apply_project_rename();
+                } else {
+                    writer.review_project_rename();
+                }
+            },
+        ),
+    ))
+    .gap(space::SIBLINGS.px())
 }
 fn history(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
