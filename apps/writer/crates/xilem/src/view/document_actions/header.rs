@@ -1,6 +1,7 @@
 //! Adaptive document navigation keeps project tools available without displacing their content.
 use super::*;
 use crate::presentation::Icon;
+use crate::presentation::space;
 use xilem::view::{GridExt, GridTrackSize, grid};
 
 pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -34,7 +35,7 @@ pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer>
                 Writer::request_close,
             ),
         ))
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
         .grid_pos(u16::from(wide), u16::from(!wide)),
     ))
     .columns([
@@ -46,8 +47,11 @@ pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer>
         },
     ])
     .rows([GridTrackSize::Auto; 2])
-    .gap(4.px())
-    .padding(xilem::style::Padding::from_vh(4.px(), 16.px()))
+    .gap(space::UNIT.px())
+    .padding(xilem::style::Padding::from_vh(
+        space::UNIT.px(),
+        space::KINDS.px(),
+    ))
 }
 
 pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -71,10 +75,10 @@ pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> +
                 .disabled(state.phase() != Phase::Writing),
             copy_link(state),
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn temporary_notice(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -126,7 +130,7 @@ fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
             Writer::copy_link,
         ),
     ))
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn copy_link(state: &Writer) -> impl WidgetView<Writer> + use<> {
     text_button(state.ui_scale(), "Copy link", Writer::copy_link)

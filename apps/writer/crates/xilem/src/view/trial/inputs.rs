@@ -1,6 +1,8 @@
 //! Composed trial settings; only one bounded page of values and languages is mounted.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 use recite_writer_session::messages::{MsgId, text};
 use xilem::{masonry::properties, view::checkbox};
 
@@ -25,10 +27,10 @@ fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
         state.trial.settings.include_drafts,
         |state: &mut Writer, value| state.trial.settings.include_drafts = value,
     )
-    .text_size(14. * scale)
+    .text_size(Type::Body.size(scale))
     .disabled(disabled);
     flex_col((
-        label(scale, "Inputs for the next run").text_size(20. * scale),
+        label(scale, "Inputs for the next run").typeset(Type::Section, scale),
         matches!(settings.review, Review::Diagnostic).then(|| {
             paragraph(
                 scale,
@@ -44,7 +46,7 @@ fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
         values::values(state, disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn wording(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
@@ -55,7 +57,7 @@ fn wording(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
                 state.trial.settings.variant = value;
             },
         )
-        .text_size(16. * state.ui_scale())
+        .text_size(field_text(state.ui_scale()))
         .disabled(disabled)
         .prop(properties::TextAreaLabel::new("Preview wording")),
     )

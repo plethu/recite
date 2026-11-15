@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 pub fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
@@ -19,7 +21,7 @@ pub fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             .then(|| content(writer)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn content(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.declarations.source;
@@ -36,7 +38,7 @@ fn content(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                         panel.preview.len()
                     ),
                 )
-                .text_size(18. * scale),
+                .typeset(Type::Section, scale),
                 flex_row((
                     text_button(scale, "Previous source preview", |writer: &mut Writer| {
                         writer.workspaces.declarations.source.page =
@@ -51,9 +53,9 @@ fn content(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                 paragraph(scale, page.clone(), 640.),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         )
-        .padding(12.px())
+        .padding(space::KINDS.px())
         .background_color(writer.palette.inset),
     )
 }

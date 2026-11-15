@@ -1,5 +1,7 @@
 //! The access form scrolls independently of its persistent submission actions.
 use super::{App, ProjectField};
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 use crate::presentation::{identity, label, paragraph, print, radio_button, text_button};
 use xilem::{
     WidgetView,
@@ -66,7 +68,10 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
                             app.welcome_layout.content = Some(size);
                         }
                     },
-                    column(layout, sized_box(fields(app, layout)).padding(24.px())),
+                    column(
+                        layout,
+                        sized_box(fields(app, layout)).padding(space::GROUPS.px()),
+                    ),
                 ))
                 .constrain_horizontal(true)
                 .flex(form),
@@ -103,7 +108,7 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     } = layout;
     flex_col((
         identity::hero(&app.theme, width.min(360. * f64::from(scale))),
-        label(scale, "Projects").text_size(24. * scale),
+        label(scale, "Projects").typeset(Type::Display, scale),
         paragraph(
             scale,
             "Open a project or create one to start writing.",
@@ -128,14 +133,14 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             ))
             .direction(direction)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(12.px()),
+            .gap(space::TEXT.px()),
         ),
         folder(app, layout),
         app.creating.then(|| name(app, layout)),
         super::feedback::details(app, scale, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
@@ -160,7 +165,7 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 app.edit_project_path(text)
             })
             .placeholder("Project folder")
-            .text_size(14. * scale)
+            .text_size(field_text(scale))
             .disabled(busy)
             .prop(TextAreaLabel::new("Project folder"))
             .prop(ProjectField(true))
@@ -169,10 +174,10 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
         ))
         .direction(direction)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
@@ -185,14 +190,14 @@ fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     flex_col((
         label(scale, "Project name"),
         text_input(app.name.clone(), |app: &mut App, text| app.edit_project_name(text))
-            .placeholder("Project name").text_size(14. * scale)
+            .placeholder("Project name").text_size(field_text(scale))
             .disabled(app.opening.is_some() || app.auxiliary)
             .prop(TextAreaLabel::new("Project name")).prop(ProjectField(true))
             .width(field_width.px()),
         paragraph(scale, "Creates recite.project.toml and a first scene with a default beat. Existing project files are preserved.", width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
@@ -233,10 +238,13 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             ))
             .direction(direction)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
-    .padding(xilem::style::Padding::from_vh(12.px(), 24.px()))
+    .padding(xilem::style::Padding::from_vh(
+        space::KINDS.px(),
+        space::GROUPS.px(),
+    ))
 }

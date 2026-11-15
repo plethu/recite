@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::space;
 use crate::presentation::{
     control_style::{ControlStyle, styled},
     manuscript_text,
@@ -62,13 +63,13 @@ pub(super) fn source(
                     )
                     .disabled(row.source_page + 1 >= row.pages.len()),
                 ))
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
             ))
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn destination(
@@ -116,6 +117,6 @@ fn destination(
             (!terminal).then(|| reference::destination(writer, destination, width)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

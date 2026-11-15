@@ -1,5 +1,7 @@
 //! Submission stays outside the independently scrolling conversation and next-run form.
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use xilem::masonry::kurbo::Axis;
 
 pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -8,11 +10,11 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         grid((
             flex_row((
-                label(scale, "Preview").text_size(18. * scale),
+                label(scale, "Preview").typeset(Type::Section, scale),
                 submission(state),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(16.px())
+            .gap(space::KINDS.px())
             .grid_pos(0, 0),
             flex_row((
                 print::action(
@@ -38,7 +40,7 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     },
                 ),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
             .grid_pos(u16::from(wide), u16::from(!wide)),
         ))
         .columns([
@@ -50,11 +52,11 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
             },
         ])
         .rows([GridTrackSize::Auto; 2])
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         feedback::panel(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -105,5 +107,5 @@ fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
         Axis::Vertical
     })
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

@@ -1,5 +1,6 @@
 //! A failed restart stays visible beside its action, even with the old run scrolled into view.
 use super::*;
+use crate::presentation::space;
 use crate::{attention::EntryContext, presentation::group};
 use xilem::masonry::kurbo::Axis;
 
@@ -42,7 +43,7 @@ fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + u
             Axis::Vertical
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
         .prop(PaneEntry(state.unfinished_trial_edit().is_some()))
         .prop(EntryContext(true)),
     )
@@ -55,13 +56,11 @@ pub(super) fn details(state: &Writer) -> impl WidgetView<Writer> + use<> {
         sized_box(
             flex_col((
                 flex_row((
-                    print::meta(scale, "Error details")
-                        .text_size(0.7 * state.reading_size())
-                        .color(state.palette.muted),
+                    print::meta(scale, "Error details").color(state.palette.muted),
                     print::action(scale, "Hide preview error", false, Writer::configure_trial),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Center)
-                .gap(16.px())
+                .gap(space::KINDS.px())
                 .prop(PaneEntry(true))
                 .prop(EntryContext(true)),
                 paragraph(
@@ -71,9 +70,9 @@ pub(super) fn details(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         )
-        .padding(12.px())
+        .padding(space::KINDS.px())
         .background_color(state.palette.inset),
     )
 }

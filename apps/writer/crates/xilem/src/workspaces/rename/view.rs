@@ -1,3 +1,5 @@
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 mod comparison;
 use super::*;
 use crate::session::RecoveryReason;
@@ -17,7 +19,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     let width = writer.content_width();
     let reviewing = !writer.workspaces.rename.changes.is_empty();
     flex_col((
-        label(writer.ui_scale(), "Rename project beat").text_size(24. * writer.ui_scale()),
+        label(writer.ui_scale(), "Rename project beat").typeset(Type::Display, writer.ui_scale()),
         paragraph(
             writer.ui_scale(),
             "Review references before staging. One project Undo step; Save all writes the files.",
@@ -31,7 +33,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         comparison(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Rename)))
 }
 fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -50,22 +52,22 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             flex_col((
                 label(scale, "Original beat name"),
                 text_input(panel.block.clone(), Writer::change_rename_block)
-                    .text_size(16. * scale)
+                    .text_size(field_text(scale))
                     .disabled(blocked)
                     .prop(TextAreaLabel::new("Original beat name")),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(6.px())
+            .gap(space::UNIT.px())
             .width(field_width.px()),
             flex_col((
                 label(scale, "New beat name"),
                 text_input(panel.name.clone(), Writer::change_rename_name)
-                    .text_size(16. * scale)
+                    .text_size(field_text(scale))
                     .disabled(blocked)
                     .prop(TextAreaLabel::new("New beat name")),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(6.px())
+            .gap(space::UNIT.px())
             .width(field_width.px()),
         ))
         .direction(if wide {
@@ -73,10 +75,10 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         } else {
             Axis::Vertical
         })
-        .gap(16.px()),
+        .gap(space::KINDS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(true))
 }
 fn summary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -105,7 +107,7 @@ fn summary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     } else {
         Axis::Vertical
     })
-    .gap(16.px())
+    .gap(space::KINDS.px())
 }
 fn review_action(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
@@ -159,7 +161,7 @@ fn history(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             text_button(scale, "Redo project rename", Writer::redo_project_rename).disabled(blocked)
         }),
     ))
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 pub(crate) fn recovery(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let reason = writer.session.recovery_reason()?;
@@ -183,7 +185,7 @@ pub(crate) fn recovery(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -218,6 +220,6 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

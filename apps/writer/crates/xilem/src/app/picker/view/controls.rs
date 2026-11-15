@@ -1,5 +1,7 @@
 //! Query input, scope selection and concise search guidance.
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 
 pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
@@ -33,7 +35,7 @@ pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 
@@ -41,7 +43,7 @@ pub(super) fn heading(scale: f32, mode: Mode, width: f64) -> impl WidgetView<App
     let wide = width >= 300. * f64::from(scale);
     flex_row((
         label(scale, mode.title())
-            .text_size(20. * scale)
+            .typeset(Type::Section, scale)
             .prop(LineBreaking::WordWrap)
             .flex(if wide { 1. } else { 0. }),
         text_button(scale, "Close search", |app: &mut App| app.dismiss_picker()),
@@ -52,7 +54,7 @@ pub(super) fn heading(scale: f32, mode: Mode, width: f64) -> impl WidgetView<App
         Axis::Vertical
     })
     .width(width.px())
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 pub(super) fn query(
@@ -67,7 +69,7 @@ pub(super) fn query(
             |app: &mut App, value: String| app.filter_picker(value),
         )
         .placeholder(mode.title())
-        .text_size(14. * scale)
+        .text_size(field_text(scale))
         .on_enter(|app: &mut App, _| app.submit_picker())
         .on_cancel(|app: &mut App, _| app.dismiss_picker())
         .prop(TextAreaLabel::new("Search query"))

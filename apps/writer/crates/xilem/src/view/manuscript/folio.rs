@@ -2,6 +2,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::print;
+use crate::presentation::space;
 use xilem::{
     masonry::{
         kurbo::Axis,
@@ -20,7 +21,7 @@ pub(super) fn footer(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 .thickness(1.5.px())
                 .prop(ContentColor::new(state.palette.accent)),
             flex_row((
-                print::meta(
+                print::id(
                     state.ui_scale(),
                     format!("{} · {beat}", state.session.model().document().key()),
                 )
@@ -28,7 +29,7 @@ pub(super) fn footer(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 .color(state.palette.muted)
                 .flex(1.),
                 FlexSpacer::Flex(1.),
-                print::meta(
+                print::id(
                     state.ui_scale(),
                     format!("beat {} / {}", position.ordinal(), position.total()),
                 )
@@ -41,11 +42,11 @@ pub(super) fn footer(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                     Axis::Horizontal
                 },
             )
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .gap(8.px())
-        .padding(Padding::top(24.px()))
+        .gap(space::SIBLINGS.px())
+        .padding(Padding::top(space::GROUPS.px()))
         .width(state.script_width().px()),
     )
 }

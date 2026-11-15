@@ -1,5 +1,7 @@
 use super::*;
 use crate::attention::PaneEntry;
+use crate::presentation::field_text;
+use crate::presentation::space;
 use xilem::masonry::kurbo::Axis;
 pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -11,15 +13,15 @@ pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             text_button(scale, if state.files_open { "Hide catalogue files" } else { "Catalogue files" }, |writer: &mut Writer| writer.localisation.files_open = !writer.localisation.files_open),
             state.has_catalogue().then(|| text_button(scale, "Translate current beat", |writer: &mut Writer| writer.open_translation_beat(0)).disabled(writer.project_action_blocked())),
             state.has_catalogue().then(|| text_button(scale, "Save all translation drafts", Writer::save_translation_drafts).disabled(writer.project_action_blocked() || state.slot.read_only() || !state.needs_save())),
-        )).direction(if writer.viewport.width - writer.navigation_width() < 600. * f64::from(scale) { Axis::Vertical } else { Axis::Horizontal }).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px()).prop(PaneEntry(true))),
+        )).direction(if writer.viewport.width - writer.navigation_width() < 600. * f64::from(scale) { Axis::Vertical } else { Axis::Horizontal }).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px()).prop(PaneEntry(true))),
         (queue && (state.files_open || !state.has_catalogue())).then(|| flex_col((
             controls(writer),
             state.has_catalogue().then(|| text_button(scale, "Compare catalogue disk changes", Writer::compare_catalogue).disabled(writer.project_action_blocked() || state.slot.read_only())),
             text_button(scale, "Add language", Writer::new_catalogue).disabled(writer.project_action_blocked() || state.slot.read_only() || state.dirty()),
             state.has_catalogue().then(|| text_button(scale, "Review source updates", Writer::review_catalogue_sources).disabled(writer.project_action_blocked() || state.slot.read_only() || state.dirty())),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())),
+        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())),
         state.slot.read_only().then(|| paragraph(scale, "The catalogue is read-only until its operation returns. After an unexpected stop, close with recovery and reopen before editing translations.", 640.)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
 }
 
 fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -36,7 +38,7 @@ fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.localisation.path.clone(),
             |writer: &mut Writer, path| writer.localisation.path = path,
         )
-        .text_size(16. * scale)
+        .text_size(field_text(scale))
         .disabled(blocked)
         .prop(TextAreaLabel::new("Catalogue path")),
         flex_col((
@@ -58,8 +60,8 @@ fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 blocked || !writer.localisation.has_catalogue() || writer.localisation.dirty(),
             ),
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

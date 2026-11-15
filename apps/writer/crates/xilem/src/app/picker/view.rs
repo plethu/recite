@@ -1,4 +1,5 @@
 use super::{App, Entry, Item, Mode, PAGE, Picker, Purpose, Search};
+use crate::presentation::space;
 use crate::presentation::{fit_content, label, paragraph, text_button};
 use crate::presentation::{group::dialog, manuscript_search, radio_button, search_label};
 use recite_writer_session::choices::display_name;
@@ -102,7 +103,7 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                     portal(
                         flex_col(rows)
                             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                            .gap(8.px()),
+                            .gap(space::SIBLINGS.px()),
                     )
                     .constrain_horizontal(true)
                     .flex(1.),
@@ -110,7 +111,14 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                     label(scale, mode.keyboard_help()),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(if compact { 8.px() } else { 12.px() }),
+                .gap(
+                    if compact {
+                        space::SIBLINGS
+                    } else {
+                        space::TEXT
+                    }
+                    .px(),
+                ),
             )
             .width((width + 2. * padding).px())
             .padding(padding.px())

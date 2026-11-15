@@ -1,5 +1,6 @@
 use super::{Phase, Writer, keyed::keyed};
 use crate::WriterLayout;
+use crate::presentation::space;
 use crate::presentation::{label, paragraph, prose, text_button};
 use recite_writer_model::View;
 use xilem::core::one_of::Either;
@@ -96,7 +97,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
         recovery_failure(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(16.px());
+    .gap(space::KINDS.px());
     xilem::core::fork(
         xilem::view::resize_observer(
             |state: &mut Writer, size| state.viewport.height = size.height,
@@ -108,7 +109,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
                     } else {
                         16.px()
                     },
-                    ..Padding::all(16.px())
+                    ..Padding::all(space::KINDS.px())
                 }),
             ),
         ),
@@ -155,7 +156,7 @@ fn editor_status(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             ),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }
 fn recovery_failure(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {

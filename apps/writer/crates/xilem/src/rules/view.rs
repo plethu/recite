@@ -1,6 +1,8 @@
 //! Reply components consume one resolved editing session.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{label, paragraph, text_button};
 use xilem::masonry::kurbo;
 use xilem::{
@@ -37,7 +39,7 @@ pub(crate) fn panel(state: &Writer, reply: &ReplySession) -> impl WidgetView<Wri
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px()),
+        .gap(space::TEXT.px()),
     )
     .width(state.script_width().px())
 }
@@ -45,13 +47,13 @@ fn heading(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<
     let scale = state.ui_scale();
     let width = state.script_width();
     flex_col((
-        label(scale, "Reply rules").text_size(22. * scale),
+        label(scale, "Reply rules").typeset(Type::Section, scale),
         paragraph(scale, format!("{} · Destination: {}", rules.text,
             rules.destination.as_deref().unwrap_or("No destination")), width),
         paragraph(scale, "Conditions control when this reply is available. Effects belong to its destination and can also run when another reply reaches that beat.", width),
         rules.has_other_statements.then(|| paragraph(scale,
             "Other statements are preserved. Effect order can change only when the destination contains direct effects alone.", width)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px())
 }
 fn additions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -69,7 +71,7 @@ fn additions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + us
                 disabled || !rules.effect_order_editable || rules.available_effects.is_empty(),
             ),
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         rules
             .condition
             .is_none()
@@ -80,7 +82,7 @@ fn additions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + us
             .then(|| label(scale, "No direct effects at this destination")),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 fn draft_actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let disabled = !state.rules_editable() || !state.session.model().has_draft();
@@ -93,7 +95,7 @@ fn draft_actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .disabled(disabled),
         text_button(state.ui_scale(), "Discard reply", Writer::discard_rules).disabled(disabled),
     ))
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn reply_actions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<> {
     let passage = rules.passage.clone();
@@ -117,7 +119,7 @@ fn reply_actions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> 
         },
     )
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn fields(state: &Writer, reply: &ReplySession) -> impl WidgetView<Writer> + use<> {
     let pages = reply.controls.rows.len().div_ceil(PAGE).max(1);
@@ -132,7 +134,7 @@ fn fields(state: &Writer, reply: &ReplySession) -> impl WidgetView<Writer> + use
         .collect::<Vec<_>>();
     flex_col(rows)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(16.px())
+        .gap(space::KINDS.px())
 }
 fn row_view(state: &Writer, reply: &ReplySession, row: &Row) -> Box<AnyWidgetView<Writer>> {
     match row.resolve(&reply.projection) {
@@ -186,9 +188,9 @@ fn pagination(state: &Writer, reply: &ReplySession) -> Option<impl WidgetView<Wr
                 )
                 .disabled(page + 1 >= pages),
             ))
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }

@@ -1,5 +1,7 @@
 //! Every field targets one catalogue lifetime, PO entry and plural arm.
 use super::*;
+use crate::presentation::Type;
+use crate::presentation::space;
 use recite_writer_session::localisation::catalogue::Draft;
 
 pub(super) fn translation(
@@ -25,7 +27,7 @@ pub(super) fn translation(
         current.is_none().then(|| paragraph(writer.ui_scale(), if writer.localisation.has_catalogue() {
             "No matching entry for this source wording. Review source updates in the translation queue."
         } else { "No catalogue selected." }, width)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
 }
 fn fields(
     writer: &Writer,
@@ -74,7 +76,7 @@ fn fields(
                     }),
                     sized_box(keyed((key.clone(), arm), input)).dims((width.px(), height.px())),
                 ))
-                .gap(6.px()),
+                .gap(space::SIBLINGS.px()),
             )
         })
         .collect();
@@ -104,7 +106,7 @@ fn fields(
                             writer.review_translation(&reviewed, value)
                         },
                     )
-                    .text_size(14. * writer.ui_scale())
+                    .text_size(Type::Body.size(writer.ui_scale()))
                     .disabled(blocked)
                 }),
             text_button(
@@ -120,7 +122,7 @@ fn fields(
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         changed.then(|| {
             flex_row((
                 text_button(
@@ -144,11 +146,11 @@ fn fields(
                 Axis::Horizontal
             })
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn form_pages(
     writer: &Writer,
@@ -182,7 +184,7 @@ fn form_pages(
             )
             .disabled(blocked || (row.form_page + 1) * 4 >= draft.forms.len()),
         ))
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }
 

@@ -2,6 +2,7 @@
 use super::*;
 use crate::attention::{EditingTarget, PassageField};
 use crate::presentation::{
+    Sheet,
     control_style::{ControlStyle, styled},
     print,
 };
@@ -71,7 +72,7 @@ fn field(
                 })
                 .insert_newline(InsertNewline::OnEnter)
                 .font(print::font(FONT_PROSE))
-                .text_size(state.reading_size())
+                .text_size(Sheet::Dialogue.size(state.reading_size()))
                 .placeholder(name.clone())
                 .disabled(state.phase() != Phase::Writing || state.session.read_only())
                 .prop(properties::TextAreaLabel::new(name))

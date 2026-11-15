@@ -1,5 +1,6 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
 use xilem::masonry::properties;
 
@@ -55,9 +56,9 @@ pub(super) fn playback(
                 ),
                 condition(state, request.query().expected_type(), disabled),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
-        flex_col(effects).gap(8.px()),
+        flex_col(effects).gap(space::SIBLINGS.px()),
         (effect_pages > 1).then(|| {
             flex_row((
                 text_button(scale, "Previous effect requests", |state: &mut Writer| {
@@ -70,7 +71,7 @@ pub(super) fn playback(
                 })
                 .disabled(disabled || effect_page + 1 >= effect_pages),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         page.waiting_effect.as_ref().map(|_| {
             flex_row((
@@ -87,11 +88,11 @@ pub(super) fn playback(
                 })
                 .disabled(disabled),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         flex_col(choices)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         (choice_pages > 1).then(|| {
             flex_row((
                 text_button(scale, "Previous preview choices", |state: &mut Writer| {
@@ -104,7 +105,7 @@ pub(super) fn playback(
                 })
                 .disabled(disabled || choice_page + 1 >= choice_pages),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         can_continue.then(|| {
             text_button(scale, "Continue preview", |state: &mut Writer| {
@@ -116,7 +117,7 @@ pub(super) fn playback(
         page.ended.then(|| label(scale, "Conversation ended")),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 fn condition(
@@ -138,7 +139,7 @@ fn condition(
                 )
                 .disabled(disabled)
             }))
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ),
         ConditionExpectedType::Enum => Either::B(
             flex_row((
@@ -157,7 +158,7 @@ fn condition(
                 })
                 .disabled(disabled || state.trial.answer.trim().is_empty()),
             ))
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ),
     }
 }

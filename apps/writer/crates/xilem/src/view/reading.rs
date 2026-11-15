@@ -8,6 +8,8 @@ use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::material;
 use crate::presentation::print;
 use crate::presentation::route_toggle;
+use crate::presentation::space;
+use crate::presentation::{Sheet, Type, Typeset};
 use crate::reading::{Content, Row};
 use recite_core::DocumentKey;
 use recite_writer_model::{AnalysisStamp, RouteOwner};
@@ -38,13 +40,13 @@ pub(super) fn repair(state: &Writer, error: &str) -> impl WidgetView<Writer> + u
         paragraph(state.ui_scale(), "Choose Open in editor to repair the source, then Reload (keep recovery copy). Your source bytes are preserved.", state.script_width()),
         paragraph(state.ui_scale(), error.to_owned(), state.script_width()),
         state.session.project().map(|_| print::action(state.ui_scale(), "Open in editor", state.phase() != Phase::Writing || state.external.busy(), Writer::open_editor)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
 }
 pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         // Halftone marks what is not yet written; it sits beside the heading, never behind it.
         flex_row((
-            label(state.ui_scale(), "No beats yet").text_size(22. * state.ui_scale()),
+            label(state.ui_scale(), "No beats yet").typeset(Type::Section, state.ui_scale()),
             material::halftone(
                 96. * f64::from(state.ui_scale()),
                 20. * f64::from(state.ui_scale()),
@@ -52,14 +54,14 @@ pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
             ),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(12.px()),
+        .gap(space::TEXT.px()),
         prose(
             state.ui_scale(),
             "Add a beat to start writing. Comments and existing source are preserved.",
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -83,7 +85,7 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
     flex_col((
         header::heading(state, id),
         // 16px between rows: this gap and each row's 4px source-label clearance.
-        column(entries).gap(12.px()),
+        column(entries).gap(space::TEXT.px()),
         rows.is_empty().then(|| {
             prose(
                 scale,
@@ -103,7 +105,7 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(16.px())
+    .gap(space::KINDS.px())
 }
 fn row(state: &Writer, beat: &str, row: &Row) -> impl WidgetView<Writer> + use<> {
     let inset = row.groups.len().min(3) as f64 * 24.;
@@ -122,7 +124,7 @@ fn row(state: &Writer, beat: &str, row: &Row) -> impl WidgetView<Writer> + use<>
         content(state, beat, row, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
     .padding(Padding::left(inset.px()))
 }
 fn content(state: &Writer, beat: &str, row: &Row, width: f64) -> Box<AnyWidgetView<Writer>> {
@@ -130,11 +132,12 @@ fn content(state: &Writer, beat: &str, row: &Row, width: f64) -> Box<AnyWidgetVi
         Content::Passage { passage, number } => {
             passage::row(state, *number, passage, row.reply, width).boxed()
         }
-        Content::Heading(text) => {
-            sized_box(prose(state.ui_scale(), text.clone()).text_size(state.reading_size()))
-                .width(width.px())
-                .boxed()
-        }
+        Content::Heading(text) => sized_box(
+            prose(state.ui_scale(), text.clone())
+                .text_size(Sheet::Dialogue.size(state.reading_size())),
+        )
+        .width(width.px())
+        .boxed(),
         Content::Note(text) => paragraph(state.ui_scale(), text.clone(), width).boxed(),
         Content::Continuation(target) => {
             continuation(state, target, row.groups.is_empty().then_some(beat), width).boxed()
@@ -166,7 +169,7 @@ pub(super) fn reply_actions(state: &Writer, id: &str) -> impl WidgetView<Writer>
         .disabled(disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn continuation(
     state: &Writer,
@@ -210,6 +213,6 @@ fn continuation(
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 pub(super) use controls::page_controls;

@@ -2,6 +2,8 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::navigation::Target;
+use crate::presentation::Type;
+use crate::presentation::space;
 use recite_writer_session::localisation::catalogue::Draft;
 use recite_writer_session::location::Screen as LinkedScreen;
 use xilem::view::{GridExt, GridTrackSize, grid};
@@ -29,10 +31,10 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 vec![GridTrackSize::Fixed(entry_width(writer).px())]
             })
             .rows(vec![GridTrackSize::Auto; if wide(writer) { 1 } else { 2 }])
-            .gap(24.px()),
+            .gap(space::GROUPS.px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(10.px()),
+        .gap(space::TEXT.px()),
     )
 }
 
@@ -72,7 +74,7 @@ fn editor(
                     writer.review_translation(&reviewed_key, reviewed)
                 },
             )
-            .text_size(14. * scale)
+            .text_size(Type::Body.size(scale))
             .disabled(blocked),
             text_button(scale, "Save translation", Writer::save_translation_entry).disabled(
                 blocked || writer.project_jobs_busy() || !changed || !entry.details.plural.valid(),
@@ -84,7 +86,7 @@ fn editor(
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         text_button(
             scale,
             "Discard translation draft",
@@ -93,7 +95,7 @@ fn editor(
         .disabled(blocked || state.saving() || !changed),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn navigation(writer: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
@@ -125,6 +127,6 @@ fn navigation(writer: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<>
         .disabled(writer.project_action_blocked()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(true))
 }

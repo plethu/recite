@@ -1,6 +1,8 @@
 //! Bounded native components inspect the same trace as the running conversation.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use recite_runtime::preview::PreviewTrace;
 use recite_writer_session::preview::trace::{
     FIELDS, FieldPreview, ListPage, Place, Projection, RECORDS, RecordPage, Section, ValuePage,
@@ -29,7 +31,7 @@ pub(super) fn panel(writer: &Writer, disabled: bool) -> Option<impl WidgetView<W
             browser.open.then(|| contents(writer, trace, disabled)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(10.px()),
+        .gap(space::TEXT.px()),
     )
 }
 fn contents(
@@ -43,11 +45,11 @@ fn contents(
         Projection::Value(page) => value::value(writer, page, disabled).boxed(),
     };
     flex_col((
-        label(writer.ui_scale(), "Runtime trace").text_size(20. * writer.ui_scale()),
+        label(writer.ui_scale(), "Runtime trace").typeset(Type::Section, writer.ui_scale()),
         paragraph(writer.ui_scale(), "These records belong to the running preview. Events retain capture order; translation and plural lookups have their own ordered lists.", writer.script_width()),
         sections(writer, disabled),
         body,
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(10.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px())
 }
 fn sections(writer: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let section = writer.trial.trace.section;
@@ -67,7 +69,7 @@ fn sections(writer: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> 
         .collect::<Vec<_>>();
     flex_col(choices)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(6.px())
+        .gap(space::SIBLINGS.px())
 }
 fn list(writer: &Writer, projection: ListPage, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let ListPage {
@@ -110,7 +112,7 @@ fn list(writer: &Writer, projection: ListPage, disabled: bool) -> impl WidgetVie
         (total == 0).then(|| label(scale, "No records in this preview.")),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
         (pages > 1).then(|| {
             flex_col((
                 text_button(
@@ -129,11 +131,11 @@ fn list(writer: &Writer, projection: ListPage, disabled: bool) -> impl WidgetVie
                 .disabled(disabled || page + 1 >= pages),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 #[cfg(test)]

@@ -1,5 +1,7 @@
 //! Direct map tools and a bounded search share the compact contextual toolbar.
 use super::*;
+use crate::presentation::field_text;
+use crate::presentation::space;
 use crate::presentation::{Icon, print};
 use recite_writer_model::StructuralCommand;
 use xilem::core::one_of::Either;
@@ -22,7 +24,7 @@ pub(super) fn toolbar(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> 
         (compact && scene.tools == Tools::Actions).then(|| compact::actions(state, scene, width, blocked)),
         (scene.tools == Tools::Help).then(|| paragraph(scale,
             "Drag empty space to pan; Ctrl+scroll zooms. Arrows select a beat; Enter opens Script beside Map. Use a card’s move grip to change its personal placement.", width)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
 }
 fn full(state: &Writer, scene: &Scene, blocked: bool) -> impl WidgetView<Writer> + use<> {
     let scale = f64::from(state.ui_scale());
@@ -55,7 +57,7 @@ fn full(state: &Writer, scene: &Scene, blocked: bool) -> impl WidgetView<Writer>
             ]
         })
         .rows(vec![GridTrackSize::Auto; if narrow { 2 } else { 1 }])
-        .gap(12.px())
+        .gap(space::TEXT.px())
         .width(width.px())
 }
 fn tools(state: &Writer, scene: &Scene, blocked: bool) -> impl WidgetView<Writer> + use<> {
@@ -85,7 +87,7 @@ fn tools(state: &Writer, scene: &Scene, blocked: bool) -> impl WidgetView<Writer
             },
         ),
     ))
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 fn search(
     state: &Writer,
@@ -94,7 +96,7 @@ fn search(
     blocked: bool,
 ) -> impl WidgetView<Writer> + use<> {
     text_input(scene.search.clone(), Writer::find_map_beat)
-        .text_size(14. * state.ui_scale())
+        .text_size(field_text(state.ui_scale()))
         .placeholder("Find a beat…")
         .disabled(blocked)
         .prop(properties::TextAreaLabel::new("Find a beat"))
@@ -130,7 +132,7 @@ fn zoom(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ),
         print::action(scale, "Fit", false, Writer::fit_map),
     ))
-    .gap(4.px())
+    .gap(space::UNIT.px())
     .border_color(state.palette.rule)
     .border_width(1.px())
     .corner_radius(3.px())

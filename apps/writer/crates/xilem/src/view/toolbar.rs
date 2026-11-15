@@ -1,6 +1,8 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
+use crate::presentation::space;
 use crate::presentation::{Icon, print};
+use crate::presentation::{Type, Typeset};
 use recite_writer_session::choices::display_name;
 use xilem::{
     masonry::properties::LineBreaking,
@@ -32,8 +34,11 @@ pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ]
     })
     .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
-    .gap(8.px())
-    .padding(xilem::style::Padding::from_vh(4.px(), 16.px()))
+    .gap(space::SIBLINGS.px())
+    .padding(xilem::style::Padding::from_vh(
+        space::UNIT.px(),
+        space::KINDS.px(),
+    ))
 }
 fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -65,11 +70,11 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
             Writer::copy_link,
         ),
         label(scale, display_name(key.rsplit('/').next().unwrap_or(key)))
-            .text_size(18. * scale)
+            .typeset(Type::Section, scale)
             .prop(LineBreaking::WordWrap)
             .flex(1.),
     ))
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -103,7 +108,7 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
                 .disabled(blocked || state.localisation.saving() || state.source_repair_pending())
         }),
     ))
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 
 pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -165,8 +170,11 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
             )
         }),
     ))
-    .gap((8. * f64::from(state.ui_scale())).px())
-    .padding(xilem::style::Padding::from_vh(6.px(), 16.px()))
+    .gap((space::SIBLINGS * f64::from(state.ui_scale())).px())
+    .padding(xilem::style::Padding::from_vh(
+        space::UNIT.px(),
+        space::KINDS.px(),
+    ))
     .background_color(state.palette.status_bar)
 }
 

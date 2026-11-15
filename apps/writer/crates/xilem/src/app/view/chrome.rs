@@ -1,5 +1,6 @@
 //! Window identity and workspace commands live outside the manuscript's reading measure.
 use crate::presentation::segments::{segment, segments};
+use crate::presentation::space;
 use crate::presentation::{identity, label, paragraph, print};
 use crate::{
     Phase, Writer,
@@ -36,9 +37,12 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
-    .padding(xilem::style::Padding::from_vh(4.px(), 12.px()))
+    .padding(xilem::style::Padding::from_vh(
+        space::UNIT.px(),
+        space::KINDS.px(),
+    ))
 }
 
 fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {
@@ -64,7 +68,10 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
                             .weight(FontWeight::SEMI_BOLD)
                             .color(app.theme.palette.ink),
                     )
-                    .padding(xilem::style::Padding::from_vh(4.px(), 8.px())),
+                    .padding(xilem::style::Padding::from_vh(
+                        space::UNIT.px(),
+                        space::SIBLINGS.px(),
+                    )),
                     flex_col(())
                         .height(1.px())
                         .background_color(app.theme.palette.teal),
@@ -131,7 +138,7 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             })
         }),
     ))
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 /// Writing and localising are the app's two modes, chosen from the tab row.
@@ -212,7 +219,7 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
             Axis::Horizontal
         },
     )
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
@@ -235,5 +242,5 @@ fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
                 })
             }),
     ))
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

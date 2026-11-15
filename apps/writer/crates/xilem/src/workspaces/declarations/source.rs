@@ -1,4 +1,6 @@
 //! Frontend views over `recite_writer_app::workspaces::declarations::source`.
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 pub(crate) use recite_writer_app::workspaces::declarations::source::*;
 mod actions;
 mod preview;
@@ -24,7 +26,7 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         super::outcome::panel(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 fn binding(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -37,15 +39,15 @@ fn binding(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     let blocked = writer.declaration_action_blocked();
     Some(flex_col((
-        label(scale, "Standalone declaration source (TOML)").text_size(18. * scale),
+        label(scale, "Standalone declaration source (TOML)").typeset(Type::Section, scale),
         paragraph(scale, "Bind your standalone TOML to edit it in your preferred editor. Writer validates explicit reloads and imports, then generates read-only JSON.", 640.),
         label(scale, "Declaration source path"),
         text_input(writer.workspaces.declarations.source.path.clone(), |writer: &mut Writer, path| writer.workspaces.declarations.source.path = path)
-            .placeholder("Absolute path or path relative to this project").text_size(16. * scale)
+            .placeholder("Absolute path or path relative to this project").text_size(field_text(scale))
             .disabled(blocked).prop(TextAreaLabel::new("Declaration source path")),
         text_button(scale, "Bind standalone source", Writer::bind_declaration_source)
             .disabled(blocked || writer.workspaces.declarations.source.path.trim().is_empty()),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px()))
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px()))
 }
 
 fn bound_source(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -63,7 +65,7 @@ fn bound_source(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                     "Standalone TOML · source saved"
                 },
             )
-            .text_size(18. * scale),
+            .typeset(Type::Section, scale),
             paragraph(scale, panel.status_message(), 640.),
             actions::primary(writer),
             paragraph(
@@ -83,6 +85,6 @@ fn bound_source(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px()),
+        .gap(space::TEXT.px()),
     )
 }

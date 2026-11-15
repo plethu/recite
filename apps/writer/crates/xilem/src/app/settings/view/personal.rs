@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
 use xilem::view::checkbox;
 use xilem::view::{GridExt, GridTrackSize, grid};
@@ -50,7 +52,7 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
         checkbox(caption, checked, move |app: &mut App, value| {
             app.update_preference(edit(value))
         })
-        .text_size(14. * scale)
+        .text_size(Type::Body.size(scale))
     })
     .collect::<Vec<_>>();
     flex_col((
@@ -67,8 +69,8 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
             vec![GridTrackSize::Fixed(width.px())]
         })
         .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
-        .gap(32.px()),
-        label(scale, "Appearance").text_size(18. * scale),
+        .gap(space::REGIONS.px()),
+        label(scale, "Appearance").typeset(Type::Section, scale),
         radio_group(
             flex_row((
                 radio_button(
@@ -88,9 +90,9 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
                     },
                 ),
             ))
-            .gap(12.px()),
+            .gap(space::TEXT.px()),
         ),
-        label(scale, "Editing").text_size(18. * scale),
+        label(scale, "Editing").typeset(Type::Section, scale),
         radio_group(
             flex_row((
                 radio_button(
@@ -106,7 +108,7 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
                     |app: &mut App| app.update_preference(UserConfigEdit::Keymap(Keymap::Vim)),
                 ),
             ))
-            .gap(12.px()),
+            .gap(space::TEXT.px()),
         ),
         radio_group(
             flex_row((
@@ -127,7 +129,7 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
                     },
                 ),
             ))
-            .gap(12.px()),
+            .gap(space::TEXT.px()),
         ),
         checkbox(
             "Split map and script",
@@ -138,15 +140,15 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
                 ))
             },
         )
-        .text_size(14. * scale),
+        .text_size(Type::Body.size(scale)),
         flex_col(booleans)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         prose(
             scale,
             format!("Personal configuration: {}", app.preferences.path),
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

@@ -1,6 +1,8 @@
 //! A completed decision replaces the review rather than leaving disabled alternatives behind.
 use super::*;
 use crate::attention::PaneEntry;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use xilem::{masonry::properties::LineBreaking, view::FlexExt};
 
 pub(super) fn panel(writer: &Writer, resolved: &Resolved) -> impl WidgetView<Writer> + use<> {
@@ -28,13 +30,13 @@ pub(super) fn panel(writer: &Writer, resolved: &Resolved) -> impl WidgetView<Wri
         sized_box(
             flex_row((
                 label(scale, heading)
-                    .text_size(24. * scale)
+                    .typeset(Type::Section, scale)
                     .prop(LineBreaking::WordWrap)
                     .flex(1.),
                 text_button(scale, "Return to writing", Writer::return_to_writing),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(12.px())
+            .gap(space::TEXT.px())
             .prop(PaneEntry(true)),
         )
         .width(writer.content_width().px()),
@@ -54,6 +56,6 @@ pub(super) fn panel(writer: &Writer, resolved: &Resolved) -> impl WidgetView<Wri
         .disabled(writer.project_action_blocked()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::External)))
 }

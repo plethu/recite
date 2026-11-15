@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{label, prose, radio_button, text_button};
 use xilem::{
     WidgetView,
@@ -12,7 +14,7 @@ pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {
     portal(
         sized_box(
             flex_col((
-                label(scale, "Settings").text_size(28. * scale),
+                label(scale, "Settings").typeset(Type::Display, scale),
                 navigation(app),
                 indexed_stack((personal(app), keyboard(app)))
                     .active(usize::from(app.settings.keyboard)),
@@ -22,9 +24,9 @@ pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {
                     .map(|error| prose(scale, error.clone())),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(16.px()),
+            .gap(space::KINDS.px()),
         )
-        .padding(24.px()),
+        .padding(space::GROUPS.px()),
     )
     .constrain_horizontal(true)
     // Settings is a page, not the desk: it keeps a flat ground beneath its forms and prose.
@@ -56,7 +58,7 @@ fn navigation(app: &App) -> impl WidgetView<App> + use<> {
                     |app: &mut App| app.settings.keyboard = true,
                 ),
             ))
-            .gap(12.px()),
+            .gap(space::TEXT.px()),
         ),
         text_button(scale, "Project settings…", |app: &mut App| {
             app.open_project_settings()
@@ -73,5 +75,5 @@ fn navigation(app: &App) -> impl WidgetView<App> + use<> {
         Axis::Vertical
     })
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

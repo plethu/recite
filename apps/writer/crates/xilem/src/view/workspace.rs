@@ -3,6 +3,7 @@ use super::*;
 use crate::map::Workspace;
 use crate::presentation::group::named;
 use crate::presentation::segments::{segment, segments};
+use crate::presentation::space;
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
 mod sheet;
@@ -96,7 +97,7 @@ pub(super) fn workspace(
             .flex(1.),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_col(()).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!script));

@@ -1,6 +1,8 @@
 //! Native text, radio and checkbox controls retain their ordinary keyboard behavior.
 use super::*;
 use crate::presentation::segments::{segment, segments};
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
 
 pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
@@ -32,7 +34,7 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         })
         .collect::<Vec<_>>();
     flex_col((
-        label(scale, "Fields and selection").text_size(22. * scale),
+        label(scale, "Fields and selection").typeset(Type::Section, scale),
         segments(palette, choices),
         label(scale, "Find a destination"),
         flex_row((
@@ -40,14 +42,14 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
                 state.query = text
             })
             .placeholder("Search scene titles…")
-            .text_size(16. * scale)
+            .text_size(field_text(scale))
             .prop(TextAreaLabel::new("Find a destination"))
             .width(640.px()),
         )),
         label(scale, format!("Destination: {}", state.destination)),
         flex_col(destinations)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         label(scale, "Manuscript"),
         sized_box(
             text_input(state.manuscript.clone(), |state: &mut Specimen, text| {
@@ -64,8 +66,8 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             state.reviewed,
             |state: &mut Specimen, checked| state.reviewed = checked,
         )
-        .text_size(14. * scale),
+        .text_size(Type::Body.size(scale)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

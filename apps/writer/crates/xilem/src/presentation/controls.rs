@@ -5,17 +5,23 @@ use xilem::{
     masonry::core::ArcStr,
     view::{self, Button, Label, PointerButton, Prose},
 };
-use xilem::{masonry::layout::AsUnit, style::Style};
+use xilem::{
+    masonry::{layout::AsUnit, parley::LineHeight},
+    style::Style,
+};
 
+/// Body text: Plex Sans 14/20. A size override keeps the same proportional leading.
 pub(crate) fn label(scale: f32, text: impl Into<ArcStr>) -> Label {
+    let (size, line) = super::tokens::Type::Body.metrics();
     view::label(text)
         .font(super::print::font(
             recite_writer_session::typography::FONT_UI,
         ))
-        .text_size(14. * scale)
+        .text_size(size * scale)
+        .line_height(LineHeight::FontSizeRelative(line / size))
 }
 pub(crate) fn prose<State, Action>(scale: f32, text: impl Into<ArcStr>) -> Prose<State, Action> {
-    view::prose(text).text_size(14. * scale)
+    view::prose(text).text_size(super::tokens::Type::Body.size(scale))
 }
 pub(crate) fn paragraph<State: 'static, Action: 'static>(
     scale: f32,
@@ -36,5 +42,5 @@ pub(crate) fn text_button<State: 'static>(
     impl Fn(&mut State, Option<PointerButton>) -> MessageResult<()> + Send + Sync + 'static,
     Label,
 > {
-    view::button(label(scale, text), callback)
+    view::button(super::tokens::Type::Control.label(scale, text), callback)
 }

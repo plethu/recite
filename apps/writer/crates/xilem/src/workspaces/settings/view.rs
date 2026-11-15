@@ -1,3 +1,5 @@
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 mod preview;
 use super::*;
 use crate::{
@@ -19,7 +21,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         .project_settings()
         .is_some_and(Session::requires_reload);
     flex_col((
-        label(scale, "Project settings").text_size(24. * scale),
+        label(scale, "Project settings").typeset(Type::Display, scale),
         writer.project_settings().map(|session| {
             paragraph(
                 scale,
@@ -43,7 +45,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         (!reload).then(|| baseline(writer)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Settings)))
 }
 fn state(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -112,7 +114,7 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         busy.then(|| {
             text_button(
                 scale,
@@ -134,7 +136,7 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(!reload))
 }
 fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -142,7 +144,7 @@ fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
     let session = writer.project_settings();
     flex_col((
-        label(scale, "Saved manifest and recovery").text_size(18. * scale),
+        label(scale, "Saved manifest and recovery").typeset(Type::Section, scale),
         flex_row((
             text_button(
                 scale,
@@ -161,10 +163,10 @@ fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(session.is_some_and(Session::requires_reload)))
 }
 fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -177,7 +179,7 @@ fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.workspaces.settings.set_import_path(path)
         })
         .placeholder("Path to the edited TOML draft")
-        .text_size(16. * scale)
+        .text_size(field_text(scale))
         .disabled(blocked)
         .width(writer.content_width().px())
         .prop(TextAreaLabel::new("Settings draft path")),
@@ -189,7 +191,7 @@ fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .disabled(blocked || panel.import_path().is_empty()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.settings;
@@ -222,6 +224,6 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

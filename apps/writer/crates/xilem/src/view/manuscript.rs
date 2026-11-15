@@ -3,6 +3,7 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::{Pane, Region};
 use crate::presentation::print;
+use crate::presentation::space;
 use crate::rules;
 use recite_writer_model::{EditOperation, StructuralCommand};
 mod field;
@@ -33,7 +34,7 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
         folio::footer(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Script)))
 }
 fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> {
@@ -81,7 +82,7 @@ pub(super) fn draft_actions(
     ))
     .direction(axis)
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn edit_button(
     state: &Writer,
@@ -129,7 +130,7 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .direction(action_axis(state))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     // Quiet actions line their labels up with the manuscript's text column.
     .padding(Padding::left(
         if state.reading.rows.is_empty() {
@@ -183,5 +184,5 @@ fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
             })
             .collect::<Vec<_>>(),
     )
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }

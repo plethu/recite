@@ -1,6 +1,7 @@
 //! Both reading aids reuse one bounded read-only block without mounting more editors.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
 use crate::presentation::{group::named, manuscript_text, print};
 use recite_writer_model::{PassageKind, ScriptEntry};
 use recite_writer_session::{choices::display_name, reading::Excerpt};
@@ -61,7 +62,6 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                             pinned.snapshot.document(),
                         ),
                     )
-                    .text_size(11. * scale)
                     .prop(LineBreaking::WordWrap)
                     .color(state.palette.muted)
                     .grid_pos(1, 0),
@@ -79,7 +79,7 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 ))
                 .columns([action, caption, action].map(|width| GridTrackSize::Fixed(width.px())))
                 .rows([GridTrackSize::Auto])
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
                 (!pinned.collapsed).then(|| {
                     portal(entries(state, &pinned.snapshot.block().entries, width))
                         .constrain_horizontal(true)
@@ -87,10 +87,10 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ))
         .dims((available.px(), height.px()))
-        .padding(Padding::from_vh(6.px(), 12.px())),))
+        .padding(Padding::from_vh(space::UNIT.px(), space::KINDS.px())),))
         .main_axis_alignment(MainAxisAlignment::Center)
         .background_color(state.palette.inset),
     )
@@ -141,10 +141,10 @@ pub(crate) fn destination(
                 ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         )
         .width(width.px())
-        .padding(12.px())
+        .padding(space::KINDS.px())
         .background_color(state.palette.inset)
         .boxed(),
     )
@@ -174,7 +174,7 @@ fn entries(state: &Writer, items: &[ScriptEntry], width: f64) -> impl WidgetView
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetView<Writer>> {
     let scale = state.ui_scale();
@@ -193,7 +193,6 @@ fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetV
             };
             flex_row((
                 print::meta(scale, caption)
-                    .text_size(11. * scale)
                     .prop(LineBreaking::WordWrap)
                     .width(caption_width.px())
                     .color(state.palette.muted),
@@ -201,7 +200,7 @@ fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetV
                     .width((width - caption_width - 8.).px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(4.px())
+            .gap(space::UNIT.px())
             .boxed()
         }
         ScriptEntry::Group { heading, .. } => label(scale, heading.clone()).boxed(),

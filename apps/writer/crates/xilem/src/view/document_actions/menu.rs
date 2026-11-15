@@ -2,6 +2,8 @@
 use super::*;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{group::named, print};
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use xilem::{
@@ -20,7 +22,7 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
         flex_col((
             flex_row((
                 label(scale, "Document actions")
-                    .text_size(18. * scale)
+                    .typeset(Type::Section, scale)
                     .flex(1.),
                 print::action(
                     scale,
@@ -29,7 +31,7 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
                     Writer::dismiss_document_menu,
                 ),
             ))
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
             map_message_result(
                 flex_col((
                     portal(content(state, width - 26.))
@@ -38,7 +40,7 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
                     footer(state),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(12.px()),
+                .gap(space::TEXT.px()),
                 |state: &mut Writer, result: MessageResult<()>| {
                     if matches!(result, MessageResult::Action(())) {
                         state.close_document_menu();
@@ -49,11 +51,11 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
             .flex(1.),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .gap(12.px())
+        .gap(space::TEXT.px())
         .prop(Region(Some(Pane::DocumentActions))),
     ))
     .dims((width.px(), (state.viewport.height * 0.65).px()))
-    .padding(12.px())
+    .padding(space::KINDS.px())
     .background_color(state.palette.inset)
     .border_color(state.palette.accent)
     .border_width(1.px())
@@ -91,7 +93,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
                 .then(|| reading::reply_actions(state, &passage.id)),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         flex_row((
             text_button(scale, "Redo applied", |state: &mut Writer| {
@@ -106,7 +108,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
         ))
         .direction(axis)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_row((
             state.session.project().is_some().then(|| {
                 text_button(scale, "Open in editor", Writer::open_editor).disabled(
@@ -127,7 +129,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
         ))
         .direction(axis)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_row((
             state
                 .work
@@ -144,10 +146,10 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
         ))
         .direction(axis)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 /// The app's workspace actions, folded into the same menu as the document's.
@@ -170,7 +172,7 @@ fn workspace_entries(state: &Writer, axis: Axis) -> impl WidgetView<Writer> + us
     ))
     .direction(axis)
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn footer(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -201,5 +203,5 @@ fn footer(state: &Writer) -> impl WidgetView<Writer> + use<> {
         text_button(scale, "Close", Writer::request_close).disabled(closing),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

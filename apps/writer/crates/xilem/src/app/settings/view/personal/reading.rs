@@ -1,6 +1,8 @@
 use super::*;
 use crate::presentation::group::named;
+use crate::presentation::space;
 use crate::presentation::{Icon, print};
+use crate::presentation::{Type, Typeset};
 use xilem::masonry::properties::LineBreaking;
 
 pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
@@ -73,7 +75,7 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                         move |app: &mut App| app.adjust_presentation(field, true),
                     ),
                 ))
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
             ))
             .direction(if wide {
                 Axis::Horizontal
@@ -81,18 +83,18 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                 Axis::Vertical
             })
             .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
             .width(width.px()),
         )
     })
     .collect::<Vec<_>>();
     flex_col((
-        label(scale, "Reading and layout").text_size(18. * scale),
+        label(scale, "Reading and layout").typeset(Type::Section, scale),
         flex_col(fields)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .width(width.px())
 }

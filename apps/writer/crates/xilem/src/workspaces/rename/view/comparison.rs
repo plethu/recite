@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::source_comparison;
+use crate::presentation::space;
 
 pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.rename;
@@ -38,9 +39,9 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
                         .width((writer.content_width() - 24.).min(960.).px()),)),
                     ))
                     .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(8.px()),
+                    .gap(space::SIBLINGS.px()),
                 )
-                .padding(12.px())
+                .padding(space::KINDS.px())
                 .background_color(writer.palette.inset)
             }),
             change.after.as_ref().map(|text| {
@@ -55,13 +56,13 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
                         .width((writer.content_width() - 24.).min(960.).px()),)),
                     ))
                     .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(8.px()),
+                    .gap(space::SIBLINGS.px()),
                 )
-                .padding(12.px())
+                .padding(space::KINDS.px())
                 .background_color(writer.palette.surface)
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px()),
+        .gap(space::TEXT.px()),
     )
 }

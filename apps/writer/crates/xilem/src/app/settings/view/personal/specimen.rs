@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::space;
 use crate::{
     presentation::{manuscript_text, print},
     reading::Content,
@@ -53,9 +54,9 @@ pub(super) fn specimen(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             manuscript_text(size, excerpt).width((width - 32.).max(200.).px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px()),
+        .gap(space::TEXT.px()),
     )
-    .padding(16.px())
+    .padding(space::KINDS.px())
     .width(width.px())
     .background_color(app.theme.palette.inset)
 }

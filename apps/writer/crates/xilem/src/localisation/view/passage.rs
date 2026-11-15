@@ -1,4 +1,5 @@
 //! Source and translation compose as one retained bilingual manuscript.
+use crate::presentation::space;
 mod context;
 mod incoming;
 mod source;
@@ -40,23 +41,24 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
                         Axis::Vertical
                     })
                     .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(24.px()),
+                    .gap(space::GROUPS.px()),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(8.px())
+                .gap(space::SIBLINGS.px())
                 .boxed(),
                 beat::Row::Context(row) => context::context(writer, row, width).boxed(),
             };
             (
                 row.identity(&beat.source),
-                flex_col((content,)).padding(xilem::style::Padding::from_vh(12.px(), 0.px())),
+                flex_col((content,))
+                    .padding(xilem::style::Padding::from_vh(space::KINDS.px(), 0.px())),
             )
         })
         .collect();
     Some(
         flex_col((
             print::title(writer.ui_scale(), display_name(&beat.name)),
-            print::meta(
+            print::id(
                 writer.ui_scale(),
                 format!(
                     "{} :: {}",
@@ -93,7 +95,7 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
             pages(writer, beat),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -119,7 +121,7 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         Axis::Horizontal
     })
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(true))
 }
 fn pages(writer: &Writer, beat: &beat::Beat) -> Option<impl WidgetView<Writer> + use<>> {
@@ -150,9 +152,9 @@ fn pages(writer: &Writer, beat: &beat::Beat) -> Option<impl WidgetView<Writer> +
                 )
                 .disabled(blocked || (page + 1) * beat::PAGE >= beat.total),
             ))
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ))
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }
 fn width(writer: &Writer) -> f64 {

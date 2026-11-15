@@ -1,5 +1,6 @@
 //! Bounded, selectable native search results and their page controls.
 use super::*;
+use crate::presentation::space;
 
 pub(super) fn result(
     app: &App,
@@ -65,7 +66,7 @@ pub(super) fn result(
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(4.px()),
+        .gap(space::UNIT.px()),
         move |app: &mut App| app.activate_picker(position),
     )
     .disabled(!enabled)
@@ -101,6 +102,6 @@ pub(super) fn pagination(
                     })
                 }),
         ))
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }

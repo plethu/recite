@@ -2,6 +2,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::print;
+use crate::presentation::space;
 use xilem::{masonry::properties::LineBreaking, view::portal};
 mod menu;
 pub(super) use menu::panel;
@@ -32,7 +33,7 @@ pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + 
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         })
 }
 
@@ -90,12 +91,12 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
                     )
                     .disabled(state.work.busy() || state.project_jobs_busy()),
                 ))
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         )
-        .padding(12.px())
+        .padding(space::KINDS.px())
         .background_color(state.palette.surface)
     })
 }
@@ -103,7 +104,7 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
 pub(super) fn close_view(state: &Writer) -> impl WidgetView<Writer> + use<> {
     portal(
         flex_col((
-            xilem::view::FlexSpacer::Fixed(48.px()),
+            xilem::view::FlexSpacer::Fixed(space::BEATS.px()),
             flex_row((sized_box(flex_col((close_prompt(state),))).width(
                 (state.viewport.width - 48.)
                     .min(720. * f64::from(state.ui_scale()))
@@ -112,7 +113,7 @@ pub(super) fn close_view(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .main_axis_alignment(xilem::view::MainAxisAlignment::Center),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .padding(24.px()),
+        .padding(space::GROUPS.px()),
     )
     .constrain_horizontal(true)
     .background_color(state.palette.inset)

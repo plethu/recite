@@ -1,6 +1,8 @@
 use super::*;
 use crate::WriterLayout;
 use crate::attention::{EntryContext, PaneEntry};
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 use crate::trial::VALUE_PAGE;
 use recite_core::ast::{InterpolationBinding, InterpolationType};
 use recite_writer_session::preview::parse_value;
@@ -27,10 +29,11 @@ pub(super) fn values(state: &Writer, disabled: bool) -> impl WidgetView<Writer> 
         })
         .collect::<Vec<_>>();
     flex_col((
-        (!bindings.is_empty()).then(|| label(scale, "Interpolation values").text_size(20. * scale)),
+        (!bindings.is_empty())
+            .then(|| label(scale, "Interpolation values").typeset(Type::Section, scale)),
         flex_col(fields)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(10.px()),
+            .gap(space::TEXT.px()),
         (pages > 1).then(|| {
             flex_col((
                 label(scale, format!("Value page {} of {pages}", page + 1)),
@@ -48,11 +51,11 @@ pub(super) fn values(state: &Writer, disabled: bool) -> impl WidgetView<Writer> 
                 .disabled(disabled || page + 1 >= pages),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn field(
@@ -81,7 +84,7 @@ fn field(
                         .insert(name.clone(), value.to_string());
                 },
             )
-            .text_size(14. * state.ui_scale())
+            .text_size(Type::Body.size(state.ui_scale()))
             .disabled(disabled),
         )
     } else {
@@ -98,7 +101,7 @@ fn field(
         let input = text_input(value, move |state: &mut Writer, value| {
             state.trial.settings.values.insert(name.clone(), value);
         })
-        .text_size(16. * state.ui_scale())
+        .text_size(field_text(state.ui_scale()))
         .disabled(disabled)
         .prop(properties::TextAreaLabel::new(caption));
         Either::B(
@@ -108,7 +111,7 @@ fn field(
                 invalid.then(|| label(state.ui_scale(), format!("Enter a {kind}."))),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
         )
     }
 }

@@ -1,6 +1,7 @@
 //! Beat identity and reading actions adapt without replacing the manuscript below.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
 use xilem::masonry::properties::LineBreaking;
 
 pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use<> {
@@ -21,8 +22,8 @@ pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use
         Axis::Vertical
     })
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .width(state.script_width().px()),))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

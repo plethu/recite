@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::source_text;
+use crate::presentation::space;
 
 pub(super) fn preview(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.settings;
@@ -58,12 +59,12 @@ pub(super) fn preview(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                             .width((writer.content_width() - 24.).min(960.).px()),)),
                     ))
                     .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(8.px()),
+                    .gap(space::SIBLINGS.px()),
                 )
-                .padding(12.px())
+                .padding(space::KINDS.px())
                 .background_color(writer.palette.inset)
             }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

@@ -1,5 +1,7 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::field_text;
+use crate::presentation::space;
 use crate::{attention::PaneEntry, trial::Review};
 use recite_writer_session::localisation::setup::languages;
 
@@ -27,7 +29,7 @@ pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer
                 text_input(settings.query.clone(), |state: &mut Writer, value| {
                     state.trial.settings.query = value
                 })
-                .text_size(16. * scale)
+                .text_size(field_text(scale))
                 .disabled(disabled)
                 .prop(properties::TextAreaLabel::new("Find preview language")),
             )
@@ -40,14 +42,14 @@ pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer
             .disabled(disabled),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
         .prop(PaneEntry(
             state.configuring_trial() && matches!(state.trial.settings.review, Review::Inputs),
         )),
         choices(state, disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn choices(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
@@ -76,7 +78,7 @@ fn choices(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     flex_col((
         flex_col(choices)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
         (pages > 1).then(|| {
             flex_col((
                 label(
@@ -99,9 +101,9 @@ fn choices(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
                 .disabled(disabled || page + 1 >= pages),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

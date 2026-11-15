@@ -1,12 +1,14 @@
 //! A passage occupies the same manuscript row while its single draft is edited.
 use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::{disclosure_width, print, route_toggle};
+use crate::presentation::space;
+use crate::presentation::{Sheet, disclosure_width, print, route_toggle};
 use crate::reading::PassageNumber;
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, PassageKind};
 use xilem::TextAlign;
 use xilem::masonry::kurbo::Axis;
+use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::button;
 #[cfg(test)]
@@ -18,8 +20,6 @@ const DESTINATION: f64 = 168.;
 const DESTINATION_MEASURE: f64 = 420.;
 /// Space between a reply and its overhanging source label.
 const CAPTION_CLEARANCE: f64 = 4.;
-/// Destination text relative to the reading size: 14px beside 20px prose.
-const DESTINATION_TEXT: f32 = 0.7;
 
 /// The speaker margin left of the text column; narrow rows set speakers above instead.
 fn speaker_margin(state: &Writer, width: f64) -> f64 {
@@ -53,7 +53,7 @@ pub(super) fn row(
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let caption_size = 0.6 * state.reading_size();
+    let reading = state.reading_size();
     let margin = speaker_margin(state, width);
     let wide = margin > 0.;
     // Destinations share one left-aligned column at the end of the measure, until the measure is
@@ -97,29 +97,30 @@ pub(super) fn row(
             flex_row((
                 indexed_stack((
                     flex_col((
-                        print::caps(scale, speaker.clone())
-                            .text_size(caption_size)
-                            .letter_spacing(0.066 * state.reading_size())
+                        Sheet::Label
+                            .label(reading, speaker.clone())
                             .text_alignment(alignment)
                             .color(state.palette.accent)
                             .width(if wide { margin } else { width }.px()),
                         (reply == Some(1)).then(|| {
-                            // 12px beside 20px prose, scaled with the manuscript like its caption.
-                            label(1., reply_count(state.reading.replies))
-                                .text_size(caption_size)
+                            // Set with the manuscript like its caption, in the regular weight.
+                            Sheet::Label
+                                .label(reading, reply_count(state.reading.replies))
+                                .weight(FontWeight::NORMAL)
+                                .letter_spacing(0.)
                                 .text_alignment(alignment)
                                 .color(state.palette.muted)
                                 .width(if wide { margin } else { width }.px())
                         }),
                     ))
-                    .gap(2.px()),
+                    .gap(space::UNIT.px()),
                     flex_col(()).dims((0.px(), 0.px())),
                 ))
                 .active(usize::from(!wide && speaker.is_empty())),
                 flex_row((
                     reply.map(|number| {
-                        print::meta(scale, number.to_string())
-                            .text_size(caption_size)
+                        print::id(scale, number.to_string())
+                            .text_size(Sheet::Number.size(reading))
                             .width(number_width.px())
                             .color(state.palette.muted)
                     }),
@@ -127,7 +128,7 @@ pub(super) fn row(
                     column
                         .then(|| route(state, passage, destination))
                         .flatten()
-                        .map(|route| sized_box(route).padding(Padding::left(8.px()))),
+                        .map(|route| sized_box(route).padding(Padding::left(space::SIBLINGS.px()))),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(number_gap.px()),
@@ -169,7 +170,7 @@ pub(super) fn row(
         },
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 
 /// Source labels either reserve their own line or share a stacked destination's target height.
@@ -185,7 +186,7 @@ fn metadata(
     placement: CaptionPlacement,
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let caption_size = 0.6 * state.reading_size();
+    let caption_size = Sheet::Number.size(state.reading_size());
     let metadata =
         if active && (state.editing_passage(&passage.id) || state.session.model().has_draft()) {
             format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id)
@@ -198,14 +199,14 @@ fn metadata(
             Either::A(
                 flex_row((
                     route(state, passage, (width - caption_width - 8.).max(80.)),
-                    print::meta(scale, metadata)
+                    print::id(scale, metadata)
                         .text_size(caption_size)
                         .prop(LineBreaking::Clip)
                         .color(state.palette.muted)
                         .width(caption_width.px()),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Center)
-                .gap(8.px())
+                .gap(space::SIBLINGS.px())
                 .width(width.px()),
             )
         }
@@ -213,11 +214,11 @@ fn metadata(
             sized_box(
                 flex_row((
                     flex_col(()).dims((margin.px(), 0.px())),
-                    print::meta(scale, metadata)
+                    print::id(scale, metadata)
                         .text_size(caption_size)
                         .color(state.palette.muted),
                 ))
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
             )
             // Only clearance below the reply's descenders takes space; the caption itself
             // overhangs into the column gap.
@@ -238,24 +239,25 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
         return None;
     }
     let target = destination.clone();
+    let size = Sheet::Destination.size(state.reading_size());
     Some(
         sized_box(styled(
             ControlStyle::Action,
             button(
                 route_toggle(
-                    DESTINATION_TEXT * state.reading_size() / 14.,
+                    size / 14.,
                     state.destination_expanded(destination),
                     state.palette.teal_text,
-                    DESTINATION_TEXT * state.reading_size(),
-                    label(1., display_name(destination))
-                        // Sized with the manuscript it belongs to, not with the interface chrome.
-                        .text_size(DESTINATION_TEXT * state.reading_size())
+                    size,
+                    // Sized with the manuscript it belongs to, not with the interface chrome.
+                    Sheet::Destination
+                        .label(state.reading_size(), display_name(destination))
                         .prop(LineBreaking::WordWrap)
                         // Fill the content box so the text starts at the column's left edge.
                         .width(
                             (width
                                 - 2. * (12. * f64::from(state.ui_scale()) + 1.)
-                                - disclosure_width(DESTINATION_TEXT * state.reading_size() / 14.))
+                                - disclosure_width(size / 14.))
                             .max(24.)
                             .px(),
                         )

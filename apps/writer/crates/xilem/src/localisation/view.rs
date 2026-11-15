@@ -1,4 +1,6 @@
 //! Catalogue files, bounded queue rows and entry fields are independent native components.
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 mod comparison;
 mod creation;
 mod entry;
@@ -39,7 +41,7 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         (!compact_entry && !matches!(writer.localisation.destination, Destination::Passage)).then(|| files(writer)),
         report(writer),
         destinations(writer),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::Localisation)))
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px()).prop(Region(Some(Pane::Localisation)))
 }
 fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let queue = matches!(writer.localisation.destination, Destination::Queue);
@@ -54,7 +56,7 @@ fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 "Translations"
             },
         )
-        .text_size(24. * writer.ui_scale())
+        .typeset(Type::Display, writer.ui_scale())
         .prop(LineBreaking::WordWrap)
         .width(if wide { width * 0.52 } else { width }.px()),
         (queue && writer.localisation.has_catalogue()).then(|| {
@@ -70,7 +72,7 @@ fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         Axis::Vertical
     })
     .cross_axis_alignment(CrossAxisAlignment::Center)
-    .gap(16.px())
+    .gap(space::KINDS.px())
 }
 fn prose_size(writer: &Writer) -> f32 {
     writer.reading_size()
@@ -130,7 +132,7 @@ pub(crate) fn close_details(writer: &Writer) -> Option<impl WidgetView<Writer> +
                 .disabled(writer.phase() != Phase::ConfirmClose || writer.project_jobs_busy() || writer.localisation.slot.read_only() || writer.localisation.saving()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -165,10 +167,10 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                     .disabled(state.report_page + 1 >= state.report.len()),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(6.px())
+                .gap(space::SIBLINGS.px())
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

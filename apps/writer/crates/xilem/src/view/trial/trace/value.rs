@@ -1,6 +1,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::source_text;
+use crate::presentation::space;
 
 pub(super) fn value(
     writer: &Writer,
@@ -60,9 +61,9 @@ pub(super) fn value(
                 .disabled(disabled || position.part + 1 >= value.parts),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }

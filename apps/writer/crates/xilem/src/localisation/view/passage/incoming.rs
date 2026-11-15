@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::disclosure;
+use crate::presentation::space;
 use xilem::view::button;
 pub(super) fn incoming(
     writer: &Writer,
@@ -56,7 +57,7 @@ pub(super) fn incoming(
                 flex_col((
                     flex_col(links)
                         .cross_axis_alignment(CrossAxisAlignment::Start)
-                        .gap(6.px()),
+                        .gap(space::SIBLINGS.px()),
                     (incoming.links.len() > 4).then(|| {
                         flex_row((
                             text_button(
@@ -77,14 +78,14 @@ pub(super) fn incoming(
                             })
                             .disabled((incoming.page + 1) * 4 >= incoming.links.len()),
                         ))
-                        .gap(8.px())
+                        .gap(space::SIBLINGS.px())
                     }),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(8.px())
+                .gap(space::SIBLINGS.px())
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

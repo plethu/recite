@@ -4,6 +4,7 @@ use crate::attention::{Pane, Region};
 use crate::map::Workspace;
 use crate::navigation::rail::{FILE_PAGE, beat_page_size};
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::space;
 use crate::presentation::{disclosure, disclosure_width, group::named, print};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::parley::style::FontWeight;
@@ -34,8 +35,8 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 outline(state),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(8.px())
-            .padding(12.px()),
+            .gap(space::SIBLINGS.px())
+            .padding(space::KINDS.px()),
         )
         .constrain_horizontal(true),
     ))
@@ -71,7 +72,7 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -165,7 +166,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .then(|| label(scale, "Project operation in progress")),
         flex_col(files)
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         (pages > 1).then(|| {
             flex_col((
                 text_button(scale, "Previous files", move |state: &mut Writer| {
@@ -177,12 +178,12 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 })
                 .disabled(closing || page + 1 >= pages),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         (pages > 1).then(|| label(scale, format!("Files · page {} of {pages}", page + 1))),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .width((state.drawer_width() - 24.).px())
 }
 
@@ -246,7 +247,7 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         flex_col(entries)
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(2.px()),
+            .gap(space::UNIT.px()),
         (pages > 1).then(|| {
             flex_col((
                 text_button(scale, "Previous beats", move |state: &mut Writer| {
@@ -258,12 +259,12 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 })
                 .disabled(closing || page + 1 >= pages),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         (pages > 1).then(|| label(scale, format!("Beats · page {} of {pages}", page + 1))),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 fn outline_caption<V: WidgetView<Writer, Widget: Sized>>(
@@ -295,7 +296,7 @@ fn outline_caption<V: WidgetView<Writer, Widget: Sized>>(
             .dims(((12. * scale).px(), (12. * scale).px())),
             text,
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 
@@ -333,8 +334,8 @@ fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 })
                 .collect::<Vec<_>>(),
         )
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

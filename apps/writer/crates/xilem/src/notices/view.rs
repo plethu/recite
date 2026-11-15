@@ -1,4 +1,5 @@
 use super::{Evidence, Target, Writer};
+use crate::presentation::space;
 use crate::{
     Phase,
     presentation::{label, paragraph, text_button},
@@ -25,7 +26,7 @@ pub(crate) fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
             notice(writer),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 fn notice(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -65,7 +66,7 @@ fn notice(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             actions(writer, blocked || !current),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 fn actions(writer: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
@@ -93,9 +94,9 @@ fn actions(writer: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
         Either::A(
             flex_col(actions)
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
         )
     } else {
-        Either::B(flex_row(actions).gap(8.px()))
+        Either::B(flex_row(actions).gap(space::SIBLINGS.px()))
     }
 }

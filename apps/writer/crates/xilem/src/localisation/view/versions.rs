@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::manuscript_comparison;
+use crate::presentation::space;
 use xilem::core::one_of::Either;
 pub(super) fn versions(
     writer: &Writer,
@@ -32,13 +33,13 @@ pub(super) fn versions(
         Either::A(
             flex_row((before, after))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
+                .gap(space::TEXT.px()),
         )
     } else {
         Either::B(
             flex_col((before, after))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
+                .gap(space::TEXT.px()),
         )
     }
 }
@@ -60,9 +61,9 @@ fn version(
             .width((width - 24.).px()),)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
     .width(width.px())
-    .padding(12.px())
+    .padding(space::KINDS.px())
     .background_color(writer.palette.inset)
 }

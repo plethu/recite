@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::manuscript_text;
+use crate::presentation::space;
 use recite_writer_session::localisation::catalogue::Draft;
 
 pub(super) fn forms(
@@ -19,7 +20,7 @@ pub(super) fn forms(
     flex_col((
         flex_col(fields)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(12.px()),
+            .gap(space::TEXT.px()),
         (draft.forms.len() > 4).then(|| {
             flex_col((
                 label(
@@ -53,11 +54,11 @@ pub(super) fn forms(
                 .disabled(blocked || (entry.form_page + 1) * 4 >= draft.forms.len()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn form(
@@ -96,7 +97,7 @@ fn form(
                 manuscript_text(prose_size(writer), excerpt).width(entry_width(writer).px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(4.px())
+            .gap(space::UNIT.px())
         }),
         paragraph(
             writer.ui_scale(),
@@ -111,5 +112,5 @@ fn form(
             .dims((entry_width(writer).px(), 180.px())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }

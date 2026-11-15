@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::{
     attention::{Pane, Region},
     presentation::{label, manuscript_text, paragraph, source_comparison, text_button},
@@ -16,14 +18,14 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         return Either::A(resolved::panel(writer, resolved));
     }
     Either::B(flex_col((
-        label(writer.ui_scale(), "Compare disk changes").text_size(28. * writer.ui_scale()),
+        label(writer.ui_scale(), "Compare disk changes").typeset(Type::Display, writer.ui_scale()),
         paragraph(writer.ui_scale(), "Review the versions before choosing a resolution. Each decision keeps a complete recovery copy. Save writes the accepted result.", 640.),
         report(writer),
         comparison(writer),
         pending(writer),
         actions(writer),
         merge(writer),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::External))))
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px()).prop(Region(Some(Pane::External))))
 }
 mod resolved;
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -39,8 +41,8 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             paragraph(scale, "Archives the complete current session, then adopts the inspected disk version as one Undo step.", 640.),
             text_button(scale, "Export merge draft", Writer::export_merge_draft).disabled(blocked || stale),
             paragraph(scale, "Combine versions in your IDE, then import the reviewed merge below.", 640.),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px()),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px())
+        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px()),
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px())
 }
 fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.external;
@@ -52,14 +54,14 @@ fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             flex_col((
                 label(scale, format!("Changed passage · {} · {} of {}", change.caption, panel.page + 1, inspection.changes.len())),
                 paired_sources(writer, change),
-            )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+            )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
         }),
         inspection.changes.is_empty().then(|| paragraph(scale, "The accepted source matches the inspected disk version. Any unapplied field draft is shown separately.", 640.)),
         (inspection.changes.len() > 1).then(|| flex_row((
             text_button(scale, "Previous source comparison", |writer: &mut Writer| writer.workspaces.external.page = writer.workspaces.external.page.saturating_sub(1)).disabled(panel.page == 0),
             text_button(scale, "More source comparison", |writer: &mut Writer| writer.workspaces.external.page += 1).disabled(panel.page + 1 >= inspection.changes.len()),
-        )).gap(8.px())),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()))
+        )).gap(space::SIBLINGS.px())),
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px()))
 }
 fn paired_sources(writer: &Writer, change: &ComparisonRow) -> impl WidgetView<Writer> + use<> {
     let available = writer.content_width();
@@ -87,13 +89,13 @@ fn paired_sources(writer: &Writer, change: &ComparisonRow) -> impl WidgetView<Wr
         Either::A(
             flex_row((before, after))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
+                .gap(space::TEXT.px()),
         )
     } else {
         Either::B(
             flex_col((before, after))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
         )
     }
 }
@@ -119,10 +121,10 @@ fn source(
             .width((width - 24.).px()),)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
     .width(width.px())
-    .padding(12.px())
+    .padding(space::KINDS.px())
     .background_color(writer.palette.inset)
 }
 fn pending(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -158,13 +160,13 @@ fn pending(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                         })
                         .disabled(panel.draft_page + 1 >= pages.len()),
                     ))
-                    .gap(8.px())
+                    .gap(space::SIBLINGS.px())
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         )
-        .padding(12.px())
+        .padding(space::KINDS.px())
         .background_color(writer.palette.surface),
     )
 }
@@ -183,7 +185,7 @@ fn merge(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         artifact.map(|artifact| paragraph(scale, format!("Merge draft: {}", artifact.source.display()), 640.)),
         text_button(scale, "Open merge draft in editor", Writer::open_merge_draft).disabled(blocked || writer.external.busy() || artifact.is_none()),
         text_button(scale, "Import reviewed merge", Writer::import_reviewed_merge).disabled(blocked || stale || artifact.is_none()),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
 }
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.external;
@@ -208,10 +210,10 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                     })
                     .disabled(panel.report_page + 1 >= panel.report.len()),
                 ))
-                .gap(8.px())
+                .gap(space::SIBLINGS.px())
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

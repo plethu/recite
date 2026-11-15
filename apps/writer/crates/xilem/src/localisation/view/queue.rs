@@ -1,5 +1,7 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 use crate::presentation::{manuscript_text, print};
 use xilem::masonry::kurbo::Axis;
 pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -33,7 +35,7 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     ),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(2.px()),
+                .gap(space::UNIT.px()),
                 flex_col((
                     paragraph(scale, row.status.clone(), measure),
                     (!row.translation.is_empty()).then(|| {
@@ -42,7 +44,7 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     }),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(6.px()),
+                .gap(space::SIBLINGS.px()),
             ))
             .direction(if wide {
                 Axis::Horizontal
@@ -50,15 +52,15 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 Axis::Vertical
             })
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(24.px())
-            .padding(xilem::style::Padding::from_vh(6.px(), 0.px()))
+            .gap(space::GROUPS.px())
+            .padding(xilem::style::Padding::from_vh(space::UNIT.px(), 0.px()))
         })
         .collect::<Vec<_>>();
     flex_col((
         flex_row((
             sized_box(
                 text_input(state.query.text.clone(), Writer::set_catalogue_query)
-                    .text_size(16. * scale)
+                    .text_size(field_text(scale))
                     .prop(TextAreaLabel::new("Search translations")),
             )
             .width(
@@ -70,11 +72,11 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 .disabled(blocked || !state.has_catalogue()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         filters(writer, wide),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(10.px()),
+            .gap(space::TEXT.px()),
         (state.queue.total > 8).then(|| {
             flex_row((
                 text_button(scale, "Previous translations", |writer: &mut Writer| {
@@ -89,11 +91,11 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 })
                 .disabled(blocked || (state.queue.page + 1) * 8 >= state.queue.total),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
@@ -122,7 +124,7 @@ fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
                 Axis::Vertical
             })
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
         ),
         label(
             scale,
@@ -132,7 +134,7 @@ fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
                 state.queue.page + 1
             ),
         )
-        .text_size(12. * scale),
+        .typeset(Type::Meta, scale),
     ))
     .direction(if wide {
         Axis::Horizontal
@@ -140,5 +142,5 @@ fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
         Axis::Vertical
     })
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

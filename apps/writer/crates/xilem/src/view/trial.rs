@@ -1,6 +1,7 @@
 //! Runtime controls; capture policy and traversal stay in the shared owners.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
 use crate::{
     attention::{Pane, PaneEntry, Region},
     presentation::{group::named, manuscript_text, print},
@@ -25,7 +26,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
             portal(content(state)).constrain_horizontal(true).flex(1.),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
         .prop(Region(Some(Pane::Preview))),
     )
 }
@@ -54,11 +55,11 @@ fn content(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ))
         .columns([GridTrackSize::FRACTION])
         .rows([GridTrackSize::Auto; 2])
-        .gap(12.px()),
+        .gap(space::TEXT.px()),
         state.trial.visible.then(|| trace::panel(state, closing)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Preview)))
 }
 
@@ -75,7 +76,7 @@ fn setup(state: &Writer, closing: bool) -> impl WidgetView<Writer> + use<> {
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 fn running(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetView<Writer> + use<> {
@@ -105,11 +106,11 @@ fn running(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetVie
             playback::playback(state, page, disabled),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px())
+        .gap(space::TEXT.px())
         .prop(PaneEntry(
             !state.configuring_trial() && state.unfinished_trial_edit().is_none(),
         )),
     )
-    .padding(12.px())
+    .padding(space::KINDS.px())
     .background_color(state.palette.inset)
 }

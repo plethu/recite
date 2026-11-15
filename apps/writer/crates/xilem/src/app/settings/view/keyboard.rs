@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 use crate::{keyed::keyed, presentation::paragraph};
 use xilem::{
     masonry::{kurbo::Axis, properties::TextAreaLabel},
@@ -17,7 +19,7 @@ pub(super) fn keyboard(app: &App) -> impl WidgetView<App> + use<> {
             Axis::Vertical
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(32.px())
+        .gap(space::REGIONS.px())
 }
 
 fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
@@ -48,12 +50,12 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         })
         .collect::<Vec<_>>();
     flex_col((
-        label(scale, "Find a command").text_size(18. * scale),
+        label(scale, "Find a command").typeset(Type::Section, scale),
         text_input(
             app.settings.query.clone(),
             |app: &mut App, value: String| app.search_shortcuts(value),
         )
-        .text_size(14. * scale)
+        .text_size(field_text(scale))
         .placeholder("Search shortcuts")
         .prop(TextAreaLabel::new("Search shortcuts"))
         .width(width.min(600.).px()),
@@ -61,7 +63,7 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         radio_group(
             flex_col(choices)
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
         ),
         (pages > 1).then(|| {
             flex_row((
@@ -75,11 +77,11 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                 })
                 .disabled(page + 1 >= pages),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .width(width.px())
 }
 
@@ -94,16 +96,16 @@ fn editor(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let changed = app.shortcut_draft() != stored;
     let selected = command_label(app.settings.command);
     flex_col((
-        label(scale, format!("Shortcut for {selected}")).text_size(18. * scale),
+        label(scale, format!("Shortcut for {selected}")).typeset(Type::Section, scale),
         label(scale, format!("Saved binding: {}", if stored.is_empty() { "Disabled" } else { stored })),
         sized_box(keyed(app.settings.command, text_input(app.shortcut_draft().to_owned(), |app: &mut App, value: String| app.edit_shortcut(value))
-            .text_size(14. * scale).prop(TextAreaLabel::new("Shortcut binding")))).width(width.min(600.).px()),
+            .text_size(field_text(scale)).prop(TextAreaLabel::new("Shortcut binding")))).width(width.min(600.).px()),
         flex_row((
             text_button(scale, "Save shortcut", |app: &mut App| app.save_shortcut()).disabled(!changed),
             text_button(scale, "Reset shortcuts", |app: &mut App| app.reset_shortcuts()),
             changed.then(|| label(scale, "Unsaved binding")),
-        )).gap(8.px()),
+        )).gap(space::SIBLINGS.px()),
         paragraph(scale, if cfg!(target_os = "macos") { "Primary means Command. Leave empty to disable. Apply, Undo and Redo belong to the focused editor." } else { "Primary means Ctrl. Leave empty to disable. Apply, Undo and Redo belong to the focused editor." }, width),
         app.settings.feedback.as_ref().map(|feedback| paragraph(scale, feedback.clone(), width)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px()).width(width.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px()).width(width.px())
 }

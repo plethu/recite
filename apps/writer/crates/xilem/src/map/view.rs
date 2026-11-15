@@ -2,6 +2,7 @@
 use super::interaction::Source;
 use super::*;
 use crate::attention::{Pane, Region};
+use crate::presentation::space;
 use crate::view::workspace;
 use xilem::masonry::properties;
 mod canvas;
@@ -63,7 +64,7 @@ pub(crate) fn panel(state: &Writer) -> Box<AnyWidgetView<Writer>> {
                 .disabled(state.navigation.busy() || state.work.busy()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         (!current).then(|| {
             text_button(state.ui_scale(), "Refresh map", |state: &mut Writer| {
@@ -82,7 +83,7 @@ pub(crate) fn panel(state: &Writer) -> Box<AnyWidgetView<Writer>> {
         connections::panel(state, scene),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(Region(Some(Pane::Map)))
     .boxed()
 }
@@ -119,5 +120,5 @@ fn scope_control(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

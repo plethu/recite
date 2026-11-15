@@ -1,4 +1,6 @@
 //! The specimen composes the same buttons, fields, palette and manuscript text as Writer.
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 mod inputs;
 mod samples;
 use super::*;
@@ -22,9 +24,9 @@ pub(super) fn specimen(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
                 samples::samples(state),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(24.px()),
+            .gap(space::GROUPS.px()),
         )
-        .padding(24.px()),
+        .padding(space::GROUPS.px()),
     )
     .constrain_horizontal(true);
     // The specimen sits on the same grained desk as Writer, so hover is judged against grain.
@@ -33,7 +35,7 @@ pub(super) fn specimen(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
 fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     flex_col((
         flex_row((label(state.scale(), "Recite · native component specimen")
-            .text_size(28. * state.scale())
+            .typeset(Type::Display, state.scale())
             .prop(LineBreaking::WordWrap)
             .width(640.px()),)),
         paragraph(
@@ -53,7 +55,7 @@ fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             ),
             text_button(state.scale(), "Monochrome", Specimen::monochrome),
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_row((
             text_button(
                 state.scale(),
@@ -68,20 +70,20 @@ fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
                 state.closed = true
             }),
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         checkbox(
             "Reduced motion",
             state.config.reduced_motion,
             |state: &mut Specimen, checked| state.config.reduced_motion = checked,
         )
-        .text_size(14. * state.scale()),
+        .text_size(Type::Body.size(state.scale())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 fn actions(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     flex_col((
-        label(state.scale(), "Actions and navigation").text_size(22. * state.scale()),
+        label(state.scale(), "Actions and navigation").typeset(Type::Section, state.scale()),
         flex_col((
             print::primary_action(
                 state.scale(),
@@ -102,8 +104,8 @@ fn actions(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             text_button(state.scale(), "Save changes", |_: &mut Specimen| {}).disabled(true),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

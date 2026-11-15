@@ -3,6 +3,7 @@ use super::*;
 use crate::map::connections::Direction;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::disclosure;
+use crate::presentation::space;
 use recite_writer_session::choices::display_name;
 use xilem::view::button;
 use xilem::view::portal;
@@ -42,14 +43,14 @@ pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + 
                     connection_list(state, scene, Direction::Incoming),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
+                .gap(space::TEXT.px()),
             )
             .constrain_horizontal(true)
             .height((120. * f64::from(state.ui_scale())).px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 fn connection_list(
     state: &Writer,
@@ -111,7 +112,7 @@ fn connection_list(
         label(state.ui_scale(), format!("{heading} · {}", indices.len())),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         indices.is_empty().then(|| label(state.ui_scale(), "None")),
         (pages > 1).then(|| {
             flex_row((
@@ -136,9 +137,9 @@ fn connection_list(
                 )
                 .disabled(page + 1 >= pages),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

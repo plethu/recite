@@ -1,5 +1,6 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
+use crate::presentation::space;
 use crate::presentation::{Icon, excerpt, mark, print};
 use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
@@ -37,7 +38,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             excerpt(synopsis.prose.clone(), zoom).width((width - 24.).px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(4.px()),
+        .gap(space::UNIT.px()),
         (!synopsis.annotations.is_empty()).then(|| {
             label(1., synopsis.annotations.join(" · "))
                 .text_size(13_f32.max(11. / zoom))
@@ -45,7 +46,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .dims(((width - 24.).px(), (HEIGHT - 24.).px()));
     let focus_id = id.clone();
     let move_id = id.clone();
@@ -62,7 +63,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         scene.node(index).width.px(),
         HEIGHT.px(),
     ))
-    .padding(Padding::all(12.px()))
+    .padding(Padding::all(space::TEXT.px()))
     .background_color(Color::TRANSPARENT)
     .border_color(Color::TRANSPARENT)
     .border_width(0.px());

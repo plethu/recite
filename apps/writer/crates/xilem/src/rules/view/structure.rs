@@ -1,5 +1,6 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
 use recite_writer_model::RuleEffect;
 use xilem::masonry::properties;
 
@@ -18,7 +19,7 @@ pub(super) fn condition(
         expanded.then(|| condition_actions(state, path, title, node)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn grouping(
     state: &Writer,
@@ -55,7 +56,7 @@ fn grouping(
         .disabled(disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn condition_actions(
     state: &Writer,
@@ -84,7 +85,7 @@ fn condition_actions(
         .disabled(!state.rules_editable()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 pub(super) fn effect(
     state: &Writer,
@@ -110,7 +111,7 @@ pub(super) fn effect(
         expanded.then(|| delivery_modes(state, index, effect)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn effect_order(
     state: &Writer,
@@ -139,7 +140,7 @@ fn effect_order(
         .disabled(disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn delivery_modes(
     state: &Writer,
@@ -166,7 +167,7 @@ fn delivery_modes(
         .collect::<Vec<_>>();
     flex_col(modes)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(4.px())
+        .gap(space::UNIT.px())
 }
 fn actions(
     state: &Writer,

@@ -1,8 +1,7 @@
 //! Print hierarchy and native action styles for Recite's writing surfaces.
+use super::Type;
 use super::control_style::{ControlStyle, styled};
-use super::label;
 use recite_writer_session::palette::Palette;
-use recite_writer_session::typography::{FONT_DISPLAY, FONT_MONO};
 use xilem::peniko::Color;
 
 mod separator;
@@ -32,23 +31,27 @@ pub(crate) fn font(families: &'static [&'static str]) -> FontFamily<'static> {
     )
 }
 
+/// A page or scene title: Display.
 pub(crate) fn title(scale: f32, text: impl Into<ArcStr>) -> Label {
-    label(scale, text)
-        .font(font(FONT_DISPLAY))
-        .text_size(32. * scale)
+    Type::Display.label(scale, text)
 }
 
+/// Counts, hints and status sentences: Meta, in Plex Sans. Callers set the muted colour.
 pub(crate) fn meta(scale: f32, text: impl Into<ArcStr>) -> Label {
-    label(scale, text)
-        .font(font(FONT_MONO))
-        .text_size(12. * scale)
+    Type::Meta.label(scale, text)
 }
 
+/// A small tracked caps caption: the sidebar's scene list heading and source captions.
 pub(crate) fn caps(scale: f32, text: impl Into<ArcStr>) -> Label {
-    label(scale, text)
-        .text_size(11. * scale)
+    Type::Meta
+        .label(scale, text)
         .weight(FontWeight::SEMI_BOLD)
-        .letter_spacing(1.32 * scale)
+        .letter_spacing(0.06 * Type::Meta.size(scale))
+}
+
+/// Ids, source labels and the folio: Plex Mono.
+pub(crate) fn id(scale: f32, text: impl Into<ArcStr>) -> Label {
+    Type::Id.label(scale, text)
 }
 
 pub(crate) fn action<S: 'static>(
@@ -59,7 +62,7 @@ pub(crate) fn action<S: 'static>(
 ) -> impl WidgetView<S, Widget = Button> {
     styled(
         ControlStyle::Action,
-        view::button(label(scale, text), callback).disabled(disabled),
+        view::button(Type::Control.label(scale, text), callback).disabled(disabled),
     )
 }
 
@@ -76,7 +79,8 @@ pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send +
         styled(
             ControlStyle::Primary,
             view::button(
-                label(scale, text)
+                Type::Control
+                    .label(scale, text)
                     .weight(if disabled {
                         FontWeight::NORMAL
                     } else {
@@ -107,9 +111,9 @@ pub(crate) fn end_mark<S: 'static>(
     let colon = || super::icons::face(scale * 0.6, "◆", super::Icon::Colon, palette.teal);
     // Sized to its content, so a divider can draw its rules either side.
     view::sized_box(
-        view::flex_row((colon(), meta(scale, "END").color(palette.muted), colon()))
+        view::flex_row((colon(), id(scale, "END").color(palette.muted), colon()))
             .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap((4. * f64::from(scale)).px()),
+            .gap((super::space::UNIT * f64::from(scale)).px()),
     )
     .width(Dim::MaxContent)
 }

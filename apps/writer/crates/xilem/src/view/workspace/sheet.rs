@@ -1,5 +1,6 @@
 //! Script is a clean sheet resting on the grained desk, or full-bleed paper where none fits.
 use super::*;
+use crate::presentation::space;
 use xilem::masonry::{properties::BoxShadow, widgets::Flex};
 use xilem::peniko::Color;
 use xilem::style::Padding;
@@ -28,9 +29,9 @@ pub(super) fn paper<V: WidgetView<Writer>>(
     let sheet = layout.sheet;
     let paper = sized_box(manuscript)
         .padding(if sheet {
-            Padding::from_vh(32.px(), MARGIN.px())
+            Padding::from_vh(space::REGIONS.px(), MARGIN.px())
         } else {
-            Padding::from_vh(16.px(), BLEED.px())
+            Padding::from_vh(space::KINDS.px(), BLEED.px())
         })
         .background_color(state.palette.surface)
         .border_color(if sheet {

@@ -2,6 +2,7 @@
 //! expanded state yet, so the announced name still begins with `▸` or `▾`: the chevron is an image
 //! named with that glyph, and assistive technology joins it with the text as before.
 use super::icons::{Icon, face};
+use crate::presentation::space;
 use xilem::{
     WidgetView,
     core::one_of::Either,
@@ -27,7 +28,7 @@ pub(crate) fn disclosure<S: 'static, V: WidgetView<S>>(
     };
     flex_row((face(scale * MARK, name, icon, color), text))
         .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap((4. * f64::from(scale)).px())
+        .gap((space::UNIT * f64::from(scale)).px())
 }
 
 /// A destination toggle: `→` while closed and a painted chevron, announced `▾`, while open.
@@ -48,7 +49,7 @@ pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
                 text,
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap((4. * f64::from(scale)).px()),
+            .gap((space::UNIT * f64::from(scale)).px()),
         )
     }
 }

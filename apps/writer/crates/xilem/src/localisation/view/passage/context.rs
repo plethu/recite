@@ -1,5 +1,6 @@
 //! Structural manuscript context never acquires source-mutating controls here.
 use super::*;
+use crate::presentation::space;
 use xilem::core::one_of::Either;
 use xilem::masonry::properties::LineBreaking;
 pub(super) fn context(
@@ -56,9 +57,9 @@ pub(super) fn context(
                 )
                 .disabled(row.page + 1 >= row.pages.len()),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }

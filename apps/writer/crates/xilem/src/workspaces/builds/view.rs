@@ -1,5 +1,7 @@
 use super::*;
 use crate::attention::{Pane, PaneEntry, Region};
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{group::named, label, paragraph, print, radio_button, text_button};
 use xilem::{
     WidgetView,
@@ -18,10 +20,10 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     let width = column_width(writer);
     flex_col((
         flex_row((
-            label(scale, "Build scenes").text_size(24. * scale),
+            label(scale, "Build scenes").typeset(Type::Display, scale),
             build_actions(writer, busy, builds.is_none_or(|builds| builds.targets.is_empty())),
         )).direction(if width >= 580. * f64::from(scale) { Axis::Horizontal } else { Axis::Vertical })
-            .cross_axis_alignment(CrossAxisAlignment::Center).gap(24.px()).prop(PaneEntry(true)),
+            .cross_axis_alignment(CrossAxisAlignment::Center).gap(space::GROUPS.px()).prop(PaneEntry(true)),
         writer.session.project().map(|project| {
             let sources = project.documents().len();
             let targets = builds.map_or(0, |builds| builds.targets.len());
@@ -33,12 +35,12 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         }),
         paragraph(scale, "Every build validates the whole saved project. The selected target limits emitted assets. Save all and build includes your current edits.", width),
         feedback(writer),
-        label(scale,"Build target").text_size(18.*scale),
+        label(scale,"Build target").typeset(Type::Section, scale),
         target_options(writer),
         pagination(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Build)))
     .width(width.px())
 }
@@ -130,7 +132,7 @@ fn target_options(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         radio_group(
             flex_col((all, choices))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
+                .gap(space::TEXT.px()),
         ),
     )
 }
@@ -158,7 +160,7 @@ fn target_choice(
     flex_col((
         choice,
         sized_box(
-            print::meta(scale, asset.to_owned())
+            print::id(scale, asset.to_owned())
                 .color(writer.palette.muted)
                 .prop(LineBreaking::WordWrap)
                 .width((column_width(writer) - 44. * f64::from(scale)).px()),
@@ -166,7 +168,7 @@ fn target_choice(
         .padding(Padding::from_vh(0.px(), (22. * f64::from(scale)).px())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 
 fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -177,7 +179,7 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     Some(
         sized_box(
             flex_col((
-                label(writer.ui_scale(), "Latest build").text_size(18. * writer.ui_scale()),
+                label(writer.ui_scale(), "Latest build").typeset(Type::Section, writer.ui_scale()),
                 paragraph(
                     writer.ui_scale(),
                     report.clone(),
@@ -207,9 +209,9 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         )
-        .padding(16.px())
+        .padding(space::KINDS.px())
         .background_color(writer.palette.inset),
     )
 }

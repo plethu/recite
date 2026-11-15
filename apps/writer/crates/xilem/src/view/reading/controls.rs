@@ -1,5 +1,6 @@
 //! One stationary navigation row for the bounded, overlapping manuscript window.
 use super::*;
+use crate::presentation::space;
 use crate::reading::Direction;
 
 pub(in crate::view) fn page_controls(
@@ -42,6 +43,6 @@ pub(in crate::view) fn page_controls(
                 ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(12.px())
+            .gap(space::TEXT.px())
         })
 }

@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 
 pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -65,7 +67,7 @@ pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         },
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -74,7 +76,7 @@ pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .declaration_session()
         .is_some_and(|session| session.dirty());
     flex_col((
-        label(scale, "Draft recovery").text_size(18. * scale),
+        label(scale, "Draft recovery").typeset(Type::Section, scale),
         matches!(
             writer.workspaces.declarations.source.validation,
             Validation::Invalid(_)
@@ -107,5 +109,5 @@ pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

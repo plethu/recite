@@ -1,5 +1,7 @@
 //! Frontend views and native glue over `recite_writer_app::workspaces::declarations`.
 use super::*;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset, field_text};
 pub(crate) use recite_writer_app::workspaces::declarations::*;
 mod outcome;
 mod producer;
@@ -20,7 +22,7 @@ use xilem::{
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
-        label(scale, "Declarations").text_size(28. * scale),
+        label(scale, "Declarations").typeset(Type::Display, scale),
         radio_group(flex_row((
             radio_button(
                 scale,
@@ -53,7 +55,7 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Declarations)))
 }
 
@@ -76,7 +78,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.workspaces.declarations.filter(query)
         })
         .placeholder("Find a declaration by name or kind")
-        .text_size(16. * scale)
+        .text_size(field_text(scale))
         .prop(TextAreaLabel::new("Search declarations")),
         label(
             scale,
@@ -117,7 +119,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         declaration_detail(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -157,7 +159,7 @@ fn declaration_detail(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
     let scale = writer.ui_scale();
     Some(
         flex_col((
-            label(scale, format!("{name} · {kind}")).text_size(18. * scale),
+            label(scale, format!("{name} · {kind}")).typeset(Type::Section, scale),
             paragraph(
                 scale,
                 detail.get(panel.detail_page).cloned().unwrap_or_default(),
