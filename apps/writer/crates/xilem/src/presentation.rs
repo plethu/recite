@@ -69,7 +69,7 @@ impl Theme {
             properties: Arc::new(theme::properties(&palette, scale(config))),
             wordmark: identity::load(config),
             hero: identity::load_hero(config),
-            grain: material::grain(palette.grain),
+            grain: material::grain(palette.grain, config.theme == WriterTheme::Dark),
             screen: material::screen(material::Texture::default(), palette.screen),
             texture: material::Texture::default(),
             palette,

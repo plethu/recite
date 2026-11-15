@@ -173,7 +173,7 @@ fn primary_controls_keep_their_target_and_show_distinct_focus_and_disabled_state
         harness.redraw();
         assert_eq!(
             *harness.get_widget_with_id(id).get_prop::<Background>(),
-            Background::Color(palette.inset)
+            Background::Color(palette.ink.with_alpha(TONAL_DISABLED))
         );
         assert_eq!(
             harness.get_widget_with_id(id).ctx().border_box().size(),

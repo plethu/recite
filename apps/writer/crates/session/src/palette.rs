@@ -2,8 +2,6 @@
 mod rgba;
 pub use rgba::Rgba;
 
-pub const STAMP_HOVER: f32 = 0.12;
-pub const STAMP_PRESSED: f32 = 0.22;
 /// Hovered controls lay this much ink over whatever surface they sit on, desk or sheet. At 10%
 /// ink text keeps 9:1 even over the grain's darkest point.
 pub const INK_HOVER: f32 = 0.10;
@@ -24,6 +22,8 @@ pub const PRIMARY_HOVER: f32 = 0.9;
 pub const PRIMARY_PRESSED: f32 = 0.8;
 /// The grain tile's peak alpha; `assets/identity/grain.png` never exceeds it.
 pub const GRAIN_PEAK: f32 = 0.07;
+/// The dark grain tile's peak alpha; `assets/identity/grain-dark.png` never exceeds it.
+pub const GRAIN_PEAK_DARK: f32 = 0.047;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Palette<C = Rgba> {
@@ -54,9 +54,6 @@ pub struct Palette<C = Rgba> {
     pub plate: C,
     /// Wordmark letters: plum on paper, warm paper on dark surfaces.
     pub wordmark: C,
-    /// Filled ink for the primary action and the active segment; text on it is `on_stamp`.
-    pub stamp: C,
-    pub on_stamp: C,
     /// The bottom rule of a field's well on paper, and on the grained desk; see `field_rule`.
     pub well_rule: C,
     pub desk_well_rule: C,
@@ -73,6 +70,8 @@ pub struct Palette<C = Rgba> {
     pub stock: C,
     /// Paper-grain ink, painted at the tile's own alpha on desk surfaces only.
     pub grain: C,
+    /// The grain tile's peak alpha in this mode.
+    pub grain_peak: f32,
 }
 impl Palette<Rgba> {
     pub fn with_mode(dark: bool, monochrome: bool) -> Self {
@@ -96,8 +95,6 @@ impl Palette<Rgba> {
                 &mut p.screen,
                 &mut p.error,
                 &mut p.wordmark,
-                &mut p.stamp,
-                &mut p.on_stamp,
                 &mut p.teal,
                 &mut p.teal_text,
                 &mut p.plate,
@@ -166,8 +163,6 @@ impl Palette<Rgba> {
             } else {
                 Rgba::from_rgb(104, 62, 98)
             },
-            stamp: ink,
-            on_stamp: surface,
             teal: second_ink,
             teal_text: color(dark, (15, 107, 111), (130, 216, 213)),
             // 12% second ink on paper; on dark paper, 14% mint over the surface.
@@ -184,8 +179,13 @@ impl Palette<Rgba> {
             },
             status_signal: Rgba::from_rgb(130, 216, 213),
             stock: Rgba::mix(canvas, ink, 0.20),
-            // The identity print recipe's grain ink; the dark variant is a later pass.
-            grain: Rgba::from_rgb(64, 46, 51),
+            // The identity print recipe's grain ink; dark paper takes a paper-toned tile instead.
+            grain: if dark {
+                Rgba::from_rgb(243, 233, 223)
+            } else {
+                Rgba::from_rgb(64, 46, 51)
+            },
+            grain_peak: if dark { GRAIN_PEAK_DARK } else { GRAIN_PEAK },
         }
         .with_rules()
     }
@@ -236,19 +236,15 @@ impl Palette<Rgba> {
         [dim, dotted]
     }
 
-    /// The darkest point of the grained desk, where text on the desk is checked.
+    /// The grained desk's extreme point, where text on the desk is checked: its darkest in light
+    /// mode and, under the paper-toned dark grain, its lightest.
     pub fn grained_desk(&self) -> Rgba {
-        Rgba::mix(self.canvas, self.grain, GRAIN_PEAK)
+        Rgba::mix(self.canvas, self.grain, self.grain_peak)
     }
 
     /// Reply destinations use text-safe teal, except on a pressed fill where it fails contrast.
     pub fn destination(&self, pressed: bool) -> Rgba {
         if pressed { self.ink } else { self.teal_text }
-    }
-
-    /// Hover and press lift a filled stamp toward its text colour, keeping text readable.
-    pub fn stamp_state(&self, amount: f32) -> Rgba {
-        Rgba::mix(self.stamp, self.on_stamp, amount)
     }
 }
 
@@ -276,8 +272,6 @@ impl<C> Palette<C> {
             teal_text: convert(self.teal_text),
             plate: convert(self.plate),
             wordmark: convert(self.wordmark),
-            stamp: convert(self.stamp),
-            on_stamp: convert(self.on_stamp),
             well_rule: convert(self.well_rule),
             desk_well_rule: convert(self.desk_well_rule),
             overprint: convert(self.overprint),
@@ -287,6 +281,7 @@ impl<C> Palette<C> {
             status_signal: convert(self.status_signal),
             stock: convert(self.stock),
             grain: convert(self.grain),
+            grain_peak: self.grain_peak,
         }
     }
 }

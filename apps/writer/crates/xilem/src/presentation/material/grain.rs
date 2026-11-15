@@ -11,30 +11,41 @@ use xilem::peniko::{
 };
 
 const TILE: &[u8] = include_bytes!("../../../../../../../assets/identity/grain.png");
+/// The same fibre at about two thirds of the alpha, for the paper-toned grain on dark paper.
+const TILE_DARK: &[u8] = include_bytes!("../../../../../../../assets/identity/grain-dark.png");
+
+type Coverage = Option<(u32, u32, Vec<u8>)>;
 
 /// The tile's coverage: one alpha byte per pixel, with its width and height.
-fn coverage() -> Option<&'static (u32, u32, Vec<u8>)> {
-    static COVERAGE: OnceLock<Option<(u32, u32, Vec<u8>)>> = OnceLock::new();
-    COVERAGE
-        .get_or_init(|| {
-            let mut reader = png::Decoder::new(Cursor::new(TILE)).read_info().ok()?;
-            let mut pixels = vec![0; reader.output_buffer_size()?];
-            let frame = reader.next_frame(&mut pixels).ok()?;
-            (frame.color_type == png::ColorType::Rgba && frame.bit_depth == png::BitDepth::Eight)
-                .then(|| {
-                    let alpha = pixels[..frame.buffer_size()]
-                        .chunks_exact(4)
-                        .map(|pixel| pixel[3])
-                        .collect();
-                    (frame.width, frame.height, alpha)
-                })
-        })
-        .as_ref()
+fn coverage(dark: bool) -> Option<&'static (u32, u32, Vec<u8>)> {
+    static LIGHT: OnceLock<Coverage> = OnceLock::new();
+    static DARK: OnceLock<Coverage> = OnceLock::new();
+    let (cell, tile) = if dark {
+        (&DARK, TILE_DARK)
+    } else {
+        (&LIGHT, TILE)
+    };
+    cell.get_or_init(|| {
+        let mut reader = png::Decoder::new(Cursor::new(tile)).read_info().ok()?;
+        let mut pixels = vec![0; reader.output_buffer_size()?];
+        let frame = reader.next_frame(&mut pixels).ok()?;
+        (frame.color_type == png::ColorType::Rgba && frame.bit_depth == png::BitDepth::Eight).then(
+            || {
+                let alpha = pixels[..frame.buffer_size()]
+                    .chunks_exact(4)
+                    .map(|pixel| pixel[3])
+                    .collect();
+                (frame.width, frame.height, alpha)
+            },
+        )
+    })
+    .as_ref()
 }
 
-/// The tile in `ink` at its own alpha, repeating in both directions. `None` if it cannot be read.
-pub(crate) fn grain(ink: Color) -> Option<ImageBrush> {
-    let (width, height, alpha) = coverage()?;
+/// The light or dark tile in `ink` at its own alpha, repeating in both directions. `None` if it
+/// cannot be read.
+pub(crate) fn grain(ink: Color, dark: bool) -> Option<ImageBrush> {
+    let (width, height, alpha) = coverage(dark)?;
     let [red, green, blue, _] = ink.to_rgba8().to_u8_array();
     let pixels = alpha
         .iter()

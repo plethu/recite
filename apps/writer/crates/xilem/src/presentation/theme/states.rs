@@ -111,7 +111,8 @@ impl Look {
                     hover: (p.accent.with_alpha(PRIMARY_HOVER), p.accent),
                     pressed: (p.accent.with_alpha(PRIMARY_PRESSED), p.accent),
                     focus: None,
-                    disabled: (p.inset, p.rule),
+                    // Disabled, it falls back to a faint tonal face: never an outline.
+                    disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
                     border: STRONG,
                     sinks: true,
                     padding: text,

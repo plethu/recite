@@ -50,18 +50,6 @@ fn second_ink_and_overprint_keep_text_on_safe_surfaces() {
             );
         }
         assert_eq!(p.destination(true), p.ink);
-        for amount in [0., STAMP_HOVER, STAMP_PRESSED] {
-            assert!(
-                contrast(p.on_stamp, p.stamp_state(amount)) >= 4.5,
-                "stamp text: dark={dark} monochrome={monochrome} amount={amount}"
-            );
-        }
-        for background in [p.canvas, p.surface, p.floating] {
-            assert!(
-                contrast(p.stamp, background) >= 3.,
-                "stamp stroke: dark={dark} monochrome={monochrome}"
-            );
-        }
         assert!(contrast(p.plate, p.surface) > contrast(p.hover, p.surface));
     }
 }
@@ -166,13 +154,6 @@ fn hover_ink_beats_the_grain_and_filled_focus_rings_contrast_with_their_fill() {
         assert!(contrast(p.teal_text, p.hover_over(p.surface)) >= 4.5);
         // A filled face's ring is its own text colour, never a border close to the fill.
         assert!(contrast(p.on_accent, p.accent) >= 4.5);
-        for amount in [0., STAMP_HOVER, STAMP_PRESSED] {
-            assert!(contrast(p.on_stamp, p.stamp_state(amount)) >= 4.5);
-        }
-        assert!(
-            contrast(p.accent, p.stamp) < 3.,
-            "why the accent is not the ring on a stamp"
-        );
     }
 }
 
@@ -220,7 +201,7 @@ fn the_primary_keeps_its_text_in_both_modes_while_hovered_and_pressed() {
             assert!(contrast(p.accent, host) >= 3., "primary fill: dark={dark}");
         }
     }
-    // Dark mode's primary is the light accent with dark text, never a near-white stamp.
+    // Dark mode's primary is the light accent with dark text; no control is a near-white stamp.
     let dark = Palette::new(true);
     assert_eq!(
         (dark.accent.r, dark.accent.g, dark.accent.b),
@@ -333,4 +314,16 @@ fn a_modal_panel_is_edged_in_ink_that_holds_three_to_one_against_the_dim() {
         // The screen is a light texture, never a second dim.
         assert!(p.screen.a <= 26 && p.backdrop.a >= 115);
     }
+}
+
+#[test]
+fn dark_grain_is_a_faint_paper_tone_that_desk_text_survives() {
+    let p = Palette::new(true);
+    assert_eq!((p.grain.r, p.grain.g, p.grain.b), (243, 233, 223));
+    assert!((0.04..=0.05).contains(&p.grain_peak));
+    // Lighter than the canvas, so it reads as paper fibre rather than soot, but only just.
+    let desk = p.grained_desk();
+    assert!(desk.luminance() > p.canvas.luminance());
+    assert!(contrast(desk, p.canvas) < 1.15);
+    assert_eq!(Palette::new(false).grain_peak, GRAIN_PEAK);
 }
