@@ -52,7 +52,8 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
     let writing = !app.show_welcome() && app.writer.is_some();
     flex_row((
         sized_box(flex_row((
-            identity::wordmark(&app.theme, scale),
+            // The welcome hero carries the wordmark while it shows.
+            (!app.show_welcome()).then(|| identity::wordmark(&app.theme, scale)),
             xilem::view::FlexSpacer::Flex(1.),
         )))
         // The wordmark heads the scene list, or keeps a minimal column while the list is hidden.

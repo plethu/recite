@@ -1,9 +1,11 @@
 //! The access form scrolls independently of its persistent submission actions.
 use super::{App, ProjectField};
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::segments::{tab, tabs};
+use crate::presentation::slip::slip;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset, field_text};
-use crate::presentation::{identity, label, paragraph, print, radio_button, text_button};
+use crate::presentation::{identity, label, paragraph, print, text_button};
 use xilem::{
     WidgetView,
     masonry::{
@@ -14,12 +16,14 @@ use xilem::{
     style::Style,
     view::{
         CrossAxisAlignment, FlexExt, FlexSpacer, MainAxisAlignment, flex_col, flex_row, portal,
-        radio_group, resize_observer, sized_box, text_input,
+        resize_observer, sized_box, text_input,
     },
 };
 
 /// The welcome column: the hero wordmark, the form and its actions share one measure.
 const COLUMN: f64 = 560.;
+/// The Browse folders button's width beside the folder field.
+const BROWSE: f64 = 160.;
 
 #[derive(Clone, Copy)]
 struct Layout {
@@ -38,10 +42,11 @@ impl Layout {
         Self {
             scale,
             width,
+            // Inside the slip's padding, beside Browse folders where the column is wide.
             field_width: if wide {
-                width - 160. * f64::from(scale) - 8.
+                width - BROWSE * f64::from(scale) - space::SIBLINGS - 2. * space::KINDS
             } else {
-                width
+                width - 2. * space::KINDS
             },
             direction: if wide {
                 Axis::Horizontal
@@ -101,12 +106,7 @@ fn column<V: WidgetView<App>>(layout: Layout, child: V) -> impl WidgetView<App> 
 
 fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     let busy = app.opening.is_some() || app.auxiliary;
-    let Layout {
-        scale,
-        width,
-        direction,
-        ..
-    } = layout;
+    let Layout { scale, width, .. } = layout;
     flex_col((
         identity::hero(&app.theme, width.min(360. * f64::from(scale))),
         label(scale, "Projects").typeset(Type::Display, scale),
@@ -115,29 +115,34 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             "Open a project or create one to start writing.",
             width,
         ),
-        radio_group(
-            flex_row((
-                radio_button(
-                    scale,
-                    "Open an existing project",
-                    !app.creating,
-                    |app: &mut App| app.choose_project_action(false),
-                )
-                .disabled(busy),
-                radio_button(
-                    scale,
-                    "Create a new project",
-                    app.creating,
-                    |app: &mut App| app.choose_project_action(true),
-                )
-                .disabled(busy),
-            ))
-            .direction(direction)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(space::TEXT.px()),
+        // Opening and creating are two tabs over one compact slip of fields.
+        tabs((
+            tab(
+                scale,
+                &app.theme.palette,
+                "Open an existing project",
+                !app.creating,
+                busy,
+                |app: &mut App| app.choose_project_action(false),
+            ),
+            tab(
+                scale,
+                &app.theme.palette,
+                "Create a new project",
+                app.creating,
+                busy,
+                |app: &mut App| app.choose_project_action(true),
+            ),
+        )),
+        slip(
+            &app.theme.palette,
+            sized_box(
+                flex_col((folder(app, layout), app.creating.then(|| name(app, layout))))
+                    .cross_axis_alignment(CrossAxisAlignment::Start)
+                    .gap(space::TEXT.px()),
+            )
+            .padding(space::KINDS.px()),
         ),
-        folder(app, layout),
-        app.creating.then(|| name(app, layout)),
         super::feedback::details(app, scale, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
