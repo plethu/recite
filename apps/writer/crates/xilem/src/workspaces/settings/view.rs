@@ -1,5 +1,5 @@
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 mod preview;
 use super::*;
 use crate::{
@@ -179,7 +179,7 @@ fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.workspaces.settings.set_import_path(path)
         })
         .placeholder("Path to the edited TOML draft")
-        .text_size(field_text(scale))
+        .typeset(Type::Body, scale)
         .disabled(blocked)
         .width(writer.content_width().px())
         .prop(TextAreaLabel::new("Settings draft path")),

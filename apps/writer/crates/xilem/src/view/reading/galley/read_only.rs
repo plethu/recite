@@ -66,9 +66,7 @@ fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Wr
     match &row.content {
         Content::Passage { passage, .. } => {
             let (label, number) = margin_label(passage, row.reply);
-            // Replies take the 0.9R tier once fields can set their own leading; until then a smaller
-            // reply would shrink its field's accessible line box below the reference.
-            let size = Sheet::Dialogue.size(reading);
+            let size = Sheet::text(row.reply).size(reading);
             let measure = grid.measure;
             let destination = match &passage.kind {
                 PassageKind::Choice {

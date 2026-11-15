@@ -2,7 +2,7 @@ use super::*;
 use crate::WriterLayout;
 use crate::presentation::segments::{segment, segments_along};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text, search_field};
+use crate::presentation::{Type, Typeset, search_field};
 use crate::presentation::{manuscript_text, print};
 use xilem::masonry::kurbo::Axis;
 pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -65,7 +65,7 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 false,
                 Some((writer.script_width() - 200. * f64::from(scale)).max(180.)),
                 text_input(state.query.text.clone(), Writer::set_catalogue_query)
-                    .text_size(field_text(scale))
+                    .typeset(Type::Body, scale)
                     .prop(TextAreaLabel::new("Search translations")),
             ),
             text_button(scale, "Search translations", Writer::search_catalogue)

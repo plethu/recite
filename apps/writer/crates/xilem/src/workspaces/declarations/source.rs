@@ -1,6 +1,6 @@
 //! Frontend views over `recite_writer_app::workspaces::declarations::source`.
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 pub(crate) use recite_writer_app::workspaces::declarations::source::*;
 mod actions;
 mod preview;
@@ -43,7 +43,7 @@ fn binding(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
         paragraph(scale, "Bind your standalone TOML to edit it in your preferred editor. Writer validates explicit reloads and imports, then generates read-only JSON.", 640.),
         label(scale, "Declaration source path"),
         text_input(writer.workspaces.declarations.source.path.clone(), |writer: &mut Writer, path| writer.workspaces.declarations.source.path = path)
-            .placeholder("Absolute path or path relative to this project").text_size(field_text(scale))
+            .placeholder("Absolute path or path relative to this project").typeset(Type::Body, scale)
             .disabled(blocked).prop(TextAreaLabel::new("Declaration source path")),
         text_button(scale, "Bind standalone source", Writer::bind_declaration_source)
             .disabled(blocked || writer.workspaces.declarations.source.path.trim().is_empty()),

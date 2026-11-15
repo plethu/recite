@@ -2,7 +2,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 use recite_writer_session::messages::{MsgId, text};
 use xilem::{masonry::properties, view::checkbox};
 
@@ -57,7 +57,7 @@ fn wording(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
                 state.trial.settings.variant = value;
             },
         )
-        .text_size(field_text(state.ui_scale()))
+        .typeset(Type::Body, state.ui_scale())
         .disabled(disabled)
         .prop(properties::TextAreaLabel::new("Preview wording")),
     )

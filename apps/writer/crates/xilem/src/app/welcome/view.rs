@@ -5,7 +5,7 @@ use crate::presentation::segments::{tab, tabs};
 use crate::presentation::slip::slip;
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{identity, label, paragraph, print, text_button};
 use xilem::{
     WidgetView,
@@ -179,7 +179,7 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 text_input(app.path.clone(), |app: &mut App, text| {
                     app.edit_project_path(text)
                 })
-                .text_size(field_text(scale))
+                .typeset(Type::Body, scale)
                 .disabled(busy)
                 .prop(TextAreaLabel::new("Project folder"))
                 .prop(ProjectField(true))
@@ -205,7 +205,7 @@ fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     flex_col((
         label(scale, "Project name"),
         styled(ControlStyle::DeskField, text_input(app.name.clone(), |app: &mut App, text| app.edit_project_name(text))
-            .text_size(field_text(scale))
+            .typeset(Type::Body, scale)
             .disabled(app.opening.is_some() || app.auxiliary)
             .prop(TextAreaLabel::new("Project name")).prop(ProjectField(true))
             .width(field_width.px())),

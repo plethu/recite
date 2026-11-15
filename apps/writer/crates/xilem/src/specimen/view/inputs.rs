@@ -2,7 +2,7 @@
 use super::*;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text, search_field};
+use crate::presentation::{Type, Typeset, search_field};
 use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
 
 pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
@@ -46,7 +46,7 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
                 state.query = text
             })
             .placeholder("Scene title")
-            .text_size(field_text(scale))
+            .typeset(Type::Body, scale)
             .prop(TextAreaLabel::new("Find a destination")),
         ),)),
         label(scale, format!("Destination: {}", state.destination)),

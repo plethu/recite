@@ -2,7 +2,7 @@
 use super::*;
 use crate::presentation::space;
 use crate::presentation::{Icon, print};
-use crate::presentation::{field_text, search_field};
+use crate::presentation::{Type, Typeset, search_field};
 use recite_writer_model::StructuralCommand;
 use recite_writer_session::palette::TONAL;
 use xilem::core::one_of::Either;
@@ -102,7 +102,7 @@ fn search(
         true,
         Some(width),
         text_input(scene.search.clone(), Writer::find_map_beat)
-            .text_size(field_text(state.ui_scale()))
+            .typeset(Type::Body, state.ui_scale())
             .placeholder("Find a beat…")
             .disabled(blocked)
             .prop(properties::TextAreaLabel::new("Find a beat")),

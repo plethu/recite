@@ -1,7 +1,7 @@
 use super::*;
 use crate::WriterLayout;
-use crate::presentation::field_text;
 use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::{attention::PaneEntry, trial::Review};
 use recite_writer_session::localisation::setup::languages;
 
@@ -29,7 +29,7 @@ pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer
                 text_input(settings.query.clone(), |state: &mut Writer, value| {
                     state.trial.settings.query = value
                 })
-                .text_size(field_text(scale))
+                .typeset(Type::Body, scale)
                 .disabled(disabled)
                 .prop(properties::TextAreaLabel::new("Find preview language")),
             )

@@ -1,6 +1,6 @@
 use super::*;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 pub fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations.source;
@@ -16,7 +16,7 @@ pub fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
         panel.artifact.as_ref().filter(|_| !matches!(panel.validation, Validation::Invalid(_))).map(|_| text_button(scale, "Open exported declaration draft in editor", Writer::open_declaration_draft).disabled(blocked || writer.external.busy())),
         label(scale, "Repaired declaration draft path"),
         text_input(panel.import.clone(), |writer: &mut Writer, path| writer.workspaces.declarations.source.import = path)
-            .placeholder("Path to the repaired TOML artifact").text_size(field_text(scale)).disabled(blocked).prop(TextAreaLabel::new("Repaired declaration draft path")),
+            .placeholder("Path to the repaired TOML artifact").typeset(Type::Body, scale).disabled(blocked).prop(TextAreaLabel::new("Repaired declaration draft path")),
         text_button(scale, "Import repaired declaration draft", Writer::import_declaration_draft).disabled(blocked || panel.import.trim().is_empty()),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())).padding(space::KINDS.px()).background_color(writer.palette.surface))
 }

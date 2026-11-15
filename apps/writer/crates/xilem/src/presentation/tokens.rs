@@ -12,7 +12,7 @@ use xilem::{
         core::ArcStr,
         parley::{LineHeight, style::FontWeight},
     },
-    view::Label,
+    view::{Label, TextInput},
 };
 
 /// The spacing scale: 4, 8, 12, 16, 24, 32 and 48. One and two pixels are borders and rings only.
@@ -81,12 +81,6 @@ pub(crate) mod breakpoint {
     pub const FIELD_ROW: f64 = 480.;
 }
 
-/// Text in a single-line field. A text input's accessible bounds are its line box, so fields
-/// keep 16px text until inputs take a line height of their own; none shrinks from the reference.
-pub(crate) fn field_text(scale: f32) -> f32 {
-    16. * scale
-}
-
 /// An interface type role.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Type {
@@ -136,7 +130,7 @@ impl Type {
     }
 }
 
-/// Set an existing label in an interface role: family, size, weight and leading together.
+/// Set an existing label or field in an interface role: family, size, weight and leading together.
 pub(crate) trait Typeset {
     fn typeset(self, role: Type, scale: f32) -> Self;
 }
@@ -149,12 +143,25 @@ impl Typeset for Label {
             .line_height(LineHeight::Absolute(line * scale))
     }
 }
+/// A field's accessible bounds are its line box, so a field set in Body keeps a 20px line, taller
+/// than the 16px text at 1.2 it replaced; no field shrinks from the reference.
+impl<S: 'static, A: 'static> Typeset for TextInput<S, A> {
+    fn typeset(self, role: Type, scale: f32) -> Self {
+        let (size, line) = role.metrics();
+        self.font(font(role.families()))
+            .text_size(size * scale)
+            .weight(role.weight())
+            .line_height(LineHeight::Absolute(line * scale))
+    }
+}
 
 /// A sheet type role, derived from the reading size R.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Sheet {
-    /// Literata 400, R: lines.
+    /// Literata 400, R / 1.45R: lines.
     Dialogue,
+    /// Literata 400, 0.9R / 1.45: replies.
+    Reply,
     /// Plex Mono at 0.6R: a reply's hanging number.
     Number,
     /// Plex Sans 600, 0.6R caps, +0.06em: speaker labels and "REPLIES" only. At least 11px.
@@ -163,10 +170,22 @@ pub(crate) enum Sheet {
     Destination,
 }
 impl Sheet {
+    /// The manuscript's leading, on editable fields and read-only text alike, so a beat sets the
+    /// same lines whether or not its fields are mounted.
+    pub const LEADING: LineHeight = LineHeight::FontSizeRelative(1.45);
+    /// The role of a manuscript row's text: a reply when it has a reply number, a line otherwise.
+    pub const fn text(reply: Option<usize>) -> Self {
+        if reply.is_some() {
+            Self::Reply
+        } else {
+            Self::Dialogue
+        }
+    }
     /// Size in logical pixels for reading size `reading`, floors included.
     pub fn size(self, reading: f32) -> f32 {
         match self {
             Self::Dialogue => reading,
+            Self::Reply => 0.9 * reading,
             Self::Number => 0.6 * reading,
             Self::Label => (0.6 * reading).max(11.),
             Self::Destination => (0.72 * reading).max(13.),
@@ -174,14 +193,14 @@ impl Sheet {
     }
     pub const fn weight(self) -> FontWeight {
         match self {
-            Self::Dialogue | Self::Number => FontWeight::NORMAL,
+            Self::Dialogue | Self::Reply | Self::Number => FontWeight::NORMAL,
             Self::Label => FontWeight::SEMI_BOLD,
             Self::Destination => FontWeight::MEDIUM,
         }
     }
     pub const fn families(self) -> &'static [&'static str] {
         match self {
-            Self::Dialogue => FONT_PROSE,
+            Self::Dialogue | Self::Reply => FONT_PROSE,
             Self::Number => FONT_MONO,
             Self::Label | Self::Destination => FONT_UI,
         }

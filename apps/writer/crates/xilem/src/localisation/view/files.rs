@@ -1,7 +1,7 @@
 use super::*;
 use crate::attention::PaneEntry;
-use crate::presentation::field_text;
 use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use xilem::masonry::kurbo::Axis;
 pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -38,7 +38,7 @@ fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.localisation.path.clone(),
             |writer: &mut Writer, path| writer.localisation.path = path,
         )
-        .text_size(field_text(scale))
+        .typeset(Type::Body, scale)
         .disabled(blocked)
         .prop(TextAreaLabel::new("Catalogue path")),
         flex_col((

@@ -2,7 +2,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 use xilem::masonry::properties::TextAreaLabel;
 
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -28,7 +28,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
             sized_box(keyed(
                 state.session.model().document().key().clone(),
                 text_input(state.repair_path().to_owned(), Writer::edit_repair_path)
-                .text_size(field_text(scale)).placeholder("Choose the text file repaired in your editor")
+                .typeset(Type::Body, scale).placeholder("Choose the text file repaired in your editor")
                 .on_enter(|state: &mut Writer, _| state.import_source_repair())
                 .disabled(busy).prop(TextAreaLabel::new("Repaired source file")),
             )).width(state.script_width().px()),

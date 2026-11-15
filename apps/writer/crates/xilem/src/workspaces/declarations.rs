@@ -4,7 +4,7 @@ use crate::WriterLayout;
 use crate::presentation::row::{listed, row};
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text, search_field};
+use crate::presentation::{Type, Typeset, search_field};
 pub(crate) use recite_writer_app::workspaces::declarations::*;
 mod outcome;
 mod producer;
@@ -95,7 +95,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 writer.workspaces.declarations.filter(query)
             })
             .placeholder("Name or kind")
-            .text_size(field_text(scale))
+            .typeset(Type::Body, scale)
             .prop(TextAreaLabel::new("Search declarations")),
         ),
         label(

@@ -2,7 +2,7 @@
 use super::*;
 use crate::presentation::segments::{segment, segments_along};
 use crate::presentation::tokens::breakpoint;
-use crate::presentation::{field_text, search_field};
+use crate::presentation::{Type, Typeset, search_field};
 use xilem::peniko::Color;
 
 pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
@@ -54,7 +54,7 @@ pub(super) fn query(
             picker.map_or_else(String::new, |picker| picker.query.clone()),
             |app: &mut App, value: String| app.filter_picker(value),
         )
-        .text_size(field_text(scale))
+        .typeset(Type::Body, scale)
         .on_enter(|app: &mut App, _| app.submit_picker())
         .on_cancel(|app: &mut App, _| app.dismiss_picker())
         .prop(TextAreaLabel::new("Search query"))

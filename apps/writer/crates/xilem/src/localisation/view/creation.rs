@@ -1,6 +1,6 @@
 use super::*;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 use recite_writer_session::localisation::{create, setup::languages};
 
 pub(super) fn creation(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -19,7 +19,7 @@ pub(super) fn creation(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
         label(scale, "Add a language").typeset(Type::Section, scale),
         paragraph(scale, "Creates a new PO catalogue from this project's current sources. Apply manuscript fields first. Accepted unsaved source edits are included; source files stay unchanged.", 640.),
         label(scale, "Language name or tag"),
-        text_input(state.query.clone(), |writer: &mut Writer, value| writer.localisation.creation.query = value).text_size(field_text(scale)).disabled(blocked).prop(TextAreaLabel::new("Language name or tag")),
+        text_input(state.query.clone(), |writer: &mut Writer, value| writer.localisation.creation.query = value).typeset(Type::Body, scale).disabled(blocked).prop(TextAreaLabel::new("Language name or tag")),
         text_button(scale, "Search languages", Writer::search_catalogue_languages).disabled(blocked),
         state.selected.is_empty().then(|| choices(writer)),
         (!state.query.trim().is_empty() && state.choices.is_empty()).then(|| paragraph(scale, "Search by language name, native name or a tag such as fr-CA.", 640.)),

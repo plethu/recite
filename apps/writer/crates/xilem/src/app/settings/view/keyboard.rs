@@ -1,7 +1,7 @@
 use super::*;
 use crate::presentation::row::{listed, row};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text, search_field};
+use crate::presentation::{Type, Typeset, search_field};
 use crate::{keyed::keyed, presentation::paragraph};
 use xilem::{masonry::properties::TextAreaLabel, view::text_input};
 
@@ -55,7 +55,7 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                 app.settings.query.clone(),
                 |app: &mut App, value: String| app.search_shortcuts(value),
             )
-            .text_size(field_text(scale))
+            .typeset(Type::Body, scale)
             .prop(TextAreaLabel::new("Search shortcuts")),
         ),
         label(scale, format!("{count} matching commands")),
@@ -83,7 +83,7 @@ fn editor(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         label(scale, format!("Shortcut for {selected}")).typeset(Type::Section, scale),
         label(scale, format!("Saved binding: {}", if stored.is_empty() { "Disabled" } else { stored })),
         sized_box(keyed(app.settings.command, text_input(app.shortcut_draft().to_owned(), |app: &mut App, value: String| app.edit_shortcut(value))
-            .text_size(field_text(scale)).prop(TextAreaLabel::new("Shortcut binding")))).width(width.px()),
+            .typeset(Type::Body, scale).prop(TextAreaLabel::new("Shortcut binding")))).width(width.px()),
         flex_row((
             text_button(scale, "Save shortcut", |app: &mut App| app.save_shortcut()).disabled(!changed),
             text_button(scale, "Reset shortcuts", |app: &mut App| app.reset_shortcuts()),

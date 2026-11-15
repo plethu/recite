@@ -1,5 +1,5 @@
-use crate::presentation::field_text;
 use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 mod comparison;
 use super::*;
 use crate::session::RecoveryReason;
@@ -52,7 +52,7 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             flex_col((
                 label(scale, "Original beat name"),
                 text_input(panel.block.clone(), Writer::change_rename_block)
-                    .text_size(field_text(scale))
+                    .typeset(Type::Body, scale)
                     .disabled(blocked)
                     .prop(TextAreaLabel::new("Original beat name")),
             ))
@@ -62,7 +62,7 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             flex_col((
                 label(scale, "New beat name"),
                 text_input(panel.name.clone(), Writer::change_rename_name)
-                    .text_size(field_text(scale))
+                    .typeset(Type::Body, scale)
                     .disabled(blocked)
                     .prop(TextAreaLabel::new("New beat name")),
             ))

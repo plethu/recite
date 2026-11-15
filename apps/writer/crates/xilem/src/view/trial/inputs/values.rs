@@ -2,7 +2,7 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::{EntryContext, PaneEntry};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset};
 use crate::trial::VALUE_PAGE;
 use recite_core::ast::{InterpolationBinding, InterpolationType};
 use recite_writer_session::preview::parse_value;
@@ -101,7 +101,7 @@ fn field(
         let input = text_input(value, move |state: &mut Writer, value| {
             state.trial.settings.values.insert(name.clone(), value);
         })
-        .text_size(field_text(state.ui_scale()))
+        .typeset(Type::Body, state.ui_scale())
         .disabled(disabled)
         .prop(properties::TextAreaLabel::new(caption));
         Either::B(

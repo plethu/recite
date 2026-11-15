@@ -123,9 +123,7 @@ pub(super) fn row(
         })
     .max(120.);
     let (label, numbered) = margin_label(passage, reply);
-    // Replies take the 0.9R tier once fields can set their own leading; until then a smaller
-    // reply would shrink its field's accessible line box below the reference.
-    let size = Sheet::Dialogue.size(reading);
+    let size = Sheet::text(reply).size(reading);
     let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
     let stacked_reply = !column
         && matches!(&passage.kind, PassageKind::Choice { destination: Some(target) } if target != "END");

@@ -40,6 +40,27 @@ fn sheet_roles_follow_the_reading_size_but_never_fall_below_their_floors() {
         assert!(Sheet::Label.size(reading) >= 11.);
         assert!(Sheet::Destination.size(reading) >= 13.);
     }
+    assert!((Sheet::Reply.size(20.) - 18.).abs() < 1e-4);
+    assert_eq!(Sheet::text(Some(1)), Sheet::Reply);
+    assert_eq!(Sheet::text(None), Sheet::Dialogue);
     assert!((Sheet::Label.tracking(20.) - 0.72).abs() < 1e-4);
     assert_eq!(Sheet::Destination.tracking(20.), 0.);
+}
+
+#[test]
+fn the_manuscript_line_box_is_taller_than_the_reference_at_every_reading_size() {
+    // The comparison reference set lines and replies at R with a 1.2 line box.
+    let leading = 1.45;
+    assert_eq!(Sheet::LEADING, LineHeight::FontSizeRelative(leading));
+    for reading in [12., 14., 16., 20., 24., 32.] {
+        for role in [Sheet::Dialogue, Sheet::Reply] {
+            assert!(
+                role.size(reading) * leading >= reading * 1.2,
+                "{role:?} at {reading}"
+            );
+        }
+    }
+    // Fields set in Body keep a line at least as tall as the 16px text at 1.2 they replaced.
+    let (_, line) = Type::Body.metrics();
+    assert!(line >= 16. * 1.2);
 }

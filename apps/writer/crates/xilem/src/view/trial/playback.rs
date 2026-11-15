@@ -36,7 +36,7 @@ pub(super) fn playback(
                             .color(state.palette.muted),
                         sheet_text(
                             choice.text.clone(),
-                            Sheet::Dialogue.size(state.reading_size()),
+                            Sheet::Reply.size(state.reading_size()),
                             state.palette.ink,
                         )
                         .width(state.script_width().px()),

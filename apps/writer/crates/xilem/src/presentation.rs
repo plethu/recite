@@ -39,7 +39,7 @@ pub(super) use radio::radio_button;
 use recite_config::{WriterConfig, WriterPresentationField, WriterTheme};
 use recite_writer_session::palette::Palette;
 use std::sync::Arc;
-pub(crate) use tokens::{Sheet, Type, Typeset, control_inset, field_text, space};
+pub(crate) use tokens::{Sheet, Type, Typeset, control_inset, space};
 use xilem::{
     masonry::core::DefaultProperties,
     peniko::{Color, ImageBrush},

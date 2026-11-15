@@ -74,6 +74,7 @@ fn field(
                 .insert_newline(InsertNewline::OnEnter)
                 .font(print::font(FONT_PROSE))
                 .text_size(size)
+                .line_height(Sheet::LEADING)
                 .placeholder(name.clone())
                 .disabled(state.phase() != Phase::Writing || state.session.read_only())
                 .prop(properties::TextAreaLabel::new(name))

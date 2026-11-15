@@ -135,7 +135,8 @@ fn content(state: &Writer, beat: &str, row: &Row, width: f64) -> Box<AnyWidgetVi
         }
         Content::Heading(text) => sized_box(
             prose(state.ui_scale(), text.clone())
-                .text_size(Sheet::Dialogue.size(state.reading_size())),
+                .text_size(Sheet::Dialogue.size(state.reading_size()))
+                .line_height(Sheet::LEADING),
         )
         .width(width.px())
         .boxed(),

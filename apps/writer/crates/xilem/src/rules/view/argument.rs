@@ -1,8 +1,8 @@
 use super::*;
 use crate::WriterLayout;
 use crate::keyed::keyed;
-use crate::presentation::field_text;
 use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use xilem::masonry::core;
 use xilem::masonry::widgets;
 use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
@@ -38,7 +38,7 @@ pub(super) fn field(
             text_input(argument.value.clone(), move |state: &mut Writer, value| {
                 state.edit_rule_argument(change.clone(), value)
             })
-            .text_size(field_text(scale))
+            .typeset(Type::Body, scale)
             .insert_newline(InsertNewline::OnShiftEnter)
             .disabled(!state.rules_editable())
             .prop(TextAreaLabel::new(caption))
