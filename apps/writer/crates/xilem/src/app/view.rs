@@ -1,8 +1,10 @@
 mod chrome;
 use super::*;
 use crate::presentation::{
+    Type,
     group::named,
     material::{backdrop, desk},
+    space,
 };
 use chrome::app_bar;
 use xilem::{
@@ -19,9 +21,11 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
         writer.viewport.width = width;
     }
     let slot = slot::writer_slot(app);
-    // The status bar's height: its vertical padding and one line of 12px meta text.
+    // The status bar's height: its vertical padding and one Meta line.
     let status_bar = if app.writer.is_some() && !app.show_welcome() && !app.settings_open() {
-        12. + 16. * f64::from(crate::presentation::scale(&app.preferences.config.writer))
+        2. * space::UNIT
+            + f64::from(Type::Meta.metrics().1)
+                * f64::from(crate::presentation::scale(&app.preferences.config.writer))
     } else {
         0.
     };
