@@ -91,8 +91,8 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     mounted.activate("Open translation queue");
     driver.finish(&mut mounted.state);
     mounted.settle();
+    // The queue filters as the text is typed.
     mounted.type_text("Search translations", "Selected source");
-    mounted.activate("Search translations");
     driver.finish(&mut mounted.state);
     mounted.settle();
     mounted.activate_prefix("Open translation · ");

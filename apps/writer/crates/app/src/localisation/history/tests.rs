@@ -25,6 +25,8 @@ fn ordinary_catalogue_history_restores_query_filter_page_and_entry_after_checked
     for query in ["H", "Hello"] {
         writer.set_catalogue_query(query.into());
     }
+    // "H" ran as it was typed; "Hello" waited for it and ran once it returned.
+    tools.finish(&mut writer);
     writer.localisation.query.filter = Filter::Attention;
     writer.search_catalogue();
     tools.finish(&mut writer);
@@ -95,4 +97,33 @@ fn ordinary_catalogue_history_restores_query_filter_page_and_entry_after_checked
         writer.navigation.history.step(false).unwrap().location(),
         &entry
     );
+}
+
+#[test]
+fn typing_filters_the_queue_and_text_typed_during_a_query_runs_after_it() {
+    let directory = support::project(SOURCE).unwrap();
+    let po = (1..=6)
+        .map(|index| format!("msgctxt \"line_{index}\"\nmsgid \"Hello {index}\"\nmsgstr \"\"\n\n"))
+        .collect::<String>()
+        + "msgctxt \"other\"\nmsgid \"Farewell\"\nmsgstr \"\"\n";
+    fs::write(directory.path().join("fr.po"), po).unwrap();
+    let mut writer = support::open(&directory).unwrap();
+    let mut tools = ToolDriver::new(&mut writer);
+    writer.open_localisation();
+    writer.localisation.path = directory.path().join("fr.po").display().to_string();
+    writer.open_catalogue_path();
+    tools.finish(&mut writer);
+    writer.set_catalogue_query("Fare".into());
+    assert!(
+        writer.workspaces.tools.busy(),
+        "the first keystroke queries at once"
+    );
+    writer.set_catalogue_query("Farewell".into());
+    // Finishing the first query also runs the text typed while it ran.
+    tools.finish(&mut writer);
+    assert!(!writer.workspaces.tools.busy());
+    assert!(!writer.localisation.query_pending);
+    let rows = &writer.localisation.queue.rows;
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].source, "Farewell");
 }

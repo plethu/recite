@@ -110,6 +110,9 @@ pub struct Localisation {
     pub report: Vec<String>,
     pub report_page: usize,
     after_save: work::AfterSave,
+    /// The queue's filter text changed while the catalogue was checked out; the query runs again
+    /// when its owner returns.
+    query_pending: bool,
     pub creation: creation::Creation,
     pub refresh: Option<refresh::Refresh>,
     pub passage: Option<beat::Beat>,

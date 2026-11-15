@@ -118,25 +118,16 @@ def catalogue_action(window, caption):
 
 
 def search_entries(window, query):
+    """Type into the queue's filter; the queue filters as the text is typed."""
     show_queue(window)
     reveal_field(window, "Search translations")
     fill(window, "Search translations", query)
-
-    def search():
-        return next(
-            (
-                node
-                for node, name in window.nodes()
-                if name == "Search translations"
-                and window.call(node, "Accessible", "GetRole")[0]
-                == int(window.api.Atspi.Role.PUSH_BUTTON)
-            ),
-            None,
-        )
-
-    _reveal(window, search, "queue search action")
-    node = window.wait(search, "queue search action")
-    window.call(node, "Action", "DoAction", window.api.GLib.Variant("(i)", (0,)))
+    push_button = int(window.api.Atspi.Role.PUSH_BUTTON)
+    assert not any(
+        name == "Search translations"
+        and window.call(node, "Accessible", "GetRole")[0] == push_button
+        for node, name in window.nodes()
+    ), "no separate Search button"
 
 
 def open_entry(window):

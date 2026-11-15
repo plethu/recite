@@ -58,21 +58,17 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         })
         .collect::<Vec<_>>();
     flex_col((
-        flex_row((
-            search_field(
-                scale,
-                writer.palette.muted,
-                false,
-                Some((writer.script_width() - 200. * f64::from(scale)).max(180.)),
-                text_input(state.query.text.clone(), Writer::set_catalogue_query)
-                    .typeset(Type::Body, scale)
-                    .prop(TextAreaLabel::new("Search translations")),
-            ),
-            text_button(scale, "Search translations", Writer::search_catalogue)
-                .disabled(blocked || !state.has_catalogue()),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::SIBLINGS.px()),
+        // The queue filters as the text is typed; there is no separate Search action.
+        search_field(
+            scale,
+            writer.palette.muted,
+            false,
+            Some(writer.script_width().max(180.)),
+            text_input(state.query.text.clone(), Writer::set_catalogue_query)
+                .typeset(Type::Body, scale)
+                .disabled(!state.has_catalogue())
+                .prop(TextAreaLabel::new("Search translations")),
+        ),
         filters(writer, wide),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
