@@ -54,7 +54,23 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
             app.update_preference(edit(value))
         })
         .text_size(Type::Body.size(scale))
-    })
+        .boxed()
+    });
+    // Every checkbox is one row of one list, so they share one rhythm.
+    let booleans = std::iter::once(
+        checkbox(
+            "Split map and script",
+            presentation.split(),
+            move |app: &mut App, value| {
+                app.update_preference(UserConfigEdit::WriterPresentation(
+                    presentation.with_split(value),
+                ))
+            },
+        )
+        .text_size(Type::Body.size(scale))
+        .boxed(),
+    )
+    .chain(booleans)
     .collect::<Vec<_>>();
     flex_col((
         grid((
@@ -118,16 +134,6 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
                 ),
             ],
         ),
-        checkbox(
-            "Split map and script",
-            presentation.split(),
-            move |app: &mut App, value| {
-                app.update_preference(UserConfigEdit::WriterPresentation(
-                    presentation.with_split(value),
-                ))
-            },
-        )
-        .text_size(Type::Body.size(scale)),
         flex_col(booleans)
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::SIBLINGS.px()),
