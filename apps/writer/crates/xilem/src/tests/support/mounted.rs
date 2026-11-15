@@ -89,22 +89,43 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
     }
     /// The selected control whose name satisfies `matches`, such as a list's active row.
     fn selected_matching(&self, matches: impl Fn(&str) -> bool) -> Option<WidgetId> {
+        self.in_state(matches, |harness, id| {
+            harness
+                .access_node(id)
+                .is_some_and(|node| node.is_selected() == Some(true))
+        })
+    }
+    /// The control whose name satisfies `matches` and whose node satisfies `state`.
+    fn in_state(
+        &self,
+        matches: impl Fn(&str) -> bool,
+        state: impl Fn(&TestHarness<Passthrough>, WidgetId) -> bool,
+    ) -> Option<WidgetId> {
         let mut pending = vec![self.harness.root_widget().as_dyn()];
         while let Some(widget) = pending.pop() {
             if widget.ctx().is_stashed() {
                 continue;
             }
             if native_label(&self.harness, widget.id()).is_some_and(|name| matches(&name))
-                && self
-                    .harness
-                    .access_node(widget.id())
-                    .is_some_and(|node| node.is_selected() == Some(true))
+                && state(&self.harness, widget.id())
             {
                 return Some(widget.id());
             }
             pending.extend(widget.children());
         }
         None
+    }
+    /// Whether the disclosure named `name` reports itself `expanded`, or collapsed.
+    pub fn is_expanded(&self, name: &str, expanded: bool) -> bool {
+        self.in_state(
+            |caption| caption == name,
+            |harness, id| {
+                harness
+                    .access_node(id)
+                    .is_some_and(|node| node.data().is_expanded() == Some(expanded))
+            },
+        )
+        .is_some()
     }
     /// Whether some control named `name` is the selected one in its list.
     pub fn is_selected(&self, name: &str) -> bool {

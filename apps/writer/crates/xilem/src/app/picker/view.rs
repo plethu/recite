@@ -2,7 +2,6 @@
 //! scope where there is one, one 32px line per result and one hint line.
 use super::{App, Entry, Item, Mode, Picker, Purpose, Search};
 use crate::app::keyboard::ModalSurface;
-use crate::presentation::row::RowButton;
 use crate::presentation::slip::slip;
 use crate::presentation::tokens::size;
 use crate::presentation::{Icon, Type, print, space};
@@ -15,7 +14,7 @@ use xilem::{
         kurbo::Axis,
         layout::{AsUnit, Dim},
         properties::TextAreaLabel,
-        widgets::TextInput,
+        widgets::{Button, TextInput},
     },
     style::Style,
     view::{
@@ -47,7 +46,7 @@ impl Property for ActiveResult {
         &OTHER
     }
 }
-impl UsesProperty<ActiveResult> for RowButton {}
+impl UsesProperty<ActiveResult> for Button {}
 
 /// The picker's content width at `scale` in a window `viewport` wide.
 fn width(viewport: f64, scale: f32) -> f64 {

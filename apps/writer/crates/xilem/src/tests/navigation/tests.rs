@@ -17,18 +17,27 @@ fn scene_navigation_disambiguates_equal_file_names_before_switching() {
     assert!(
         captions
             .iter()
-            .any(|name| name == "▸ Scene · one/scene.recite")
+            .any(|name| name == "Scene · one/scene.recite")
     );
     assert!(
         captions
             .iter()
-            .any(|name| name == "▸ Scene · two/scene.recite")
+            .any(|name| name == "Scene · two/scene.recite")
     );
-    click(&mut writer, &["▸ Scene · two/scene.recite"]).unwrap();
+    assert!(!support::is_expanded(
+        &mut writer,
+        "Scene · two/scene.recite"
+    ));
+    click(&mut writer, &["Scene · two/scene.recite"]).unwrap();
     assert_eq!(
         writer.session.project().unwrap().current().path(),
         directory.path().join("two/scene.recite")
     );
+    // The open scene's disclosure reports its state; its name carries no glyph.
+    assert!(support::is_expanded(
+        &mut writer,
+        "Scene · two/scene.recite"
+    ));
 }
 
 #[test]
@@ -41,7 +50,7 @@ fn inactive_draft_guards_window_closing_and_save_close_covers_every_open_file() 
         model.set_draft("Keep my first draft.".into());
         Ok(())
     });
-    click(&mut writer, &["▸ Other"]).unwrap();
+    click(&mut writer, &["Other"]).unwrap();
     assert_eq!(writer.session.project().unwrap().current().path(), other);
     assert!(!writer.session.project().unwrap().current().dirty());
     click(&mut writer, &["Workspace", "Close"]).unwrap();
@@ -68,7 +77,7 @@ fn failed_inactive_save_keeps_the_window_open_and_displays_the_conflicting_file(
         model.set_draft("Local first draft.".into());
         Ok(())
     });
-    click(&mut writer, &["▸ Other"]).unwrap();
+    click(&mut writer, &["Other"]).unwrap();
     fs::write(
         directory.path().join("scene.recite"),
         ":: external\n-> END\n",
@@ -101,12 +110,12 @@ fn file_pages_bound_native_controls_without_opening_unvisited_documents() {
     );
     writer.file_page = 0;
     let before = labels(&mut writer).unwrap();
-    assert!(before.iter().any(|label| label == "▸ File 00"));
-    assert!(!before.iter().any(|label| label == "▸ File 04"));
+    assert!(before.iter().any(|label| label == "File 00"));
+    assert!(!before.iter().any(|label| label == "File 04"));
     click(&mut writer, &["Next files"]).unwrap();
     let after = labels(&mut writer).unwrap();
-    assert!(after.iter().any(|label| label == "▸ File 04"));
-    assert!(!after.iter().any(|label| label == "▸ File 00"));
+    assert!(after.iter().any(|label| label == "File 04"));
+    assert!(!after.iter().any(|label| label == "File 00"));
     click(&mut writer, &["Previous files"]).unwrap();
     assert_eq!(writer.file_page, 0);
     assert_eq!(writer.session.project().unwrap().sessions().count(), 1);

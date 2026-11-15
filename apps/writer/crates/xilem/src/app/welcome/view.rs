@@ -127,24 +127,27 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             width,
         ),
         // Opening and creating are two tabs over one compact slip of fields.
-        tabs((
-            tab(
-                scale,
-                &app.theme.palette,
-                "Open an existing project",
-                !app.creating,
-                busy,
-                |app: &mut App| app.choose_project_action(false),
+        tabs(
+            "Project",
+            (
+                tab(
+                    scale,
+                    &app.theme.palette,
+                    "Open an existing project",
+                    !app.creating,
+                    busy,
+                    |app: &mut App| app.choose_project_action(false),
+                ),
+                tab(
+                    scale,
+                    &app.theme.palette,
+                    "Create a new project",
+                    app.creating,
+                    busy,
+                    |app: &mut App| app.choose_project_action(true),
+                ),
             ),
-            tab(
-                scale,
-                &app.theme.palette,
-                "Create a new project",
-                app.creating,
-                busy,
-                |app: &mut App| app.choose_project_action(true),
-            ),
-        )),
+        ),
         slip(
             &app.theme.palette,
             sized_box(

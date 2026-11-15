@@ -149,6 +149,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                         ),
                         move |state: &mut Writer| state.switch(&path),
                     )
+                    .expanded(current)
                     .disabled(closing),
                 ),
             );

@@ -60,8 +60,14 @@ impl Widget for NativeIcon {
     fn accessibility_role(&self) -> Role {
         Role::Image
     }
+    /// An unnamed face is decoration, such as a disclosure chevron whose button reports the state:
+    /// hidden, so it adds nothing to the name assistive technology reads.
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
-        node.set_label(self.0.name);
+        if self.0.name.is_empty() {
+            node.set_hidden();
+        } else {
+            node.set_label(self.0.name);
+        }
     }
     fn children_ids(&self) -> ChildrenIds {
         ChildrenIds::new()

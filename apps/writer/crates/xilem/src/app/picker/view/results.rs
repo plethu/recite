@@ -86,7 +86,7 @@ pub(super) fn result(
             move |app: &mut App| app.activate_picker(position),
         )
         // A shortcut or kind is not part of the row's name; a passage's words are.
-        .named(Some(name.into()))
+        .accessible_label(name)
         .disabled(!enabled)
         .prop(ActiveResult(selected)),
     )

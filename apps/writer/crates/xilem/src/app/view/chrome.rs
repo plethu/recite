@@ -135,6 +135,7 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
 fn authoring_modes(writer: &Writer, searching: bool) -> impl WidgetView<App> + use<> {
     let localise = writer.workspaces.screen == crate::workspaces::Screen::Localisation;
     tabs(
+        "Mode",
         [("Write", false), ("Localise", true)].map(|(title, selected)| {
             tab(
                 writer.ui_scale(),

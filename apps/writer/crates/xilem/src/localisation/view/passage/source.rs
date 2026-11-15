@@ -4,7 +4,7 @@ use crate::presentation::{
     control_style::{ControlStyle, styled},
     manuscript_text,
 };
-use crate::presentation::{disclosure_width, route_toggle};
+use crate::presentation::{disclosure_width, route_name, route_toggle};
 use crate::view::reference;
 use recite_writer_model::PassageKind;
 
@@ -110,6 +110,8 @@ fn destination(
                             writer.toggle_destination_preview(target.clone())
                         },
                     )
+                    .expanded(writer.destination_expanded(destination))
+                    .accessible_label(route_name(&display_name(destination)))
                     .disabled(writer.project_action_blocked())
                     .background_color(writer.palette.surface),
                 )

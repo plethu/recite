@@ -12,7 +12,8 @@ fn view(state: &mut State) -> impl WidgetView<State, Widget = Passthrough> + use
         button(
             disclosure(1., state.0, Color::BLACK, label(1., "Relay Hub")),
             |state: &mut State| state.0 = !state.0,
-        ),
+        )
+        .expanded(state.0),
     )
 }
 
@@ -30,9 +31,11 @@ fn names(mounted: &Mounted<State, impl WidgetView<State, Widget = Passthrough>>)
 }
 
 #[test]
-fn a_painted_chevron_keeps_the_announced_disclosure_glyph() {
+fn a_disclosure_reports_expanded_and_keeps_its_name_across_states() {
     let mut mounted = Mounted::new(State(false), view);
-    assert_eq!(names(&mounted), ["▸ Relay Hub"]);
-    mounted.activate("▸ Relay Hub");
-    assert_eq!(names(&mounted), ["▾ Relay Hub"]);
+    assert_eq!(names(&mounted), ["Relay Hub"]);
+    assert!(mounted.is_expanded("Relay Hub", false));
+    mounted.activate("Relay Hub");
+    assert_eq!(names(&mounted), ["Relay Hub"]);
+    assert!(mounted.is_expanded("Relay Hub", true));
 }

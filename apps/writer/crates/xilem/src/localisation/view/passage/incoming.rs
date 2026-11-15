@@ -52,7 +52,8 @@ pub(super) fn incoming(
                         beat.incoming.expanded = !beat.incoming.expanded;
                     }
                 },
-            ),
+            )
+            .expanded(incoming.expanded),
             incoming.expanded.then(|| {
                 flex_col((
                     flex_col(links)

@@ -25,14 +25,61 @@ impl RawProxy for NoProxy {
     }
 }
 
-pub(crate) fn labels(writer: &mut Writer) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+/// The Writer's view built once into a harness, for reading its accessibility tree.
+fn built(
+    writer: &mut Writer,
+) -> Result<TestHarness<masonry::widgets::SizedBox>, Box<dyn std::error::Error>> {
     let runtime = Arc::new(tokio::runtime::Runtime::new()?);
     let mut context = ViewCtx::new(Arc::new(NoProxy), runtime);
     let view = view::writer(writer);
     let (pod, _) = view.build(&mut context, writer);
     let root = masonry::core::NewWidget::new(masonry::widgets::SizedBox::new(pod.new_widget));
-    let harness =
-        TestHarness::create_with_size(masonry::theme::default_property_set(), root, (900, 650));
+    Ok(TestHarness::create_with_size(
+        masonry::theme::default_property_set(),
+        root,
+        (900, 650),
+    ))
+}
+
+/// Whether the disclosure named `name` reports `expanded`.
+pub(crate) fn is_expanded(writer: &mut Writer, name: &str) -> bool {
+    let Ok(harness) = built(writer) else {
+        return false;
+    };
+    let tree = harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    while let Some(node) = pending.pop() {
+        if node.label().as_deref() == Some(name) && node.data().is_expanded() == Some(true) {
+            return true;
+        }
+        pending.extend(node.children());
+    }
+    false
+}
+
+/// Whether the toggle named `name` reports itself pressed (`true`) or released (`false`).
+pub(crate) fn is_pressed(writer: &mut Writer, name: &str, pressed: bool) -> bool {
+    let Ok(harness) = built(writer) else {
+        return false;
+    };
+    let want = if pressed {
+        masonry::accesskit::Toggled::True
+    } else {
+        masonry::accesskit::Toggled::False
+    };
+    let tree = harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    while let Some(node) = pending.pop() {
+        if node.label().as_deref() == Some(name) && node.toggled() == Some(want) {
+            return true;
+        }
+        pending.extend(node.children());
+    }
+    false
+}
+
+pub(crate) fn labels(writer: &mut Writer) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let harness = built(writer)?;
     let tree = harness.access_tree();
     let mut pending = vec![tree.state().root()];
     let mut labels = vec![];

@@ -107,6 +107,8 @@ pub(in crate::view::reading) fn route_to(
             ),
             move |state: &mut Writer| state.toggle_destination_preview(target.clone()),
         )
+        .expanded(state.destination_expanded(destination))
+        .accessible_label(route_name(&display_name(destination)))
         .disabled(state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy())
         .background_color(state.palette.surface),
     ))

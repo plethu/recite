@@ -35,6 +35,9 @@ pub(crate) enum ControlStyle {
     RowSelected,
     /// A compact icon face with even padding.
     Icon,
+    /// An icon toggle that is on: the pressed sink held, with its ink edge, so the state shows by
+    /// shape as well as fill.
+    IconOn,
     /// An action on the status bar: quiet on the overprint, with a mint focus border.
     Status,
 }
@@ -53,6 +56,7 @@ impl ControlStyle {
             Self::DeskField => "writer-desk-field",
             Self::SearchField => "writer-search-field",
             Self::Icon => "writer-icon",
+            Self::IconOn => "writer-icon-on",
             Self::Entry => "writer-entry",
             Self::Row => "writer-row",
             Self::RowSelected => "writer-row-selected",

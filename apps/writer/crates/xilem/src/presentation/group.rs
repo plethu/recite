@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod tests;
 mod widget;
-use widget::Group;
+pub(crate) use widget::Group;
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
@@ -37,6 +37,16 @@ pub(crate) fn list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),
         role: Role::List,
+        disabled: false,
+        child,
+    }
+}
+/// Tabs: one Tab stop, the selected tab, with Left and Right moving between them (see the native
+/// host's `radio` arrows).
+pub(crate) fn tab_list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
+    Named {
+        name: name.into(),
+        role: Role::TabList,
         disabled: false,
         child,
     }

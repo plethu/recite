@@ -139,6 +139,49 @@ fn walk(
     }
 }
 
+/// The enabled tabs of the tab list that holds `tab`, in order. Unselected tabs are not Tab
+/// stops, so they are found by role, not by focus.
+pub(super) fn tabs(root: WidgetRef<'_, dyn Widget>, tab: WidgetId) -> Vec<WidgetId> {
+    fn collect(
+        widget: WidgetRef<'_, dyn Widget>,
+        list: Option<WidgetId>,
+        found: &mut Vec<(WidgetId, WidgetId)>,
+    ) {
+        if widget.ctx().is_stashed() {
+            return;
+        }
+        let role = widget.accessibility_role();
+        let list = if role == Role::TabList {
+            Some(widget.id())
+        } else {
+            list
+        };
+        if role == Role::Tab
+            && !widget.ctx().is_disabled()
+            && let Some(list) = list
+        {
+            found.push((list, widget.id()));
+        }
+        for child in widget.children() {
+            collect(child, list, found);
+        }
+    }
+    let mut found = Vec::new();
+    collect(root, None, &mut found);
+    let Some(list) = found
+        .iter()
+        .find(|(_, id)| *id == tab)
+        .map(|(list, _)| *list)
+    else {
+        return Vec::new();
+    };
+    found
+        .into_iter()
+        .filter(|(owner, _)| *owner == list)
+        .map(|(_, id)| id)
+        .collect()
+}
+
 /// The enabled choices of the radio group that holds `radio`, in Tab order.
 pub(super) fn choices(root: WidgetRef<'_, dyn Widget>, radio: WidgetId) -> Vec<WidgetId> {
     let mut found = Vec::new();

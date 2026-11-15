@@ -27,15 +27,15 @@ def document_caption(window, name, selected=None):
     )
     for node, caption in window.nodes():
         clean = caption.removesuffix(" · Unsaved")
-        current = clean.startswith("▾ ") or clean == "Current · " + key
-        matches = clean in (key, "Current · " + key) or (
-            clean.startswith(("▾ ", "▸ ")) and (clean.endswith(" · " + key) or clean[2:] == display)
-        )
-        if (
+        matches = clean in (key, "Current · " + key, display) or clean.endswith(" · " + key)
+        if not (
             matches
-            and (selected is None or current == selected)
             and "org.a11y.atspi.Action" in window.call(node, "Accessible", "GetInterfaces")[0]
         ):
+            continue
+        # The open scene's disclosure reports EXPANDED; its name carries no glyph.
+        current = clean == "Current · " + key or window.has_state(node, "EXPANDED")
+        if selected is None or current == selected:
             return caption
     return None
 

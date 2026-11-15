@@ -96,6 +96,14 @@ impl Look {
                 Some(ControlStyle::Icon),
                 quiet((space::UNIT * scale, space::UNIT * scale)),
             ),
+            (
+                Some(ControlStyle::IconOn),
+                Self {
+                    rest: Some((p.pressed, p.ink)),
+                    hover: (p.pressed.lerp_rect(p.ink, INK_HOVER), p.ink),
+                    ..quiet((space::UNIT * scale, space::UNIT * scale))
+                },
+            ),
             (Some(ControlStyle::Tab), quiet(text)),
             (Some(ControlStyle::Row), quiet(text)),
             (

@@ -117,7 +117,12 @@ def run(api, bus, registry, binary, output):
                         lambda: window.find_action("Pin reference"), "pin the current whole beat"
                     )
                     window.focus(pin)
+                    assert not window.has_state(pin, "PRESSED"), "pin toggle starts released"
                     window.act("Pin reference")
+                    window.wait(
+                        lambda: window.has_state(window.find_action("Pin reference"), "PRESSED"),
+                        "pin toggle reports PRESSED",
+                    )
                     key("p", control=True)
                     fill(window, "Search query", "missing courier")
                     window.wait(

@@ -6,7 +6,6 @@ use crate::app::picker;
 use crate::attention::{EditRequest, EditingTarget};
 use crate::localisation::{TranslationField, TranslationTarget};
 use crate::presentation::marks::Wedge;
-use crate::presentation::row::RowButton;
 use crate::rules::view;
 use xilem::masonry::accesskit;
 use xilem::masonry::core::{Widget, WidgetRef};
@@ -197,7 +196,7 @@ impl Focus {
 }
 fn role(widget: WidgetRef<'_, dyn Widget>) -> Kind {
     if widget
-        .downcast::<RowButton>()
+        .downcast::<Button>()
         .is_some_and(|row| row.get_prop::<picker::ActiveResult>().0)
     {
         return Kind::ActiveResult;

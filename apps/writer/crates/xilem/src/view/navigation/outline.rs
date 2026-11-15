@@ -62,7 +62,11 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     },
                     move |state: &mut Writer| state.inspect(id.clone()),
                 )
-                .named(problem.then(|| format!("{text} · Problem").into()))
+                .accessible_label(if problem {
+                    format!("{text} · Problem")
+                } else {
+                    text.clone()
+                })
                 .disabled(closing),
             )
         })

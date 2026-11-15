@@ -1,7 +1,6 @@
 //! Exercise the host's focus boundary against a real mounted widget tree.
 use super::*;
 use crate::app::picker::{ActiveResult, QueryField};
-use crate::presentation::row::RowButton;
 use crate::{Writer, session::Session, workspaces::Screen};
 use crate::{
     attention::{Pane, PaneMotion, Region},
@@ -19,7 +18,7 @@ const SCRIPT: WidgetTag<TextInput> = WidgetTag::named("mounted-script");
 const NAVIGATION: WidgetTag<TextInput> = WidgetTag::named("mounted-navigation");
 const QUERY: WidgetTag<TextInput> = WidgetTag::named("mounted-query");
 const MAP: WidgetTag<Button> = WidgetTag::named("mounted-map");
-const RESULT: WidgetTag<RowButton> = WidgetTag::named("mounted-result");
+const RESULT: WidgetTag<Button> = WidgetTag::named("mounted-result");
 #[path = "composition/tests.rs"]
 mod composition;
 #[path = "input/tests.rs"]
@@ -64,12 +63,9 @@ fn mounted() -> (RenderRoot, mpsc::Receiver<RenderRootSignal>) {
                 .with_props(QueryField(true)),
         )
         .with_fixed(
-            NewWidget::new(RowButton::new(
-                true,
-                NewWidget::new(Label::new("Active result")),
-            ))
-            .with_tag(RESULT)
-            .with_props(ActiveResult(true)),
+            NewWidget::new(Button::new(NewWidget::new(Label::new("Active result"))))
+                .with_tag(RESULT)
+                .with_props(ActiveResult(true)),
         );
     let root = NewWidget::new(Passthrough::new(NewWidget::new(body)))
         .with_tag(TAG)

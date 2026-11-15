@@ -196,13 +196,12 @@ fn actions(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
                 state.open_project_workspace(crate::workspaces::Open::Rename);
             },
         ),
-        print::icon_action(
+        print::icon_toggle(
             scale,
-            "Pin reference",
-            Icon::Pin,
+            ("Pin reference", Icon::Pin),
             &state.palette,
-            blocked,
-            Writer::pin_reference,
+            (state.reference_pinned(), blocked),
+            Writer::toggle_reference,
         ),
         print::icon_action(
             scale,

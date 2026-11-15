@@ -78,8 +78,10 @@ def exercise(window, po, output, results, scale):
     capture(output, f"-{scale}-destination")
     reveal_destination_body(window)
     capture(output, f"-{scale}-destination-body")
-    reveal(window, "▾ Later")
-    window.act("▾ Later")
+    assert window.expanded("→ Later"), "destination toggle reports EXPANDED"
+    reveal(window, "→ Later")
+    window.act("→ Later")
+    window.wait(lambda: not window.expanded("→ Later"), "destination toggle collapsed")
     reveal_field(window, FIRST)
     fill(window, FIRST, "Premier brouillon indépendant.")
     fill(window, SECOND, "Deuxième brouillon publié.")

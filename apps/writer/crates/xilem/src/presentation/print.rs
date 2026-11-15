@@ -191,6 +191,46 @@ pub(crate) fn icon_action_width(scale: f32) -> f64 {
     (super::icons::FACE + 2. * super::space::UNIT) * f64::from(scale) + 2.
 }
 
+/// An icon toggle such as "Pin reference": the same compact face, reporting `pressed` and held
+/// in the pressed sink while on.
+pub(crate) fn icon_toggle<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+    scale: f32,
+    (name, icon): (&'static str, super::Icon),
+    palette: &Palette<Color>,
+    (pressed, disabled): (bool, bool),
+    callback: F,
+) -> impl WidgetView<S, Widget = Button> + use<S, F> {
+    styled(
+        if pressed {
+            ControlStyle::IconOn
+        } else {
+            ControlStyle::Icon
+        },
+        view::button(icon_face(scale, name, icon, palette, disabled), callback)
+            .toggled(pressed)
+            .disabled(disabled),
+    )
+}
+
+fn icon_face(
+    scale: f32,
+    name: &'static str,
+    icon: super::Icon,
+    palette: &Palette<Color>,
+    disabled: bool,
+) -> super::icons::Face {
+    super::icons::face(
+        scale,
+        name,
+        icon,
+        if disabled {
+            palette.muted.with_alpha(0.4)
+        } else {
+            palette.ink
+        },
+    )
+}
+
 /// Keep the ordinary native button and its name when the compact face is an icon.
 pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,
@@ -202,19 +242,6 @@ pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
 ) -> impl WidgetView<S, Widget = Button> + use<S, F> {
     styled(
         ControlStyle::Icon,
-        view::button(
-            super::icons::face(
-                scale,
-                name,
-                icon,
-                if disabled {
-                    palette.muted.with_alpha(0.4)
-                } else {
-                    palette.ink
-                },
-            ),
-            callback,
-        )
-        .disabled(disabled),
+        view::button(icon_face(scale, name, icon, palette, disabled), callback).disabled(disabled),
     )
 }

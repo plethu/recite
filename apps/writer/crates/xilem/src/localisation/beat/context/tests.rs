@@ -37,7 +37,9 @@ fn incoming_prompt_pages_preserve_the_draft_and_navigate_to_the_chosen_origin() 
     mounted.state.navigation.sender = Some(sender);
     mounted.state.navigation.runtime = Some(runtime.handle().clone());
     assert!(!mounted.contains_text("Origin 0 → Question 0?"));
-    mounted.activate("▸ Incoming prompts (6)");
+    assert!(mounted.is_expanded("Incoming prompts (6)", false));
+    mounted.activate("Incoming prompts (6)");
+    assert!(mounted.is_expanded("Incoming prompts (6)", true));
     for index in 0..4 {
         assert!(mounted.contains_text(&format!("Origin {index} → Question {index}?")));
     }
@@ -52,9 +54,9 @@ fn incoming_prompt_pages_preserve_the_draft_and_navigate_to_the_chosen_origin() 
             .ctx()
             .is_disabled()
     );
-    mounted.activate("▾ Incoming prompts (6)");
+    mounted.activate("Incoming prompts (6)");
     assert!(!mounted.contains_text("Origin 4 → Question 4?"));
-    mounted.activate("▸ Incoming prompts (6)");
+    mounted.activate("Incoming prompts (6)");
     assert!(mounted.contains_text("Origin 4 → Question 4?"));
     mounted.activate("Previous incoming prompts");
     assert!(mounted.contains_text("Origin 0 → Question 0?"));

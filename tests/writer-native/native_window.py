@@ -122,6 +122,17 @@ class NativeWindow:
             None,
         )
 
+    def has_state(self, node, state):
+        """Whether `node` is in the AT-SPI `state`, named as in StateType, such as "EXPANDED"."""
+        index = int(getattr(self.api.Atspi.StateType, state))
+        states = self.call(node, "Accessible", "GetState")[0]
+        return bool(states[index // 32] & (1 << (index % 32)))
+
+    def expanded(self, label):
+        """Whether the action named `label`, such as a disclosure, reports the EXPANDED state."""
+        node = self.find_action(label)
+        return node is not None and self.has_state(node, "EXPANDED")
+
     def find_spin(self, label):
         """A named spin button, which offers the Value interface its visible caption lacks."""
         return next(

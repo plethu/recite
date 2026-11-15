@@ -1,6 +1,5 @@
-//! Disclosure state is a painted chevron beside the text. Native buttons cannot expose an
-//! expanded state yet, so the announced name still begins with `▸` or `▾`: the chevron is an image
-//! named with that glyph, and assistive technology joins it with the text as before.
+//! Disclosure state is a painted chevron beside the text, and the button that holds it reports
+//! the native `expanded` state, so the chevron is decoration and no glyph enters the name.
 use super::icons::{Icon, face};
 use crate::presentation::space;
 use xilem::{
@@ -21,18 +20,18 @@ pub(crate) fn disclosure<S: 'static, V: WidgetView<S>>(
     color: Color,
     text: V,
 ) -> impl WidgetView<S> + use<S, V> {
-    let (name, icon) = if expanded {
-        ("▾", Icon::Expanded)
+    let icon = if expanded {
+        Icon::Expanded
     } else {
-        ("▸", Icon::Collapsed)
+        Icon::Collapsed
     };
-    flex_row((face(scale * MARK, name, icon, color), text))
+    flex_row((face(scale * MARK, "", icon, color), text))
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .gap((space::UNIT * f64::from(scale)).px())
 }
 
-/// A destination toggle: `→` while closed and a painted chevron, announced `▾`, while open.
-/// The arrow is a text glyph, so both states keep their names byte for byte.
+/// A destination toggle: `→` while closed and a painted chevron while open. Its button is named
+/// with the arrow in both states (`route_name`) and reports `expanded`.
 pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
     scale: f32,
     expanded: bool,
@@ -52,6 +51,11 @@ pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
             .gap((space::UNIT * f64::from(scale)).px()),
         )
     }
+}
+
+/// A destination toggle's name in both states: the arrow and the destination's display name.
+pub(crate) fn route_name(destination: &str) -> String {
+    format!("→ {destination}")
 }
 
 /// The width the chevron and its gap take from a row of text.

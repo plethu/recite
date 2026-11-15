@@ -34,7 +34,8 @@ pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + 
                         scene.connections.expanded = !scene.connections.expanded;
                     }
                 },
-            ),
+            )
+            .expanded(scene.connections.expanded),
         ),
         scene.connections.expanded.then(|| {
             pane(
