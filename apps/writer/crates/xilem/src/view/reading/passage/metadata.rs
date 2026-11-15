@@ -71,40 +71,44 @@ pub(super) fn route(
     if destination == "END" {
         return None;
     }
-    let target = destination.clone();
+    Some(route_to(state, destination, width))
+}
+
+/// A destination as a button in the manuscript's destination type: pressing it shows or hides
+/// the destination beat's opening beneath the row.
+pub(in crate::view::reading) fn route_to(
+    state: &Writer,
+    destination: &str,
+    width: f64,
+) -> impl WidgetView<Writer> + use<> {
+    let target = destination.to_owned();
     let size = Sheet::Destination.size(state.reading_size());
     // The chevron is drawn for Control text; it scales to the destination's size.
     let glyph = size / Type::Control.metrics().0;
-    Some(
-        sized_box(styled(
-            ControlStyle::Action,
-            button(
-                route_toggle(
-                    glyph,
-                    state.destination_expanded(destination),
-                    state.palette.teal_text,
-                    size,
-                    // Sized with the manuscript it belongs to, not with the interface chrome.
-                    Sheet::Destination
-                        .label(state.reading_size(), display_name(destination))
-                        .prop(LineBreaking::WordWrap)
-                        // Fill the content box so the text starts at the column's left edge.
-                        .width(
-                            (width
-                                - 2. * control_inset(state.ui_scale())
-                                - disclosure_width(glyph))
+    sized_box(styled(
+        ControlStyle::Action,
+        button(
+            route_toggle(
+                glyph,
+                state.destination_expanded(destination),
+                state.palette.teal_text,
+                size,
+                // Sized with the manuscript it belongs to, not with the interface chrome.
+                Sheet::Destination
+                    .label(state.reading_size(), display_name(destination))
+                    .prop(LineBreaking::WordWrap)
+                    // Fill the content box so the text starts at the column's left edge.
+                    .width(
+                        (width - 2. * control_inset(state.ui_scale()) - disclosure_width(glyph))
                             .max(24.)
                             .px(),
-                        )
-                        .color(state.palette.teal_text),
-                ),
-                move |state: &mut Writer| state.toggle_destination_preview(target.clone()),
-            )
-            .disabled(
-                state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy(),
-            )
-            .background_color(state.palette.surface),
-        ))
-        .width(width.px()),
-    )
+                    )
+                    .color(state.palette.teal_text),
+            ),
+            move |state: &mut Writer| state.toggle_destination_preview(target.clone()),
+        )
+        .disabled(state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy())
+        .background_color(state.palette.surface),
+    ))
+    .width(width.px())
 }

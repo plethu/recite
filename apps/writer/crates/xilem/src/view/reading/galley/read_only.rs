@@ -1,6 +1,9 @@
 //! Beats whose fields are not mounted: their rows as read-only text in reading order, on the same
 //! grid and at the same sizes as the editable beat, so choosing a beat never reflows the page.
 use super::*;
+use crate::view::reading::passage::{RouteFace, continuation_row};
+use xilem::masonry::properties::Dimensions;
+use xilem::view::{Label, MainAxisAlignment};
 
 /// A beat whose fields are not mounted: its heading button, then its rows as read-only text in
 /// reading order.
@@ -101,8 +104,10 @@ fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Wr
                 .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
                 .gap(grid.gutter().px()),
                 (!column).then_some(destination).flatten().map(|target| {
-                    sized_box(route(target).width(grid.measure.px()))
-                        .padding(Padding::left((grid.text() + size::FIELD_INSET).px()))
+                    // Under the text, where a route button's words would start.
+                    sized_box(route(target).width(grid.measure.px())).padding(Padding::left(
+                        (grid.text() + control_inset(state.ui_scale())).px(),
+                    ))
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -140,12 +145,27 @@ fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Wr
                 .padding(Padding::left(grid.text().px()))
                 .boxed()
         }
-        Content::Continuation(target) => sized_box(
-            Sheet::Destination
+        Content::Continuation(target) => continuation_row(
+            state,
+            grid,
+            None::<Label>,
+            // As tall as the route button it stands for, so the row keeps the editable height.
+            flex_col((Sheet::Destination
                 .label(reading, format!("→ {}", display_name(target)))
-                .color(state.palette.teal_text),
+                .color(state.palette.teal_text)
+                .prop(LineBreaking::WordWrap)
+                .width(
+                    if grid.destination > 0. {
+                        grid.destination
+                    } else {
+                        grid.measure
+                    }
+                    .px(),
+                ),))
+            .main_axis_alignment(MainAxisAlignment::Center)
+            .dims(Dimensions::AUTO.with_height((size::ROW * f64::from(state.ui_scale())).px())),
+            RouteFace::Label,
         )
-        .padding(Padding::left(grid.text().px()))
         .boxed(),
     }
 }

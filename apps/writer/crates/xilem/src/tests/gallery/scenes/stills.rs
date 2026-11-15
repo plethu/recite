@@ -132,6 +132,14 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
             stage.shot(record, "Station history under the running head");
             stage.focus("Edit beat Station Answer, 7 of 9");
             stage.shot(record, "Next beat heading focused");
+            // A continuation sits in the destination column whether or not its beat is mounted.
+            stage.harness.focus_on(None);
+            stage.act(|app| {
+                if let Some(writer) = app.writer.as_mut() {
+                    writer.edit_beat(3);
+                }
+            });
+            stage.shot(record, "Pump House continues to Courier Route");
         },
     );
     record.scene(

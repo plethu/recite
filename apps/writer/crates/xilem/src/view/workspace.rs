@@ -5,6 +5,7 @@ use crate::presentation::group::named;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use recite_config::{WriterPaneSide, WriterPresentationField};
+use xilem::masonry::layout::Dim;
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
 mod sheet;
 use crate::presentation::grid::Grid;
@@ -90,8 +91,11 @@ pub(super) fn workspace(
                     &layout,
                     super::reading::viewport::follow_reading(
                         state,
+                        // The scroll area is the whole paper, so its scrollbar runs down the
+                        // paper's edge, clear of the columns and their pad.
                         portal(sheet::columns(&layout, manuscript(state, surface)))
                             .constrain_horizontal(true)
+                            .width(Dim::Stretch)
                             .prop(ReadingViewport::capture(state)),
                     ),
                 ),

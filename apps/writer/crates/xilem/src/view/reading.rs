@@ -5,16 +5,15 @@ use crate::app::picker::Search;
 use crate::keyed::column;
 use crate::presentation::Icon;
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::grid::Grid;
 use crate::presentation::material;
 use crate::presentation::print;
-use crate::presentation::route_toggle;
 use crate::presentation::space;
 use crate::presentation::{Sheet, Type, Typeset};
 use crate::reading::{Content, Row};
 use recite_core::DocumentKey;
 use recite_writer_model::{AnalysisStamp, RouteOwner};
 use recite_writer_session::choices::display_name;
-use xilem::view::button;
 mod controls;
 mod galley;
 pub(crate) use galley::SelectedBeat;
@@ -173,48 +172,54 @@ pub(super) fn reply_actions(state: &Writer, id: &str) -> impl WidgetView<Writer>
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
 }
+/// A beat's continuation: the end mark in the text column, or its destination in the
+/// destination column like a reply's (under the text where destinations wrap), with the change
+/// action in the margin. Read-only beats set it in the same place.
 fn continuation(
     state: &Writer,
     target: &str,
     beat: Option<&str>,
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
-    let end = target == "END";
-    let target = target.to_owned();
-    let toggle = target.clone();
-    flex_col((
-        end.then(|| print::end_mark(state.ui_scale(), &state.palette)),
-        (!end).then(|| {
-            let scale = state.ui_scale();
-            styled(
-                ControlStyle::Action,
-                button(
-                    route_toggle(
-                        scale,
-                        state.destination_expanded(&target),
-                        state.palette.ink,
-                        14. * scale,
-                        label(scale, display_name(&target)),
-                    ),
-                    move |state: &mut Writer| state.toggle_destination_preview(toggle.clone()),
-                )
-                .disabled(state.phase() != Phase::Writing),
-            )
-        }),
-        (!end)
-            .then(|| super::reference::destination(state, &target, width))
-            .flatten(),
-        beat.map(|id| {
-            let owner = RouteOwner::Beat(id.to_owned());
-            print::action(
-                state.ui_scale(),
-                "Change continuation…",
-                state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
-                move |state: &mut Writer| state.choose_destination(owner.clone()),
-            )
-        }),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
+    let grid = passage::grid(state);
+    if target == "END" {
+        return Either::A(
+            sized_box(print::end_mark(state.ui_scale(), &state.palette))
+                .padding(Padding::left(grid.text().px())),
+        );
+    }
+    let change = beat.map(|id| {
+        let owner = RouteOwner::Beat(id.to_owned());
+        print::icon_action(
+            state.ui_scale(),
+            "Change continuation…",
+            Icon::Rename,
+            &state.palette,
+            state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
+            move |state: &mut Writer| state.choose_destination(owner.clone()),
+        )
+    });
+    Either::B(
+        flex_col((
+            passage::continuation_row(
+                state,
+                &grid,
+                change,
+                passage::route_to(state, target, route_width(&grid)),
+                passage::RouteFace::Button,
+            ),
+            super::reference::destination(state, target, width),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::SIBLINGS.px()),
+    )
+}
+/// A continuation's width: the destination column, or the measure where destinations wrap.
+fn route_width(grid: &Grid) -> f64 {
+    if grid.destination > 0. {
+        grid.destination
+    } else {
+        grid.measure
+    }
 }
 pub(super) use controls::page_controls;

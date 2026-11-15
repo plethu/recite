@@ -5,7 +5,11 @@ use super::super::manuscript::folio;
 use super::*;
 use crate::presentation::space;
 use xilem::masonry::layout::UnitPoint;
-use xilem::masonry::{layout::Dim, properties::BoxShadow, widgets::Flex};
+use xilem::masonry::{
+    layout::Dim,
+    properties::{BoxShadow, Dimensions},
+    widgets::Flex,
+};
 use xilem::peniko::Color;
 use xilem::style::Padding;
 use xilem::view::MainAxisAlignment;
@@ -55,8 +59,12 @@ pub(super) fn frame<V: WidgetView<Writer>>(
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(0.px()),
     )
-    .width(layout.grid.width.px())
-    .height(Dim::Stretch)
+    // One Dimensions for both axes: a later `height` alone would reset the width to auto.
+    .dims(
+        Dimensions::AUTO
+            .with_width(layout.grid.width.px())
+            .with_height(Dim::Stretch),
+    )
     .background_color(state.palette.surface)
     .border_color(if sheet {
         state.palette.rule

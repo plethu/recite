@@ -169,7 +169,10 @@ fn heading(
                 }),
             ))
             .width(grid.margin.px()),
-            title.flex(1.),
+            // The heading hugs its words, so a focused heading's ring stays inside the measure.
+            flex_col((title,))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .flex(1.),
             selected.then(|| actions(state, blocked)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
