@@ -14,7 +14,7 @@ use xilem::{
 /// One row from about 600 logical pixels: history, workspace modes, then the scene's
 /// tools with Save as the only raised action. Narrower windows move the modes to a second row.
 pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let width = (state.viewport.width - state.navigation_width() - 32.).max(280.);
+    let width = state.content_width();
     let wide = width >= breakpoint::TOOLBAR * f64::from(state.ui_scale());
     let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     grid((
@@ -63,8 +63,10 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
             blocked || state.navigation.history.step(true).is_none(),
             |state: &mut Writer| state.history_step(true),
         ),
-        // Script sets the scene's title and the beat's link on the sheet; Map keeps them here.
-        (state.visible_workspace() == crate::map::Workspace::Map).then(|| {
+        // The galley's beat heading carries the link; wherever no heading shows, the toolbar does.
+        (state.visible_workspace() == crate::map::Workspace::Map
+            || !super::manuscript::galley(state, &surface::Surface::resolve(state)))
+        .then(|| {
             print::icon_action(
                 scale,
                 "Copy link",

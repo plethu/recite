@@ -102,7 +102,8 @@ fn edit_button(
     .disabled(!enabled)
 }
 /// Whether `surface` shows the scene galley, which holds the beat's actions itself.
-fn galley(state: &Writer, surface: &Surface<'_>) -> bool {
+/// Whether the scene galley shows a selected beat, whose heading carries the beat's actions.
+pub(super) fn galley(state: &Writer, surface: &Surface<'_>) -> bool {
     match surface {
         Surface::Manuscript { .. } => {
             state.reading.selected.is_some()

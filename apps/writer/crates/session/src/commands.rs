@@ -24,6 +24,7 @@ pub fn label(command: WriterCommand, focused: bool) -> String {
         WriterCommand::Focus if focused => text(MsgId::WriterWorkspaceExitFocus),
         WriterCommand::Focus => text(MsgId::WriterWorkspaceFocusWriting),
         WriterCommand::Sidebar => "Show or hide the scene list".into(),
+        WriterCommand::CopyLink => "Copy link".into(),
         WriterCommand::Commands => text(MsgId::WriterWorkspaceCommands),
         WriterCommand::GoTo => text(MsgId::WriterWorkspaceGoTo),
         WriterCommand::OpenProject => text(MsgId::WriterGuiOpenProject),

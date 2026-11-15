@@ -51,6 +51,7 @@ impl Shell {
             (Some(writer), WriterCommand::Split) => writer.show_workspace(Workspace::Split),
             (Some(writer), WriterCommand::Focus) => writer.toggle_focus(),
             (Some(writer), WriterCommand::Sidebar) => writer.toggle_sidebar(),
+            (Some(writer), WriterCommand::CopyLink) => writer.copy_link(),
             (Some(writer), WriterCommand::Localise) => writer.open_localisation(),
             (Some(writer), WriterCommand::Declarations) => {
                 writer.open_project_workspace(Open::Declarations)

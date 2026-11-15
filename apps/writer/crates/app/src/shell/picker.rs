@@ -286,6 +286,7 @@ impl Shell {
             }
             C::Script | C::Map | C::Split | C::AddBeat | C::Focus => idle,
             C::Sidebar => !writer.attention.is_focused(),
+            C::CopyLink => !writer.project_action_blocked(),
             C::PaneLeft | C::PaneRight | C::PaneUp | C::PaneDown => true,
             C::NextMatch | C::PreviousMatch => idle,
             C::AddLine | C::AddReply => {

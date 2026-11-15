@@ -50,8 +50,8 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
     let writing = !app.show_welcome()
         && !app.settings_open()
         && app.writer.as_ref().is_some_and(|writer| {
+            // Focus mode is writing too: its tab row keeps only the modes and Commands.
             writer.workspaces.screen == crate::workspaces::Screen::Write
-                && !writer.attention.is_focused()
         });
     flex_row((
         sized_box(flex_row((
@@ -130,7 +130,10 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
         app.writer
             .as_ref()
             .filter(|writer| {
-                !app.show_welcome() && !app.settings_open() && writer.navigation_width() == 0.
+                !app.show_welcome()
+                    && !app.settings_open()
+                    && writer.navigation_width() == 0.
+                    && !writer.attention.is_focused()
             })
             .map(|_| {
                 print::action(scale, "Scenes…", blocked, |app: &mut App| {
