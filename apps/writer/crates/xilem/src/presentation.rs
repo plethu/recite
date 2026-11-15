@@ -50,7 +50,9 @@ pub(super) struct Theme {
     pub grain: Option<ImageBrush>,
     /// The modal backdrop's print texture in this palette's screen ink.
     pub screen: ImageBrush,
-    texture: material::Texture,
+    /// The backdrop's texture: the dot screen, or the gallery's hatch comparison, which theme
+    /// refreshes keep.
+    pub texture: material::Texture,
     wordmark: Result<Arc<usvg::Tree>, String>,
     hero: Result<Arc<usvg::Tree>, String>,
 }
@@ -74,13 +76,6 @@ impl Theme {
             texture: material::Texture::default(),
             palette,
         }
-    }
-    /// Print the modal backdrop's hatch instead of its dot screen: the gallery's comparison for
-    /// the maintainer, kept across theme refreshes.
-    #[cfg(test)]
-    pub fn print_hatch(&mut self) {
-        self.texture = material::Texture::Hatch;
-        self.screen = material::screen(self.texture, self.palette.screen);
     }
     pub fn refresh(&mut self, config: &WriterConfig) {
         let key = (

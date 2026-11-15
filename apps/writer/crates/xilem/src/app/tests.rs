@@ -27,7 +27,9 @@ impl App {
     }
     /// Print the modal backdrop's hatch, the gallery's comparison with its dot screen.
     pub(crate) fn print_hatch(&mut self) {
-        self.theme.print_hatch();
+        use crate::presentation::material::{Texture, screen};
+        self.theme.texture = Texture::Hatch;
+        self.theme.screen = screen(Texture::Hatch, self.theme.palette.screen);
     }
     /// The look the native window would use for the current preferences.
     pub(crate) fn gallery_look(&mut self, initial: bool) -> Look {
