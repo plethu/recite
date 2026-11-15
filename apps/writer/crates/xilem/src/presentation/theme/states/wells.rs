@@ -1,5 +1,6 @@
 //! Wells and indicators: text and number fields, and the checkbox and plain radio indicator.
 use super::*;
+use crate::presentation::control_style::ControlStyle;
 use crate::presentation::tokens::space;
 
 /// Text inputs: a tonal well closed by a bottom rule, a 2px accent ring around the whole well on
@@ -101,7 +102,7 @@ pub(in super::super) fn check<W: Widget>(
     }
     .push(
         &mut stack,
-        &Selector::classes(&[crate::presentation::control_style::ControlStyle::Flush.class()]),
+        &Selector::classes(&[ControlStyle::Flush.class()]),
         STRONG,
     );
     properties.insert_stack::<W>(stack);
