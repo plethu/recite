@@ -1,6 +1,7 @@
 //! The access form scrolls independently of its persistent submission actions.
 use super::{App, ProjectField};
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::pane;
 use crate::presentation::segments::{tab, tabs};
 use crate::presentation::slip::slip;
 use crate::presentation::space;
@@ -16,7 +17,7 @@ use xilem::{
     },
     style::Style,
     view::{
-        CrossAxisAlignment, FlexExt, FlexSpacer, MainAxisAlignment, flex_col, flex_row, portal,
+        CrossAxisAlignment, FlexExt, FlexSpacer, MainAxisAlignment, flex_col, flex_row,
         resize_observer, sized_box, text_input,
     },
 };
@@ -75,17 +76,20 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
         },
         sized_box(
             flex_col((
-                portal(resize_observer(
-                    |app: &mut App, size| {
-                        if app.welcome_layout.content != Some(size) {
-                            app.welcome_layout.content = Some(size);
-                        }
-                    },
-                    column(
-                        layout,
-                        sized_box(fields(app, layout)).padding(space::GROUPS.px()),
+                pane(
+                    "Welcome",
+                    resize_observer(
+                        |app: &mut App, size| {
+                            if app.welcome_layout.content != Some(size) {
+                                app.welcome_layout.content = Some(size);
+                            }
+                        },
+                        column(
+                            layout,
+                            sized_box(fields(app, layout)).padding(space::GROUPS.px()),
+                        ),
                     ),
-                ))
+                )
                 .constrain_horizontal(true)
                 .flex(form),
                 resize_observer(
@@ -227,9 +231,12 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
         flex_col((
             super::feedback::panel(app, layout.scale, layout.width),
             (app.welcome_problem.is_none() && !app.status.is_empty()).then(|| {
-                portal(paragraph(scale, app.status.clone(), width - space::KINDS))
-                    .constrain_horizontal(true)
-                    .height((STATUS_LINES * f64::from(Type::Body.metrics().1 * scale)).px())
+                pane(
+                    "Status",
+                    paragraph(scale, app.status.clone(), width - space::KINDS),
+                )
+                .constrain_horizontal(true)
+                .height((STATUS_LINES * f64::from(Type::Body.metrics().1 * scale)).px())
             }),
             flex_row((
                 print::primary_action(

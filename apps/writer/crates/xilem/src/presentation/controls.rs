@@ -3,12 +3,23 @@ use xilem::{
     WidgetView,
     core::MessageResult,
     masonry::core::ArcStr,
-    view::{self, Button, Label, PointerButton, Prose},
+    view::{self, Button, Label, PointerButton, Portal, Prose},
 };
 use xilem::{
     masonry::{layout::AsUnit, parley::LineHeight},
     style::Style,
 };
+
+/// A named scroll area that is not itself a Tab stop: Tab reaches the controls inside, whose
+/// unhandled page and arrow keys still scroll it, and its scrollbars stay focusable.
+pub(crate) fn pane<State: 'static, Action, V: WidgetView<State, Action>>(
+    name: &'static str,
+    content: V,
+) -> Portal<V, State, Action> {
+    view::portal(content)
+        .accessible_label(name)
+        .focusable(false)
+}
 
 /// Body text: Plex Sans 14/20. A size override keeps the same proportional leading.
 pub(crate) fn label(scale: f32, text: impl Into<ArcStr>) -> Label {

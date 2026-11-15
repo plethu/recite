@@ -1,15 +1,14 @@
 //! Reveal only the result of a native Tab move, after Masonry handles the key.
 //!
-//! Masonry offers every scrollable Portal as a Tab stop but gives it no accessible name, and its
-//! focus draws nothing. Writer's panes keep keyboard scrolling without being stops: page and
-//! arrow keys from any control inside bubble to the pane, and its scrollbars stay focusable.
+//! Writer's scroll panes are named and leave the Tab order themselves (`presentation::pane`).
 //!
 //! A mounted modal surface (a slip or sheet marked `ModalSurface`) holds Tab: stops outside it are
 //! passed over, so Tab and Shift+Tab cycle within it.
 //!
 //! Masonry also makes every radio a Tab stop. A radio group is one stop, its checked choice (or
 //! its first, while none is checked), and arrow keys move within it (see `radio`). So a Tab move
-//! that lands on a pane or on another choice of a group continues in the same direction.
+//! that lands outside the modal surface or on another choice of a group continues in the same
+//! direction.
 use super::*;
 use crate::app::keyboard::ModalSurface;
 use crate::presentation::GroupStop;
@@ -32,7 +31,7 @@ impl Reveal {
         let Self::Pending { from, backward } = std::mem::take(self) else {
             return;
         };
-        past_panes(root, backward);
+        to_tab_stop(root, backward);
         if root
             .focused_widget()
             .is_some_and(|current| Some(current) != from)
@@ -42,9 +41,9 @@ impl Reveal {
     }
 }
 
-/// Move focus off an unnamed scroll pane, or a radio that is not its group's stop, to the next
-/// Tab stop in the same direction.
-pub(crate) fn past_panes(root: &mut RenderRoot, backward: bool) {
+/// Move focus off a control behind a modal surface, or a radio that is not its group's stop, to
+/// the next Tab stop in the same direction.
+pub(crate) fn to_tab_stop(root: &mut RenderRoot, backward: bool) {
     let Some(focused) = root.focused_widget() else {
         return;
     };
@@ -73,7 +72,6 @@ pub(crate) fn past_panes(root: &mut RenderRoot, backward: bool) {
 /// One focusable widget in Masonry's Tab order.
 struct Focusable {
     id: WidgetId,
-    pane: bool,
     /// Inside a modal surface.
     modal: bool,
     /// The radio group it belongs to, and whether it is checked.
@@ -98,8 +96,7 @@ fn stops(root: WidgetRef<'_, dyn Widget>) -> Vec<(WidgetId, bool)> {
     found
         .iter()
         .map(|focusable| {
-            let passed = focusable.pane
-                || (modal && !focusable.modal)
+            let passed = (modal && !focusable.modal)
                 || focusable
                     .group
                     .is_some_and(|(group, _)| stop(group) != Some(focusable.id));
@@ -130,7 +127,6 @@ fn walk(
     if widget.ctx().accepts_focus() && !widget.ctx().is_disabled() {
         found.push(Focusable {
             id: widget.id(),
-            pane: is_pane(&widget),
             modal,
             group: (role == Role::RadioButton)
                 .then_some(group)
@@ -160,10 +156,6 @@ pub(super) fn choices(root: WidgetRef<'_, dyn Widget>, radio: WidgetId) -> Vec<W
         .filter(|focusable| focusable.group.is_some_and(|(id, _)| id == group))
         .map(|focusable| focusable.id)
         .collect()
-}
-
-fn is_pane(widget: &WidgetRef<'_, dyn Widget>) -> bool {
-    widget.accessibility_role() == Role::ScrollView
 }
 
 #[cfg(test)]

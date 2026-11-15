@@ -233,6 +233,15 @@ fn accessibility(harness: &TestHarness<Passthrough>, scale: f64) -> (Vec<Value>,
             .map(|rect| [rect.x0, rect.y0, rect.x1, rect.y1].map(|edge| (edge / scale).round()));
         // Scroll containers and their bars are reached by wheel and keys over their content.
         let scrolling = matches!(role, Role::ScrollView | Role::ScrollBar);
+        // A scroll area is named and is no Tab stop: it draws no focus of its own.
+        if role == Role::ScrollView {
+            if label.is_none() {
+                lint.push(format!("unnamed ScrollView at {bounds:?}"));
+            }
+            if data.supports_action(Action::Focus) {
+                lint.push(format!("ScrollView {label:?} is a Tab stop at {bounds:?}"));
+            }
+        }
         let role = format!("{role:?}");
         if interactive && !node.is_disabled() && !scrolling {
             let name = label.as_deref().unwrap_or("");

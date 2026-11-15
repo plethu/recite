@@ -1,6 +1,7 @@
 //! Both reading aids reuse one bounded read-only block without mounting more editors.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::pane;
 use crate::presentation::space;
 use crate::presentation::{group::named, manuscript_text, print};
 use recite_writer_model::{PassageKind, ScriptEntry};
@@ -9,7 +10,7 @@ use xilem::{
     AnyWidgetView,
     masonry::properties::LineBreaking,
     style::Padding,
-    view::{GridExt, GridTrackSize, MainAxisAlignment, grid, portal},
+    view::{GridExt, GridTrackSize, MainAxisAlignment, grid},
 };
 
 pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -81,9 +82,12 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 .rows([GridTrackSize::Auto])
                 .gap(space::SIBLINGS.px()),
                 (!pinned.collapsed).then(|| {
-                    portal(entries(state, &pinned.snapshot.block().entries, width))
-                        .constrain_horizontal(true)
-                        .flex(1.)
+                    pane(
+                        "Pinned reference",
+                        entries(state, &pinned.snapshot.block().entries, width),
+                    )
+                    .constrain_horizontal(true)
+                    .flex(1.)
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)

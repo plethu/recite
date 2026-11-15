@@ -1,12 +1,13 @@
 //! The fixed writing shell retains content while its contextual panel comes and goes.
 use super::{Phase, Writer, document_actions, navigation, reference, retained, toolbar};
 use crate::presentation::group::inert;
+use crate::presentation::pane;
 use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, UnitPoint},
     peniko::Color,
     style::Style,
-    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, portal, zstack},
+    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, zstack},
 };
 
 pub(super) fn frame<V: WidgetView<Writer>>(
@@ -28,7 +29,7 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                             document_actions::focus_header(state),
                         ))
                         .active(usize::from(writing && state.attention.is_focused())),
-                        portal(content)
+                        pane("Workspace", content)
                             .constrain_horizontal(true)
                             .constrain_vertical(writing)
                             // Writing sits on the desk; tool and Localise panels keep the surface.

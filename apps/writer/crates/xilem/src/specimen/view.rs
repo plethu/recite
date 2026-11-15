@@ -1,4 +1,5 @@
 //! The specimen composes the same buttons, fields, palette and manuscript text as Writer.
+use crate::presentation::pane;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 mod inputs;
@@ -10,11 +11,12 @@ use xilem::{
     WidgetView,
     masonry::layout::AsUnit,
     style::Style,
-    view::{CrossAxisAlignment, checkbox, flex_col, flex_row, portal, sized_box},
+    view::{CrossAxisAlignment, checkbox, flex_col, flex_row, sized_box},
 };
 
 pub(super) fn specimen(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
-    let page = portal(
+    let page = pane(
+        "Specimen",
         sized_box(
             flex_col((
                 header(state),

@@ -2,11 +2,12 @@
 use super::*;
 use crate::map::Workspace;
 use crate::presentation::group::named;
+use crate::presentation::pane;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::masonry::layout::Dim;
-use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
+use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack};
 mod sheet;
 use crate::presentation::grid::Grid;
 use recite_writer_app::COMPACT_WINDOW;
@@ -93,10 +94,13 @@ pub(super) fn workspace(
                         state,
                         // The scroll area is the whole paper, so its scrollbar runs down the
                         // paper's edge, clear of the columns and their pad.
-                        portal(sheet::columns(&layout, manuscript(state, surface)))
-                            .constrain_horizontal(true)
-                            .width(Dim::Stretch)
-                            .prop(ReadingViewport::capture(state)),
+                        pane(
+                            "Script",
+                            sheet::columns(&layout, manuscript(state, surface)),
+                        )
+                        .constrain_horizontal(true)
+                        .width(Dim::Stretch)
+                        .prop(ReadingViewport::capture(state)),
                     ),
                 ),
             )

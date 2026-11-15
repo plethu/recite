@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::pane;
 mod outline;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
@@ -16,7 +17,7 @@ use outline::outline;
 use recite_writer_session::choices::display_name;
 use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
-use xilem::view::{button, portal};
+use xilem::view::button;
 
 /// The scene list's width: as allocated while shown, and its preferred width while retained
 /// hidden, so its rows keep their layout.
@@ -41,7 +42,8 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     };
     sized_box(named(
         "Scene navigation",
-        portal(
+        pane(
+            "Scenes",
             flex_col((search_entry(state), documents))
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .gap(space::KINDS.px())

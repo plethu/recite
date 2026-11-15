@@ -3,10 +3,10 @@ use super::*;
 use crate::map::connections::Direction;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::disclosure;
+use crate::presentation::pane;
 use crate::presentation::space;
 use recite_writer_session::choices::display_name;
 use xilem::view::button;
-use xilem::view::portal;
 
 pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use<> {
     flex_col((
@@ -37,7 +37,8 @@ pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + 
             ),
         ),
         scene.connections.expanded.then(|| {
-            portal(
+            pane(
+                "Connections",
                 flex_col((
                     connection_list(state, scene, Direction::Outgoing),
                     connection_list(state, scene, Direction::Incoming),

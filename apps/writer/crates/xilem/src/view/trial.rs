@@ -1,6 +1,7 @@
 //! Runtime controls; capture policy and traversal stay in the shared owners.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::pane;
 use crate::presentation::space;
 use crate::{
     attention::{Pane, PaneEntry, Region},
@@ -10,7 +11,7 @@ use crate::{
 use recite_writer_app::trial::captions;
 use recite_writer_model::PreviewPage;
 use recite_writer_session::preview::catalogue_stale;
-use xilem::view::{GridExt, GridTrackSize, grid, portal};
+use xilem::view::{GridExt, GridTrackSize, grid};
 mod context;
 mod controls;
 mod feedback;
@@ -23,7 +24,9 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
         "Conversation preview",
         flex_col((
             controls::header(state),
-            portal(content(state)).constrain_horizontal(true).flex(1.),
+            pane("Transcript", content(state))
+                .constrain_horizontal(true)
+                .flex(1.),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(space::SIBLINGS.px())

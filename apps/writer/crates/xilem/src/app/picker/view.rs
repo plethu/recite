@@ -129,6 +129,9 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                             virtual_scroll(count, move |app: &mut App, position| {
                                 line(app, position, width)
                             })
+                            // Up and Down in the query choose; the list itself is no Tab stop.
+                            .accessible_label("Results")
+                            .focusable(false)
                             .jump_to(Some(anchor))
                             .on_scroll(|app: &mut App, visible| {
                                 app.picker_scrolled(visible);

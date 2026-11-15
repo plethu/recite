@@ -4,6 +4,7 @@
 use super::*;
 use crate::app::keyboard::{DefaultFocus, ModalSurface};
 use crate::presentation::group::dialog;
+use crate::presentation::pane;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::slip::slip;
 use crate::presentation::tokens::size;
@@ -13,7 +14,7 @@ use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, Dim},
     style::Style,
-    view::{CrossAxisAlignment, FlexSpacer, flex_col, flex_row, indexed_stack, portal, sized_box},
+    view::{CrossAxisAlignment, FlexSpacer, flex_col, flex_row, indexed_stack, sized_box},
 };
 
 /// The sheet's width: 360px, or the whole window below the comfortable minimum and at 200%.
@@ -34,7 +35,8 @@ pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {
         slip(
             &app.theme.palette,
             sized_box(
-                portal(
+                pane(
+                    "Settings",
                     flex_col((
                         flex_row((
                             Type::Section.label(scale, "Settings"),

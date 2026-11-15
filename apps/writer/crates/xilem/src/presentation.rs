@@ -33,7 +33,7 @@ pub(crate) mod sheet_text;
 pub(crate) use shaped_text::ShapedText;
 mod theme;
 pub(crate) mod tokens;
-pub(super) use controls::{label, paragraph, prose, text_button};
+pub(super) use controls::{label, pane, paragraph, prose, text_button};
 pub(crate) use radio::GroupStop;
 pub(super) use radio::radio_button;
 use recite_config::{WriterConfig, WriterPresentationField, WriterTheme};

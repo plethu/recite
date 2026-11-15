@@ -2,6 +2,7 @@
 use super::*;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
+use crate::presentation::pane;
 use crate::presentation::slip::slip;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
@@ -10,7 +11,6 @@ use recite_core::STABLE_ID_FIELD_PREFIX;
 use xilem::{
     core::{MessageResult, map_message_result},
     masonry::kurbo::Axis,
-    view::portal,
 };
 
 pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -37,7 +37,7 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
                 .gap(space::SIBLINGS.px()),
                 map_message_result(
                     flex_col((
-                        portal(content(state, width - 26.))
+                        pane("Workspace actions", content(state, width - 26.))
                             .constrain_horizontal(true)
                             .flex(1.),
                         footer(state),

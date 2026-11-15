@@ -1,4 +1,4 @@
-use super::super::tab::past_panes;
+use super::super::tab::to_tab_stop;
 use super::*;
 use crate::presentation::GroupStop;
 use xilem::masonry::{
@@ -36,16 +36,16 @@ fn a_radio_group_is_one_tab_stop_and_arrows_choose_within_it() {
     // Tab lands on the checked choice and leaves the group on the next press.
     harness.focus_on(Some(before_id));
     harness.press_tab_key(false);
-    past_panes(harness.render_root(), false);
+    to_tab_stop(harness.render_root(), false);
     assert_eq!(harness.focused_widget_id(), Some(map_id));
     harness.press_tab_key(false);
-    past_panes(harness.render_root(), false);
+    to_tab_stop(harness.render_root(), false);
     assert_eq!(harness.focused_widget_id(), Some(after_id));
     harness.press_tab_key(true);
-    past_panes(harness.render_root(), true);
+    to_tab_stop(harness.render_root(), true);
     assert_eq!(harness.focused_widget_id(), Some(map_id));
     harness.press_tab_key(true);
-    past_panes(harness.render_root(), true);
+    to_tab_stop(harness.render_root(), true);
     assert_eq!(harness.focused_widget_id(), Some(before_id));
     // Arrows move focus and choose, wrapping at either end.
     step(harness.render_root(), map_id, false);
