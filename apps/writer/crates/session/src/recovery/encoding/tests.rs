@@ -204,7 +204,7 @@ fn failed_writes_retry_with_matching_cached_keys_and_clear_releases_encoding() {
 }
 
 #[test]
-#[ignore = "serialization timing; use just writer bench-recovery"]
+#[ignore = "serialization timing; use just writer bench recovery"]
 fn recovery_serialization_timing() {
     use criterion::measurement::{Measurement, WallTime};
     use std::hint::black_box;
