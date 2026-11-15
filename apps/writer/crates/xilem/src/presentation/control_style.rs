@@ -35,6 +35,8 @@ pub(crate) enum ControlStyle {
     RowSelected,
     /// A compact icon face with even padding.
     Icon,
+    /// An action on the status bar: quiet on the overprint, with a mint focus border.
+    Status,
 }
 impl ControlStyle {
     pub fn class(self) -> &'static str {
@@ -54,6 +56,7 @@ impl ControlStyle {
             Self::Entry => "writer-entry",
             Self::Row => "writer-row",
             Self::RowSelected => "writer-row-selected",
+            Self::Status => "writer-status",
         }
     }
 }

@@ -103,3 +103,18 @@ fn editing_a_read_only_beat_selects_its_first_passage_for_the_caret()
     );
     Ok(())
 }
+
+#[test]
+fn revealing_the_first_problem_asks_for_focus_on_its_beat_in_the_galley()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = project(
+        ":: first default\n> @ffee6p8\n  Fine.\n-> second\n\n:: second\n> @rthh7ab\n  Broken.\n-> nowhere\n",
+    )?;
+    let mut writer = open(&directory)?;
+    let before = writer.attention.problem_request();
+    // The beat is already in the galley, so only focus moves.
+    writer.reveal_first_problem();
+    assert_eq!(writer.attention.problem_request(), before.wrapping_add(1));
+    assert_eq!(writer.reading.selected.as_deref(), Some("first"));
+    Ok(())
+}

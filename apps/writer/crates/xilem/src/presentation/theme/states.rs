@@ -99,6 +99,19 @@ impl Look {
             (Some(ControlStyle::Tab), quiet(text)),
             (Some(ControlStyle::Row), quiet(text)),
             (
+                Some(ControlStyle::Status),
+                Self {
+                    // The status bar's text ink tints its own overprint; mint marks focus.
+                    hover: (p.status_text.with_alpha(INK_HOVER), Color::TRANSPARENT),
+                    pressed: (p.status_text.with_alpha(TONAL_HOVER), p.status_text),
+                    focus: Some(p.status_signal),
+                    // As tall as the bar: its line and the bar's own padding, so the target is
+                    // at least 24px; no sinking.
+                    sinks: false,
+                    ..quiet((space::UNIT, space::UNIT * scale))
+                },
+            ),
+            (
                 Some(ControlStyle::Entry),
                 Self {
                     // Pressing the entry opens a search, so it answers like a button.

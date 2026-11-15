@@ -5,6 +5,7 @@ use crate::app::keyboard::DefaultFocus;
 use crate::app::picker;
 use crate::attention::{EditRequest, EditingTarget};
 use crate::localisation::{TranslationField, TranslationTarget};
+use crate::presentation::marks::Wedge;
 use crate::presentation::row::RowButton;
 use crate::rules::view;
 use xilem::masonry::accesskit;
@@ -29,6 +30,9 @@ pub(super) struct Focus {
     /// to when it closes.
     modal: Option<Modal>,
     modal_return: Option<Option<WidgetId>>,
+    /// The last request to focus the first problem, and whether it waits for its wedge to mount.
+    problem: u64,
+    problem_pending: bool,
     picker_instance: Option<picker::PickerInstance>,
     return_to: Option<WidgetId>,
     last: Option<WidgetId>,
@@ -97,8 +101,30 @@ impl Focus {
         self.modal_return = Some(root.focused_widget().filter(|focused| *focused != target));
         root.focus_on(Some(target));
     }
+    /// Move focus to the first problem's wedge when the writer asks, once it has mounted.
+    fn synchronize_problem(&mut self, root: &mut RenderRoot, context: &Context) {
+        let request = context.attention.problem_request();
+        if request != self.problem {
+            self.problem = request;
+            self.problem_pending = true;
+        }
+        if !self.problem_pending || root.needs_rewrite_passes() {
+            return;
+        }
+        if let Some(wedge) = first_wedge(root) {
+            self.problem_pending = false;
+            root.focus_on(Some(wedge));
+            root.handle_access_event(accesskit::ActionRequest {
+                action: accesskit::Action::ScrollIntoView,
+                target_tree: accesskit::TreeId::ROOT,
+                target_node: wedge.to_raw().into(),
+                data: None,
+            });
+        }
+    }
     pub fn synchronize(&mut self, root: &mut RenderRoot, context: &Context) {
         self.synchronize_modal(root, context);
+        self.synchronize_problem(root, context);
         let picker = context.picker_open;
         let generation = context.generation;
         if picker != self.picker {
@@ -225,6 +251,23 @@ fn default_focus(root: &RenderRoot) -> Option<WidgetId> {
             return Some(widget.id());
         }
         pending.extend(widget.children());
+    }
+    None
+}
+/// The first focusable problem wedge in the window, in reading order.
+fn first_wedge(root: &RenderRoot) -> Option<WidgetId> {
+    let mut pending = vec![root.get_layer_root(0)];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() || widget.ctx().is_disabled() {
+            continue;
+        }
+        if widget
+            .downcast::<Wedge>()
+            .is_some_and(|wedge| wedge.inner().is_control())
+        {
+            return Some(widget.id());
+        }
+        pending.extend(widget.children().into_iter().rev());
     }
     None
 }

@@ -1,15 +1,17 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
+use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
 use crate::presentation::{Icon, print};
 use crate::presentation::{Type, Typeset};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::kurbo::Axis;
+use xilem::masonry::properties::Dimensions;
 use xilem::view::FlexSpacer;
 use xilem::{
     masonry::properties::LineBreaking,
-    view::{GridExt, GridTrackSize, grid},
+    view::{GridExt, GridTrackSize, button, grid},
 };
 
 /// One row from about 600 logical pixels: history, workspace modes, then the scene's
@@ -164,32 +166,44 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_row((
         print::meta(state.ui_scale(), saved).color(state.palette.status_text),
         print::separator(state.ui_scale(), state.palette.status_text),
-        print::meta(
-            state.ui_scale(),
-            if let Some(refusal) = refusal {
-                refusal.footer().to_owned()
-            } else if state.unfinished_trial_edit().is_some() && state.trial.visible {
-                "Preview needs an applied edit".to_owned()
-            } else if diagnostics.is_empty() {
-                "no problems".to_owned()
-            } else {
-                format!(
-                    "{} problem{}",
-                    diagnostics.len(),
-                    if diagnostics.len() == 1 { "" } else { "s" }
+        if let (None, false, Some(count)) = (
+            refusal,
+            state.unfinished_trial_edit().is_some() && state.trial.visible,
+            (!diagnostics.is_empty()).then_some(diagnostics.len()),
+        ) {
+            // The count is a way to the first problem: focus moves to its wedge.
+            Either::A(styled(
+                ControlStyle::Status,
+                button(
+                    print::meta(
+                        state.ui_scale(),
+                        format!("{count} problem{}", if count == 1 { "" } else { "s" }),
+                    )
+                    .color(state.palette.status_text),
+                    Writer::reveal_first_problem,
+                ),
+            ))
+        } else {
+            Either::B(
+                print::meta(
+                    state.ui_scale(),
+                    if let Some(refusal) = refusal {
+                        refusal.footer().to_owned()
+                    } else if state.unfinished_trial_edit().is_some() && state.trial.visible {
+                        "Preview needs an applied edit".to_owned()
+                    } else {
+                        "no problems".to_owned()
+                    },
                 )
-            },
-        )
-        .color(
-            if diagnostics.is_empty()
-                && refusal.is_none()
-                && state.unfinished_trial_edit().is_none()
-            {
-                state.palette.status_signal
-            } else {
-                state.palette.status_text
-            },
-        ),
+                .color(
+                    if refusal.is_none() && state.unfinished_trial_edit().is_none() {
+                        state.palette.status_signal
+                    } else {
+                        state.palette.status_text
+                    },
+                ),
+            )
+        },
         (state.workspaces.screen == crate::workspaces::Screen::Write
             && !workspace::Layout::resolve(state).split_available)
             .then(|| {
@@ -209,10 +223,12 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
             )
         }),
     ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap((space::SIBLINGS * f64::from(state.ui_scale())).px())
-    .padding(xilem::style::Padding::from_vh(
-        space::UNIT.px(),
-        space::KINDS.px(),
+    // One line and its padding tall, whether or not the problem count is a button.
+    .padding(xilem::style::Padding::from_vh(0.px(), space::KINDS.px()))
+    .dims(Dimensions::AUTO.with_height(
+        (2. * space::UNIT + f64::from(Type::Meta.metrics().1 * state.ui_scale())).px(),
     ))
     .background_color(state.palette.status_bar)
 }

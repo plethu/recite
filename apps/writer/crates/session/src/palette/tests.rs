@@ -354,3 +354,26 @@ fn margin_marks_hold_three_to_one_wherever_they_repeat() {
         }
     }
 }
+
+#[test]
+fn a_status_bar_action_keeps_its_text_and_shows_focus_on_the_overprint() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        for fill in [
+            p.status_bar,
+            Rgba::mix(p.status_bar, p.status_text, INK_HOVER),
+            Rgba::mix(p.status_bar, p.status_text, TONAL_HOVER),
+        ] {
+            assert!(
+                contrast(p.status_text, fill) >= 4.5,
+                "status action text: dark={dark} monochrome={monochrome}: {}",
+                contrast(p.status_text, fill)
+            );
+        }
+        assert!(
+            contrast(p.status_signal, p.status_bar) >= 3.,
+            "status focus: dark={dark} monochrome={monochrome}: {}",
+            contrast(p.status_signal, p.status_bar)
+        );
+    }
+}

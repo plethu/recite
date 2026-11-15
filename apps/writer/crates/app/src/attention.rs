@@ -123,8 +123,17 @@ pub struct Attention {
     pane: Option<PaneRequest>,
     field: Option<EditingTarget>,
     edit_request: Option<EditRequest>,
+    /// Raised each time the writer asks to be taken to the first problem.
+    problem_request: u64,
 }
 impl Attention {
+    /// How many times focus has been asked to move to the first problem.
+    pub fn problem_request(&self) -> u64 {
+        self.problem_request
+    }
+    pub(crate) fn request_problem_focus(&mut self) {
+        self.problem_request = self.problem_request.wrapping_add(1);
+    }
     pub fn begin_preedit(&self) -> Preedit {
         self.composition.begin()
     }

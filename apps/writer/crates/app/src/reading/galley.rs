@@ -99,6 +99,21 @@ impl Writer {
 
     /// The first problem in each beat of the open scene, by beat id, in source order. A problem
     /// belongs to the last beat that starts at or before its line.
+    /// Bring the first beat with a problem into the galley and ask for focus on its wedge.
+    pub fn reveal_first_problem(&mut self) {
+        let Some((beat, _)) = self.beat_problems().into_iter().next() else {
+            return;
+        };
+        let index = self
+            .reading
+            .script()
+            .ok()
+            .and_then(|blocks| blocks.iter().position(|block| block.id == beat));
+        if let Some(index) = index.filter(|index| !self.reading.galley().contains(index)) {
+            self.edit_beat(index);
+        }
+        self.attention.request_problem_focus();
+    }
     pub fn beat_problems(&self) -> Vec<(String, String)> {
         let document = self.session.model().document();
         let diagnostics = document.diagnostic_snapshot();

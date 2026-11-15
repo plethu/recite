@@ -6,7 +6,7 @@ mod tests;
 mod wedge;
 use super::material::{Bar, Decorated, Edge, bar};
 use recite_writer_session::palette::Palette;
-pub(crate) use wedge::{wedge, wedge_glyph};
+pub(crate) use wedge::{Wedge, wedge, wedge_glyph};
 use xilem::peniko::Color;
 
 /// A margin bar's thickness.

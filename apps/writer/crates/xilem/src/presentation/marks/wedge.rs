@@ -50,6 +50,10 @@ impl Wedge {
             ..Self::new(ArcStr::from(""), ArcStr::from(""), (ink, ink))
         }
     }
+    /// Whether this is the focusable control rather than a decorative glyph.
+    pub fn is_control(&self) -> bool {
+        self.glyph.is_none()
+    }
     /// Resize and re-ink a decorative wedge.
     pub fn set_glyph(this: &mut WidgetMut<'_, Self>, side: f64, ink: Color) {
         this.widget.glyph = Some(side);
