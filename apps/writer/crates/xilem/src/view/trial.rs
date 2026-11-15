@@ -11,7 +11,8 @@ use crate::{
 use recite_writer_app::trial::captions;
 use recite_writer_model::PreviewPage;
 use recite_writer_session::preview::catalogue_stale;
-use xilem::view::{GridExt, GridTrackSize, grid};
+use xilem::masonry::layout::UnitPoint;
+use xilem::view::{GridExt, GridTrackSize, grid, zstack};
 mod context;
 mod controls;
 mod feedback;
@@ -24,9 +25,12 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
         "Conversation preview",
         flex_col((
             controls::header(state),
-            pane("Transcript", content(state))
-                .constrain_horizontal(true)
-                .flex(1.),
+            zstack((
+                pane("Transcript", content(state)).constrain_horizontal(true),
+                state.configuring_trial().then(|| inputs::slip(state)),
+            ))
+            .alignment(UnitPoint::TOP_RIGHT)
+            .flex(1.),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(space::SIBLINGS.px())
@@ -54,7 +58,7 @@ fn content(state: &Writer) -> impl WidgetView<Writer> + use<> {
         grid((
             flex_col((page.map(|page| running(state, page, closing || busy)),))
                 .grid_pos(0, u16::from(setup_first)),
-            setup(state, closing).grid_pos(0, u16::from(!setup_first)),
+            flex_col((setup(state),)).grid_pos(0, u16::from(!setup_first)),
         ))
         .columns([GridTrackSize::FRACTION])
         .rows([GridTrackSize::Auto; 2])
@@ -66,20 +70,14 @@ fn content(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .prop(Region(Some(Pane::Preview)))
 }
 
-fn setup(state: &Writer, closing: bool) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    flex_col((
-        inputs::controls(state, closing),
-        state.reading.script().is_err().then(|| {
-            paragraph(
-                scale,
-                "Repair this source in your editor before starting a preview.",
-                state.script_width(),
-            )
-        }),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::TEXT.px())
+fn setup(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    state.reading.script().is_err().then(|| {
+        paragraph(
+            state.ui_scale(),
+            "Repair this source in your editor before starting a preview.",
+            state.script_width(),
+        )
+    })
 }
 
 fn running(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetView<Writer> + use<> {

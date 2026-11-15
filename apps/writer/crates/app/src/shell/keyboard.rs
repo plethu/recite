@@ -51,6 +51,8 @@ pub enum Modal {
     Settings,
     /// The decision to keep, save or discard work before closing.
     CloseDecision,
+    /// The Configure preview slip: the next run's inputs.
+    PreviewInputs,
 }
 pub struct Invocation {
     pub action: Action,
@@ -145,6 +147,12 @@ impl Scope {
                 Some(Modal::CloseDecision)
             } else if self.settings {
                 Some(Modal::Settings)
+            } else if self
+                .writer
+                .as_ref()
+                .is_some_and(|writer| writer.configuring && !self.welcome)
+            {
+                Some(Modal::PreviewInputs)
             } else {
                 None
             },
@@ -228,6 +236,11 @@ impl Shell {
                 }
             }
             Action::DismissModal(Modal::Settings) => self.close_settings(),
+            Action::DismissModal(Modal::PreviewInputs) => {
+                if let Some(writer) = &mut self.writer {
+                    writer.close_trial_inputs();
+                }
+            }
             Action::DismissModal(Modal::CloseDecision) => {
                 if let Some(writer) = &mut self.writer {
                     writer.keep_editing();

@@ -1,55 +1,105 @@
 //! Composed trial settings; only one bounded page of values and languages is mounted.
 use super::*;
-use crate::WriterLayout;
+use crate::app::keyboard::ModalSurface;
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::group::dialog;
+use crate::presentation::slip::OFFSET;
 use crate::presentation::space;
+use crate::presentation::tokens::size;
+use crate::presentation::{self, Icon};
 use crate::presentation::{Type, Typeset};
 use recite_writer_session::messages::{MsgId, text};
+use xilem::masonry::layout::Dim;
 use xilem::{masonry::properties, view::checkbox};
 
 mod language;
 mod values;
 
-pub(super) fn controls(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
-    let settings = &state.trial.settings;
-    retained(editor(state, disabled), settings.open)
+/// The Configure preview slip: the next run's inputs on floating paper, anchored under the
+/// preview's header and over its transcript, which stays in place beneath. The language query takes
+/// focus as it opens, Tab stays inside, and Esc or its close returns to the preview.
+pub(super) fn slip(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let width = (size::SLIP_WIDTH * f64::from(scale)).min(state.content_width() - OFFSET);
+    let inner = width - 2. * space::KINDS - 2.;
+    let disabled = state.phase() != Phase::Writing || state.session.read_only();
+    // Room for the slip's stock offset inside the transcript's area.
+    sized_box(presentation::slip::slip(
+        &state.palette,
+        sized_box(dialog(
+            "Configure preview",
+            flex_col((
+                flex_row((
+                    label(scale, "Configure preview")
+                        .typeset(Type::Section, scale)
+                        .flex(1.),
+                    print::icon_action(
+                        scale,
+                        "Done with preview inputs",
+                        Icon::Close,
+                        &state.palette,
+                        false,
+                        Writer::close_trial_inputs,
+                    ),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .gap(space::SIBLINGS.px()),
+                pane("Preview inputs", editor(state, disabled, inner))
+                    .constrain_horizontal(true)
+                    .flex(1.),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(space::TEXT.px()),
+        ))
+        .dims((width.px(), Dim::Stretch))
+        .padding(space::KINDS.px())
+        .prop(ModalSurface(true)),
+    ))
+    .padding(Padding {
+        right: OFFSET.px(),
+        bottom: OFFSET.px(),
+        ..Padding::all(0.px())
+    })
 }
 
-fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
+fn editor(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer> + use<> {
     let settings = &state.trial.settings;
     let scale = state.ui_scale();
     let help = paragraph(
         scale,
         "Starting or restarting captures these settings. Changes here apply to the next run; the current conversation keeps its captured inputs.",
-        state.script_width(),
+        width,
     );
-    let drafts = checkbox(
-        text(MsgId::WriterIncludeDrafts),
-        state.trial.settings.include_drafts,
-        |state: &mut Writer, value| state.trial.settings.include_drafts = value,
-    )
-    .text_size(Type::Body.size(scale))
-    .disabled(disabled);
+    let drafts = styled(
+        ControlStyle::Flush,
+        checkbox(
+            text(MsgId::WriterIncludeDrafts),
+            state.trial.settings.include_drafts,
+            |state: &mut Writer, value| state.trial.settings.include_drafts = value,
+        )
+        .text_size(Type::Body.size(scale))
+        .disabled(disabled),
+    );
     flex_col((
-        label(scale, "Inputs for the next run").typeset(Type::Section, scale),
         matches!(settings.review, Review::Diagnostic).then(|| {
             paragraph(
                 scale,
                 "Values were valid when checked. Changes below apply to the next run.",
-                state.script_width(),
+                width,
             )
         }),
         help,
-        language::selector(state, disabled),
+        language::selector(state, disabled, width),
         label(scale, "Preview wording (empty for default)"),
-        wording(state, disabled),
+        wording(state, disabled, width),
         drafts,
-        values::values(state, disabled),
+        values::values(state, disabled, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
 }
 
-fn wording(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
+fn wording(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer> + use<> {
     sized_box(
         text_input(
             state.trial.settings.variant.clone(),
@@ -61,7 +111,7 @@ fn wording(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
         .disabled(disabled)
         .prop(properties::TextAreaLabel::new("Preview wording")),
     )
-    .width(state.script_width().px())
+    .width(width.px())
 }
 
 #[cfg(test)]

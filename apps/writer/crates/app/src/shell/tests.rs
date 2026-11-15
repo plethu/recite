@@ -75,3 +75,31 @@ fn keep_editing_returns_from_a_close_prompt() {
     writer.keep_editing();
     assert!(writer.phase == Phase::Writing);
 }
+
+#[test]
+fn the_configure_preview_slip_is_a_modal_that_escape_dismisses() {
+    use keyboard::{Action, Generations, Invocation, Modal, Scope};
+    let directory = test_support::project(SOURCE).unwrap();
+    let mut shell = Shell::with_writer(test_support::open(&directory).unwrap());
+    let shortcuts = shell.preferences.config.writer.shortcuts.clone();
+    let modal = |shell: &Shell| {
+        Scope::capture(shell)
+            .context(&shortcuts, Generations::default(), ())
+            .modal
+    };
+    assert_eq!(modal(&shell), None);
+    shell.writer.as_mut().unwrap().configure_trial();
+    assert_eq!(modal(&shell), Some(Modal::PreviewInputs));
+    let captured = Scope::capture(&shell);
+    assert!(shell.invoke(
+        &captured,
+        &shortcuts,
+        Generations::default(),
+        Invocation {
+            action: Action::DismissModal(Modal::PreviewInputs),
+            generation: Generations::default().command,
+        },
+    ));
+    assert!(!shell.writer.as_ref().unwrap().configuring_trial());
+    assert_eq!(modal(&shell), None);
+}

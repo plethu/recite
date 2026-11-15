@@ -25,19 +25,9 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 ),
                 print::action(
                     scale,
-                    if state.configuring_trial() {
-                        "Hide preview inputs"
-                    } else {
-                        "Configure preview"
-                    },
+                    "Configure preview",
                     state.phase() != Phase::Writing,
-                    |state: &mut Writer| {
-                        if state.configuring_trial() {
-                            state.close_trial_inputs();
-                        } else {
-                            state.configure_trial();
-                        }
-                    },
+                    Writer::configure_trial,
                 ),
             ))
             .gap(space::SIBLINGS.px())

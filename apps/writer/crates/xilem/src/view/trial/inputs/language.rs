@@ -1,11 +1,14 @@
 use super::*;
-use crate::WriterLayout;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 use crate::{attention::PaneEntry, trial::Review};
 use recite_writer_session::localisation::setup::languages;
 
-pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
+pub(super) fn selector(
+    state: &Writer,
+    disabled: bool,
+    width: f64,
+) -> impl WidgetView<Writer> + use<> {
     let settings = &state.trial.settings;
     let scale = state.ui_scale();
     let caption = if settings.locale.is_empty() {
@@ -17,7 +20,7 @@ pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer
         )
     };
     flex_col((
-        paragraph(scale, caption, state.script_width()),
+        paragraph(scale, caption, width),
         text_button(scale, "Use source language only", |state: &mut Writer| {
             state.trial.settings.locale.clear();
             state.trial.settings.languages.clear();
@@ -33,7 +36,7 @@ pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer
                 .disabled(disabled)
                 .prop(properties::TextAreaLabel::new("Find preview language")),
             )
-            .width(state.script_width().px()),
+            .width(width.px()),
             text_button(
                 scale,
                 "Search preview languages",

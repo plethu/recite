@@ -53,6 +53,8 @@ pub(crate) mod size {
     pub const SIDE_SHEET: f64 = 360.;
     /// The close decision slip's width.
     pub const DECISION_WIDTH: f64 = 560.;
+    /// An anchored form slip's width, such as Configure preview.
+    pub const SLIP_WIDTH: f64 = 480.;
 }
 
 /// A text control's padding and 1px border before its words, at `scale`: where a heading or

@@ -117,7 +117,7 @@ def exercise(window, po, output, results):
     action(window, "Search preview languages")
     action(window, "Preview in French (Canada) · fr-CA")
     reveal_text(window, "Preview language:", prefix=True)
-    action(window, "Hide preview inputs")
+    action(window, "Done with preview inputs")
     action(window, "Configure preview")
     configuration_focus_and_tab(window)
     results["selected_locale_configuration_focuses_the_language_query"] = True
@@ -129,7 +129,7 @@ def exercise(window, po, output, results):
     capture_end(window, output, "-values")
     restart(window, "Bonjour Ada.")
     capture_end(window, output, "-saved")
-    assert window.find("Hide preview inputs") is None
+    assert window.find("Done with preview inputs") is None
     scrollbar = window.wait(
         lambda: (window.section_scrollbar("Conversation preview"),), "retained conversation layout"
     )[0]

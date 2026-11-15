@@ -15,6 +15,7 @@ const EXTREMES: &[&str] = &[
     "overlay.settings",
     "overlay.commands",
     "overlay.close",
+    "preview.configure",
 ];
 
 /// Transitions whose meaning depends on contrast alone.
@@ -35,6 +36,7 @@ fn capture_gallery() {
         let full = matches!(variant.id, "light" | "dark");
         record.limit((!full).then_some(EXTREMES));
         scenes::stills(&mut record, variant);
+        scenes::in_place(&mut record, variant);
         if full {
             scenes::transitions(&mut record, variant, &settings);
         } else if variant.id == "mono" {

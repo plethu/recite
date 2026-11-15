@@ -24,7 +24,7 @@ fn binding_view(count: usize) -> (usize, Writer) {
         Arc::new(support::NoProxy),
         Arc::new(tokio::runtime::Runtime::new().unwrap()),
     );
-    let view = sized_box(controls(&writer, false));
+    let view = sized_box(editor(&writer, false, writer.script_width()));
     let (pod, _) = view.build(&mut context, &mut writer);
     let harness = TestHarness::create_with_size(
         masonry::theme::default_property_set(),

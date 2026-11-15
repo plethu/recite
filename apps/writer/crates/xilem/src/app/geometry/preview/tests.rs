@@ -48,7 +48,7 @@ fn configuring_preview_uses_the_workspace_and_restores_retained_writing_and_refe
                 .harness
                 .process_window_event(WindowEvent::Resize((width, 720).into()));
             mounted.settle();
-            for name in ["Return to writing", "Hide preview inputs"] {
+            for name in ["Return to writing", "Done with preview inputs"] {
                 let control = mounted.harness.get_widget_with_id(mounted.find(name));
                 let bounds = control
                     .ctx()
@@ -92,7 +92,7 @@ fn configuring_preview_uses_the_workspace_and_restores_retained_writing_and_refe
 }
 
 #[test]
-fn current_run_precedes_configuration_and_focus_retains_the_collapsed_reference() {
+fn current_run_stays_under_configuration_and_focus_retains_the_collapsed_reference() {
     let prose = "A long running conversation remains inspectable. ".repeat(80);
     let source = format!(":: start default\n> @ffee6p8\n  {prose}\n-> END\n");
     let directory = support::project(&source).unwrap();
@@ -112,7 +112,9 @@ fn current_run_precedes_configuration_and_focus_retains_the_collapsed_reference(
             .window_transform()
             .transform_rect_bbox(widget.ctx().border_box())
     };
-    assert!(bounds("Continue preview").y0 < bounds("Preview wording").y0);
+    // The inputs open on a slip over the preview; the current run stays mounted beneath it.
+    assert!(bounds("Continue preview").height() > 0.);
+    assert!(bounds("Preview wording").height() > 0.);
     assert!(
         mounted
             .harness

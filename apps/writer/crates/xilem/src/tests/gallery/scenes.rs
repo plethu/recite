@@ -2,8 +2,10 @@
 //!
 //! Scene ids are stable: comparisons match baseline frames by id, so rename one only together with
 //! a new baseline. Add a scene when a surface or state ships; reviewers cannot judge what is absent.
+mod in_place;
 mod stills;
 mod transitions;
+pub(super) use in_place::in_place;
 pub(super) use stills::stills;
 pub(super) use transitions::transitions;
 
