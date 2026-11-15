@@ -327,3 +327,30 @@ fn dark_grain_is_a_faint_paper_tone_that_desk_text_survives() {
     assert!(contrast(desk, p.canvas) < 1.15);
     assert_eq!(Palette::new(false).grain_peak, GRAIN_PEAK);
 }
+
+#[test]
+fn margin_marks_hold_three_to_one_wherever_they_repeat() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        let desk = p.grained_desk();
+        // The galley margin and map cards are paper; the scene list is the desk, and the selected
+        // beat row is the plate.
+        for (host, name) in [
+            (p.surface, "sheet"),
+            (desk, "desk"),
+            (p.plate, "selected row"),
+        ] {
+            for (mark, kind) in [
+                (p.teal, "current bar"),
+                (p.accent, "unsaved dots"),
+                (p.error, "problem wedge"),
+            ] {
+                assert!(
+                    contrast(mark, host) >= 3.,
+                    "{kind} on {name}: dark={dark} monochrome={monochrome}: {}",
+                    contrast(mark, host)
+                );
+            }
+        }
+    }
+}
