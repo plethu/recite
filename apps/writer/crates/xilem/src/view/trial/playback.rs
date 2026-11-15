@@ -1,6 +1,9 @@
 use super::*;
 use crate::WriterLayout;
-use crate::presentation::space;
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::row::named_row;
+use crate::presentation::sheet_text::sheet_text;
+use crate::presentation::{Sheet, space};
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
 use xilem::masonry::properties;
 
@@ -22,11 +25,28 @@ pub(super) fn playback(
         .skip(choice_page * PAGE)
         .take(PAGE)
         .map(|(index, choice)| {
-            text_button(scale, choice.text.clone(), move |state: &mut Writer| {
-                let result = state.session.advance_preview(Some(index));
-                state.report_trial_step(result);
-            })
-            .disabled(disabled)
+            // A numbered reply in the manuscript's type: the number is its digit key.
+            styled(
+                ControlStyle::Action,
+                named_row(
+                    choice.text.clone(),
+                    flex_row((
+                        Sheet::Number
+                            .label(state.reading_size(), format!("{}", index + 1))
+                            .color(state.palette.muted),
+                        sheet_text(
+                            choice.text.clone(),
+                            Sheet::Dialogue.size(state.reading_size()),
+                            state.palette.ink,
+                        )
+                        .width(state.script_width().px()),
+                    ))
+                    .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+                    .gap(space::TEXT.px()),
+                    move |state: &mut Writer| state.choose_preview(index),
+                )
+                .disabled(disabled),
+            )
         })
         .collect::<Vec<_>>();
     let effects = page
@@ -92,7 +112,7 @@ pub(super) fn playback(
         }),
         flex_col(choices)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(space::SIBLINGS.px()),
+            .gap(0.px()),
         (choice_pages > 1).then(|| {
             flex_row((
                 text_button(scale, "Previous preview choices", |state: &mut Writer| {

@@ -68,6 +68,7 @@ pub(super) fn mounted(
         .or_else(|| document_menu::escape(context, key, modifiers))
         .or_else(|| history::key(context, key, modifiers))
         .or_else(|| modal_key(context, key, modifiers))
+        .or_else(|| preview_key(context, kind, key, modifiers))
         .or_else(|| beat_key(context, key, modifiers))
         .or_else(|| focus_key(context, key, modifiers))
 }
@@ -103,4 +104,26 @@ fn modal_key(context: &Context, key: &keyboard::Key, modifiers: Modifiers) -> Op
     let modal = context.modal.filter(|_| !context.picker_open)?;
     (modifiers == Modifiers::default() && *key == keyboard::Key::Named(NamedKey::Escape))
         .then_some(Action::DismissModal(modal))
+}
+/// 1 to 9 choose the preview's numbered replies, unless a text field has the keys.
+fn preview_key(
+    context: &Context,
+    kind: &focus::Kind,
+    key: &keyboard::Key,
+    modifiers: Modifiers,
+) -> Option<Action> {
+    if context.picker_open
+        || modifiers != Modifiers::default()
+        || !matches!(kind, focus::Kind::Other | focus::Kind::ActiveResult)
+    {
+        return None;
+    }
+    let keyboard::Key::Character(text) = key else {
+        return None;
+    };
+    let digit = text
+        .parse::<usize>()
+        .ok()
+        .filter(|digit| (1..=9).contains(digit))?;
+    (digit <= context.preview_choices).then_some(Action::ChoosePreview(digit - 1))
 }

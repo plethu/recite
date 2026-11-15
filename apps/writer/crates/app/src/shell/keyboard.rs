@@ -40,6 +40,8 @@ pub struct Context<P> {
     pub keymap: recite_config::Keymap,
     /// A modal surface over the document: focus moves into it and Esc dismisses it.
     pub modal: Option<Modal>,
+    /// The preview's current replies: 1 to 9 choose among the first nine.
+    pub preview_choices: usize,
     pub proxy: P,
 }
 /// A surface that takes focus from the document until it is dismissed.
@@ -72,6 +74,8 @@ pub enum Action {
     DismissDocumentMenu,
     /// Esc on a modal surface: close Settings, or keep editing rather than close.
     DismissModal(Modal),
+    /// A digit key: the preview's numbered reply.
+    ChoosePreview(usize),
     /// Ctrl+Down and Ctrl+Up: the next or previous beat of the scene.
     StepBeat {
         forward: bool,
@@ -132,6 +136,11 @@ impl Scope {
                 })
                 .and_then(|writer| writer.editing.clone()),
             keymap: self.keymap,
+            preview_choices: self
+                .writer
+                .as_ref()
+                .filter(|writer| writer.writing && !self.welcome && !self.settings)
+                .map_or(0, |writer| writer.preview_choices),
             modal: if self.writer.as_ref().is_some_and(|writer| writer.confirming) {
                 Some(Modal::CloseDecision)
             } else if self.settings {
@@ -222,6 +231,11 @@ impl Shell {
             Action::DismissModal(Modal::CloseDecision) => {
                 if let Some(writer) = &mut self.writer {
                     writer.keep_editing();
+                }
+            }
+            Action::ChoosePreview(index) => {
+                if let Some(writer) = &mut self.writer {
+                    writer.choose_preview(index);
                 }
             }
             Action::PaneHint(pending) => self.pane_hint = pending,

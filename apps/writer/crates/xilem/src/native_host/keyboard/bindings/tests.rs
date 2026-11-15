@@ -59,3 +59,20 @@ fn escape_dismisses_a_modal_surface_unless_a_picker_takes_it() {
         context.picker_open = false;
     }
 }
+
+#[test]
+fn digits_choose_the_previews_numbered_replies_outside_text_fields() {
+    let (mut context, _) = context();
+    let two = keyboard::Key::Character("2".into());
+    assert!(preview_key(&context, &focus::Kind::Other, &two, Modifiers::default()).is_none());
+    context.preview_choices = 3;
+    assert_eq!(
+        preview_key(&context, &focus::Kind::Other, &two, Modifiers::default()),
+        Some(Action::ChoosePreview(1))
+    );
+    let four = keyboard::Key::Character("4".into());
+    assert!(preview_key(&context, &focus::Kind::Other, &four, Modifiers::default()).is_none());
+    assert!(preview_key(&context, &focus::Kind::Text, &two, Modifiers::default()).is_none());
+    context.picker_open = true;
+    assert!(preview_key(&context, &focus::Kind::Other, &two, Modifiers::default()).is_none());
+}

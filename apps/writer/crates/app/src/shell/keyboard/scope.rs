@@ -24,6 +24,8 @@ pub(super) struct DocumentScope {
     pub(super) writing: bool,
     /// The close decision is open over the document.
     pub(super) confirming: bool,
+    /// The preview's current replies, which digit keys choose.
+    pub(super) preview_choices: usize,
     pub(super) screen: crate::workspaces::Screen,
     pub(super) document_menu: DocumentMenu,
 }
@@ -47,6 +49,7 @@ impl DocumentScope {
             && self.editing == other.editing
             && self.writing == other.writing
             && self.confirming == other.confirming
+            && self.preview_choices == other.preview_choices
             && self.screen == other.screen
             && self.document_menu == other.document_menu
     }
@@ -89,6 +92,7 @@ impl Scope {
                     editing: EditingTarget::capture(writer),
                     field_restoration: writer.field_restoration(),
                     writing: writer.phase == Phase::Writing,
+                    preview_choices: writer.preview_choices(),
                     confirming: matches!(
                         writer.phase,
                         Phase::ConfirmClose | Phase::ConfirmExit | Phase::Closing
