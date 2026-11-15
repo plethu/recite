@@ -126,7 +126,7 @@ fn personal_controls_expose_their_native_checkbox_names() {
 }
 
 #[test]
-fn compact_reading_controls_keep_their_identity_and_fit_before_the_specimen() {
+fn compact_reading_controls_keep_their_identity_and_fit_the_window_at_200_percent() {
     use recite_config::WriterPresentationField;
     use xilem::masonry::core::WindowEvent;
     let mut mounted = Mounted::new(App::empty(), surface);
@@ -149,7 +149,6 @@ fn compact_reading_controls_keep_their_identity_and_fit_before_the_specimen() {
             .value(WriterPresentationField::UiScale),
         200
     );
-    let mut bottom = 0.;
     for name in [
         "Reading text size",
         "Source text size",
@@ -168,19 +167,5 @@ fn compact_reading_controls_keep_their_identity_and_fit_before_the_specimen() {
             field.width() >= 2. * 48. && field.height() >= 48.,
             "{field:?}"
         );
-        bottom = field.y1;
     }
-    let tree = mounted.harness.access_tree();
-    let mut pending = vec![tree.state().root()];
-    let top = loop {
-        let node = pending.pop().expect("writing specimen");
-        if node.label().or_else(|| node.value()).as_deref() == Some("Writing preview") {
-            break node.bounding_box().unwrap().y0;
-        }
-        pending.extend(node.children());
-    };
-    assert!(
-        top >= bottom,
-        "compact settings put controls before the specimen"
-    );
 }

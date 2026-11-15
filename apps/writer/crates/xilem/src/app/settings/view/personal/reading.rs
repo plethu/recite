@@ -1,13 +1,12 @@
 use super::*;
 use crate::presentation::number::{Range, Spin, number_field};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
 use xilem::masonry::properties::LineBreaking;
+use xilem::view::FlexExt;
 
 pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let presentation = app.preferences.config.writer.presentation;
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let wide = width >= 300. * f64::from(scale);
     let fields = [
         ("Reading text size", Field::ReadingSize),
         ("Source text size", Field::SourceSize),
@@ -20,9 +19,7 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         let (min, max) = field.bounds();
         let value = presentation.value(field);
         flex_row((
-            label(scale, caption)
-                .prop(LineBreaking::WordWrap)
-                .width((190. * f64::from(scale)).min(width).px()),
+            label(scale, caption).prop(LineBreaking::WordWrap).flex(1.),
             number_field(
                 scale,
                 caption,
@@ -44,23 +41,13 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                 },
             ),
         ))
-        .direction(if wide {
-            Axis::Horizontal
-        } else {
-            Axis::Vertical
-        })
+        // The label on the left, the field against the sheet's right edge.
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .gap(space::SIBLINGS.px())
         .width(width.px())
     })
     .collect::<Vec<_>>();
-    flex_col((
-        label(scale, "Reading and layout").typeset(Type::Section, scale),
-        flex_col(fields)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(space::SIBLINGS.px()),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::TEXT.px())
-    .width(width.px())
+    flex_col(fields)
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::SIBLINGS.px())
 }

@@ -3,24 +3,13 @@ use crate::presentation::row::{listed, row};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset, field_text, search_field};
 use crate::{keyed::keyed, presentation::paragraph};
-use xilem::{
-    masonry::{kurbo::Axis, properties::TextAreaLabel},
-    view::text_input,
-};
+use xilem::{masonry::properties::TextAreaLabel, view::text_input};
 
-pub(super) fn keyboard(app: &App) -> impl WidgetView<App> + use<> {
-    let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let width = (app.viewport.width - 48.).max(280.);
-    let wide = width >= 560. * f64::from(scale);
-    let column_width = if wide { (width - 32.) / 2. } else { width };
-    flex_row((editor(app, column_width), commands(app, column_width)))
-        .direction(if wide {
-            Axis::Horizontal
-        } else {
-            Axis::Vertical
-        })
+/// The shortcut being edited, then the commands to choose from, down the sheet.
+pub(super) fn keyboard(app: &App, width: f64) -> impl WidgetView<App> + use<> {
+    flex_col((editor(app, width), commands(app, width)))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::REGIONS.px())
+        .gap(space::GROUPS.px())
 }
 
 fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
@@ -61,7 +50,7 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             scale,
             app.theme.palette.muted,
             false,
-            Some(width.min(600.)),
+            Some(width),
             text_input(
                 app.settings.query.clone(),
                 |app: &mut App, value: String| app.search_shortcuts(value),
@@ -73,7 +62,7 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         flex_col(choices)
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .gap(0.px())
-            .width(width.min(600.).px()),
+            .width(width.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
@@ -94,7 +83,7 @@ fn editor(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         label(scale, format!("Shortcut for {selected}")).typeset(Type::Section, scale),
         label(scale, format!("Saved binding: {}", if stored.is_empty() { "Disabled" } else { stored })),
         sized_box(keyed(app.settings.command, text_input(app.shortcut_draft().to_owned(), |app: &mut App, value: String| app.edit_shortcut(value))
-            .text_size(field_text(scale)).prop(TextAreaLabel::new("Shortcut binding")))).width(width.min(600.).px()),
+            .text_size(field_text(scale)).prop(TextAreaLabel::new("Shortcut binding")))).width(width.px()),
         flex_row((
             text_button(scale, "Save shortcut", |app: &mut App| app.save_shortcut()).disabled(!changed),
             text_button(scale, "Reset shortcuts", |app: &mut App| app.reset_shortcuts()),

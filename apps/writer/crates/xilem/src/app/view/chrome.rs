@@ -47,8 +47,8 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
 }
 
 fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {
+    // Settings is a sheet over the workspace, so the tab row stays as it is beneath it.
     let writing = !app.show_welcome()
-        && !app.settings_open()
         && app.writer.as_ref().is_some_and(|writer| {
             // Focus mode is writing too: its tab row keeps only the modes and Commands.
             writer.workspaces.screen == crate::workspaces::Screen::Write
@@ -122,16 +122,10 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
                 app.return_to_document()
             })
         }),
-        app.settings_open().then(|| {
-            print::action(scale, "Done with settings", blocked, |app: &mut App| {
-                app.close_settings()
-            })
-        }),
         app.writer
             .as_ref()
             .filter(|writer| {
                 !app.show_welcome()
-                    && !app.settings_open()
                     && writer.navigation_width() == 0.
                     && !writer.attention.is_focused()
             })
@@ -142,7 +136,7 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             }),
         app.writer
             .as_ref()
-            .filter(|_| !app.show_welcome() && !app.settings_open())
+            .filter(|_| !app.show_welcome())
             .map(|writer| {
                 (
                     authoring_modes(writer, app.picker.is_some()),

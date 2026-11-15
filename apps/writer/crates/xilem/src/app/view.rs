@@ -12,7 +12,10 @@ use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, Dim, UnitPoint},
     style::{Padding, Style},
-    view::{CrossAxisAlignment, FlexExt, flex_col, indexed_stack, sized_box, zstack},
+    view::{
+        CrossAxisAlignment, FlexExt, FlexSpacer, flex_col, flex_row, indexed_stack, sized_box,
+        zstack,
+    },
 };
 pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     let width = app.viewport.width;
@@ -22,7 +25,7 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     let slot = slot::writer_slot(app);
     let scale = f64::from(crate::presentation::scale(&app.preferences.config.writer));
     // The status bar's height: its vertical padding and one Meta line.
-    let status_bar = if app.writer.is_some() && !app.show_welcome() && !app.settings_open() {
+    let status_bar = if app.writer.is_some() && !app.show_welcome() {
         2. * space::UNIT
             + f64::from(Type::Meta.metrics().1)
                 * f64::from(crate::presentation::scale(&app.preferences.config.writer))
@@ -41,14 +44,29 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                         zstack((
                             named(
                                 "Writer workspace",
-                                indexed_stack((welcome::panel(app), slot, settings::settings(app)))
-                                    .active(if app.settings_open() {
-                                        2
-                                    } else {
-                                        usize::from(!app.show_welcome())
-                                    }),
+                                indexed_stack((welcome::panel(app), slot))
+                                    .active(usize::from(!app.show_welcome())),
                             )
                             .disabled(app.picker.is_some()),
+                            // Settings is a side sheet over the live workspace, clear of the
+                            // status bar. A stack keeps the layer in place while it is closed, so
+                            // the layers above it keep theirs.
+                            indexed_stack((
+                                flex_row((FlexSpacer::Flex(1.), settings::settings(app)))
+                                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                                    .padding(Padding {
+                                        bottom: status_bar.px(),
+                                        ..Padding::all(0.px())
+                                    })
+                                    .dims(Dim::Stretch),
+                                sized_box(flex_col(())).dims((0.px(), 0.px())),
+                            ))
+                            .active(usize::from(!app.settings_open()))
+                            .dims(if app.settings_open() {
+                                Dim::Stretch
+                            } else {
+                                Dim::Auto
+                            }),
                             indexed_stack((
                                 // Pickers stay above the status bar at every interface scale, and
                                 // their backdrop leaves the status bar readable.

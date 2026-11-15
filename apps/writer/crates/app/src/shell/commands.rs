@@ -43,7 +43,7 @@ impl Shell {
                 self.settings_open = false;
             }
             (_, WriterCommand::Close) => self.request_close(),
-            (_, _) if self.settings_open || self.show_welcome => {
+            (_, _) if self.show_welcome => {
                 self.status = "Return to your document to run this command.".into()
             }
             (Some(writer), WriterCommand::Script) => writer.show_workspace(Workspace::Script),
