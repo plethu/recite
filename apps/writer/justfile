@@ -56,13 +56,11 @@ heap:
 profile mode="cpu" passages="10000" output="/tmp/recite-writer-profile":
     scripts/profile-writer.sh "$1" "$2" "$3"
 
-# Run one Writer workload: project (default; arguments go to the benchmark), recovery, map,
-# sessions [PASSAGES=10000 VISITS=20] or catalogue [ENTRIES=10000 EDITS=20]. All run without a window.
-#   project:   generated saved-project workload
-#   recovery:  background draft queue, durable flush/reopen and JSON serialization
-#   sessions:  retained file sessions, edit history, saves and closing
-#   map:       geometry reconstruction for authored, linear and high-fan-out maps
-#   catalogue: PO recovery, saves and queue filtering
+# Scenarios, all without a native window: project (default; arguments go to the benchmark) times a generated saved project.
+# recovery times the background draft queue, durable flush/reopen and JSON serialization.
+# sessions [PASSAGES=10000 VISITS=20] times retained file sessions, edit history, saves and closing.
+# map times geometry reconstruction for authored, linear and high-fan-out maps.
+# catalogue [ENTRIES=10000 EDITS=20] times PO recovery, saves and queue filtering.
 bench scenario="project" *args:
     #!/usr/bin/env bash
     set -euo pipefail
