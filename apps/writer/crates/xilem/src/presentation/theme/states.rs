@@ -91,12 +91,14 @@ impl Look {
             (
                 Some(ControlStyle::Chosen),
                 Self {
-                    rest: Some((p.surface, Color::TRANSPARENT)),
-                    hover: (p.surface.lerp_rect(p.ink, INK_HOVER), Color::TRANSPARENT),
+                    // Floating paper reads as a raised chip on every track: on the grained desk, on a
+                    // flat page and on dark paper, where the reading surface matches the track.
+                    rest: Some((p.floating, Color::TRANSPARENT)),
+                    hover: (p.floating.lerp_rect(p.ink, INK_HOVER), Color::TRANSPARENT),
                     pressed: (p.pressed, p.ink),
                     focus: Some(p.accent),
                     // The current choice stays legible while the group waits.
-                    disabled: (p.surface, Color::TRANSPARENT),
+                    disabled: (p.floating, Color::TRANSPARENT),
                     border: 1.,
                     sinks: true,
                     padding: text,

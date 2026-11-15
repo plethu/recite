@@ -263,15 +263,15 @@ fn mode_switch_marks_hold_three_to_one_where_they_sit() {
             "tab underline: dark={dark} monochrome={monochrome}: {}",
             contrast(p.teal, desk)
         );
-        // The chosen segment's ink bar sits on the paper chip, over the tonal track on the desk.
-        for background in [p.surface, p.tint(desk, TONAL), p.tint(p.canvas, TONAL)] {
+        // The chosen segment's ink bar sits on its floating-paper chip, over the tonal track on the desk.
+        for background in [p.floating, p.tint(desk, TONAL), p.tint(p.canvas, TONAL)] {
             assert!(
                 contrast(p.ink, background) >= 3.,
                 "segment bar: dark={dark} monochrome={monochrome} {background:?}"
             );
         }
         // Chip text, chosen or not, on paper and on the track.
-        for background in [p.surface, p.tint(desk, TONAL)] {
+        for background in [p.floating, p.tint(desk, TONAL)] {
             for text in [p.ink, p.muted] {
                 assert!(contrast(text, background) >= 4.5);
             }

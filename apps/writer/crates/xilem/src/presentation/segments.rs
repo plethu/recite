@@ -1,8 +1,8 @@
 //! Mode switches. Both are one native radio group, so each is one Tab stop with arrow keys, and the
 //! choice carries two cues besides colour.
 //!
-//! - **Segments** (Script | Map | Split): one tonal track; the chosen chip sits on the reading
-//!   surface in semibold with a 2px ink bar under its label.
+//! - **Segments** (Script | Map | Split and every other one-of choice): one tonal track; the
+//!   chosen chip is floating paper in semibold with a 2px ink bar under its label.
 //! - **Tabs** (Write | Localise): quiet text; the chosen tab is semibold over a 2px underline in
 //!   the second ink, which holds 3:1 on the grained desk.
 use super::control_style::{ControlStyle, styled};

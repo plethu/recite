@@ -332,7 +332,7 @@ fn every_class_takes_ink_on_hover_two_pixel_focus_and_a_sunk_press_inside_one_bo
 }
 
 #[test]
-fn a_chosen_segment_is_the_reading_surface_with_an_accent_focus_ring_in_one_box() {
+fn a_chosen_segment_is_floating_paper_with_an_accent_focus_ring_in_one_box() {
     for dark in [false, true] {
         let config = WriterConfig {
             theme: if dark {
@@ -364,7 +364,7 @@ fn a_chosen_segment_is_the_reading_surface_with_an_accent_focus_ring_in_one_box(
         // No stamp: the chosen chip is paper on the tonal track; its ink bar is painted above.
         assert_eq!(
             (fill, border),
-            (Background::Color(palette.surface), Color::TRANSPARENT)
+            (Background::Color(palette.floating), Color::TRANSPARENT)
         );
         harness.mouse_move_to(id);
         harness.focus_on(Some(id));
