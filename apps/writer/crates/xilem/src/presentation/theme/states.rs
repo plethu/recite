@@ -3,8 +3,12 @@
 //! Every state keeps the control's border box: a wider border takes its width from the padding,
 //! and a pressed face sinks one pixel down and right inside the same box.
 use super::super::control_style::ControlStyle;
+use super::super::tokens::{Type, size};
 use super::*;
-use recite_writer_session::palette::{INK_HOVER, STAMP_HOVER, STAMP_PRESSED};
+use recite_writer_session::palette::{
+    INK_HOVER, PRIMARY_HOVER, PRIMARY_PRESSED, STAMP_HOVER, STAMP_PRESSED, TONAL, TONAL_DISABLED,
+    TONAL_HOVER,
+};
 
 /// How one kind of control looks in each state.
 struct Look {
@@ -26,7 +30,9 @@ const STRONG: f64 = 2.;
 impl Look {
     fn table(p: &Palette<Color>, scale: f64) -> Vec<(Option<ControlStyle>, Self)> {
         let ink_hover = p.ink.with_alpha(INK_HOVER);
-        let text = (6. * scale, 12. * scale);
+        // A text control is a row tall: one Control line between its padding and a 1px border.
+        let line = f64::from(Type::Control.metrics().1);
+        let text = (((size::ROW - line) * scale - 2.) / 2., 12. * scale);
         let quiet = |padding| Self {
             rest: Some((Color::TRANSPARENT, Color::TRANSPARENT)),
             hover: (ink_hover, Color::TRANSPARENT),
@@ -38,20 +44,20 @@ impl Look {
             padding,
         };
         let stamp = |amount| p.stamp.lerp_rect(p.on_stamp, amount);
+        // Secondary actions on sheets, panels and dialogs: a tint of ink over the host, no border.
+        let tonal = || Self {
+            rest: Some((p.ink.with_alpha(TONAL), Color::TRANSPARENT)),
+            hover: (p.ink.with_alpha(TONAL_HOVER), Color::TRANSPARENT),
+            pressed: (p.pressed, p.ink),
+            focus: Some(p.accent),
+            disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
+            border: 1.,
+            sinks: true,
+            padding: text,
+        };
         vec![
-            (
-                None,
-                Self {
-                    rest: None,
-                    hover: (ink_hover, p.ink),
-                    pressed: (p.pressed, p.ink),
-                    focus: Some(p.accent),
-                    disabled: (p.inset, p.rule),
-                    border: 1.,
-                    sinks: true,
-                    padding: text,
-                },
-            ),
+            (None, tonal()),
+            (Some(ControlStyle::Tonal), tonal()),
             (Some(ControlStyle::Action), quiet(text)),
             (Some(ControlStyle::Navigation), quiet(text)),
             (Some(ControlStyle::Segment), quiet(text)),
@@ -75,8 +81,8 @@ impl Look {
                 Some(ControlStyle::Primary),
                 Self {
                     rest: Some((p.accent, p.accent)),
-                    hover: (p.accent.with_alpha(0.9), p.accent),
-                    pressed: (p.accent.with_alpha(0.8), p.accent),
+                    hover: (p.accent.with_alpha(PRIMARY_HOVER), p.accent),
+                    pressed: (p.accent.with_alpha(PRIMARY_PRESSED), p.accent),
                     focus: None,
                     disabled: (p.inset, p.rule),
                     border: STRONG,

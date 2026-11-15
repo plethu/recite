@@ -6,7 +6,12 @@ use xilem::{
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ControlStyle {
+    /// The one solid plum action on a view.
     Primary,
+    /// A secondary action on a sheet, panel or dialog: ink at 8% over its host, no border. The
+    /// unclassed default looks the same; the class lets an action change emphasis in place.
+    Tonal,
+    /// A quiet action on the desk: no fill until hovered.
     Action,
     Navigation,
     Segment,
@@ -20,6 +25,7 @@ impl ControlStyle {
     pub fn class(self) -> &'static str {
         match self {
             Self::Primary => "writer-primary",
+            Self::Tonal => "writer-tonal",
             Self::Action => "writer-action",
             Self::Navigation => "writer-navigation",
             Self::Segment => "writer-segment",

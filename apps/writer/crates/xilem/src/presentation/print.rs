@@ -98,6 +98,52 @@ pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send +
     )
 }
 
+/// An action that is tonal at rest and becomes the view's primary while `primary` holds, such as
+/// Save with unsaved changes. Both states share one widget, so focus survives the change, and the
+/// accessible name never changes.
+pub(crate) fn emphasised_action<
+    S: 'static,
+    T: Into<ArcStr>,
+    F: Fn(&mut S) + Send + Sync + 'static,
+>(
+    scale: f32,
+    text: T,
+    palette: &Palette<Color>,
+    primary: bool,
+    disabled: bool,
+    callback: F,
+) -> impl WidgetView<S> + use<S, T, F> {
+    let primary = primary && !disabled;
+    super::material::focus_ring(
+        primary.then_some(palette.on_accent),
+        styled(
+            if primary {
+                ControlStyle::Primary
+            } else {
+                ControlStyle::Tonal
+            },
+            view::button(
+                Type::Control
+                    .label(scale, text)
+                    .weight(if primary {
+                        FontWeight::SEMI_BOLD
+                    } else {
+                        Type::Control.weight()
+                    })
+                    .color(if disabled {
+                        palette.muted
+                    } else if primary {
+                        palette.on_accent
+                    } else {
+                        palette.ink
+                    }),
+                callback,
+            )
+            .disabled(disabled),
+        ),
+    )
+}
+
 /// The end of a beat: "END" between two colon devices in the second ink. The devices are
 /// images named `◆`, so the announced mark is unchanged.
 pub(crate) fn end_mark<S: 'static>(

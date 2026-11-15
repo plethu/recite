@@ -18,9 +18,12 @@ pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer>
                 state.phase() != Phase::Writing,
                 Writer::return_to_writing,
             ),
-            print::action(
+            // Tool and Localise sheets keep their own primary; Save all stays tonal.
+            print::emphasised_action(
                 scale,
                 "Save all",
+                &state.palette,
+                false,
                 blocked
                     || state.session.read_only()
                     || state.source_repair_pending()
@@ -63,12 +66,17 @@ pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> +
                 state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
             ),
             state.session.project().map(|_| {
-                text_button(state.ui_scale(), "Save file", Writer::save).disabled(
+                print::emphasised_action(
+                    state.ui_scale(),
+                    "Save file",
+                    &state.palette,
+                    state.save_is_primary(),
                     state.phase() != Phase::Writing
                         || state.navigation.busy()
                         || state.work.busy()
                         || state.localisation.saving()
                         || state.source_repair_pending(),
+                    Writer::save,
                 )
             }),
             text_button(state.ui_scale(), "Close", Writer::request_close)

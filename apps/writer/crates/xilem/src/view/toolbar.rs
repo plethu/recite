@@ -103,9 +103,16 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
         }),
         // Workspace holds the project, document and app actions in one menu.
         print::action(scale, "Workspace", blocked, Writer::toggle_document_menu),
+        // Save is tonal while clean and the view's one primary with unsaved work.
         state.session.project().map(|_| {
-            text_button(scale, "Save", Writer::save)
-                .disabled(blocked || state.localisation.saving() || state.source_repair_pending())
+            print::emphasised_action(
+                scale,
+                "Save",
+                &state.palette,
+                state.save_is_primary(),
+                blocked || state.localisation.saving() || state.source_repair_pending(),
+                Writer::save,
+            )
         }),
     ))
     .gap(space::UNIT.px())

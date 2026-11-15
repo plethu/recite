@@ -188,3 +188,59 @@ fn hover_ink_beats_the_grain_and_filled_focus_rings_contrast_with_their_fill() {
         );
     }
 }
+
+/// Every host a control may sit on: the desk at its darkest grain point and each paper.
+fn hosts(p: &Palette) -> [Rgba; 5] {
+    [p.grained_desk(), p.canvas, p.surface, p.inset, p.floating]
+}
+
+#[test]
+fn tonal_actions_keep_their_text_through_rest_hover_and_press_on_every_host() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        for host in hosts(&p) {
+            for amount in [TONAL, TONAL_HOVER] {
+                let fill = p.tint(host, amount);
+                for text in [p.ink, p.muted, p.accent] {
+                    assert!(
+                        contrast(text, fill) >= 4.5,
+                        "tonal text: dark={dark} monochrome={monochrome} {host:?} {amount}: {}",
+                        contrast(text, fill)
+                    );
+                }
+            }
+            // Hover must read as a change of state on its own host.
+            assert!(contrast(p.tint(host, TONAL_HOVER), p.tint(host, TONAL)) > 1.04);
+            assert!(contrast(p.ink, p.pressed) >= 4.5);
+        }
+    }
+}
+
+#[test]
+fn the_primary_keeps_its_text_in_both_modes_while_hovered_and_pressed() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        for host in hosts(&p) {
+            for alpha in [1., PRIMARY_HOVER, PRIMARY_PRESSED] {
+                let fill = p.primary_over(host, alpha);
+                assert!(
+                    contrast(p.on_accent, fill) >= 4.5,
+                    "primary text: dark={dark} monochrome={monochrome} {host:?} {alpha}: {}",
+                    contrast(p.on_accent, fill)
+                );
+            }
+            // The fill is its own boundary against the host.
+            assert!(contrast(p.accent, host) >= 3., "primary fill: dark={dark}");
+        }
+    }
+    // Dark mode's primary is the light accent with dark text, never a near-white stamp.
+    let dark = Palette::new(true);
+    assert_eq!(
+        (dark.accent.r, dark.accent.g, dark.accent.b),
+        (212, 174, 204)
+    );
+    assert_eq!(
+        (dark.on_accent.r, dark.on_accent.g, dark.on_accent.b),
+        (40, 25, 39)
+    );
+}

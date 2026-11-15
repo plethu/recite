@@ -1,6 +1,6 @@
 use super::*;
 use crate::presentation::control_style::ControlStyle;
-use recite_writer_session::palette::INK_HOVER;
+use recite_writer_session::palette::{INK_HOVER, TONAL, TONAL_DISABLED, TONAL_HOVER};
 use xilem::masonry::{
     accesskit::{Action, ActionRequest, TreeId},
     core::PointerButton,
@@ -241,22 +241,32 @@ fn every_class_takes_ink_on_hover_two_pixel_focus_and_a_sunk_press_inside_one_bo
             ..Default::default()
         };
         let palette = palette(&config);
-        for (class, rest_border, hover_border) in [
-            (None, palette.boundary, palette.ink),
+        // No control is outlined: tonal actions are a tint, quiet ones nothing until hovered.
+        for (class, rest_fill, hover_fill) in [
+            (
+                None,
+                palette.ink.with_alpha(TONAL),
+                palette.ink.with_alpha(TONAL_HOVER),
+            ),
+            (
+                Some(ControlStyle::Tonal),
+                palette.ink.with_alpha(TONAL),
+                palette.ink.with_alpha(TONAL_HOVER),
+            ),
             (
                 Some(ControlStyle::Action),
                 Color::TRANSPARENT,
-                Color::TRANSPARENT,
+                palette.ink.with_alpha(INK_HOVER),
             ),
             (
                 Some(ControlStyle::Navigation),
                 Color::TRANSPARENT,
-                Color::TRANSPARENT,
+                palette.ink.with_alpha(INK_HOVER),
             ),
             (
                 Some(ControlStyle::Icon),
                 Color::TRANSPARENT,
-                Color::TRANSPARENT,
+                palette.ink.with_alpha(INK_HOVER),
             ),
         ] {
             let mut button = NewWidget::new(Button::new(NewWidget::new(Label::new("Save"))));
@@ -279,16 +289,14 @@ fn every_class_takes_ink_on_hover_two_pixel_focus_and_a_sunk_press_inside_one_bo
                     widget.get_prop::<CornerRadius>().radius.get(),
                 )
             };
-            let (size, _, border, width, radius) = control(&harness);
-            assert_eq!((border, width, radius), (rest_border, 1., 2.));
+            let (size, fill, border, width, radius) = control(&harness);
+            assert_eq!((border, width, radius), (Color::TRANSPARENT, 1., 2.));
+            assert_eq!(fill, Background::Color(rest_fill));
             let origin = content_origin(&harness, id);
             harness.mouse_move_to(id);
             let hovered = control(&harness);
-            assert_eq!(
-                hovered.1,
-                Background::Color(palette.ink.with_alpha(INK_HOVER))
-            );
-            assert_eq!((hovered.0, hovered.2), (size, hover_border));
+            assert_eq!(hovered.1, Background::Color(hover_fill));
+            assert_eq!((hovered.0, hovered.2), (size, Color::TRANSPARENT));
             harness.mouse_button_press(Some(PointerButton::Primary));
             let pressed = control(&harness);
             assert_eq!(pressed.1, Background::Color(palette.pressed));
@@ -309,8 +317,14 @@ fn every_class_takes_ink_on_hover_two_pixel_focus_and_a_sunk_press_inside_one_bo
             harness.redraw();
             let disabled = control(&harness);
             assert_eq!(disabled.0, size);
-            if class.is_none() {
-                assert_eq!(disabled.2, palette.rule);
+            if class.is_none_or(|class| class == ControlStyle::Tonal) {
+                assert_eq!(
+                    (disabled.1, disabled.2),
+                    (
+                        Background::Color(palette.ink.with_alpha(TONAL_DISABLED)),
+                        Color::TRANSPARENT
+                    )
+                );
             }
         }
     }

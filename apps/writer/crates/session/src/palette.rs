@@ -7,6 +7,16 @@ pub const STAMP_PRESSED: f32 = 0.22;
 /// Hovered controls lay this much ink over whatever surface they sit on, desk or sheet. At 10%
 /// ink text keeps 9:1 even over the grain's darkest point.
 pub const INK_HOVER: f32 = 0.10;
+/// A tonal action on a sheet, panel or dialog: this much ink over its host, with no border.
+pub const TONAL: f32 = 0.08;
+/// A hovered tonal action: half again the rest tint; more would drop accent text under 4.5:1 on
+/// dark floating panels.
+pub const TONAL_HOVER: f32 = 0.12;
+/// A disabled tonal action keeps its shape at half the rest tint; its text turns muted.
+pub const TONAL_DISABLED: f32 = 0.04;
+/// The primary action's fill alpha while hovered and pressed, over whatever hosts it.
+pub const PRIMARY_HOVER: f32 = 0.9;
+pub const PRIMARY_PRESSED: f32 = 0.8;
 /// The grain tile's peak alpha; `assets/identity/grain.png` never exceeds it.
 pub const GRAIN_PEAK: f32 = 0.07;
 
@@ -153,6 +163,16 @@ impl Palette<Rgba> {
     /// A hovered control's fill: ink laid over `base`.
     pub fn hover_over(&self, base: Rgba) -> Rgba {
         Rgba::mix(base, self.ink, INK_HOVER)
+    }
+
+    /// `amount` of ink laid over `base`: a tonal fill, as the eye sees it on that host.
+    pub fn tint(&self, base: Rgba, amount: f32) -> Rgba {
+        Rgba::mix(base, self.ink, amount)
+    }
+
+    /// The primary fill at `alpha` over `base`.
+    pub fn primary_over(&self, base: Rgba, alpha: f32) -> Rgba {
+        Rgba::mix(base, self.accent, alpha)
     }
 
     /// The darkest point of the grained desk, where text on the desk is checked.

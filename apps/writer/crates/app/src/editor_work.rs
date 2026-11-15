@@ -1,6 +1,8 @@
 //! Native event-loop scheduling around Recite's shared save policy.
 mod accepting;
 mod completion;
+#[cfg(test)]
+mod tests;
 pub use super::{Phase, Writer, feedback};
 use crate::external_editor::linked::Link;
 use recite_writer_model::EditOperation;
@@ -65,6 +67,14 @@ impl EditorWork {
     }
 }
 impl Writer {
+    /// Whether Save is the view's one primary action: unsaved work in a writing view (Script,
+    /// Map or Split) outside Preview. Tool and Localise sheets keep their own action primary, and
+    /// the status bar carries the unsaved state there.
+    pub fn save_is_primary(&self) -> bool {
+        self.workspaces.screen == crate::workspaces::Screen::Write
+            && !self.trial.visible
+            && (self.session.current_dirty() || self.session.model().has_draft())
+    }
     pub fn save(&mut self) {
         self.start_save(Scope::Current, AfterSave::Stay);
     }

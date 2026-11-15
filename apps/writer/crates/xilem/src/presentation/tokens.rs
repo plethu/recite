@@ -33,6 +33,13 @@ pub(crate) mod space {
     pub const BEATS: f64 = 48.;
 }
 
+/// Control and row geometry, before the UI scale.
+pub(crate) mod size {
+    /// A text control on a page or sheet, and a list row. The agreed 32 rounded up past the
+    /// comparison reference's 32.2, so no hit target shrinks.
+    pub const ROW: f64 = 33.;
+}
+
 /// Text in a single-line field. A text input's accessible bounds are its line box, so fields
 /// keep 16px text until inputs take a line height of their own; none shrinks from the reference.
 pub(crate) fn field_text(scale: f32) -> f32 {
