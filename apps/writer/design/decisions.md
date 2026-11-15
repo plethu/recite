@@ -24,6 +24,16 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
 - **Structure.** A paper sidebar, a tab row that is always present, a one-row toolbar and an ink
   status bar. Script reads as a manuscript: speaker labels in the margin, destinations inline, an
   end-mark and folio. Map has a dot grid, teal return edges and offset cards.
+- **Tokens.** `presentation/tokens.rs` owns the spacing scale (4, 8, 12, 16, 24, 32, 48), the
+  interface type roles, which scale with the UI, and the sheet roles, which follow the reading size
+  with floors. Views compose tokens and helpers from `presentation/` rather than hard-coding
+  colours, sizes or gaps.
+- **Controls.** One state table (`presentation/theme/states.rs`) styles every control class; wells
+  share one look. Every one-of choice is a segment on one tonal track; only Write | Localise are
+  tabs.
+- **Slips and backdrop.** Menus, pickers and modal panels are slips: floating paper with a 1px
+  ink edge and a hard stock offset. Behind a modal slip the backdrop is a static overprint dim
+  under a paper-toned print texture; nothing blurs or animates.
 - **Galley.** Script is one continuous scene on a sheet grid (`presentation/grid.rs`): pad,
   margin column, measure capped at 68 characters, destination column. Every beat is set at the
   same metrics; only the selected one mounts fields, so choosing a beat never reflows the page. A

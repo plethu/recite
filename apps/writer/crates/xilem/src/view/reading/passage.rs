@@ -270,12 +270,14 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
     }
     let target = destination.clone();
     let size = Sheet::Destination.size(state.reading_size());
+    // The chevron is drawn for Control text; it scales to the destination's size.
+    let glyph = size / Type::Control.metrics().0;
     Some(
         sized_box(styled(
             ControlStyle::Action,
             button(
                 route_toggle(
-                    size / 14.,
+                    glyph,
                     state.destination_expanded(destination),
                     state.palette.teal_text,
                     size,
@@ -287,7 +289,7 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
                         .width(
                             (width
                                 - 2. * control_inset(state.ui_scale())
-                                - disclosure_width(size / 14.))
+                                - disclosure_width(glyph))
                             .max(24.)
                             .px(),
                         )

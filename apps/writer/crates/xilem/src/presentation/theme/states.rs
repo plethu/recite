@@ -5,10 +5,13 @@
 use super::super::control_style::ControlStyle;
 use super::super::tokens::{Type, size};
 use super::*;
+mod wells;
 use recite_writer_session::palette::{
     INK_HOVER, PLATE_HOVER, PRIMARY_HOVER, PRIMARY_PRESSED, TONAL, TONAL_DISABLED, TONAL_HOVER,
     WELL,
 };
+use wells::indicator;
+pub(super) use wells::{check, field, number};
 
 /// How one kind of control looks in each state.
 struct Look {
@@ -33,6 +36,22 @@ struct Look {
 const STRONG: f64 = 2.;
 
 impl Look {
+    /// A tonal well closed by a 1px bottom rule in `rule`: fields, number fields and the scene
+    /// list's search entry. Wells never sink; a 2px accent border marks focus.
+    fn well(p: &Palette<Color>, padding: (f64, f64), rule: Color) -> Self {
+        Self {
+            rest: Some((p.ink.with_alpha(WELL), Color::TRANSPARENT)),
+            hover: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
+            pressed: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
+            focus: Some(p.accent),
+            disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
+            border: 1.,
+            sinks: false,
+            padding,
+            rule: Some(rule),
+            lead: 0.,
+        }
+    }
     fn table(p: &Palette<Color>, scale: f64) -> Vec<(Option<ControlStyle>, Self)> {
         let ink_hover = p.ink.with_alpha(INK_HOVER);
         // A text control is a row tall: one Control line between its padding and a 1px border.
@@ -79,16 +98,9 @@ impl Look {
             (
                 Some(ControlStyle::Entry),
                 Self {
-                    rest: Some((p.ink.with_alpha(WELL), Color::TRANSPARENT)),
-                    hover: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
+                    // Pressing the entry opens a search, so it answers like a button.
                     pressed: (p.pressed, p.ink),
-                    focus: Some(p.accent),
-                    disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
-                    border: 1.,
-                    sinks: false,
-                    padding: text,
-                    rule: Some(p.desk_well_rule),
-                    lead: 0.,
+                    ..Self::well(p, text, p.desk_well_rule)
                 },
             ),
             (
@@ -274,104 +286,5 @@ pub(super) fn choosable<W: Widget>(
         }
         .push(&mut stack, &Selector::classes(&[style.class()]), 0.);
     }
-    properties.insert_stack::<W>(stack);
-}
-
-/// Text inputs: a tonal well closed by a bottom rule, a 2px accent ring around the whole well on
-/// focus, and no sinking. Wells on the grained desk take the desk's rule, and search fields leave
-/// room for their leading icon. Manuscript fields have no frame at rest and a hairline of padding
-/// for the 2px focus border.
-pub(super) fn field<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, scale: f64) {
-    let well = |rule, lead| Look {
-        rest: Some((p.ink.with_alpha(WELL), Color::TRANSPARENT)),
-        hover: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
-        pressed: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
-        focus: Some(p.accent),
-        disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
-        border: 1.,
-        sinks: false,
-        padding: (6. * scale, 12. * scale),
-        rule: Some(rule),
-        lead,
-    };
-    let lead = super::super::search::LEAD * scale;
-    let (desk, search) = (
-        ControlStyle::DeskField.class(),
-        ControlStyle::SearchField.class(),
-    );
-    let mut stack = PropertyStack::new();
-    for (selector, rule, lead) in [
-        (Selector::new(), p.well_rule, 0.),
-        (Selector::classes(&[desk]), p.desk_well_rule, 0.),
-        (Selector::classes(&[search]), p.well_rule, lead),
-        (Selector::classes(&[desk, search]), p.desk_well_rule, lead),
-    ] {
-        well(rule, lead).push(&mut stack, &selector, STRONG);
-    }
-    Look {
-        rest: Some((Color::TRANSPARENT, Color::TRANSPARENT)),
-        hover: (p.hover, Color::TRANSPARENT),
-        pressed: (p.pressed, Color::TRANSPARENT),
-        focus: Some(p.accent),
-        disabled: (Color::TRANSPARENT, Color::TRANSPARENT),
-        border: 1.,
-        sinks: false,
-        padding: (1., 1.),
-        rule: Some(Color::TRANSPARENT),
-        lead: 0.,
-    }
-    .push(
-        &mut stack,
-        &Selector::classes(&[ControlStyle::Manuscript.class()]),
-        STRONG,
-    );
-    properties.insert_stack::<W>(stack);
-}
-
-/// Number fields: the paper well, padded so a stepper target and the well's edges make one row.
-pub(super) fn number<W: Widget>(
-    properties: &mut DefaultProperties,
-    p: &Palette<Color>,
-    scale: f64,
-) {
-    let target = 24.;
-    let mut stack = PropertyStack::new();
-    Look {
-        rest: Some((p.ink.with_alpha(WELL), Color::TRANSPARENT)),
-        hover: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
-        pressed: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
-        focus: Some(p.accent),
-        disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
-        border: 1.,
-        sinks: false,
-        padding: (((size::ROW - target) * scale - 2.) / 2., 4. * scale),
-        rule: Some(p.well_rule),
-        lead: 0.,
-    }
-    .push(&mut stack, &Selector::new(), STRONG);
-    properties.insert_stack::<W>(stack);
-}
-
-/// Checkboxes and plain radios: no chip at rest, a full-row ink hover, and the indicator drawn in
-/// the boundary colour. The toolkit strokes its focus and hover ring in the border colour, so
-/// focus turns both accent.
-fn indicator(p: &Palette<Color>, scale: f64) -> Look {
-    Look {
-        rest: Some((Color::TRANSPARENT, p.boundary)),
-        hover: (p.ink.with_alpha(INK_HOVER), p.boundary),
-        pressed: (p.pressed, p.boundary),
-        focus: Some(p.accent),
-        disabled: (Color::TRANSPARENT, p.rule),
-        border: 1.,
-        sinks: false,
-        padding: (6. * scale, 12. * scale),
-        rule: None,
-        lead: 0.,
-    }
-}
-
-pub(super) fn check<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, scale: f64) {
-    let mut stack = PropertyStack::new();
-    indicator(p, scale).push(&mut stack, &Selector::new(), STRONG);
     properties.insert_stack::<W>(stack);
 }
