@@ -22,6 +22,8 @@ pub mod shell;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
 pub mod trial;
+mod window;
+pub use window::{COMPACT_WINDOW, NARROW_SIDEBAR};
 pub mod workspaces;
 use recite_writer_model::Workbench;
 use std::num::NonZeroU64;
@@ -52,9 +54,6 @@ impl Default for Host {
         }
     }
 }
-
-/// The scene list's width in narrow windows.
-pub const NARROW_SIDEBAR: f64 = 192.;
 
 pub struct Writer {
     pub(crate) host: Host,
@@ -181,37 +180,6 @@ impl Writer {
                 .value(recite_config::WriterPresentationField::ReadingSize),
         )
     }
-    pub fn compact_chrome(&self) -> bool {
-        self.viewport.width < 900. * f64::from(self.ui_scale())
-    }
-    pub fn content_width(&self) -> f64 {
-        (self.viewport.width - self.navigation_width() - 32.).max(280.)
-    }
-    /// The scene list's width: hidden in focus mode, by choice or below the minimum window, and
-    /// narrowed to 192px with ellipsis below 1100px so the sheet keeps its measure.
-    pub fn navigation_width(&self) -> f64 {
-        let scale = f64::from(self.ui_scale());
-        if self.attention.is_focused()
-            || self.attention.sidebar_hidden()
-            || self.viewport.width < 900. * scale
-        {
-            return 0.;
-        }
-        if self.viewport.width < 1100. * scale {
-            self.drawer_width().min(NARROW_SIDEBAR)
-        } else {
-            self.drawer_width()
-        }
-    }
-    pub fn drawer_width(&self) -> f64 {
-        f64::from(
-            self.config
-                .writer
-                .presentation
-                .value(recite_config::WriterPresentationField::DrawerWidth),
-        )
-    }
-
     pub fn change(
         &mut self,
         action: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,

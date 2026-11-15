@@ -30,8 +30,6 @@ const BLEED_MARGIN: f64 = 72.;
 const DESTINATION: f64 = 134.;
 /// Narrower paper drops the margin column; its labels move above their lines.
 const MARGIN_PAPER: f64 = 360.;
-/// The least window that rests a sheet on the desk.
-pub(crate) const SHEET_WINDOW: f64 = 900.;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Grid {
