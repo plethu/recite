@@ -4,6 +4,7 @@ use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::segments::{tab, tabs};
 use crate::presentation::slip::slip;
 use crate::presentation::space;
+use crate::presentation::tokens::breakpoint;
 use crate::presentation::{Type, Typeset, field_text};
 use crate::presentation::{identity, label, paragraph, print, text_button};
 use xilem::{
@@ -24,6 +25,12 @@ use xilem::{
 const COLUMN: f64 = 560.;
 /// The Browse folders button's width beside the folder field.
 const BROWSE: f64 = 160.;
+/// The narrowest column, below which the page scrolls sideways rather than crush its fields.
+const NARROWEST: f64 = 240.;
+/// The hero wordmark's widest.
+const HERO: f64 = 360.;
+/// The status note's height: three Body lines before it scrolls.
+const STATUS_LINES: f64 = 3.;
 
 #[derive(Clone, Copy)]
 struct Layout {
@@ -35,10 +42,10 @@ struct Layout {
 impl Layout {
     fn resolve(app: &App) -> Self {
         let scale = crate::presentation::scale(&app.preferences.config.writer);
-        let width = (app.viewport.width - 48.)
-            .max(240.)
+        let width = (app.viewport.width - 2. * space::GROUPS)
+            .max(NARROWEST)
             .min(COLUMN * f64::from(scale));
-        let wide = width >= 480. * f64::from(scale);
+        let wide = width >= breakpoint::FIELD_ROW * f64::from(scale);
         Self {
             scale,
             width,
@@ -100,7 +107,7 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
 
 /// Centre a part of the welcome page on the column's measure.
 fn column<V: WidgetView<App>>(layout: Layout, child: V) -> impl WidgetView<App> + use<V> {
-    flex_row((sized_box(child).width((layout.width + 48.).px()),))
+    flex_row((sized_box(child).width((layout.width + 2. * space::GROUPS).px()),))
         .main_axis_alignment(MainAxisAlignment::Center)
 }
 
@@ -108,7 +115,7 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     let busy = app.opening.is_some() || app.auxiliary;
     let Layout { scale, width, .. } = layout;
     flex_col((
-        identity::hero(&app.theme, width.min(360. * f64::from(scale))),
+        identity::hero(&app.theme, width.min(HERO * f64::from(scale))),
         label(scale, "Projects").typeset(Type::Display, scale),
         paragraph(
             scale,
@@ -220,9 +227,9 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
         flex_col((
             super::feedback::panel(app, layout.scale, layout.width),
             (app.welcome_problem.is_none() && !app.status.is_empty()).then(|| {
-                portal(paragraph(scale, app.status.clone(), width - 16.))
+                portal(paragraph(scale, app.status.clone(), width - space::KINDS))
                     .constrain_horizontal(true)
-                    .height((56. * f64::from(scale)).px())
+                    .height((STATUS_LINES * f64::from(Type::Body.metrics().1 * scale)).px())
             }),
             flex_row((
                 print::primary_action(

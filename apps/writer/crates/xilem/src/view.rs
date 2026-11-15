@@ -1,5 +1,6 @@
 use super::{Phase, Writer, keyed::keyed};
 use crate::WriterLayout;
+use crate::presentation::sheet_head::{Close, sheet_head};
 use crate::presentation::space;
 use crate::presentation::{label, paragraph, prose, text_button};
 use recite_writer_model::View;
@@ -190,12 +191,12 @@ pub(crate) fn tool_head<
     title: T,
     actions: A,
 ) -> impl WidgetView<Writer, Widget = widgets::Flex> + use<T, A> {
-    crate::presentation::sheet_head::sheet_head(
+    sheet_head(
         state.ui_scale(),
         &state.palette,
         title,
         actions,
-        crate::presentation::sheet_head::Close {
+        Close {
             disabled: state.phase() != Phase::Writing,
             action: Writer::return_to_writing,
         },

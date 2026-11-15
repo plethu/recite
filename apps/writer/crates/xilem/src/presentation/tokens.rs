@@ -77,6 +77,8 @@ pub(crate) mod breakpoint {
     pub const TOOLBAR: f64 = 600.;
     /// Segments narrower than this stack.
     pub const SEGMENTS: f64 = 360.;
+    /// A field and its button share a row from this width.
+    pub const FIELD_ROW: f64 = 480.;
 }
 
 /// Text in a single-line field. A text input's accessible bounds are its line box, so fields
