@@ -5,11 +5,7 @@ use crate::presentation::running::running_head;
 use crate::presentation::space;
 use crate::view::workspace::Layout;
 use xilem::masonry::parley::style::FontWeight;
-use xilem::{
-    masonry::properties::{ContentColor, LineBreaking},
-    style::Padding,
-    view::divider_h,
-};
+use xilem::{masonry::properties::LineBreaking, style::Padding};
 
 /// The running foot: the file and beat ids in mono and the beat's place in the scene, held at
 /// the sheet's foot while the manuscript scrolls.
@@ -19,9 +15,7 @@ pub(in crate::view) fn footer(state: &Writer) -> Option<impl WidgetView<Writer> 
     let grid = Layout::resolve(state).grid;
     Some(
         flex_col((
-            divider_h()
-                .thickness(1.px())
-                .prop(ContentColor::new(state.palette.rule)),
+            print::hairline(&state.palette),
             flex_row((
                 print::id(
                     state.ui_scale(),
@@ -69,9 +63,7 @@ pub(in crate::view) fn head(state: &Writer) -> Option<impl WidgetView<Writer> + 
             .weight(FontWeight::SEMI_BOLD)
             .color(state.palette.muted)
             .prop(LineBreaking::Clip),
-            divider_h()
-                .thickness(1.px())
-                .prop(ContentColor::new(state.palette.rule)),
+            print::hairline(&state.palette),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(space::SIBLINGS.px())

@@ -37,7 +37,10 @@ impl Look {
         let ink_hover = p.ink.with_alpha(INK_HOVER);
         // A text control is a row tall: one Control line between its padding and a 1px border.
         let line = f64::from(Type::Control.metrics().1);
-        let text = (((size::ROW - line) * scale - 2.) / 2., 12. * scale);
+        let text = (
+            ((size::ROW - line) * scale - 2.) / 2.,
+            size::CONTROL_PAD * scale,
+        );
         let quiet = |padding| Self {
             rest: Some((Color::TRANSPARENT, Color::TRANSPARENT)),
             hover: (ink_hover, Color::TRANSPARENT),
@@ -73,6 +76,21 @@ impl Look {
             (Some(ControlStyle::Icon), quiet((4. * scale, 4. * scale))),
             (Some(ControlStyle::Tab), quiet(text)),
             (Some(ControlStyle::Row), quiet(text)),
+            (
+                Some(ControlStyle::Entry),
+                Self {
+                    rest: Some((p.ink.with_alpha(WELL), Color::TRANSPARENT)),
+                    hover: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
+                    pressed: (p.pressed, p.ink),
+                    focus: Some(p.accent),
+                    disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
+                    border: 1.,
+                    sinks: false,
+                    padding: text,
+                    rule: Some(p.desk_well_rule),
+                    lead: 0.,
+                },
+            ),
             (
                 Some(ControlStyle::RowSelected),
                 Self {

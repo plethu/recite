@@ -38,6 +38,34 @@ pub(crate) mod size {
     /// A text control on a page or sheet, and a list row. The agreed 32 rounded up past the
     /// comparison reference's 32.2, so no hit target shrinks.
     pub const ROW: f64 = 33.;
+    /// A text control's padding either side of its words.
+    pub const CONTROL_PAD: f64 = 12.;
+    /// A field's padding and border before its text, at every scale.
+    pub const FIELD_INSET: f64 = 2.;
+    /// The least width of the file tab, and of the wordmark's column while the scene list hides.
+    pub const TAB_MIN: f64 = 96.;
+}
+
+/// A text control's padding and 1px border before its words, at `scale`: where a heading or
+/// label beside such a control starts its text so the two line up.
+pub(crate) fn control_inset(scale: f32) -> f64 {
+    size::CONTROL_PAD * f64::from(scale) + 1.
+}
+
+/// The scene list's insets, before the UI scale.
+pub(crate) mod sidebar {
+    /// The list's scroll padding either side.
+    pub const COLUMN: f64 = 24.;
+    /// The scroll padding and a row's own padding either side.
+    pub const ROW: f64 = 48.;
+    /// Beats sit inside their scene, past its disclosure chevron.
+    pub const OUTLINE: f64 = 12.;
+}
+
+/// Widths at which chrome changes form, before the UI scale.
+pub(crate) mod breakpoint {
+    /// The toolbar shows labels and the history buttons from this width.
+    pub const TOOLBAR: f64 = 600.;
 }
 
 /// Text in a single-line field. A text input's accessible bounds are its line box, so fields

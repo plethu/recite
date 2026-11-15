@@ -150,6 +150,8 @@ pub(crate) struct Face {
     icon: Icon,
     color: Color,
 }
+/// The scale of a small mark beside a control's words, such as a search glyph or a grip.
+pub(crate) const SMALL: f32 = 0.8;
 /// A decorative face named `name`, for marks that replace a glyph inside other content.
 pub(crate) fn mark(scale: f32, name: &'static str, icon: Icon, color: Color) -> Face {
     face(scale, name, icon, color)

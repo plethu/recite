@@ -1,6 +1,7 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
 use crate::presentation::space;
+use crate::presentation::tokens::breakpoint;
 use crate::presentation::{Icon, print};
 use crate::presentation::{Type, Typeset};
 use recite_writer_session::choices::display_name;
@@ -14,7 +15,7 @@ use xilem::{
 /// tools with Save as the only raised action. Narrower windows move the modes to a second row.
 pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = (state.viewport.width - state.navigation_width() - 32.).max(280.);
-    let wide = width >= 600. * f64::from(state.ui_scale());
+    let wide = width >= breakpoint::TOOLBAR * f64::from(state.ui_scale());
     let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     grid((
         history(state).grid_pos(0, 0),
@@ -85,7 +86,8 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let history = state.viewport.width - state.navigation_width() >= 600. * f64::from(scale);
+    let history =
+        state.viewport.width - state.navigation_width() >= breakpoint::TOOLBAR * f64::from(scale);
     flex_row((
         print::action(scale, "Try scene", blocked, Writer::start_trial),
         history.then(|| {

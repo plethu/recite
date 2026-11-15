@@ -1,12 +1,14 @@
 //! A passage occupies the same manuscript row while its single draft is edited.
 use super::*;
+use crate::presentation::control_inset;
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::grid::Grid;
+use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER};
 use crate::presentation::marks::{Mark, marked};
 use crate::presentation::space;
 use crate::presentation::{Sheet, disclosure_width, print, route_toggle};
 use crate::reading::PassageNumber;
-use crate::view::workspace::grid::{DESTINATION_GUTTER, GUTTER, ROUTE_PADDING};
-use crate::view::workspace::{Grid, Layout};
+use crate::view::workspace::Layout;
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, PassageKind};
 use xilem::masonry::kurbo::Axis;
@@ -15,10 +17,6 @@ use xilem::view::{FlexSpacer, button};
 #[cfg(test)]
 mod tests;
 
-/// A route button's padding and border before its text, at `scale`.
-pub(in crate::view) fn route_inset(scale: f32) -> f64 {
-    ROUTE_PADDING * f64::from(scale) + 1.
-}
 /// Space between a reply and its overhanging source label.
 const CAPTION_CLEARANCE: f64 = 4.;
 
@@ -143,7 +141,7 @@ pub(super) fn row(
                         .map(|route| {
                             // The route button's own padding takes the rest of the gutter.
                             sized_box(route).padding(Padding::left(
-                                (DESTINATION_GUTTER - GUTTER - route_inset(state.ui_scale()))
+                                (DESTINATION_GUTTER - GUTTER - control_inset(state.ui_scale()))
                                     .max(0.)
                                     .px(),
                             ))
@@ -288,7 +286,7 @@ fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetVie
                         // Fill the content box so the text starts at the column's left edge.
                         .width(
                             (width
-                                - 2. * (12. * f64::from(state.ui_scale()) + 1.)
+                                - 2. * control_inset(state.ui_scale())
                                 - disclosure_width(size / 14.))
                             .max(24.)
                             .px(),

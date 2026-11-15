@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::tokens::size;
 
 #[test]
 fn at_1200_by_800_the_sheet_takes_the_pane_less_24px_of_desk_and_keeps_every_column() {
@@ -31,10 +32,17 @@ fn the_measure_never_exceeds_68_characters_and_the_paper_left_over_is_shared() {
     assert!((grid.pad * 2. + grid.row() - grid.width).abs() < 1e-9);
     // The destination column keeps room for its button's padding at 200%.
     let doubled = Grid::resolve(2400., (20., 2.), true);
-    assert_eq!(doubled.destination, grid.destination + 2. * ROUTE_PADDING);
+    assert_eq!(
+        doubled.destination,
+        grid.destination + 2. * size::CONTROL_PAD
+    );
     // A larger reading size widens every sheet column with it.
     let larger = Grid::resolve(2400., (28., 1.), true);
     assert!(larger.margin > grid.margin && larger.measure > grid.measure);
+    // At the smallest reading size destinations hold their 13px floor, and so does their column.
+    let smallest = Grid::resolve(2400., (14., 1.), true);
+    assert!((smallest.destination - (134. * 13. / 14.4 + 26.)).abs() < 1e-3);
+    assert!(smallest.margin < grid.margin);
 }
 
 #[test]

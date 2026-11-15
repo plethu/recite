@@ -164,6 +164,28 @@ pub(crate) fn end_mark<S: 'static>(
     .width(Dim::MaxContent)
 }
 
+/// A 1px rule in the rule ink across its container: under a running head, over a running foot,
+/// between beats.
+pub(crate) fn hairline<S: 'static>(palette: &Palette<Color>) -> impl WidgetView<S> + use<S> {
+    use xilem::masonry::{layout::AsUnit, properties::ContentColor};
+    view::divider_h()
+        .thickness(1.px())
+        .prop(ContentColor::new(palette.rule))
+}
+
+/// The dotted rule that ends a beat, `width` wide with the end mark at its centre.
+pub(crate) fn end_rule<S: 'static>(
+    scale: f32,
+    palette: &Palette<Color>,
+    width: f64,
+) -> impl WidgetView<S> + use<S> {
+    use xilem::masonry::{kurbo::Axis, layout::AsUnit, properties::ContentColor};
+    view::divider(Axis::Horizontal, end_mark(scale, palette))
+        .dash_pattern(&[1.px(), 3.px()])
+        .prop(ContentColor::new(palette.rule))
+        .width(width.px())
+}
+
 /// Keep the ordinary native button and its name when the compact face is an icon.
 pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,

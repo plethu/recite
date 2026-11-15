@@ -27,6 +27,8 @@ pub(crate) enum ControlStyle {
     DeskField,
     /// A search field, padded for its leading icon.
     SearchField,
+    /// A button shaped like a search field on the desk: it opens a search.
+    Entry,
     /// A list row at rest.
     Row,
     /// The selected list row: the second-ink plate, with its ink bar painted above.
@@ -49,6 +51,7 @@ impl ControlStyle {
             Self::DeskField => "writer-desk-field",
             Self::SearchField => "writer-search-field",
             Self::Icon => "writer-icon",
+            Self::Entry => "writer-entry",
             Self::Row => "writer-row",
             Self::RowSelected => "writer-row-selected",
         }

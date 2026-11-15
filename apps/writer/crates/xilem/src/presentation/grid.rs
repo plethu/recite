@@ -4,6 +4,7 @@
 //! paper goes full-bleed, its margin narrows and destinations wrap under their replies.
 #[cfg(test)]
 mod tests;
+use super::tokens::{Sheet, control_inset};
 
 /// Desk either side of a sheet, beyond the workspace's own 16px padding: 24px in all.
 pub(crate) const DESK_SIDE: f64 = 8.;
@@ -16,11 +17,21 @@ pub(crate) const DESTINATION_GUTTER: f64 = 24.;
 /// The least measure a sheet keeps, and the least beside a destination column.
 const SHEET_MEASURE: f64 = 480.;
 const DESTINATION_MEASURE: f64 = 420.;
-/// A route button's horizontal padding at 100%.
-pub(crate) const ROUTE_PADDING: f64 = 12.;
 /// The longest measure: about 68 characters of the reading face.
 const CHARACTERS: f64 = 68.;
 const CHARACTER: f64 = 0.55;
+/// The reading size the column widths below are set for; other sizes scale them.
+const REFERENCE_READING: f64 = 20.;
+/// The margin column on a sheet and on full-bleed paper.
+const MARGIN: f64 = 96.;
+const BLEED_MARGIN: f64 = 72.;
+/// The destination column's text at the reference reading size; the route button's padding and
+/// border either side come on top, 160px in all at 100%.
+const DESTINATION: f64 = 134.;
+/// Narrower paper drops the margin column; its labels move above their lines.
+const MARGIN_PAPER: f64 = 360.;
+/// The least window that rests a sheet on the desk.
+pub(crate) const SHEET_WINDOW: f64 = 900.;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Grid {
@@ -42,27 +53,35 @@ impl Grid {
     pub fn resolve(available: f64, (reading, scale): (f32, f32), sheet: bool) -> Self {
         // Sheet columns are set with the manuscript: in proportion to its reading size. The
         // destination column also holds its route button's padding, which scales with the UI.
-        let unit = f64::from(reading) / 20.;
+        let unit = f64::from(reading) / REFERENCE_READING;
         let longest = CHARACTERS * CHARACTER * f64::from(reading);
-        let destination = 160. * unit + 2. * ROUTE_PADDING * (f64::from(scale) - 1.).max(0.);
+        // Destinations keep their 13px floor at small reading sizes, so the column follows the
+        // destination type rather than the reading size.
+        let route = f64::from(Sheet::Destination.size(reading))
+            / f64::from(Sheet::Destination.size(REFERENCE_READING as f32));
+        let destination = DESTINATION * route + 2. * control_inset(scale);
         let width = available - 2. * DESK_SIDE;
         let measure =
-            width - 2. * SHEET_PAD - 96. * unit - GUTTER - DESTINATION_GUTTER - destination;
+            width - 2. * SHEET_PAD - MARGIN * unit - GUTTER - DESTINATION_GUTTER - destination;
         if sheet && measure >= SHEET_MEASURE {
             let measure = measure.min(longest);
-            let columns = 96. * unit + GUTTER + measure + DESTINATION_GUTTER + destination;
+            let columns = MARGIN * unit + GUTTER + measure + DESTINATION_GUTTER + destination;
             return Self {
                 sheet: true,
                 width,
                 // Paper the measure cap leaves over is shared either side, so the text stays
                 // centred on the sheet.
                 pad: (width - columns) / 2.,
-                margin: 96. * unit,
+                margin: MARGIN * unit,
                 measure,
                 destination,
             };
         }
-        let margin = if available >= 360. { 72. * unit } else { 0. };
+        let margin = if available >= MARGIN_PAPER {
+            BLEED_MARGIN * unit
+        } else {
+            0.
+        };
         let gutter = if margin > 0. { GUTTER } else { 0. };
         let beside =
             available - 2. * BLEED_PAD - margin - gutter - DESTINATION_GUTTER - destination;

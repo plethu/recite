@@ -22,12 +22,7 @@ mod passage;
 pub(super) use passage::text_column;
 mod refusal;
 pub(super) mod viewport;
-use xilem::{
-    AnyWidgetView,
-    masonry::{kurbo::Axis, properties::ContentColor},
-    style::Padding,
-    view::divider,
-};
+use xilem::{AnyWidgetView, masonry::kurbo::Axis, style::Padding};
 
 #[derive(Clone, PartialEq)]
 enum RowIdentity {
@@ -98,12 +93,7 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
                 rows.last().map(|row| &row.content),
                 Some(Content::Continuation(_))
             ))
-        .then(|| {
-            divider(Axis::Horizontal, print::end_mark(scale, &state.palette))
-                .dash_pattern(&[1.px(), 3.px()])
-                .prop(ContentColor::new(state.palette.rule))
-                .width(state.script_width().px())
-        }),
+        .then(|| print::end_rule(scale, &state.palette, state.script_width())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::KINDS.px())

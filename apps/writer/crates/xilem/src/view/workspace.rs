@@ -6,9 +6,8 @@ use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
-pub(crate) mod grid;
 mod sheet;
-pub(crate) use grid::Grid;
+use crate::presentation::grid::{Grid, SHEET_WINDOW};
 
 pub(crate) struct Layout {
     pub map: f64,
@@ -53,7 +52,7 @@ impl Layout {
         let grid = Grid::resolve(
             script_pane,
             (state.reading_size(), state.ui_scale()),
-            workspace == Workspace::Script && state.viewport.width >= 900.,
+            workspace == Workspace::Script && state.viewport.width >= SHEET_WINDOW,
         );
         Self {
             map,
