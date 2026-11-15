@@ -47,12 +47,9 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
 }
 
 fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {
-    // Settings is a sheet over the workspace, so the tab row stays as it is beneath it.
-    let writing = !app.show_welcome()
-        && app.writer.as_ref().is_some_and(|writer| {
-            // Focus mode is writing too: its tab row keeps only the modes and Commands.
-            writer.workspaces.screen == crate::workspaces::Screen::Write
-        });
+    // Writing, focus mode and the tool screens share the toolbar's Workspace menu, so their tab
+    // row keeps only the file, the modes and Commands; Settings is a sheet over it.
+    let writing = !app.show_welcome() && app.writer.is_some();
     flex_row((
         sized_box(flex_row((
             identity::wordmark(&app.theme, scale),
@@ -96,27 +93,6 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
         } else {
             xilem::view::FlexSpacer::Flex(1.)
         },
-        app.writer
-            .as_ref()
-            .filter(|writer| {
-                !writing
-                    && !app.show_welcome()
-                    && !app.settings_open()
-                    && writer.session.project().is_some()
-                    && writer.viewport.width >= 1100. * f64::from(scale)
-            })
-            .map(|writer| {
-                print::action(
-                    scale,
-                    "Open in editor",
-                    blocked || writer.project_action_blocked() || writer.external.busy(),
-                    |app: &mut App| {
-                        if let Some(writer) = &mut app.writer {
-                            writer.open_editor();
-                        }
-                    },
-                )
-            }),
         (app.writer.is_some() && app.show_welcome() && !app.settings_open()).then(|| {
             print::action(scale, "Return to Writer", blocked, |app: &mut App| {
                 app.return_to_document()

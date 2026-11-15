@@ -1,6 +1,5 @@
 use super::*;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
 use crate::{
     attention::{Pane, Region},
     presentation::{label, manuscript_text, paragraph, source_comparison, text_button},
@@ -18,7 +17,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         return Either::A(resolved::panel(writer, resolved));
     }
     Either::B(flex_col((
-        label(writer.ui_scale(), "Compare disk changes").typeset(Type::Display, writer.ui_scale()),
+        crate::view::tool_head(writer, "Compare disk changes", ()),
         paragraph(writer.ui_scale(), "Review the versions before choosing a resolution. Each decision keeps a complete recovery copy. Save writes the accepted result.", 640.),
         report(writer),
         comparison(writer),

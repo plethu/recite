@@ -18,18 +18,12 @@ pub(super) fn frame<V: WidgetView<Writer>>(
             flex_row((
                 retained(navigation(state), state.navigation_width() > 0.),
                 flex_col((
+                    // Tool and Localise screens share Script's one-row toolbar.
                     indexed_stack((
                         toolbar::toolbar(state),
                         document_actions::focus_header(state),
-                        document_actions::project_header(state),
                     ))
-                    .active(
-                        if state.workspaces.screen != crate::workspaces::Screen::Write {
-                            2
-                        } else {
-                            usize::from(state.attention.is_focused())
-                        },
-                    ),
+                    .active(usize::from(writing && state.attention.is_focused())),
                     portal(content)
                         .constrain_horizontal(true)
                         .constrain_vertical(writing)

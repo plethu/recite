@@ -179,3 +179,25 @@ fn recovery_failure(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             )
         })
 }
+
+/// A tool or Localise sheet's head for the open document: `title`, `actions`, and the close icon
+/// back to writing.
+pub(crate) fn tool_head<
+    T: Into<core::ArcStr>,
+    A: xilem::view::FlexSequence<Writer> + Send + Sync,
+>(
+    state: &Writer,
+    title: T,
+    actions: A,
+) -> impl WidgetView<Writer, Widget = widgets::Flex> + use<T, A> {
+    crate::presentation::sheet_head::sheet_head(
+        state.ui_scale(),
+        &state.palette,
+        title,
+        actions,
+        crate::presentation::sheet_head::Close {
+            disabled: state.phase() != Phase::Writing,
+            action: Writer::return_to_writing,
+        },
+    )
+}

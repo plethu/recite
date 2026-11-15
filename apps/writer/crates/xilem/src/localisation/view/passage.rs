@@ -57,7 +57,7 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
         .collect();
     Some(
         flex_col((
-            print::title(writer.ui_scale(), display_name(&beat.name)),
+            crate::view::tool_head(writer, display_name(&beat.name), ()),
             print::id(
                 writer.ui_scale(),
                 format!(

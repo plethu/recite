@@ -28,6 +28,7 @@ pub(crate) mod segments;
 pub(crate) mod slip;
 pub(crate) use search::search_field;
 mod shaped_text;
+pub(crate) mod sheet_head;
 pub(crate) mod sheet_text;
 pub(crate) use shaped_text::ShapedText;
 mod theme;

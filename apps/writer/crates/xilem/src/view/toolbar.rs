@@ -5,6 +5,7 @@ use crate::presentation::tokens::breakpoint;
 use crate::presentation::{Icon, print};
 use crate::presentation::{Type, Typeset};
 use recite_writer_session::choices::display_name;
+use xilem::masonry::kurbo::Axis;
 use xilem::view::FlexSpacer;
 use xilem::{
     masonry::properties::LineBreaking,
@@ -17,30 +18,48 @@ pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = state.content_width();
     let wide = width >= breakpoint::TOOLBAR * f64::from(state.ui_scale());
     let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
-    grid((
-        history(state).grid_pos(0, 0),
-        workspace::workspace_tabs(state).grid_pos(u16::from(wide), u16::from(!wide)),
-        document_tools(state, blocked).grid_pos(if wide { 2 } else { 1 }, 0),
-    ))
-    .columns(if wide {
-        [
-            GridTrackSize::FRACTION,
-            GridTrackSize::Auto,
-            GridTrackSize::Auto,
-        ]
-    } else {
-        [
-            GridTrackSize::FRACTION,
-            GridTrackSize::Auto,
-            GridTrackSize::Fixed(0.px()),
-        ]
-    })
-    .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
-    .gap(space::SIBLINGS.px())
-    .padding(xilem::style::Padding::from_vh(
-        space::UNIT.px(),
-        space::KINDS.px(),
-    ))
+    let padding = xilem::style::Padding::from_vh(space::UNIT.px(), space::KINDS.px());
+    // Tool screens have no workspaces: history, then the tools, on one row where they fit.
+    if state.workspaces.screen != crate::workspaces::Screen::Write {
+        return Either::A(
+            flex_row((history(state).flex(1.), document_tools(state, blocked)))
+                .direction(if wide {
+                    Axis::Horizontal
+                } else {
+                    Axis::Vertical
+                })
+                .cross_axis_alignment(if wide {
+                    CrossAxisAlignment::Center
+                } else {
+                    CrossAxisAlignment::End
+                })
+                .gap(space::SIBLINGS.px())
+                .padding(padding),
+        );
+    }
+    Either::B(
+        grid((
+            history(state).grid_pos(0, 0),
+            workspace::workspace_tabs(state).grid_pos(u16::from(wide), u16::from(!wide)),
+            document_tools(state, blocked).grid_pos(if wide { 2 } else { 1 }, 0),
+        ))
+        .columns(if wide {
+            [
+                GridTrackSize::FRACTION,
+                GridTrackSize::Auto,
+                GridTrackSize::Auto,
+            ]
+        } else {
+            [
+                GridTrackSize::FRACTION,
+                GridTrackSize::Auto,
+                GridTrackSize::Fixed(0.px()),
+            ]
+        })
+        .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
+        .gap(space::SIBLINGS.px())
+        .padding(padding),
+    )
 }
 fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -66,6 +85,7 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
         // The galley's beat heading carries the link; wherever no heading shows, the toolbar does.
         (state.visible_workspace() == crate::map::Workspace::Map
             || state.trial.visible
+            || state.workspaces.screen != crate::workspaces::Screen::Write
             || !super::manuscript::galley(state, &surface::Surface::resolve(state)))
         .then(|| {
             print::icon_action(

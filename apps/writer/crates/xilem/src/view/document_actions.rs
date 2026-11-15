@@ -16,7 +16,7 @@ mod menu;
 pub(super) use menu::panel;
 
 mod header;
-pub(super) use header::{focus_header, project_header};
+pub(super) use header::focus_header;
 
 pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = state.ui_scale();

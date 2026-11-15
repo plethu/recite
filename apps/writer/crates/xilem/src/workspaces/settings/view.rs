@@ -21,7 +21,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         .project_settings()
         .is_some_and(Session::requires_reload);
     flex_col((
-        label(scale, "Project settings").typeset(Type::Display, scale),
+        crate::view::tool_head(writer, "Project settings", ()),
         writer.project_settings().map(|session| {
             paragraph(
                 scale,

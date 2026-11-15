@@ -25,7 +25,7 @@ use xilem::{
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
-        label(scale, "Declarations").typeset(Type::Display, scale),
+        crate::view::tool_head(writer, "Declarations", ()),
         segments(
             &writer.palette,
             (

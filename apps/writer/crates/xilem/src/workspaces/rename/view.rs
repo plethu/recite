@@ -1,5 +1,5 @@
+use crate::presentation::field_text;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
 mod comparison;
 use super::*;
 use crate::session::RecoveryReason;
@@ -19,7 +19,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     let width = writer.content_width();
     let reviewing = !writer.workspaces.rename.changes.is_empty();
     flex_col((
-        label(writer.ui_scale(), "Rename project beat").typeset(Type::Display, writer.ui_scale()),
+        crate::view::tool_head(writer, "Rename project beat", ()),
         paragraph(
             writer.ui_scale(),
             "Review references before staging. One project Undo step; Save all writes the files.",

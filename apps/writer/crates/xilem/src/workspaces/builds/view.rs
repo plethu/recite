@@ -5,7 +5,7 @@ use crate::presentation::{Type, Typeset};
 use crate::presentation::{group::named, label, paragraph, print, radio_button, text_button};
 use xilem::{
     WidgetView,
-    masonry::{kurbo::Axis, layout::AsUnit, properties::LineBreaking},
+    masonry::{layout::AsUnit, properties::LineBreaking},
     style::{Padding, Style},
     view::{CrossAxisAlignment, flex_col, flex_row, radio_group, sized_box},
 };
@@ -19,11 +19,12 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     let busy = builds.is_some_and(|builds| builds.busy());
     let width = column_width(writer);
     flex_col((
-        flex_row((
-            label(scale, "Build scenes").typeset(Type::Display, scale),
+        crate::view::tool_head(
+            writer,
+            "Build scenes",
             build_actions(writer, busy, builds.is_none_or(|builds| builds.targets.is_empty())),
-        )).direction(if width >= 580. * f64::from(scale) { Axis::Horizontal } else { Axis::Vertical })
-            .cross_axis_alignment(CrossAxisAlignment::Center).gap(space::GROUPS.px()).prop(PaneEntry(true)),
+        )
+        .prop(PaneEntry(true)),
         writer.session.project().map(|project| {
             let sources = project.documents().len();
             let targets = builds.map_or(0, |builds| builds.targets.len());

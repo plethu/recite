@@ -126,6 +126,8 @@ fn mounted_unsaved_translation_reentry_and_paged_report_keep_close_recoverable()
         model.set_draft("Retain source recovery.".into());
         Ok(())
     });
+    // Close lives in the Workspace menu on every screen.
+    mounted.activate("Workspace");
     mounted.activate("Close");
     assert!(mounted.state.phase() == Phase::ConfirmClose);
     mounted.activate("Open unsaved translations");
@@ -148,6 +150,8 @@ fn mounted_unsaved_translation_reentry_and_paged_report_keep_close_recoverable()
     assert!(mounted.contains_text("Report end"));
     mounted.activate("Previous catalogue report part");
     assert!(!mounted.contains_text("Report end"));
+    // Close lives in the Workspace menu on every screen.
+    mounted.activate("Workspace");
     mounted.activate("Close");
     mounted.activate("Discard translations and close");
     driver.finish(&mut mounted.state);

@@ -1,6 +1,5 @@
 //! Catalogue files, bounded queue rows and entry fields are independent native components.
-use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
+use crate::presentation::{print, space};
 mod comparison;
 mod creation;
 mod entry;
@@ -45,34 +44,18 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let queue = matches!(writer.localisation.destination, Destination::Queue);
-    let width = writer.content_width();
-    let wide = width >= 600. * f64::from(writer.ui_scale());
-    flex_row((
-        label(
-            writer.ui_scale(),
-            if queue {
-                "Translation queue"
-            } else {
-                "Translations"
-            },
-        )
-        .typeset(Type::Display, writer.ui_scale())
-        .prop(LineBreaking::WordWrap)
-        .width(if wide { width * 0.52 } else { width }.px()),
+    crate::view::tool_head(
+        writer,
+        if queue {
+            "Translation queue"
+        } else {
+            "Translations"
+        },
         (queue && writer.localisation.has_catalogue()).then(|| {
-            label(writer.ui_scale(), writer.localisation.catalogue_caption())
-                .prop(LineBreaking::WordWrap)
-                .width(if wide { width * 0.45 } else { width }.px())
+            print::meta(writer.ui_scale(), writer.localisation.catalogue_caption())
                 .color(writer.palette.muted)
         }),
-    ))
-    .direction(if wide {
-        Axis::Horizontal
-    } else {
-        Axis::Vertical
-    })
-    .cross_axis_alignment(CrossAxisAlignment::Center)
-    .gap(space::KINDS.px())
+    )
 }
 fn prose_size(writer: &Writer) -> f32 {
     writer.reading_size()
