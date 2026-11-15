@@ -118,6 +118,8 @@ impl PaneRequest {
 pub struct Attention {
     composition: Composition,
     focused: bool,
+    /// The scene list is hidden by the writer's own choice.
+    sidebar_hidden: bool,
     pane: Option<PaneRequest>,
     field: Option<EditingTarget>,
     edit_request: Option<EditRequest>,
@@ -134,6 +136,9 @@ impl Attention {
     }
     pub fn is_focused(&self) -> bool {
         self.focused
+    }
+    pub fn sidebar_hidden(&self) -> bool {
+        self.sidebar_hidden
     }
     pub(crate) fn leave_focus(&mut self) {
         self.focused = false;
@@ -182,6 +187,19 @@ impl Writer {
             self.map.workspace
         }
     }
+    /// Show or hide the scene list; focus mode hides it regardless.
+    pub fn toggle_sidebar(&mut self) {
+        if self.attention.focused {
+            return;
+        }
+        self.attention.sidebar_hidden = !self.attention.sidebar_hidden;
+        self.status = if self.attention.sidebar_hidden {
+            "Scene list hidden"
+        } else {
+            "Scene list shown"
+        }
+        .into();
+    }
     pub fn toggle_focus(&mut self) {
         if self.phase != Phase::Writing || self.work.busy() || self.navigation.busy() {
             self.status = "Finish the current action before changing writing focus.".into();
@@ -201,3 +219,6 @@ impl Writer {
         self.attention.pane = Some(PaneRequest(Arc::new(direction)));
     }
 }
+
+#[cfg(test)]
+mod tests;

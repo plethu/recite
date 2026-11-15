@@ -53,6 +53,9 @@ impl Default for Host {
     }
 }
 
+/// The scene list's width in narrow windows.
+pub const NARROW_SIDEBAR: f64 = 192.;
+
 pub struct Writer {
     pub(crate) host: Host,
     pub session: session::Session,
@@ -184,11 +187,21 @@ impl Writer {
     pub fn content_width(&self) -> f64 {
         (self.viewport.width - self.navigation_width() - 32.).max(280.)
     }
+    /// The scene list's width: hidden in focus mode, by choice or below the minimum window, and
+    /// narrowed to 192px with ellipsis below 1100px so the sheet keeps its measure.
     pub fn navigation_width(&self) -> f64 {
-        if self.attention.is_focused() || self.viewport.width < 900. * f64::from(self.ui_scale()) {
+        let scale = f64::from(self.ui_scale());
+        if self.attention.is_focused()
+            || self.attention.sidebar_hidden()
+            || self.viewport.width < 900. * scale
+        {
             return 0.;
         }
-        self.drawer_width()
+        if self.viewport.width < 1100. * scale {
+            self.drawer_width().min(NARROW_SIDEBAR)
+        } else {
+            self.drawer_width()
+        }
     }
     pub fn drawer_width(&self) -> f64 {
         f64::from(

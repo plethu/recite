@@ -285,6 +285,7 @@ impl Shell {
                     || writer.has_project_history(true))
             }
             C::Script | C::Map | C::Split | C::AddBeat | C::Focus => idle,
+            C::Sidebar => !writer.attention.is_focused(),
             C::PaneLeft | C::PaneRight | C::PaneUp | C::PaneDown => true,
             C::NextMatch | C::PreviousMatch => idle,
             C::AddLine | C::AddReply => {
