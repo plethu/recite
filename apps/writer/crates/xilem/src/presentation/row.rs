@@ -12,6 +12,7 @@ pub(crate) use widget::{RowButton, RowPress};
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
+    masonry::core::ArcStr,
     peniko::Color,
 };
 
@@ -22,7 +23,25 @@ pub(crate) fn row<S: 'static, V: WidgetView<S>, F: Fn(&mut S) + Send + Sync + 's
     press: F,
 ) -> Row<S, V, F> {
     Row {
-        selected,
+        selected: Some(selected),
+        name: None,
+        disabled: false,
+        child,
+        press,
+        phantom: PhantomData,
+    }
+}
+
+/// A pressable row outside any list, named `name` whatever its content shows, such as a beat
+/// heading whose button says what pressing it does.
+pub(crate) fn named_row<S: 'static, V: WidgetView<S>, F: Fn(&mut S) + Send + Sync + 'static>(
+    name: impl Into<ArcStr>,
+    child: V,
+    press: F,
+) -> Row<S, V, F> {
+    Row {
+        selected: None,
+        name: Some(name.into()),
         disabled: false,
         child,
         press,
@@ -37,12 +56,7 @@ pub(crate) fn listed<S: 'static, R: WidgetView<S, Widget = RowButton>>(
     row: R,
 ) -> impl WidgetView<S> + use<S, R> {
     bar(
-        selected.then_some(Bar {
-            color: palette.ink,
-            edge: Edge::Leading,
-            inset: 0.,
-            lift: 0.,
-        }),
+        selected.then_some(Bar::solid(palette.ink, Edge::Leading, 0., 0.)),
         styled(
             if selected {
                 ControlStyle::RowSelected
@@ -55,7 +69,8 @@ pub(crate) fn listed<S: 'static, R: WidgetView<S, Widget = RowButton>>(
 }
 
 pub(crate) struct Row<S, V, F> {
-    selected: bool,
+    selected: Option<bool>,
+    name: Option<ArcStr>,
     disabled: bool,
     child: V,
     press: F,
@@ -79,7 +94,10 @@ impl<S: 'static, V: WidgetView<S>, F: Fn(&mut S) + Send + Sync + 'static> View<S
     fn build(&self, ctx: &mut ViewCtx, state: &mut S) -> (Self::Element, Self::ViewState) {
         let (child, local) = ctx.with_id(CONTENT, |ctx| self.child.build(ctx, state));
         let mut pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(RowButton::new(self.selected, child.new_widget))
+            ctx.create_pod(match (&self.name, self.selected) {
+                (Some(name), _) => RowButton::named(name.clone(), child.new_widget),
+                (None, selected) => RowButton::new(selected.unwrap_or(false), child.new_widget),
+            })
         });
         pod.new_widget.options.disabled = self.disabled;
         (pod, local)
@@ -95,8 +113,13 @@ impl<S: 'static, V: WidgetView<S>, F: Fn(&mut S) + Send + Sync + 'static> View<S
         if previous.disabled != self.disabled {
             element.ctx.set_disabled(self.disabled);
         }
-        if previous.selected != self.selected {
-            RowButton::set_selected(&mut element, self.selected);
+        if previous.selected != self.selected
+            && let Some(selected) = self.selected
+        {
+            RowButton::set_selected(&mut element, selected);
+        }
+        if previous.name != self.name {
+            RowButton::set_name(&mut element, self.name.clone());
         }
         ctx.with_id(CONTENT, |ctx| {
             self.child.rebuild(

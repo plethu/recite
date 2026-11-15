@@ -16,7 +16,8 @@ use recite_writer_model::{AnalysisStamp, RouteOwner};
 use recite_writer_session::choices::display_name;
 use xilem::view::button;
 mod controls;
-mod header;
+mod galley;
+pub(crate) use galley::SelectedBeat;
 mod passage;
 pub(super) use passage::text_column;
 mod refusal;
@@ -82,9 +83,9 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
             (key, row(state, id, &rows[index]))
         })
         .collect();
-    flex_col((
-        header::heading(state, id),
-        // 16px between rows: this gap and each row's 4px source-label clearance.
+    let _ = id;
+    let body = flex_col((
+        // 12px between rows, and each row's 4px source-label clearance below it.
         column(entries).gap(space::TEXT.px()),
         rows.is_empty().then(|| {
             prose(
@@ -106,6 +107,17 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::KINDS.px())
+    .padding(Padding::top(space::KINDS.px()));
+    let body = flex_col((
+        body,
+        retained(
+            super::manuscript::actions(state),
+            !state.attention.is_focused(),
+        ),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::TEXT.px());
+    galley::galley(state, body)
 }
 fn row(state: &Writer, beat: &str, row: &Row) -> impl WidgetView<Writer> + use<> {
     let inset = row.groups.len().min(3) as f64 * 24.;

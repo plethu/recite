@@ -29,6 +29,10 @@ pub(crate) enum Icon {
     Grip,
     /// A magnifier: the leading mark of a search field.
     Search,
+    /// A pin: keep this beat as a reference beside the work.
+    Pin,
+    /// A pen nib: rename this object.
+    Rename,
 }
 impl Icon {
     fn filled(self) -> bool {
@@ -92,6 +96,32 @@ impl Icon {
                 path.line_to((17., 8.));
                 path.curve_to((22.33, 8.), (22.33, 16.), (17., 16.));
                 path.line_to((14., 16.));
+            }
+            Self::Pin => {
+                // A drawing pin seen from the side: head, collar and point.
+                path.move_to((9., 4.));
+                path.line_to((15., 4.));
+                path.move_to((10., 4.));
+                path.line_to((10., 11.));
+                path.line_to((7., 14.));
+                path.line_to((17., 14.));
+                path.line_to((14., 11.));
+                path.line_to((14., 4.));
+                path.move_to((12., 14.));
+                path.line_to((12., 20.));
+            }
+            Self::Rename => {
+                // A pencil laid on a line of text.
+                path.move_to((5., 17.));
+                path.line_to((15., 7.));
+                path.line_to((17., 9.));
+                path.line_to((7., 19.));
+                path.line_to((5., 19.));
+                path.close_path();
+                path.move_to((13., 9.));
+                path.line_to((15., 11.));
+                path.move_to((11., 19.));
+                path.line_to((19., 19.));
             }
             Self::Search => {
                 path.extend(Circle::new((10.5, 10.5), 5.5).path_elements(0.1));

@@ -35,6 +35,23 @@ pub(crate) struct Bar {
     pub inset: f64,
     /// Distance in from that edge to the bar.
     pub lift: f64,
+    /// A halftone bar, the mark of what is not yet fixed, instead of a solid one.
+    pub screen: bool,
+    /// The bar's thickness.
+    pub thickness: f64,
+}
+impl Bar {
+    /// A solid 2px bar in `color` along `edge`.
+    pub fn solid(color: Color, edge: Edge, inset: f64, lift: f64) -> Self {
+        Self {
+            color,
+            edge,
+            inset,
+            lift,
+            screen: false,
+            thickness: 2.,
+        }
+    }
 }
 
 /// The edge a [`Bar`] runs along.

@@ -4,16 +4,17 @@ use crate::presentation::space;
 use crate::presentation::{Icon, print};
 use crate::presentation::{Type, Typeset};
 use recite_writer_session::choices::display_name;
+use xilem::view::FlexSpacer;
 use xilem::{
     masonry::properties::LineBreaking,
     view::{GridExt, GridTrackSize, grid},
 };
 
-/// One row from about 760 logical pixels: title and history, workspace modes, then the scene's
+/// One row from about 600 logical pixels: history, workspace modes, then the scene's
 /// tools with Save as the only raised action. Narrower windows move the modes to a second row.
 pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = (state.viewport.width - state.navigation_width() - 32.).max(280.);
-    let wide = width >= 760. * f64::from(state.ui_scale());
+    let wide = width >= 600. * f64::from(state.ui_scale());
     let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     grid((
         history(state).grid_pos(0, 0),
@@ -61,18 +62,24 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
             blocked || state.navigation.history.step(true).is_none(),
             |state: &mut Writer| state.history_step(true),
         ),
-        print::icon_action(
-            scale,
-            "Copy link",
-            Icon::Link,
-            &state.palette,
-            blocked,
-            Writer::copy_link,
-        ),
-        label(scale, display_name(key.rsplit('/').next().unwrap_or(key)))
-            .typeset(Type::Section, scale)
-            .prop(LineBreaking::WordWrap)
-            .flex(1.),
+        // Script sets the scene's title and the beat's link on the sheet; Map keeps them here.
+        (state.visible_workspace() == crate::map::Workspace::Map).then(|| {
+            print::icon_action(
+                scale,
+                "Copy link",
+                Icon::Link,
+                &state.palette,
+                blocked,
+                Writer::copy_link,
+            )
+        }),
+        (state.visible_workspace() == crate::map::Workspace::Map).then(|| {
+            label(scale, display_name(key.rsplit('/').next().unwrap_or(key)))
+                .typeset(Type::Section, scale)
+                .prop(LineBreaking::WordWrap)
+                .flex(1.)
+        }),
+        FlexSpacer::Flex(1.),
     ))
     .gap(space::UNIT.px())
 }

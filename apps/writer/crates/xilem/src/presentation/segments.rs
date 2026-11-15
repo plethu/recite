@@ -58,12 +58,12 @@ pub(crate) fn segment<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync +
     select: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
     bar(
-        selected.then_some(Bar {
-            color: palette.ink,
-            edge: Edge::Bottom,
-            inset: 12. * f64::from(scale),
-            lift: LIFT * f64::from(scale),
-        }),
+        selected.then_some(Bar::solid(
+            palette.ink,
+            Edge::Bottom,
+            12. * f64::from(scale),
+            LIFT * f64::from(scale),
+        )),
         styled(
             if selected {
                 ControlStyle::Chosen
@@ -109,12 +109,7 @@ pub(crate) fn tab<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'st
     select: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
     bar(
-        selected.then_some(Bar {
-            color: palette.teal,
-            edge: Edge::Bottom,
-            inset: 0.,
-            lift: 0.,
-        }),
+        selected.then_some(Bar::solid(palette.teal, Edge::Bottom, 0., 0.)),
         styled(
             ControlStyle::Tab,
             choice(scale, palette, title, selected, disabled, select),

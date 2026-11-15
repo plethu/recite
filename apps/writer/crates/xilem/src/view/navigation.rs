@@ -12,6 +12,17 @@ use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::{button, portal};
 
+/// The scene list's width: as allocated while shown, and its preferred width while retained
+/// hidden, so its rows keep their layout.
+pub(crate) fn sidebar_width(state: &Writer) -> f64 {
+    let width = state.navigation_width();
+    if width > 0. {
+        width
+    } else {
+        state.drawer_width()
+    }
+}
+
 pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let documents = if state.session.project_root().is_some() {
         Either::A(project_files(state))
@@ -33,7 +44,7 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
         )
         .constrain_horizontal(true),
     ))
-    .width(state.drawer_width().px())
+    .width(sidebar_width(state).px())
     .prop(Region(Some(Pane::Navigation)))
 }
 fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -46,7 +57,7 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .weight(FontWeight::MEDIUM)
                     .color(state.palette.accent)
                     .prop(LineBreaking::WordWrap)
-                    .width((state.drawer_width() - 48.).px()),
+                    .width((sidebar_width(state) - 48.).px()),
                 |state: &mut Writer| state.request_search(Search::ProjectText),
             )
             .disabled(blocked || state.session.project().is_none()),
@@ -58,7 +69,7 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .weight(FontWeight::MEDIUM)
                     .color(state.palette.accent)
                     .prop(LineBreaking::WordWrap)
-                    .width((state.drawer_width() - 48.).px()),
+                    .width((sidebar_width(state) - 48.).px()),
                 |state: &mut Writer| state.request_search(Search::GoTo),
             )
             .disabled(blocked),
@@ -127,7 +138,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                         .weight(FontWeight::SEMI_BOLD)
                         .color(ink)
                         .prop(LineBreaking::WordWrap)
-                        .width((state.drawer_width() - 48. - disclosure_width(scale)).px()),
+                        .width((sidebar_width(state) - 48. - disclosure_width(scale)).px()),
                     ),
                     move |state: &mut Writer| state.switch(&path),
                 )
@@ -151,7 +162,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 ),
             )
             .prop(LineBreaking::WordWrap)
-            .width((state.drawer_width() - 48.).px())
+            .width((sidebar_width(state) - 48.).px())
         }),
         state
             .session
@@ -177,7 +188,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
-    .width((state.drawer_width() - 24.).px())
+    .width((sidebar_width(state) - 24.).px())
 }
 
 fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -225,7 +236,7 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
                         FontWeight::NORMAL
                     })
                     .prop(LineBreaking::WordWrap)
-                    .width((state.drawer_width() - 48. - OUTLINE_INSET).px()),
+                    .width((sidebar_width(state) - 48. - OUTLINE_INSET).px()),
                     move |state: &mut Writer| state.inspect(id.clone()),
                 )
                 .disabled(closing),

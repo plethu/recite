@@ -29,6 +29,7 @@ impl core::Property for Manuscript {
 mod navigation;
 mod reading;
 use manuscript::manuscript;
+pub(crate) use reading::SelectedBeat;
 pub(crate) use reading::viewport::ReadingViewport;
 mod trial;
 use navigation::navigation;

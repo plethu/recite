@@ -112,7 +112,7 @@ impl Typeset for Label {
 /// A sheet type role, derived from the reading size R.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Sheet {
-    /// Literata 400, R / 1.45R: lines.
+    /// Literata 400, R: lines.
     Dialogue,
     /// Plex Mono at 0.6R: a reply's hanging number.
     Number,

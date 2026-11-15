@@ -6,16 +6,19 @@ use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
+pub(crate) mod grid;
 mod sheet;
+pub(crate) use grid::Grid;
 
 pub(crate) struct Layout {
     pub map: f64,
+    /// The width of the manuscript's columns: margin, measure and any destination column.
     pub script: f64,
     script_pane: f64,
     pub compact_split: bool,
     pub split_available: bool,
-    /// Whether Script reads as a bordered sheet on the desk rather than full-bleed paper.
-    pub sheet: bool,
+    /// Script's paper: a sheet on the desk or full-bleed, and its columns.
+    pub grid: Grid,
     available: f64,
 }
 impl Layout {
@@ -36,33 +39,29 @@ impl Layout {
         let split_available = available >= minimum_script + minimum_map + 20.;
         let compact_split = workspace == Workspace::Split && !split_available;
         let full_script = workspace == Workspace::Script || compact_split;
-        let script = if full_script {
-            preferred + 144.
+        let script_pane = if full_script {
+            available
         } else {
-            minimum_script
-        }
-        .min(available);
+            minimum_script.min(available)
+        };
         let map = if workspace == Workspace::Split && !compact_split {
-            available - script - 20.
+            available - script_pane - 20.
         } else {
             available
         };
-        let script_pane = if full_script { available } else { script };
-        let sheet = workspace == Workspace::Script
-            && state.viewport.width >= sheet::MINIMUM_WINDOW
-            && script + sheet::EXTENT <= available;
+        // Script alone may rest a sheet on the desk; beside the map the paper is full-bleed.
+        let grid = Grid::resolve(
+            script_pane,
+            (state.reading_size(), state.ui_scale()),
+            workspace == Workspace::Script && state.viewport.width >= 900.,
+        );
         Self {
             map,
-            // Full-bleed paper keeps a margin of paper either side of the measure.
-            script: if sheet {
-                script
-            } else {
-                script.min(script_pane - 2. * sheet::BLEED)
-            },
+            script: grid.row(),
             script_pane,
             compact_split,
             split_available,
-            sheet,
+            grid,
             available,
         }
     }
@@ -86,12 +85,15 @@ pub(super) fn workspace(
             super::reading::page_controls(state, surface),
             named(
                 "Script pane",
-                super::reading::viewport::follow_reading(
+                sheet::frame(
                     state,
-                    portal(sheet::paper(state, &layout, manuscript(state, surface)))
-                        .constrain_horizontal(true)
-                        .background_color(sheet::ground(state, &layout))
-                        .prop(ReadingViewport::capture(state)),
+                    &layout,
+                    super::reading::viewport::follow_reading(
+                        state,
+                        portal(sheet::columns(&layout, manuscript(state, surface)))
+                            .constrain_horizontal(true)
+                            .prop(ReadingViewport::capture(state)),
+                    ),
                 ),
             )
             .flex(1.),

@@ -7,14 +7,30 @@ use xilem::masonry::{
         PropertiesMut, PropertiesRef, RegisterCtx, Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
     },
     imaging::Painter,
-    kurbo::{Axis, Point, Size, Stroke},
+    kurbo::{Axis, BezPath, Circle, Point, Shape, Size, Stroke},
     layout::{LenReq, Length},
 };
 
 /// The ring's width and its distance inside the child's edge, in logical pixels.
 pub(super) const RING: f64 = 2.;
-/// A bar's thickness, in logical pixels.
-pub(super) const BAR: f64 = 2.;
+/// A halftone bar's dot pitch, in logical pixels.
+const PITCH: f64 = 3.;
+
+/// A column of dots filling `bar`, one per pitch, as wide as the bar.
+fn halftone(bar: Rect) -> BezPath {
+    let mut dots = BezPath::new();
+    let radius = (bar.width().min(bar.height()) / 2.).min(PITCH / 2.) * 0.8;
+    let mut y = bar.y0 + PITCH / 2.;
+    while y < bar.y1 {
+        let mut x = bar.x0 + PITCH / 2.;
+        while x < bar.x1 + 0.5 {
+            dots.extend(Circle::new((x.min(bar.x1 - radius), y), radius).path_elements(0.1));
+            x += PITCH;
+        }
+        y += PITCH;
+    }
+    dots
+}
 
 pub(crate) struct Decor {
     decoration: Decoration,
@@ -84,24 +100,30 @@ impl Widget for Decor {
             edge,
             inset,
             lift,
+            screen,
+            thickness,
         })) = self.decoration
         {
             let border = ctx.border_box();
             let bar = match edge {
                 Edge::Bottom => Rect::new(
                     border.x0 + inset,
-                    border.y1 - lift - BAR,
+                    border.y1 - lift - thickness,
                     border.x1 - inset,
                     border.y1 - lift,
                 ),
                 Edge::Leading => Rect::new(
                     border.x0 + lift,
                     border.y0 + inset,
-                    border.x0 + lift + BAR,
+                    border.x0 + lift + thickness,
                     border.y1 - inset,
                 ),
             };
-            painter.fill(bar, color).draw();
+            if screen {
+                painter.fill(halftone(bar), color).draw();
+            } else {
+                painter.fill(bar, color).draw();
+            }
         }
         if let Decoration::Ring(Some(color)) = self.decoration
             && ctx.has_focus_target()

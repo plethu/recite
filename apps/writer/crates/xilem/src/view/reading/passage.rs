@@ -1,48 +1,99 @@
 //! A passage occupies the same manuscript row while its single draft is edited.
 use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::marks::{Mark, marked};
 use crate::presentation::space;
 use crate::presentation::{Sheet, disclosure_width, print, route_toggle};
 use crate::reading::PassageNumber;
+use crate::view::workspace::grid::{DESTINATION_GUTTER, GUTTER, ROUTE_PADDING};
+use crate::view::workspace::{Grid, Layout};
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, PassageKind};
-use xilem::TextAlign;
 use xilem::masonry::kurbo::Axis;
-use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
-use xilem::view::button;
+use xilem::view::{FlexSpacer, button};
 #[cfg(test)]
 mod tests;
 
-/// The destination column at the end of a reply's measure.
-const DESTINATION: f64 = 168.;
-/// Below this row width, destinations wrap under their reply instead.
-const DESTINATION_MEASURE: f64 = 420.;
+/// A route button's padding and border before its text, at `scale`.
+pub(in crate::view) fn route_inset(scale: f32) -> f64 {
+    ROUTE_PADDING * f64::from(scale) + 1.
+}
 /// Space between a reply and its overhanging source label.
 const CAPTION_CLEARANCE: f64 = 4.;
 
-/// The speaker margin left of the text column; narrow rows set speakers above instead.
-fn speaker_margin(state: &Writer, width: f64) -> f64 {
-    let scale = f64::from(state.ui_scale());
-    if width >= 560. * scale {
-        (96. * scale).min(width * 0.15)
-    } else {
-        0.
+/// The grid every manuscript row is set on.
+pub(in crate::view) fn grid(state: &Writer) -> Grid {
+    Layout::resolve(state).grid
+}
+
+/// Where dialogue text starts in a row, for actions that line up with it.
+pub(in crate::view) fn text_column(state: &Writer) -> f64 {
+    grid(state).text()
+}
+
+/// What a row's margin column holds: a speaker, or a reply's number with "REPLIES" beside the
+/// first. Labels sit right-aligned against the gutter; marks sit at the column's left edge.
+pub(in crate::view) fn margin_label(
+    passage: &Passage,
+    reply: Option<usize>,
+) -> (String, Option<usize>) {
+    match &passage.kind {
+        PassageKind::Dialogue { speaker } => {
+            (speaker.as_deref().unwrap_or("").to_uppercase(), None)
+        }
+        PassageKind::Choice { .. } => (
+            if reply == Some(1) {
+                "REPLIES".into()
+            } else {
+                String::new()
+            },
+            reply,
+        ),
     }
 }
 
-/// Where dialogue text starts in a row of `width`, for actions that line up with it.
-pub(in crate::view) fn text_column(state: &Writer, width: f64) -> f64 {
-    let margin = speaker_margin(state, width);
-    if margin > 0. { margin + 8. } else { 0. }
+/// The margin column's content for a row: right-aligned and baseline-aligned to the first line.
+pub(in crate::view) fn margin<S: 'static>(
+    state: &Writer,
+    grid: &Grid,
+    label: String,
+    number: Option<usize>,
+) -> impl WidgetView<S> + use<S> {
+    let reading = state.reading_size();
+    let width = if grid.margin > 0. {
+        grid.margin
+    } else {
+        grid.measure
+    };
+    flex_row((
+        FlexSpacer::Flex(if grid.margin > 0. { 1. } else { 0. }),
+        (!label.is_empty()).then(|| {
+            Sheet::Label
+                .label(reading, label)
+                .color(state.palette.accent)
+                .prop(LineBreaking::Clip)
+        }),
+        number.map(|number| {
+            Sheet::Number
+                .label(reading, number.to_string())
+                .color(state.palette.muted)
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+    .gap(space::UNIT.px())
+    .width(width.px())
 }
 
-fn reply_count(replies: usize) -> String {
-    if replies == 1 {
-        "1 reply".to_owned()
-    } else {
-        format!("{replies} replies")
-    }
+/// The mark a passage's row carries: unsaved while it holds a draft, current while selected.
+pub(in crate::view) fn passage_mark(state: &Writer, active: bool) -> Option<Mark> {
+    active.then(|| {
+        if state.session.model().has_draft() {
+            Mark::Unsaved
+        } else {
+            Mark::Current
+        }
+    })
 }
 
 pub(super) fn row(
@@ -52,116 +103,93 @@ pub(super) fn row(
     reply: Option<usize>,
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
     let reading = state.reading_size();
-    let margin = speaker_margin(state, width);
-    let wide = margin > 0.;
-    // Destinations share one left-aligned column at the end of the measure, until the measure is
-    // too narrow to keep both readable.
-    let column = reply.is_some() && width >= DESTINATION_MEASURE;
-    let destination = if column { DESTINATION } else { 0. };
-    let number_width = if reply.is_some() {
-        16. * f64::from(scale)
+    let grid = grid(state);
+    let wide = grid.margin > 0.;
+    // Nested groups indent the row; the margin column and the gutters keep their widths.
+    let destination = if reply.is_some() {
+        grid.destination
     } else {
         0.
     };
-    let number_gap = if reply.is_some() { 8. } else { 0. };
+    let column = destination > 0.;
     let measure = (width
-        - margin
-        - if wide { 8. } else { 0. }
-        - number_width
-        - number_gap
-        - if column { destination + 8. } else { 0. })
+        - grid.text()
+        - if grid.destination > 0. {
+            DESTINATION_GUTTER + grid.destination
+        } else {
+            0.
+        })
     .max(120.);
-    let speaker = match &passage.kind {
-        PassageKind::Dialogue { speaker } => speaker.as_deref().unwrap_or("").to_uppercase(),
-        PassageKind::Choice { .. } => {
-            if reply == Some(1) {
-                "REPLIES".into()
-            } else {
-                String::new()
-            }
-        }
-    };
+    let (label, numbered) = margin_label(passage, reply);
+    // Replies take the 0.9R tier once fields can set their own leading; until then a smaller
+    // reply would shrink its field's accessible line box below the reference.
+    let size = Sheet::Dialogue.size(reading);
     let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
     let stacked_reply = !column
         && matches!(&passage.kind, PassageKind::Choice { destination: Some(target) } if target != "END");
-    let content_gap = if !wide && speaker.is_empty() { 0. } else { 8. };
-    let alignment = if wide {
-        TextAlign::End
-    } else {
-        TextAlign::Start
-    };
     flex_col((
         flex_col((
-            flex_row((
-                indexed_stack((
-                    flex_col((
-                        Sheet::Label
-                            .label(reading, speaker.clone())
-                            .text_alignment(alignment)
-                            .color(state.palette.accent)
-                            .width(if wide { margin } else { width }.px()),
-                        (reply == Some(1)).then(|| {
-                            // Set with the manuscript like its caption, in the regular weight.
-                            Sheet::Label
-                                .label(reading, reply_count(state.reading.replies))
-                                .weight(FontWeight::NORMAL)
-                                .letter_spacing(0.)
-                                .text_alignment(alignment)
-                                .color(state.palette.muted)
-                                .width(if wide { margin } else { width }.px())
-                        }),
-                    ))
-                    .gap(space::UNIT.px()),
-                    flex_col(()).dims((0.px(), 0.px())),
-                ))
-                .active(usize::from(!wide && speaker.is_empty())),
+            marked(
+                &state.palette,
+                passage_mark(state, active),
                 flex_row((
-                    reply.map(|number| {
-                        print::id(scale, number.to_string())
-                            .text_size(Sheet::Number.size(reading))
-                            .width(number_width.px())
-                            .color(state.palette.muted)
-                    }),
-                    super::super::manuscript::passage_editor(state, passage, number, measure),
+                    (wide || !label.is_empty() || numbered.is_some())
+                        .then(|| margin(state, &grid, label, numbered)),
+                    super::super::manuscript::passage_editor(state, passage, number, measure, size),
                     column
                         .then(|| route(state, passage, destination))
                         .flatten()
-                        .map(|route| sized_box(route).padding(Padding::left(space::SIBLINGS.px()))),
+                        .map(|route| {
+                            // The route button's own padding takes the rest of the gutter.
+                            sized_box(route).padding(Padding::left(
+                                (DESTINATION_GUTTER - GUTTER - route_inset(state.ui_scale()))
+                                    .max(0.)
+                                    .px(),
+                            ))
+                        }),
                 ))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(number_gap.px()),
-            ))
-            .direction(if wide {
-                Axis::Horizontal
-            } else {
-                Axis::Vertical
-            })
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(content_gap.px()),
+                .direction(if wide {
+                    Axis::Horizontal
+                } else {
+                    Axis::Vertical
+                })
+                .cross_axis_alignment(if wide {
+                    CrossAxisAlignment::FirstBaseline
+                } else {
+                    CrossAxisAlignment::Start
+                })
+                .gap(if wide { GUTTER } else { space::UNIT }.px()),
+            ),
             // The source label paints into the gap below its passage without taking space, so
-            // selecting or typing never moves a row and resting rows keep the 16px rhythm.
-            (!stacked_reply)
-                .then(|| metadata(state, passage, active, CaptionPlacement::Under { margin })),
+            // selecting or typing never moves a row and resting rows keep their rhythm.
+            (!stacked_reply).then(|| {
+                metadata(
+                    state,
+                    passage,
+                    active,
+                    CaptionPlacement::Under {
+                        margin: grid.text(),
+                    },
+                )
+            }),
         ))
         .gap(0.px()),
         stacked_reply.then(|| {
-            metadata(
+            sized_box(metadata(
                 state,
                 passage,
                 active,
-                CaptionPlacement::BesideDestination { width },
-            )
+                CaptionPlacement::BesideDestination {
+                    width: width - grid.text(),
+                },
+            ))
+            .padding(Padding::left(grid.text().px()))
         }),
         active
             .then(|| super::refusal::panel(state, measure))
             .flatten()
-            .map(|notice| {
-                sized_box(notice).padding(Padding::left(
-                    (margin + if wide { 8. } else { 0. } + number_width + number_gap).px(),
-                ))
-            }),
+            .map(|notice| sized_box(notice).padding(Padding::left(grid.text().px()))),
         match &passage.kind {
             PassageKind::Choice {
                 destination: Some(target),
@@ -171,6 +199,10 @@ pub(super) fn row(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::UNIT.px())
+    // Replies open as a group 24px below the dialogue; each further reply keeps the 12px rhythm.
+    .padding(Padding::top(
+        if reply == Some(1) { space::TEXT } else { 0. }.px(),
+    ))
 }
 
 /// Source labels either reserve their own line or share a stacked destination's target height.

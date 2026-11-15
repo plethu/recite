@@ -1,75 +1,90 @@
-//! Script is a clean sheet resting on the grained desk, or full-bleed paper where none fits.
+//! Script is a sheet resting on the grained desk, or full-bleed paper where none fits. The sheet
+//! is the frame: it stays put and the manuscript scrolls within it, so the sheet always reaches
+//! the pane's foot and its running head and foot stay in place.
+use super::super::manuscript::folio;
 use super::*;
 use crate::presentation::space;
-use xilem::masonry::{properties::BoxShadow, widgets::Flex};
+use xilem::masonry::layout::UnitPoint;
+use xilem::masonry::{layout::Dim, properties::BoxShadow, widgets::Flex};
 use xilem::peniko::Color;
 use xilem::style::Padding;
 use xilem::view::MainAxisAlignment;
+use xilem::view::zstack;
 
-/// Paper either side of the script measure, inside the sheet.
-const MARGIN: f64 = 56.;
-/// Desk visible above and below the sheet.
-const DESK: f64 = 24.;
 /// The hard offset of the sheet's shadow, right and down.
 const SHADOW: f64 = 3.;
-/// Paper either side of the measure when Script is full-bleed.
-pub(super) const BLEED: f64 = 16.;
-/// Below this window width, in logical pixels, Script is full-bleed.
-pub(super) const MINIMUM_WINDOW: f64 = 900.;
-/// The width a sheet adds to the script measure: margins, border and shadow.
-pub(super) const EXTENT: f64 = 2. * MARGIN + 2. + SHADOW;
 
-/// The Script pane's scrolled content. Both forms keep one widget tree, so switching between them
-/// never replaces the mounted manuscript.
-pub(super) fn paper<V: WidgetView<Writer>>(
-    state: &Writer,
+/// The manuscript's scrolled content: the columns, padded to the grid. Both forms keep one widget
+/// tree, so switching between them never replaces the mounted manuscript.
+pub(super) fn columns<V: WidgetView<Writer>>(
     layout: &Layout,
     manuscript: V,
 ) -> impl WidgetView<Writer, Widget = Flex> + use<V> {
-    let sheet = layout.sheet;
-    let paper = sized_box(manuscript)
-        .padding(if sheet {
-            Padding::from_vh(space::REGIONS.px(), MARGIN.px())
-        } else {
-            Padding::from_vh(space::KINDS.px(), BLEED.px())
+    let grid = layout.grid;
+    flex_col((manuscript,))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .padding(Padding {
+            top: if grid.sheet {
+                space::REGIONS
+            } else {
+                space::KINDS
+            }
+            .px(),
+            bottom: space::REGIONS.px(),
+            left: grid.pad.px(),
+            right: 0.px(),
         })
-        .background_color(state.palette.surface)
-        .border_color(if sheet {
-            state.palette.rule
+}
+
+/// The paper around `content`: a sheet with a rule edge and a hard stock shadow, set on the desk,
+/// or full-bleed paper filling the pane.
+pub(super) fn frame<V: WidgetView<Writer>>(
+    state: &Writer,
+    layout: &Layout,
+    content: V,
+) -> impl WidgetView<Writer> + use<V> {
+    let sheet = layout.grid.sheet;
+    let galley = state.visible_workspace() != Workspace::Map;
+    let paper = sized_box(
+        flex_col((
+            zstack((content, galley.then(|| folio::head(state)).flatten()))
+                .alignment(UnitPoint::TOP)
+                .flex(1.),
+            galley.then(|| folio::footer(state)).flatten(),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .gap(0.px()),
+    )
+    .width(layout.grid.width.px())
+    .height(Dim::Stretch)
+    .background_color(state.palette.surface)
+    .border_color(if sheet {
+        state.palette.rule
+    } else {
+        Color::TRANSPARENT
+    })
+    .border_width(if sheet { 1.px() } else { 0.px() })
+    .box_shadow(BoxShadow::new(
+        if sheet {
+            state.palette.stock
         } else {
             Color::TRANSPARENT
-        })
-        .border_width(if sheet { 1.px() } else { 0.px() })
-        .box_shadow(BoxShadow::new(
-            if sheet {
-                state.palette.stock
-            } else {
-                Color::TRANSPARENT
-            },
-            (SHADOW, SHADOW),
-        ));
+        },
+        (SHADOW, SHADOW),
+    ));
     flex_row((paper,))
         .main_axis_alignment(MainAxisAlignment::Center)
-        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        // The workspace's own 16px padding is the desk above the sheet.
         .padding(if sheet {
             Padding {
-                top: DESK.px(),
-                bottom: (DESK + SHADOW).px(),
+                bottom: (space::KINDS + SHADOW).px(),
                 ..Padding::all(0.px())
             }
         } else {
             Padding::all(0.px())
         })
         .width(layout.script_pane.px())
-}
-
-/// The pane behind the paper: the desk around a sheet, or the paper itself when full-bleed.
-pub(super) fn ground(state: &Writer, layout: &Layout) -> Color {
-    if layout.sheet {
-        Color::TRANSPARENT
-    } else {
-        state.palette.surface
-    }
 }
 
 #[cfg(test)]

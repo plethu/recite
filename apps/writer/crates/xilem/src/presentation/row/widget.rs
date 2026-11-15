@@ -6,9 +6,9 @@
 use xilem::masonry::{
     accesskit::{Action, Node, Role},
     core::{
-        AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget, PaintCtx,
-        PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent,
-        Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
+        AccessCtx, AccessEvent, ArcStr, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget,
+        PaintCtx, PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx,
+        TextEvent, Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
         keyboard::{Key, NamedKey},
     },
     imaging::Painter,
@@ -21,21 +21,37 @@ use xilem::masonry::{
 pub(crate) struct RowPress;
 
 pub(crate) struct RowButton {
-    selected: bool,
+    /// Whether the row is its list's selection; `None` for a pressable row outside any list.
+    selected: Option<bool>,
+    /// A name that replaces the one read from the row's content.
+    name: Option<ArcStr>,
     child: WidgetPod<dyn Widget>,
 }
 impl RowButton {
     pub fn new(selected: bool, child: NewWidget<impl Widget + ?Sized>) -> Self {
         Self {
-            selected,
+            selected: Some(selected),
+            name: None,
             child: child.erased().to_pod(),
         }
+    }
+    /// A row that is not part of a list's selection, named `name` rather than by its content.
+    pub fn named(name: ArcStr, child: NewWidget<impl Widget + ?Sized>) -> Self {
+        Self {
+            selected: None,
+            name: Some(name),
+            child: child.erased().to_pod(),
+        }
+    }
+    pub fn set_name(this: &mut WidgetMut<'_, Self>, name: Option<ArcStr>) {
+        this.widget.name = name;
+        this.ctx.request_accessibility_update();
     }
     pub fn child_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, dyn Widget> {
         this.ctx.get_mut(&mut this.widget.child)
     }
     pub fn set_selected(this: &mut WidgetMut<'_, Self>, selected: bool) {
-        this.widget.selected = selected;
+        this.widget.selected = Some(selected);
         this.ctx.request_accessibility_update();
         this.ctx.request_paint_only();
     }
@@ -136,7 +152,12 @@ impl Widget for RowButton {
 
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
         node.add_action(Action::Click);
-        node.set_selected(self.selected);
+        if let Some(selected) = self.selected {
+            node.set_selected(selected);
+        }
+        if let Some(name) = &self.name {
+            node.set_label(&**name);
+        }
     }
 
     fn children_ids(&self) -> ChildrenIds {

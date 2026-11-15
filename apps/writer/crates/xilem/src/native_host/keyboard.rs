@@ -1,5 +1,6 @@
 mod document_menu;
 mod focus;
+pub(crate) mod galley;
 mod held;
 mod history;
 mod manuscript;
@@ -48,6 +49,7 @@ pub(super) struct Keyboard {
     document_menu: document_menu::Focus,
     tab: tab::Reveal,
     radio: radio::Arrows,
+    galley: galley::Galley,
     reading: reading::Position,
 }
 impl Keyboard {
@@ -157,7 +159,9 @@ impl Keyboard {
             )
         })
         .or_else(|| document_menu::escape(&context, event.logical_key, self.normalized_modifiers()))
-        .or_else(|| history::key(&context, event.logical_key, self.normalized_modifiers()));
+        .or_else(|| history::key(&context, event.logical_key, self.normalized_modifiers()))
+        .or_else(|| history::beat_key(&context, event.logical_key, self.normalized_modifiers()))
+        .or_else(|| history::focus_key(&context, event.logical_key, self.normalized_modifiers()));
         let consumed = self.dispatch(
             &context,
             root.focused_widget(),
@@ -292,6 +296,7 @@ impl Keyboard {
                 .synchronize(root, &context, &self.composition);
             self.document_menu.synchronize(root, &context);
             self.reading.capture(root);
+            self.galley.synchronize(root);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {

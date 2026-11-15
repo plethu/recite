@@ -39,10 +39,8 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(space::SIBLINGS.px()),
     )
-    .padding(xilem::style::Padding::from_vh(
-        space::UNIT.px(),
-        space::KINDS.px(),
-    ))
+    // The tab row is one control tall.
+    .padding(xilem::style::Padding::from_vh(0.px(), space::KINDS.px()))
 }
 
 fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {
@@ -57,7 +55,15 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             identity::wordmark(&app.theme, scale),
             xilem::view::FlexSpacer::Flex(1.),
         )))
-        .width(app.writer.as_ref().map_or(220., Writer::drawer_width).px()),
+        // The wordmark heads the scene list, or keeps a minimal column while the list is hidden.
+        .width(
+            app.writer
+                .as_ref()
+                .map_or(220., |writer| {
+                    writer.navigation_width().max(96. * f64::from(scale))
+                })
+                .px(),
+        ),
         app.writer
             .as_ref()
             .filter(|writer| writer.viewport.width >= 1100. * f64::from(scale))

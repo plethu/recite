@@ -7,7 +7,7 @@ use crate::presentation::space;
 use crate::rules;
 use recite_writer_model::{EditOperation, StructuralCommand};
 mod field;
-mod folio;
+pub(in crate::view) mod folio;
 mod input;
 pub(super) use field::{passage_editor, prose_editor};
 use xilem::AnyWidgetView;
@@ -18,7 +18,8 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
         matches!(surface, Surface::SourceRepair { import: true, .. })
             .then(|| super::source_repair::panel(state)),
         content(state, surface),
-        retained(actions(state), !state.attention.is_focused()),
+        // The galley sets these with the selected beat; other surfaces keep them below.
+        (!galley(state, surface)).then(|| retained(actions(state), !state.attention.is_focused())),
         diagnostics(state),
         (!matches!(
             surface,
@@ -31,7 +32,6 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
                 action_axis(state),
             )
         }),
-        folio::footer(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
@@ -101,7 +101,19 @@ fn edit_button(
     )
     .disabled(!enabled)
 }
-fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
+/// Whether `surface` shows the scene galley, which holds the beat's actions itself.
+fn galley(state: &Writer, surface: &Surface<'_>) -> bool {
+    match surface {
+        Surface::Manuscript { .. } => {
+            state.reading.selected.is_some()
+                && state.reading.error.is_none()
+                && !state.reading.rows.is_empty()
+        }
+        Surface::Beat { .. } => true,
+        _ => false,
+    }
+}
+pub(super) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase() != Phase::Writing
         || state.session.read_only()
         || state.navigation.busy()
@@ -136,10 +148,7 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
         if state.reading.rows.is_empty() {
             0.
         } else {
-            (super::reading::text_column(state, state.script_width())
-                - 12. * f64::from(state.ui_scale())
-                - 1.)
-                .max(0.)
+            (super::reading::text_column(state) - 12. * f64::from(state.ui_scale()) - 1.).max(0.)
         }
         .px(),
     ))
