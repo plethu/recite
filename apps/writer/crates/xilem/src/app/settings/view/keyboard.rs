@@ -55,13 +55,13 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             scale,
             app.theme.palette.muted,
             false,
+            Some(width.min(600.)),
             text_input(
                 app.settings.query.clone(),
                 |app: &mut App, value: String| app.search_shortcuts(value),
             )
             .text_size(field_text(scale))
-            .prop(TextAreaLabel::new("Search shortcuts"))
-            .width(width.min(600.).px()),
+            .prop(TextAreaLabel::new("Search shortcuts")),
         ),
         label(scale, format!("{count} matching commands")),
         radio_group(

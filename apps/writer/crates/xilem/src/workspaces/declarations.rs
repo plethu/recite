@@ -78,6 +78,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             scale,
             writer.palette.muted,
             false,
+            None,
             text_input(panel.query.clone(), |writer: &mut Writer, query| {
                 writer.workspaces.declarations.filter(query)
             })

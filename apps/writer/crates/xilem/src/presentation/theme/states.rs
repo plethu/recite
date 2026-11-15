@@ -6,8 +6,7 @@ use super::super::control_style::ControlStyle;
 use super::super::tokens::{Type, size};
 use super::*;
 use recite_writer_session::palette::{
-    INK_HOVER, PRIMARY_HOVER, PRIMARY_PRESSED, STAMP_HOVER, STAMP_PRESSED, TONAL, TONAL_DISABLED,
-    TONAL_HOVER, WELL,
+    INK_HOVER, PRIMARY_HOVER, PRIMARY_PRESSED, TONAL, TONAL_DISABLED, TONAL_HOVER, WELL,
 };
 
 /// How one kind of control looks in each state.
@@ -50,7 +49,6 @@ impl Look {
             rule: None,
             lead: 0.,
         };
-        let stamp = |amount| p.stamp.lerp_rect(p.on_stamp, amount);
         // Secondary actions on sheets, panels and dialogs: a tint of ink over the host, no border.
         let tonal = || Self {
             rest: Some((p.ink.with_alpha(TONAL), Color::TRANSPARENT)),
@@ -72,15 +70,16 @@ impl Look {
             (Some(ControlStyle::Segment), quiet(text)),
             (Some(ControlStyle::Manuscript), quiet(text)),
             (Some(ControlStyle::Icon), quiet((4. * scale, 4. * scale))),
+            (Some(ControlStyle::Tab), quiet(text)),
             (
-                Some(ControlStyle::Selected),
+                Some(ControlStyle::Chosen),
                 Self {
-                    rest: Some((p.stamp, p.stamp)),
-                    hover: (stamp(STAMP_HOVER), stamp(STAMP_HOVER)),
-                    pressed: (stamp(STAMP_PRESSED), stamp(STAMP_PRESSED)),
-                    focus: None,
+                    rest: Some((p.surface, Color::TRANSPARENT)),
+                    hover: (p.surface.lerp_rect(p.ink, INK_HOVER), Color::TRANSPARENT),
+                    pressed: (p.pressed, p.ink),
+                    focus: Some(p.accent),
                     // The current choice stays legible while the group waits.
-                    disabled: (p.stamp, p.stamp),
+                    disabled: (p.surface, Color::TRANSPARENT),
                     border: 1.,
                     sinks: true,
                     padding: text,
@@ -118,7 +117,8 @@ impl Look {
         }
     }
 
-    fn push(&self, stack: &mut PropertyStack, selector: &Selector) {
+    /// Push this look's layers; `strong` is the focus and pressed border width.
+    fn push(&self, stack: &mut PropertyStack, selector: &Selector, strong: f64) {
         let at = |hovered: Option<bool>, pressed: Option<bool>, focused: Option<bool>| {
             let mut selector = selector.clone();
             if let Some(value) = hovered {
@@ -158,8 +158,8 @@ impl Look {
         let focus = match (self.focus, self.rest) {
             (Some(color), _) => PropertySet::new()
                 .with(BorderColor { color })
-                .with(BorderWidth { width: STRONG.px() })
-                .with(self.padding(STRONG, 0.)),
+                .with(BorderWidth { width: strong.px() })
+                .with(self.padding(strong, 0.)),
             (None, rest) => {
                 let mut set = PropertySet::new()
                     .with(BorderWidth {
@@ -179,8 +179,8 @@ impl Look {
             .with(BorderColor { color: border });
         if self.sinks {
             pressed = pressed
-                .with(BorderWidth { width: STRONG.px() })
-                .with(self.padding(STRONG, 1.));
+                .with(BorderWidth { width: strong.px() })
+                .with(self.padding(strong, 1.));
         }
         stack.push_layer(at(None, Some(true), None), pressed);
         let (fill, border) = self.disabled;
@@ -197,7 +197,7 @@ impl Look {
     }
 }
 
-/// Buttons and segment radios: the whole table, unclassed first so classes shadow it.
+/// Buttons: the whole table, unclassed first so classes shadow it.
 pub(super) fn pressable<W: Widget>(
     properties: &mut DefaultProperties,
     p: &Palette<Color>,
@@ -207,7 +207,34 @@ pub(super) fn pressable<W: Widget>(
     for (style, look) in Look::table(p, scale) {
         let selector =
             style.map_or_else(Selector::new, |style| Selector::classes(&[style.class()]));
-        look.push(&mut stack, &selector);
+        look.push(&mut stack, &selector, STRONG);
+    }
+    properties.insert_stack::<W>(stack);
+}
+
+/// Radios. A plain radio keeps its drawn indicator, whose outline is the border colour and width.
+/// Segments and tabs hide the indicator and have no border: Masonry strokes a radio's focus ring
+/// 2px outside it in the border colour and never paints the border itself, but it still strokes
+/// the hidden indicator with the border's width, which at zero draws nothing.
+pub(super) fn choosable<W: Widget>(
+    properties: &mut DefaultProperties,
+    p: &Palette<Color>,
+    scale: f64,
+) {
+    let mut stack = PropertyStack::new();
+    for (style, look) in Look::table(p, scale) {
+        let Some(style) = style else {
+            indicator(p, scale).push(&mut stack, &Selector::new(), STRONG);
+            continue;
+        };
+        // The border's pixel moves into the padding, so the hit area stays the same.
+        let (vertical, horizontal) = look.padding;
+        Look {
+            border: 0.,
+            padding: (vertical + look.border, horizontal + look.border),
+            ..look
+        }
+        .push(&mut stack, &Selector::classes(&[style.class()]), 0.);
     }
     properties.insert_stack::<W>(stack);
 }
@@ -241,7 +268,7 @@ pub(super) fn field<W: Widget>(properties: &mut DefaultProperties, p: &Palette<C
         (Selector::classes(&[search]), p.well_rule, lead),
         (Selector::classes(&[desk, search]), p.desk_well_rule, lead),
     ] {
-        well(rule, lead).push(&mut stack, &selector);
+        well(rule, lead).push(&mut stack, &selector, STRONG);
     }
     Look {
         rest: Some((Color::TRANSPARENT, Color::TRANSPARENT)),
@@ -258,14 +285,15 @@ pub(super) fn field<W: Widget>(properties: &mut DefaultProperties, p: &Palette<C
     .push(
         &mut stack,
         &Selector::classes(&[ControlStyle::Manuscript.class()]),
+        STRONG,
     );
     properties.insert_stack::<W>(stack);
 }
 
-/// Checkboxes: no chip at rest, a full-row ink hover, and the box drawn in the boundary colour.
-/// The toolkit strokes its focus and hover ring in the border colour, so focus turns it accent.
-pub(super) fn check<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, scale: f64) {
-    let mut stack = PropertyStack::new();
+/// Checkboxes and plain radios: no chip at rest, a full-row ink hover, and the indicator drawn in
+/// the boundary colour. The toolkit strokes its focus and hover ring in the border colour, so
+/// focus turns both accent.
+fn indicator(p: &Palette<Color>, scale: f64) -> Look {
     Look {
         rest: Some((Color::TRANSPARENT, p.boundary)),
         hover: (p.ink.with_alpha(INK_HOVER), p.boundary),
@@ -278,6 +306,10 @@ pub(super) fn check<W: Widget>(properties: &mut DefaultProperties, p: &Palette<C
         rule: None,
         lead: 0.,
     }
-    .push(&mut stack, &Selector::new());
+}
+
+pub(super) fn check<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, scale: f64) {
+    let mut stack = PropertyStack::new();
+    indicator(p, scale).push(&mut stack, &Selector::new(), STRONG);
     properties.insert_stack::<W>(stack);
 }

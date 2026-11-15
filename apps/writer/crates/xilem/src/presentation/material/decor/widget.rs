@@ -1,4 +1,5 @@
-use super::Decoration;
+use super::{Bar, Decoration};
+use xilem::masonry::kurbo::Rect;
 use xilem::masonry::{
     accesskit::{Node, Role},
     core::{
@@ -12,6 +13,8 @@ use xilem::masonry::{
 
 /// The ring's width and its distance inside the child's edge, in logical pixels.
 pub(super) const RING: f64 = 2.;
+/// A bar's thickness, in logical pixels.
+pub(super) const BAR: f64 = 2.;
 
 pub(crate) struct Decor {
     decoration: Decoration,
@@ -72,6 +75,16 @@ impl Widget for Decor {
         _: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
+        if let Decoration::Bar(Some(Bar { color, inset, lift })) = self.decoration {
+            let edge = ctx.border_box();
+            let bar = Rect::new(
+                edge.x0 + inset,
+                edge.y1 - lift - BAR,
+                edge.x1 - inset,
+                edge.y1 - lift,
+            );
+            painter.fill(bar, color).draw();
+        }
         if let Decoration::Ring(Some(color)) = self.decoration
             && ctx.has_focus_target()
         {

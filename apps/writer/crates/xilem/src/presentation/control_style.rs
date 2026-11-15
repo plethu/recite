@@ -14,9 +14,12 @@ pub(crate) enum ControlStyle {
     /// A quiet action on the desk: no fill until hovered.
     Action,
     Navigation,
+    /// An unchosen segment: quiet on its tonal track.
     Segment,
-    /// The chosen segment of a group: a solid stamp.
-    Selected,
+    /// The chosen segment: the reading surface on the track, with its ink bar painted above.
+    Chosen,
+    /// A text tab; the chosen one carries an underline painted above it.
+    Tab,
     Manuscript,
     /// A field on paper: the default well, named so a field can move between hosts in place.
     Field,
@@ -35,7 +38,8 @@ impl ControlStyle {
             Self::Action => "writer-action",
             Self::Navigation => "writer-navigation",
             Self::Segment => "writer-segment",
-            Self::Selected => "writer-selected",
+            Self::Chosen => "writer-chosen",
+            Self::Tab => "writer-tab",
             Self::Manuscript => "writer-manuscript",
             Self::Field => "writer-field",
             Self::DeskField => "writer-desk-field",

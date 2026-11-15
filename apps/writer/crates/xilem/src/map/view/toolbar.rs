@@ -4,6 +4,7 @@ use crate::presentation::space;
 use crate::presentation::{Icon, print};
 use crate::presentation::{field_text, search_field};
 use recite_writer_model::StructuralCommand;
+use recite_writer_session::palette::TONAL;
 use xilem::core::one_of::Either;
 use xilem::view::{GridExt, GridParams, GridTrackSize, grid, text_input};
 mod compact;
@@ -99,12 +100,12 @@ fn search(
         state.ui_scale(),
         state.palette.muted,
         true,
+        Some(width),
         text_input(scene.search.clone(), Writer::find_map_beat)
             .text_size(field_text(state.ui_scale()))
             .placeholder("Find a beat…")
             .disabled(blocked)
-            .prop(properties::TextAreaLabel::new("Find a beat"))
-            .width(width.px()),
+            .prop(properties::TextAreaLabel::new("Find a beat")),
     )
 }
 fn zoom(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -138,7 +139,7 @@ fn zoom(state: &Writer) -> impl WidgetView<Writer> + use<> {
         print::action(scale, "Fit", false, Writer::fit_map),
     ))
     .gap(space::UNIT.px())
-    .border_color(state.palette.rule)
-    .border_width(1.px())
-    .corner_radius(3.px())
+    // One tonal track groups the zoom controls, like a segment's; nothing is outlined.
+    .background_color(state.palette.ink.with_alpha(TONAL))
+    .corner_radius(2.px())
 }

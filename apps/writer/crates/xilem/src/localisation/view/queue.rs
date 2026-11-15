@@ -62,14 +62,10 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 scale,
                 writer.palette.muted,
                 false,
+                Some((writer.script_width() - 200. * f64::from(scale)).max(180.)),
                 text_input(state.query.text.clone(), Writer::set_catalogue_query)
                     .text_size(field_text(scale))
-                    .prop(TextAreaLabel::new("Search translations"))
-                    .width(
-                        (writer.script_width() - 200. * f64::from(scale))
-                            .max(180.)
-                            .px(),
-                    ),
+                    .prop(TextAreaLabel::new("Search translations")),
             ),
             text_button(scale, "Search translations", Writer::search_catalogue)
                 .disabled(blocked || !state.has_catalogue()),

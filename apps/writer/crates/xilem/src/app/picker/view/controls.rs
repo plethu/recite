@@ -68,6 +68,7 @@ pub(super) fn query(
         scale,
         ink,
         false,
+        Some(width),
         text_input(
             picker.map_or_else(String::new, |picker| picker.query.clone()),
             |app: &mut App, value: String| app.filter_picker(value),
@@ -76,7 +77,6 @@ pub(super) fn query(
         .on_enter(|app: &mut App, _| app.submit_picker())
         .on_cancel(|app: &mut App, _| app.dismiss_picker())
         .prop(TextAreaLabel::new("Search query"))
-        .prop(QueryField(true))
-        .width(width.px()),
+        .prop(QueryField(true)),
     )
 }

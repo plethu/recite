@@ -1,5 +1,5 @@
 //! Window identity and workspace commands live outside the manuscript's reading measure.
-use crate::presentation::segments::{segment, segments};
+use crate::presentation::segments::{tab, tabs};
 use crate::presentation::space;
 use crate::presentation::{identity, label, paragraph, print};
 use crate::{
@@ -144,10 +144,9 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
 /// Writing and localising are the app's two modes, chosen from the tab row.
 fn authoring_modes(writer: &Writer, searching: bool) -> impl WidgetView<App> + use<> {
     let localise = writer.workspaces.screen == crate::workspaces::Screen::Localisation;
-    segments(
-        &writer.palette,
+    tabs(
         [("Write", false), ("Localise", true)].map(|(title, selected)| {
-            segment(
+            tab(
                 writer.ui_scale(),
                 &writer.palette,
                 title,

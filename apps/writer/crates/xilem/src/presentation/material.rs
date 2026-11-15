@@ -14,12 +14,17 @@ use xilem::{
 
 mod decor;
 mod grain;
-pub(crate) use decor::{Decorated, Decoration};
+pub(crate) use decor::{Bar, Decorated, Decoration};
 pub(crate) use grain::{desk, grain};
 
 /// Filled controls show keyboard focus as a ring of `color` inside their edge.
 pub(crate) fn focus_ring<V>(color: Option<Color>, child: V) -> Decorated<V> {
     Decorated::new(Decoration::Ring(color), child)
+}
+
+/// A 2px bar along the bottom of `child`, or nothing while `bar` is `None`.
+pub(crate) fn bar<V>(bar: Option<Bar>, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Bar(bar), child)
 }
 
 fn dots(bounds: Rect) -> BezPath {

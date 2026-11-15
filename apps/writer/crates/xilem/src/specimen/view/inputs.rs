@@ -41,13 +41,13 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             scale,
             palette.muted,
             false,
+            Some(640.),
             text_input(state.query.clone(), |state: &mut Specimen, text| {
                 state.query = text
             })
             .placeholder("Scene title")
             .text_size(field_text(scale))
-            .prop(TextAreaLabel::new("Find a destination"))
-            .width(640.px()),
+            .prop(TextAreaLabel::new("Find a destination")),
         ),)),
         label(scale, format!("Destination: {}", state.destination)),
         flex_col(destinations)

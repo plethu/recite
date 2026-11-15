@@ -18,6 +18,18 @@ pub(crate) enum Decoration {
     /// A 2px ring inside the child's edge while focus is within it, for filled controls whose
     /// own border would vanish into the fill.
     Ring(Option<Color>),
+    /// A 2px bar along the child's bottom: a chosen tab's underline or a chosen segment's mark.
+    Bar(Option<Bar>),
+}
+
+/// Where a [`Decoration::Bar`] sits inside its child.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct Bar {
+    pub color: Color,
+    /// Distance in from the left and right edges.
+    pub inset: f64,
+    /// Distance up from the bottom edge to the bar's lower edge.
+    pub lift: f64,
 }
 
 pub(crate) struct Decorated<V> {

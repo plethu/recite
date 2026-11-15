@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::control_style::ControlStyle;
+use crate::presentation::search::LEAD;
 use recite_writer_session::palette::{INK_HOVER, TONAL, TONAL_DISABLED, TONAL_HOVER};
 use xilem::masonry::{
     accesskit::{Action, ActionRequest, TreeId},
@@ -331,7 +332,7 @@ fn every_class_takes_ink_on_hover_two_pixel_focus_and_a_sunk_press_inside_one_bo
 }
 
 #[test]
-fn a_selected_segment_is_a_flush_stamp_that_keeps_its_box_through_every_state() {
+fn a_chosen_segment_is_the_reading_surface_with_an_accent_focus_ring_in_one_box() {
     for dark in [false, true] {
         let config = WriterConfig {
             theme: if dark {
@@ -343,7 +344,7 @@ fn a_selected_segment_is_a_flush_stamp_that_keeps_its_box_through_every_state() 
         };
         let palette = palette(&config);
         let radio = NewWidget::new(RadioButton::new(true, "Script"))
-            .with_class(ControlStyle::Selected.class());
+            .with_class(ControlStyle::Chosen.class());
         let id = radio.id();
         let mut harness = TestHarness::create_with_size(
             properties(&palette, 1.),
@@ -356,19 +357,21 @@ fn a_selected_segment_is_a_flush_stamp_that_keeps_its_box_through_every_state() 
                 widget.ctx().border_box().size(),
                 widget.get_prop::<Background>().clone(),
                 widget.get_prop::<BorderColor>().color,
+                widget.get_prop::<BorderWidth>().width.get(),
             )
         };
-        let (size, fill, border) = state(&harness);
+        let (size, fill, border, _) = state(&harness);
+        // No stamp: the chosen chip is paper on the tonal track; its ink bar is painted above.
         assert_eq!(
             (fill, border),
-            (Background::Color(palette.stamp), palette.stamp)
+            (Background::Color(palette.surface), Color::TRANSPARENT)
         );
         harness.mouse_move_to(id);
         harness.focus_on(Some(id));
-        let (focused, _, border) = state(&harness);
-        assert_eq!(focused, size);
-        // Accent on a stamp is 1.63:1 in dark mode; the ring in `on_stamp` carries focus.
-        assert_ne!(border, palette.accent);
+        // Masonry strokes a radio's 2px focus ring outside it in the border colour; the border
+        // itself stays zero wide, so the hidden indicator draws nothing.
+        let (focused, _, border, width) = state(&harness);
+        assert_eq!((focused, border, width), (size, palette.accent, 0.));
     }
 }
 
@@ -415,7 +418,7 @@ fn fields_are_tonal_wells_whose_bottom_rule_follows_the_host_and_whose_focus_rin
         );
         let (_, _, _, _, desk_rule, desk_left) = field(&harness, desk_id);
         assert_eq!(desk_rule.color, palette.desk_well_rule);
-        assert_eq!(desk_left - left, crate::presentation::search::LEAD);
+        assert_eq!(desk_left - left, LEAD);
         harness.focus_on(Some(paper_id));
         let focused = field(&harness, paper_id);
         assert_eq!(

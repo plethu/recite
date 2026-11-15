@@ -2,9 +2,13 @@
 //!
 //! Masonry offers every scrollable Portal as a Tab stop but gives it no accessible name, and its
 //! focus draws nothing. Writer's panes keep keyboard scrolling without being stops: page and
-//! arrow keys from any control inside bubble to the pane, and its scrollbars stay focusable. So a
-//! Tab move that lands on a pane continues to the next stop in the same direction.
+//! arrow keys from any control inside bubble to the pane, and its scrollbars stay focusable.
+//!
+//! Masonry also makes every radio a Tab stop. A radio group is one stop, its checked choice (or
+//! its first, while none is checked), and arrow keys move within it (see `radio`). So a Tab move
+//! that lands on a pane or on another choice of a group continues in the same direction.
 use super::*;
+use crate::presentation::GroupStop;
 use xilem::masonry::{accesskit::Role, core::WidgetRef};
 
 #[derive(Default)]
@@ -34,7 +38,8 @@ impl Reveal {
     }
 }
 
-/// Move focus off an unnamed scroll pane to the next Tab stop in the same direction.
+/// Move focus off an unnamed scroll pane, or a radio that is not its group's stop, to the next
+/// Tab stop in the same direction.
 pub(crate) fn past_panes(root: &mut RenderRoot, backward: bool) {
     let Some(focused) = root.focused_widget() else {
         return;
@@ -61,20 +66,82 @@ pub(crate) fn past_panes(root: &mut RenderRoot, backward: bool) {
     }
 }
 
-/// Focusable widgets in Masonry's Tab order (preorder), each marked when it is a scroll pane.
+/// One focusable widget in Masonry's Tab order.
+struct Focusable {
+    id: WidgetId,
+    pane: bool,
+    /// The radio group it belongs to, and whether it is checked.
+    group: Option<(WidgetId, bool)>,
+}
+
+/// Focusable widgets in Masonry's Tab order (preorder), each marked when Tab passes over it.
 fn stops(root: WidgetRef<'_, dyn Widget>) -> Vec<(WidgetId, bool)> {
-    let mut stops = Vec::new();
-    let mut pending = vec![root];
-    while let Some(widget) = pending.pop() {
-        if widget.ctx().is_stashed() {
-            continue;
-        }
-        if widget.ctx().accepts_focus() && !widget.ctx().is_disabled() {
-            stops.push((widget.id(), is_pane(&widget)));
-        }
-        pending.extend(widget.children().into_iter().rev());
+    let mut found = Vec::new();
+    walk(root, None, &mut found);
+    let stop = |group: WidgetId| {
+        let mut members = found
+            .iter()
+            .filter(|other| other.group.is_some_and(|(id, _)| id == group));
+        let first = members.clone().next().map(|member| member.id);
+        members
+            .find(|member| member.group.is_some_and(|(_, checked)| checked))
+            .map(|member| member.id)
+            .or(first)
+    };
+    found
+        .iter()
+        .map(|focusable| {
+            let passed = focusable.pane
+                || focusable
+                    .group
+                    .is_some_and(|(group, _)| stop(group) != Some(focusable.id));
+            (focusable.id, passed)
+        })
+        .collect()
+}
+
+fn walk(widget: WidgetRef<'_, dyn Widget>, group: Option<WidgetId>, found: &mut Vec<Focusable>) {
+    if widget.ctx().is_stashed() {
+        return;
     }
-    stops
+    let role = widget.accessibility_role();
+    let group = if role == Role::RadioGroup {
+        Some(widget.id())
+    } else {
+        group
+    };
+    if widget.ctx().accepts_focus() && !widget.ctx().is_disabled() {
+        found.push(Focusable {
+            id: widget.id(),
+            pane: is_pane(&widget),
+            group: (role == Role::RadioButton)
+                .then_some(group)
+                .flatten()
+                .map(|group| (group, widget.get_prop::<GroupStop>().0)),
+        });
+    }
+    for child in widget.children() {
+        walk(child, group, found);
+    }
+}
+
+/// The enabled choices of the radio group that holds `radio`, in Tab order.
+pub(super) fn choices(root: WidgetRef<'_, dyn Widget>, radio: WidgetId) -> Vec<WidgetId> {
+    let mut found = Vec::new();
+    walk(root, None, &mut found);
+    let Some(group) = found
+        .iter()
+        .find(|focusable| focusable.id == radio)
+        .and_then(|focusable| focusable.group)
+        .map(|(group, _)| group)
+    else {
+        return Vec::new();
+    };
+    found
+        .into_iter()
+        .filter(|focusable| focusable.group.is_some_and(|(id, _)| id == group))
+        .map(|focusable| focusable.id)
+        .collect()
 }
 
 fn is_pane(widget: &WidgetRef<'_, dyn Widget>) -> bool {

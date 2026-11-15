@@ -26,7 +26,7 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     // Writer's own shaped text (map excerpts, abbreviations) otherwise falls back to black.
     text::<ShapedText>(&mut properties, p);
     control::<Button>(&mut properties, p, scale, states::pressable::<Button>);
-    control::<RadioButton>(&mut properties, p, scale, states::pressable::<RadioButton>);
+    control::<RadioButton>(&mut properties, p, scale, states::choosable::<RadioButton>);
     control::<TextInput>(&mut properties, p, scale, states::field::<TextInput>);
     control::<Checkbox>(&mut properties, p, scale, states::check::<Checkbox>);
     properties.insert::<Checkbox, _>(CheckmarkColor { color: p.accent });

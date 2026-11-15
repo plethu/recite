@@ -6,6 +6,7 @@ mod manuscript;
 mod panes;
 mod picker;
 mod project;
+mod radio;
 mod reading;
 pub(crate) mod tab;
 mod vim;
@@ -46,6 +47,7 @@ pub(super) struct Keyboard {
     manuscript: manuscript::Fields,
     document_menu: document_menu::Focus,
     tab: tab::Reveal,
+    radio: radio::Arrows,
     reading: reading::Position,
 }
 impl Keyboard {
@@ -55,6 +57,7 @@ impl Keyboard {
         self.vim = vim::Vim::default();
         self.held = held::HeldKeys::default();
         self.tab = tab::Reveal::default();
+        self.radio = radio::Arrows::default();
     }
     pub fn blur(&mut self, root: &mut RenderRoot) {
         if let Some(context) = root
@@ -123,6 +126,13 @@ impl Keyboard {
         }
         if is_synthetic {
             return false;
+        }
+        if event.state == ElementState::Pressed
+            && self.modifiers.is_empty()
+            && self.radio.request(root, event.logical_key)
+        {
+            self.held.press(event.physical_key);
+            return true;
         }
         let Some(context) = root
             .get_widget_with_tag(TAG)
@@ -258,6 +268,7 @@ impl Keyboard {
     }
     pub fn synchronize(&mut self, root: &mut RenderRoot) {
         self.tab.synchronize(root);
+        self.radio.synchronize(root);
         let context = root
             .get_widget_with_tag(TAG)
             .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone());

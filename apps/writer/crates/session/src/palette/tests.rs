@@ -270,3 +270,30 @@ fn a_field_well_is_identified_by_a_rule_of_three_to_one_on_every_host() {
         );
     }
 }
+
+#[test]
+fn mode_switch_marks_hold_three_to_one_where_they_sit() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        let desk = p.grained_desk();
+        // The chosen tab's underline sits on the desk at its darkest grain point.
+        assert!(
+            contrast(p.teal, desk) >= 3.,
+            "tab underline: dark={dark} monochrome={monochrome}: {}",
+            contrast(p.teal, desk)
+        );
+        // The chosen segment's ink bar sits on the paper chip, over the tonal track on the desk.
+        for background in [p.surface, p.tint(desk, TONAL), p.tint(p.canvas, TONAL)] {
+            assert!(
+                contrast(p.ink, background) >= 3.,
+                "segment bar: dark={dark} monochrome={monochrome} {background:?}"
+            );
+        }
+        // Chip text, chosen or not, on paper and on the track.
+        for background in [p.surface, p.tint(desk, TONAL)] {
+            for text in [p.ink, p.muted] {
+                assert!(contrast(text, background) >= 4.5);
+            }
+        }
+    }
+}
