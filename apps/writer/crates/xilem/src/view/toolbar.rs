@@ -65,6 +65,7 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ),
         // The galley's beat heading carries the link; wherever no heading shows, the toolbar does.
         (state.visible_workspace() == crate::map::Workspace::Map
+            || state.trial.visible
             || !super::manuscript::galley(state, &surface::Surface::resolve(state)))
         .then(|| {
             print::icon_action(
