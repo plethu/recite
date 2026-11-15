@@ -1,8 +1,9 @@
 //! The continuous scene galley: the scene's beats in order around the selected one, which alone
 //! mounts editable fields. Read-only beats come from the same accepted projection as the selected
 //! beat, so the galley never shows text the document does not hold.
-use super::{Reading, Row, flatten};
-use crate::{Phase, Writer};
+use super::{Content, Reading, Row, flatten};
+use crate::{Phase, Writer, navigation::Target};
+use recite_writer_session::location::{Location, Screen};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -60,6 +61,40 @@ impl Writer {
             let id = block.id.clone();
             self.inspect(id);
         }
+    }
+
+    /// Mount a read-only beat's fields and put the caret in its first passage, as its "Edit beat"
+    /// heading does. A beat without passages is selected as a whole.
+    pub fn edit_beat(&mut self, index: usize) {
+        let Some(id) = self
+            .reading
+            .script()
+            .ok()
+            .and_then(|blocks| blocks.get(index))
+            .map(|block| block.id.clone())
+        else {
+            return;
+        };
+        let first = self.reading.beat_rows(index).and_then(|rows| {
+            rows.iter().find_map(|row| match &row.content {
+                Content::Passage { passage, .. } => Some(passage.id.clone()),
+                _ => None,
+            })
+        });
+        let Some(passage) = first else {
+            self.inspect(id);
+            return;
+        };
+        let location = Location {
+            screen: Screen::Write,
+            beat: Some(id),
+            passage: Some(passage),
+            source: false,
+            view: Some(recite_config::WriterView::Script),
+            page: 0,
+            ..self.current_location()
+        };
+        self.navigate(Target::Selection(location));
     }
 
     /// The first problem in each beat of the open scene, by beat id, in source order. A problem

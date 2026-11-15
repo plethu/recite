@@ -60,6 +60,10 @@ pub enum Action {
     },
     FieldFocus(Option<EditingTarget>),
     DismissDocumentMenu,
+    /// Ctrl+Down and Ctrl+Up: the next or previous beat of the scene.
+    StepBeat {
+        forward: bool,
+    },
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -196,6 +200,11 @@ impl Shell {
                 }
             }
             Action::PaneHint(pending) => self.pane_hint = pending,
+            Action::StepBeat { forward } => {
+                if let Some(writer) = &mut self.writer {
+                    writer.step_beat(forward);
+                }
+            }
             Action::CyclePane { forward } => {
                 if let Some(writer) = &mut self.writer {
                     writer.focus_pane(if forward {

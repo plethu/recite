@@ -80,3 +80,26 @@ fn problems_are_attributed_to_the_beat_whose_source_holds_them()
     assert!(!problems[0].1.is_empty());
     Ok(())
 }
+
+#[test]
+fn editing_a_read_only_beat_selects_its_first_passage_for_the_caret()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = project(&scene(3))?;
+    let mut writer = open(&directory)?;
+    let (sender, mut jobs) = async_mpsc::unbounded_channel();
+    writer.navigation.sender = Some(sender);
+    let runtime = tokio::runtime::Runtime::new()?;
+    writer.navigation.runtime = Some(runtime.handle().clone());
+    writer.edit_beat(2);
+    finish_navigation(&mut writer, &mut jobs)?;
+    assert_eq!(writer.reading.selected.as_deref(), Some("beat2"));
+    assert_eq!(
+        writer.session.model().view(),
+        &recite_writer_model::View::Passage("b000002".into())
+    );
+    assert!(
+        writer.attention.edit_request().is_some(),
+        "the caret follows"
+    );
+    Ok(())
+}
