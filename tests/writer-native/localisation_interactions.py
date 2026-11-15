@@ -76,8 +76,11 @@ def _reveal(window, find, label):
 def open_catalogue(window, path):
     command(window, "Localise")
     show_queue(window)
-    if not window.find("Catalogue path") and window.find("Catalogue files"):
-        window.act("Catalogue files")
+    if not window.find("Catalogue path"):
+        # Without a catalogue the path waits behind "Open a catalogue…"; with one, behind its files.
+        window.act(
+            "Open a catalogue…" if window.find("Open a catalogue…") else "Catalogue files"
+        )
     reveal(window, "Catalogue path")
     fill(window, "Catalogue path", str(path))
     window.reveal_end("Open catalogue")

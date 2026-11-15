@@ -21,6 +21,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     writer.open_localisation();
     let mut mounted = Mounted::new(writer, surface);
     let mut tools = ToolDriver::new(&mut mounted.state);
+    mounted.activate("Open a catalogue…");
     mounted.type_text("Catalogue path", po.to_str().unwrap());
     mounted.activate("Open catalogue");
     tools.finish(&mut mounted.state);
