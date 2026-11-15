@@ -34,6 +34,13 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
 - **Slips and backdrop.** Menus, pickers and modal panels are slips: floating paper with a 1px
   ink edge and a hard stock offset. Behind a modal slip the backdrop is a static overprint dim
   under a paper-toned print texture; nothing blurs or animates.
+- **Modal surfaces.** Pickers open 640px wide 72px from the top over the backdrop, one 32px line
+  per result in a virtual list with no paging. The close decision is a slip over the dimmed
+  document. Settings is a 360px side sheet over the live workspace, whose manuscript is the
+  preview. Each takes focus as it opens, returns it as it closes, and closes on Esc.
+- **Tool sheets.** Tool and Localise screens share Script's toolbar. Each sheet opens with its
+  title in Display, its own actions and a named Return to writing icon; Open in editor, Save all
+  and Close live in the Workspace menu.
 - **Galley.** Script is one continuous scene on a sheet grid (`presentation/grid.rs`): pad,
   margin column, measure capped at 68 characters, destination column. Every beat is set at the
   same metrics; only the selected one mounts fields, so choosing a beat never reflows the page. A
