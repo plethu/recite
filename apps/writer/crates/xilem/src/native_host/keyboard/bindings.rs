@@ -67,6 +67,7 @@ pub(super) fn mounted(
         .or_else(|| project::submit(context, kind, key, modifiers))
         .or_else(|| document_menu::escape(context, key, modifiers))
         .or_else(|| history::key(context, key, modifiers))
+        .or_else(|| modal_key(context, key, modifiers))
         .or_else(|| beat_key(context, key, modifiers))
         .or_else(|| focus_key(context, key, modifiers))
 }
@@ -96,4 +97,10 @@ fn focus_key(context: &Context, key: &keyboard::Key, modifiers: Modifiers) -> Op
         && modifiers == Modifiers::default()
         && *key == keyboard::Key::Named(NamedKey::Escape))
     .then_some(Action::Command(WriterCommand::Focus))
+}
+/// Escape dismisses a modal surface when no picker above it takes the key first.
+fn modal_key(context: &Context, key: &keyboard::Key, modifiers: Modifiers) -> Option<Action> {
+    let modal = context.modal.filter(|_| !context.picker_open)?;
+    (modifiers == Modifiers::default() && *key == keyboard::Key::Named(NamedKey::Escape))
+        .then_some(Action::DismissModal(modal))
 }

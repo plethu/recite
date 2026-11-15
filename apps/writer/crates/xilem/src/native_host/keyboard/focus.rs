@@ -1,6 +1,7 @@
 //! Native focus moves through RenderRoot's safe API; mounted fields retain their identities.
 use super::*;
 use crate::app::keyboard::CommandGeneration;
+use crate::app::keyboard::DefaultFocus;
 use crate::app::picker;
 use crate::attention::{EditRequest, EditingTarget};
 use crate::localisation::{TranslationField, TranslationTarget};
@@ -8,6 +9,7 @@ use crate::presentation::row::RowButton;
 use crate::rules::view;
 use xilem::masonry::accesskit;
 use xilem::masonry::core::{Widget, WidgetRef};
+use xilem::masonry::widgets::Button;
 
 #[derive(Clone, Default, PartialEq)]
 pub(super) enum Kind {
@@ -23,6 +25,10 @@ pub(super) enum Kind {
 #[derive(Default)]
 pub(super) struct Focus {
     picker: bool,
+    /// The modal surface over the document, and once it has taken focus, the control to return
+    /// to when it closes.
+    modal: Option<Modal>,
+    modal_return: Option<Option<WidgetId>>,
     picker_instance: Option<picker::PickerInstance>,
     return_to: Option<WidgetId>,
     last: Option<WidgetId>,
@@ -61,7 +67,38 @@ impl Focus {
         self.edit_request = request.cloned();
         super::panes::reveal_editor(root, field);
     }
+    /// Move focus into a modal surface as it opens, and back to where it was when it closes.
+    fn synchronize_modal(&mut self, root: &mut RenderRoot, context: &Context) {
+        if self.modal == context.modal {
+            // A modal mounted after its context: focus it once it has its default control.
+            if self.modal.is_some() && self.modal_return.is_none() {
+                self.enter_modal(root);
+            }
+            return;
+        }
+        match (self.modal, context.modal) {
+            (None, Some(_)) => {
+                self.modal_return = None;
+                self.enter_modal(root);
+            }
+            (Some(_), None) => {
+                if let Some(Some(target)) = self.modal_return.take() {
+                    root.focus_on(Some(target));
+                }
+            }
+            _ => self.enter_modal(root),
+        }
+        self.modal = context.modal;
+    }
+    fn enter_modal(&mut self, root: &mut RenderRoot) {
+        let Some(target) = default_focus(root) else {
+            return;
+        };
+        self.modal_return = Some(root.focused_widget().filter(|focused| *focused != target));
+        root.focus_on(Some(target));
+    }
     pub fn synchronize(&mut self, root: &mut RenderRoot, context: &Context) {
+        self.synchronize_modal(root, context);
         let picker = context.picker_open;
         let generation = context.generation;
         if picker != self.picker {
@@ -169,6 +206,23 @@ fn find(root: &RenderRoot, kind: Kind) -> Option<WidgetId> {
             return widget
                 .downcast::<TextInput>()
                 .map(|input| input.area_pod().id());
+        }
+        pending.extend(widget.children());
+    }
+    None
+}
+/// The enabled, mounted control marked to take focus when its modal surface opens.
+fn default_focus(root: &RenderRoot) -> Option<WidgetId> {
+    let mut pending = vec![root.get_layer_root(0)];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() || widget.ctx().is_disabled() {
+            continue;
+        }
+        if widget
+            .downcast::<Button>()
+            .is_some_and(|button| button.get_prop::<DefaultFocus>().0)
+        {
+            return Some(widget.id());
         }
         pending.extend(widget.children());
     }

@@ -37,6 +37,7 @@ pub(super) fn context() -> (Context, mpsc::Receiver<SendMessage>) {
             editing: None,
             field_restoration: None,
             keymap: recite_config::Keymap::default(),
+            modal: None,
             proxy: MessageProxy::new(Arc::new(Recorder(sender)), Arc::from([])),
         },
         receiver,

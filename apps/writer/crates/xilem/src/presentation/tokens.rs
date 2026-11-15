@@ -49,6 +49,10 @@ pub(crate) mod size {
     pub const PICKER_TOP: f64 = 72.;
     /// The most result lines a picker shows at once; the rest scroll.
     pub const PICKER_ROWS: usize = 8;
+    /// The Settings side sheet's width.
+    pub const SIDE_SHEET: f64 = 360.;
+    /// The close decision slip's width.
+    pub const DECISION_WIDTH: f64 = 560.;
 }
 
 /// A text control's padding and 1px border before its words, at `scale`: where a heading or

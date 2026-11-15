@@ -38,7 +38,17 @@ pub struct Context<P> {
     pub editing: Option<EditingTarget>,
     pub field_restoration: Option<FieldRestoration>,
     pub keymap: recite_config::Keymap,
+    /// A modal surface over the document: focus moves into it and Esc dismisses it.
+    pub modal: Option<Modal>,
     pub proxy: P,
+}
+/// A surface that takes focus from the document until it is dismissed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Modal {
+    /// The Settings side sheet.
+    Settings,
+    /// The decision to keep, save or discard work before closing.
+    CloseDecision,
 }
 pub struct Invocation {
     pub action: Action,
@@ -60,6 +70,8 @@ pub enum Action {
     },
     FieldFocus(Option<EditingTarget>),
     DismissDocumentMenu,
+    /// Esc on a modal surface: close Settings, or keep editing rather than close.
+    DismissModal(Modal),
     /// Ctrl+Down and Ctrl+Up: the next or previous beat of the scene.
     StepBeat {
         forward: bool,
@@ -120,6 +132,13 @@ impl Scope {
                 })
                 .and_then(|writer| writer.editing.clone()),
             keymap: self.keymap,
+            modal: if self.writer.as_ref().is_some_and(|writer| writer.confirming) {
+                Some(Modal::CloseDecision)
+            } else if self.settings {
+                Some(Modal::Settings)
+            } else {
+                None
+            },
             field_restoration: self
                 .writer
                 .as_ref()
@@ -197,6 +216,12 @@ impl Shell {
             Action::DismissDocumentMenu => {
                 if let Some(writer) = &mut self.writer {
                     writer.document_menu = DocumentMenu::Dismissed;
+                }
+            }
+            Action::DismissModal(Modal::Settings) => self.close_settings(),
+            Action::DismissModal(Modal::CloseDecision) => {
+                if let Some(writer) = &mut self.writer {
+                    writer.keep_editing();
                 }
             }
             Action::PaneHint(pending) => self.pane_hint = pending,

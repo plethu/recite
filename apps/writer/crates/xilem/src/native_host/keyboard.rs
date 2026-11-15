@@ -14,7 +14,7 @@ mod radio;
 mod reading;
 pub(crate) mod tab;
 mod vim;
-use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
+use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, Modal, TAG};
 use crate::app::picker::Search;
 use recite_config::WriterCommand;
 use recite_writer_session::commands::keybindings::{self, Input, Key, Modifiers, PhysicalKey};

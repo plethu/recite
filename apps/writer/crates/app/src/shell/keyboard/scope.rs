@@ -22,6 +22,8 @@ pub(super) struct DocumentScope {
     pub(super) editing: Option<EditingTarget>,
     pub(super) field_restoration: Option<FieldRestoration>,
     pub(super) writing: bool,
+    /// The close decision is open over the document.
+    pub(super) confirming: bool,
     pub(super) screen: crate::workspaces::Screen,
     pub(super) document_menu: DocumentMenu,
 }
@@ -44,6 +46,7 @@ impl DocumentScope {
             && self.attention.same_command_scope(&other.attention)
             && self.editing == other.editing
             && self.writing == other.writing
+            && self.confirming == other.confirming
             && self.screen == other.screen
             && self.document_menu == other.document_menu
     }
@@ -86,6 +89,10 @@ impl Scope {
                     editing: EditingTarget::capture(writer),
                     field_restoration: writer.field_restoration(),
                     writing: writer.phase == Phase::Writing,
+                    confirming: matches!(
+                        writer.phase,
+                        Phase::ConfirmClose | Phase::ConfirmExit | Phase::Closing
+                    ),
                     screen: writer.workspaces.screen,
                     document_menu: writer.document_menu,
                 }

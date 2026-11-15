@@ -9,9 +9,9 @@ use xilem::{
         MessageCtx, MessageProxy, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker,
     },
     masonry::{
-        core::{Property, WidgetTag},
+        core::{Property, UsesProperty, WidgetTag},
         properties::Dimensions,
-        widgets::Passthrough,
+        widgets::{Button, Passthrough},
     },
 };
 
@@ -20,6 +20,18 @@ use recite_writer_app::shell::keyboard::Context as CommandContext;
 pub(crate) type Context = CommandContext<MessageProxy<Invocation>>;
 #[derive(Clone, Default)]
 pub(crate) struct KeyboardContext(pub Option<Arc<Context>>);
+
+/// Marks the control a modal surface focuses when it opens, such as "Keep editing" on the close
+/// decision or the Settings sheet's close action.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct DefaultFocus(pub bool);
+impl Property for DefaultFocus {
+    fn static_default() -> &'static Self {
+        static OTHER: DefaultFocus = DefaultFocus(false);
+        &OTHER
+    }
+}
+impl UsesProperty<DefaultFocus> for Button {}
 impl Property for KeyboardContext {
     fn static_default() -> &'static Self {
         static EMPTY: KeyboardContext = KeyboardContext(None);

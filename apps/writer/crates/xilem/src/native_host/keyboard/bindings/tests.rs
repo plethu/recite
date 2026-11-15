@@ -42,3 +42,20 @@ fn escape_leaves_focus_mode_unless_a_picker_takes_it() {
     context.picker_open = true;
     assert!(focus_key(&context, &escape, Modifiers::default()).is_none());
 }
+
+#[test]
+fn escape_dismisses_a_modal_surface_unless_a_picker_takes_it() {
+    let (mut context, _) = context();
+    let escape = keyboard::Key::Named(NamedKey::Escape);
+    assert!(modal_key(&context, &escape, Modifiers::default()).is_none());
+    for modal in [Modal::Settings, Modal::CloseDecision] {
+        context.modal = Some(modal);
+        assert_eq!(
+            modal_key(&context, &escape, Modifiers::default()),
+            Some(Action::DismissModal(modal))
+        );
+        context.picker_open = true;
+        assert!(modal_key(&context, &escape, Modifiers::default()).is_none());
+        context.picker_open = false;
+    }
+}
