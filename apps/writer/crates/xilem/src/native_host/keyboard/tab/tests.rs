@@ -48,3 +48,27 @@ fn tab_passes_over_unnamed_scroll_panes_in_both_directions() {
     past_panes(harness.render_root(), false);
     assert_eq!(harness.focused_widget_id(), Some(before_id));
 }
+
+#[test]
+fn tab_cycles_within_a_mounted_modal_surface() {
+    let behind = NewWidget::new(Button::with_text("Behind"));
+    let first = NewWidget::new(Button::with_text("Keep editing"));
+    let last = NewWidget::new(Button::with_text("Close"));
+    let (behind_id, first_id, last_id) = (behind.id(), first.id(), last.id());
+    let surface = NewWidget::new(SizedBox::new(NewWidget::new(
+        Flex::column().with_fixed(first).with_fixed(last),
+    )))
+    .with_props(ModalSurface(true));
+    let root = Flex::column().with_fixed(behind).with_fixed(surface);
+    let mut harness =
+        TestHarness::create_with_size(default_property_set(), NewWidget::new(root), (300, 300));
+    harness.focus_on(Some(last_id));
+    // Masonry alone would leave the surface for the document behind it.
+    harness.press_tab_key(false);
+    past_panes(harness.render_root(), false);
+    assert_eq!(harness.focused_widget_id(), Some(first_id));
+    harness.press_tab_key(true);
+    past_panes(harness.render_root(), true);
+    assert_eq!(harness.focused_widget_id(), Some(last_id));
+    assert_ne!(harness.focused_widget_id(), Some(behind_id));
+}

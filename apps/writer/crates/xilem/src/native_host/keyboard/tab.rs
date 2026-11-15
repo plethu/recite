@@ -4,12 +4,16 @@
 //! focus draws nothing. Writer's panes keep keyboard scrolling without being stops: page and
 //! arrow keys from any control inside bubble to the pane, and its scrollbars stay focusable.
 //!
+//! A mounted modal surface (a slip or sheet marked `ModalSurface`) holds Tab: stops outside it are
+//! passed over, so Tab and Shift+Tab cycle within it.
+//!
 //! Masonry also makes every radio a Tab stop. A radio group is one stop, its checked choice (or
 //! its first, while none is checked), and arrow keys move within it (see `radio`). So a Tab move
 //! that lands on a pane or on another choice of a group continues in the same direction.
 use super::*;
+use crate::app::keyboard::ModalSurface;
 use crate::presentation::GroupStop;
-use xilem::masonry::{accesskit::Role, core::WidgetRef};
+use xilem::masonry::{accesskit::Role, core::WidgetRef, widgets::SizedBox};
 
 #[derive(Default)]
 pub(super) enum Reveal {
@@ -70,6 +74,8 @@ pub(crate) fn past_panes(root: &mut RenderRoot, backward: bool) {
 struct Focusable {
     id: WidgetId,
     pane: bool,
+    /// Inside a modal surface.
+    modal: bool,
     /// The radio group it belongs to, and whether it is checked.
     group: Option<(WidgetId, bool)>,
 }
@@ -77,7 +83,8 @@ struct Focusable {
 /// Focusable widgets in Masonry's Tab order (preorder), each marked when Tab passes over it.
 fn stops(root: WidgetRef<'_, dyn Widget>) -> Vec<(WidgetId, bool)> {
     let mut found = Vec::new();
-    walk(root, None, &mut found);
+    walk(root, None, false, &mut found);
+    let modal = found.iter().any(|focusable| focusable.modal);
     let stop = |group: WidgetId| {
         let mut members = found
             .iter()
@@ -92,6 +99,7 @@ fn stops(root: WidgetRef<'_, dyn Widget>) -> Vec<(WidgetId, bool)> {
         .iter()
         .map(|focusable| {
             let passed = focusable.pane
+                || (modal && !focusable.modal)
                 || focusable
                     .group
                     .is_some_and(|(group, _)| stop(group) != Some(focusable.id));
@@ -100,10 +108,19 @@ fn stops(root: WidgetRef<'_, dyn Widget>) -> Vec<(WidgetId, bool)> {
         .collect()
 }
 
-fn walk(widget: WidgetRef<'_, dyn Widget>, group: Option<WidgetId>, found: &mut Vec<Focusable>) {
+fn walk(
+    widget: WidgetRef<'_, dyn Widget>,
+    group: Option<WidgetId>,
+    modal: bool,
+    found: &mut Vec<Focusable>,
+) {
     if widget.ctx().is_stashed() {
         return;
     }
+    let modal = modal
+        || widget
+            .downcast::<SizedBox>()
+            .is_some_and(|surface| surface.get_prop::<ModalSurface>().0);
     let role = widget.accessibility_role();
     let group = if role == Role::RadioGroup {
         Some(widget.id())
@@ -114,6 +131,7 @@ fn walk(widget: WidgetRef<'_, dyn Widget>, group: Option<WidgetId>, found: &mut 
         found.push(Focusable {
             id: widget.id(),
             pane: is_pane(&widget),
+            modal,
             group: (role == Role::RadioButton)
                 .then_some(group)
                 .flatten()
@@ -121,14 +139,14 @@ fn walk(widget: WidgetRef<'_, dyn Widget>, group: Option<WidgetId>, found: &mut 
         });
     }
     for child in widget.children() {
-        walk(child, group, found);
+        walk(child, group, modal, found);
     }
 }
 
 /// The enabled choices of the radio group that holds `radio`, in Tab order.
 pub(super) fn choices(root: WidgetRef<'_, dyn Widget>, radio: WidgetId) -> Vec<WidgetId> {
     let mut found = Vec::new();
-    walk(root, None, &mut found);
+    walk(root, None, false, &mut found);
     let Some(group) = found
         .iter()
         .find(|focusable| focusable.id == radio)

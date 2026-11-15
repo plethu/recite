@@ -11,7 +11,7 @@ use xilem::{
     masonry::{
         core::{Property, UsesProperty, WidgetTag},
         properties::Dimensions,
-        widgets::{Button, Passthrough},
+        widgets::{Button, Passthrough, SizedBox},
     },
 };
 
@@ -32,6 +32,17 @@ impl Property for DefaultFocus {
     }
 }
 impl UsesProperty<DefaultFocus> for Button {}
+
+/// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct ModalSurface(pub bool);
+impl Property for ModalSurface {
+    fn static_default() -> &'static Self {
+        static OTHER: ModalSurface = ModalSurface(false);
+        &OTHER
+    }
+}
+impl UsesProperty<ModalSurface> for SizedBox {}
 impl Property for KeyboardContext {
     fn static_default() -> &'static Self {
         static EMPTY: KeyboardContext = KeyboardContext(None);

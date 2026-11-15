@@ -2,7 +2,8 @@
 //! Preferences sit in groups under Section heads with their controls on the right; changes apply
 //! at once. The sheet takes focus when it opens, gives it back when it closes, and Esc closes it.
 use super::*;
-use crate::app::keyboard::DefaultFocus;
+use crate::app::keyboard::{DefaultFocus, ModalSurface};
+use crate::presentation::group::dialog;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::slip::slip;
 use crate::presentation::tokens::size;
@@ -28,42 +29,46 @@ pub(in crate::app) fn sheet_width(app: &App) -> f64 {
 pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     let width = sheet_width(app) - 2. * space::KINDS;
-    slip(
-        &app.theme.palette,
-        sized_box(
-            portal(
-                flex_col((
-                    flex_row((
-                        Type::Section.label(scale, "Settings"),
-                        FlexSpacer::Flex(1.),
-                        print::icon_action(
-                            scale,
-                            "Done with settings",
-                            Icon::Close,
-                            &app.theme.palette,
-                            false,
-                            |app: &mut App| app.close_settings(),
-                        )
-                        .prop(DefaultFocus(true)),
+    dialog(
+        "Settings",
+        slip(
+            &app.theme.palette,
+            sized_box(
+                portal(
+                    flex_col((
+                        flex_row((
+                            Type::Section.label(scale, "Settings"),
+                            FlexSpacer::Flex(1.),
+                            print::icon_action(
+                                scale,
+                                "Done with settings",
+                                Icon::Close,
+                                &app.theme.palette,
+                                false,
+                                |app: &mut App| app.close_settings(),
+                            )
+                            .prop(DefaultFocus(true)),
+                        ))
+                        .cross_axis_alignment(CrossAxisAlignment::Center)
+                        .width(width.px()),
+                        pages(app),
+                        indexed_stack((personal(app, width), keyboard(app, width)))
+                            .active(usize::from(app.settings.keyboard)),
+                        app.preferences
+                            .error
+                            .as_ref()
+                            .map(|error| prose(scale, error.clone())),
                     ))
-                    .cross_axis_alignment(CrossAxisAlignment::Center)
-                    .width(width.px()),
-                    pages(app),
-                    indexed_stack((personal(app, width), keyboard(app, width)))
-                        .active(usize::from(app.settings.keyboard)),
-                    app.preferences
-                        .error
-                        .as_ref()
-                        .map(|error| prose(scale, error.clone())),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(space::KINDS.px())
-                .padding(space::KINDS.px()),
+                    .cross_axis_alignment(CrossAxisAlignment::Start)
+                    .gap(space::KINDS.px())
+                    .padding(space::KINDS.px()),
+                )
+                .constrain_horizontal(true),
             )
-            .constrain_horizontal(true),
-        )
-        // The slip's 1px edge sits inside the sheet's width.
-        .dims(((sheet_width(app) - 2.).px(), Dim::Stretch)),
+            // The slip's 1px edge sits inside the sheet's width.
+            .dims(((sheet_width(app) - 2.).px(), Dim::Stretch))
+            .prop(ModalSurface(true)),
+        ),
     )
 }
 mod keyboard;

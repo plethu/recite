@@ -1,7 +1,7 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
 use crate::WriterLayout;
-use crate::app::keyboard::DefaultFocus;
+use crate::app::keyboard::{DefaultFocus, ModalSurface};
 use crate::presentation::Type;
 use crate::presentation::group::dialog;
 use crate::presentation::material::{Texture, backdrop, screen};
@@ -132,7 +132,8 @@ pub(super) fn close_decision(state: &Writer) -> Option<impl WidgetView<Writer> +
                         .gap(space::TEXT.px()),
                     )
                     .padding(space::GROUPS.px())
-                    .width((width + 2. * space::GROUPS).px()),
+                    .width((width + 2. * space::GROUPS).px())
+                    .prop(ModalSurface(true)),
                 ),
             ),))
             .main_axis_alignment(MainAxisAlignment::Start)

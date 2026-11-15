@@ -23,6 +23,16 @@ pub(crate) fn named<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         child,
     }
 }
+/// `child` with no role of its own, made inert while `disabled`: the document behind a modal
+/// surface, which keeps its layout but neither takes input nor offers its controls.
+pub(crate) fn inert<V>(disabled: bool, child: V) -> Named<V> {
+    Named {
+        name: ArcStr::from(""),
+        role: Role::GenericContainer,
+        disabled,
+        child,
+    }
+}
 pub(crate) fn list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),

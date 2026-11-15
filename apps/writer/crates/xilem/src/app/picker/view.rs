@@ -1,6 +1,7 @@
 //! The picker: a slip anchored near the top of the window over the backdrop, with the query, the
 //! scope where there is one, one 32px line per result and one hint line.
 use super::{App, Entry, Item, Mode, Picker, Purpose, Search};
+use crate::app::keyboard::ModalSurface;
 use crate::presentation::row::RowButton;
 use crate::presentation::slip::slip;
 use crate::presentation::tokens::size;
@@ -142,7 +143,8 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                     .gap(space::TEXT.px()),
                 )
                 .width((width + 2. * space::KINDS).px())
-                .padding(space::KINDS.px()),
+                .padding(space::KINDS.px())
+                .prop(ModalSurface(true)),
             ),
         ),
     )
