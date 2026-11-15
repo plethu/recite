@@ -11,9 +11,7 @@ use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, Dim, UnitPoint},
     style::{Padding, Style},
-    view::{
-        CrossAxisAlignment, FlexExt, MainAxisAlignment, flex_col, indexed_stack, sized_box, zstack,
-    },
+    view::{CrossAxisAlignment, FlexExt, flex_col, indexed_stack, sized_box, zstack},
 };
 pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     let width = app.viewport.width;
@@ -55,9 +53,10 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                                 sized_box(backdrop(
                                     app.theme.palette.backdrop,
                                     app.theme.screen.clone(),
-                                    flex_col((picker::view::picker(app),))
-                                        .main_axis_alignment(MainAxisAlignment::Center)
-                                        .cross_axis_alignment(CrossAxisAlignment::Center)
+                                    // A stack bounds the picker by the layer, so it
+                                    // scrolls its results rather than overflow at 200%.
+                                    zstack((picker::view::picker(app),))
+                                        .alignment(UnitPoint::CENTER)
                                         .dims(Dim::Stretch),
                                 ))
                                 .padding(Padding {
