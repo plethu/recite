@@ -3,13 +3,14 @@ use recite_core::DocumentKey;
 use recite_writer_model::{Passage, PassageKind, ScriptBlock, ScriptEntry, View, Workbench};
 use std::sync::Arc;
 
+pub mod galley;
 pub mod navigation;
 pub mod surface;
 pub(crate) mod window;
 pub use window::CAPACITY as PAGE;
 pub use window::{Direction, ReadingWindow};
 pub struct BeatPosition {
-    index: usize,
+    pub(crate) index: usize,
     total: usize,
 }
 impl BeatPosition {
@@ -49,6 +50,8 @@ pub struct Reading {
     key: Option<DocumentKey>,
     pub source: Option<Arc<str>>,
     script: Result<Arc<[ScriptBlock]>, String>,
+    /// Every beat's rows, in scene order; see `galley`.
+    beats: Arc<[Arc<[Row]>]>,
     block: Option<String>,
     view: Option<View>,
     pub selected: Option<String>,
@@ -73,6 +76,7 @@ impl Reading {
             key: None,
             source: None,
             script: Ok(Arc::from([])),
+            beats: Arc::from([]),
             block: None,
             view: None,
             selected: None,
@@ -102,6 +106,7 @@ impl Reading {
                 .document()
                 .script_snapshot()
                 .map_err(|error| crate::feedback::edit(&error));
+            self.shape_beats();
             self.source = Some(source);
             self.block = None;
             self.rows = Arc::from([]);
