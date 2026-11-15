@@ -1,8 +1,8 @@
 //! Direct map tools and a bounded search share the compact contextual toolbar.
 use super::*;
-use crate::presentation::field_text;
 use crate::presentation::space;
 use crate::presentation::{Icon, print};
+use crate::presentation::{field_text, search_field};
 use recite_writer_model::StructuralCommand;
 use xilem::core::one_of::Either;
 use xilem::view::{GridExt, GridParams, GridTrackSize, grid, text_input};
@@ -95,12 +95,17 @@ fn search(
     width: f64,
     blocked: bool,
 ) -> impl WidgetView<Writer> + use<> {
-    text_input(scene.search.clone(), Writer::find_map_beat)
-        .text_size(field_text(state.ui_scale()))
-        .placeholder("Find a beat…")
-        .disabled(blocked)
-        .prop(properties::TextAreaLabel::new("Find a beat"))
-        .width(width.px())
+    search_field(
+        state.ui_scale(),
+        state.palette.muted,
+        true,
+        text_input(scene.search.clone(), Writer::find_map_beat)
+            .text_size(field_text(state.ui_scale()))
+            .placeholder("Find a beat…")
+            .disabled(blocked)
+            .prop(properties::TextAreaLabel::new("Find a beat"))
+            .width(width.px()),
+    )
 }
 fn zoom(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();

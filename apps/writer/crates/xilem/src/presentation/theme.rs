@@ -9,7 +9,7 @@ use xilem::masonry::{
     core::{DefaultProperties, PropertySet, PropertyStack, Selector, Widget},
     layout::AsUnit,
     properties::{
-        Background, BorderColor, BorderWidth, CaretColor, CheckmarkColor, CheckmarkSize,
+        Background, BorderColor, BorderWidth, BoxShadow, CaretColor, CheckmarkColor, CheckmarkSize,
         CheckmarkStrokeWidth, ContentColor, CornerRadius, Padding, PlaceholderColor,
         PlaceholderTextSize, SelectionColor,
     },
@@ -28,13 +28,13 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     control::<Button>(&mut properties, p, scale, states::pressable::<Button>);
     control::<RadioButton>(&mut properties, p, scale, states::pressable::<RadioButton>);
     control::<TextInput>(&mut properties, p, scale, states::field::<TextInput>);
-    control::<Checkbox>(&mut properties, p, scale, states::field::<Checkbox>);
+    control::<Checkbox>(&mut properties, p, scale, states::check::<Checkbox>);
     properties.insert::<Checkbox, _>(CheckmarkColor { color: p.accent });
     properties.insert::<RadioButton, _>(CheckmarkColor { color: p.accent });
     indicators::<Checkbox>(&mut properties, scale);
     indicators::<RadioButton>(&mut properties, scale);
-    properties.insert::<TextInput, _>(Background::Color(p.surface));
-    properties.insert::<TextInput, _>(PlaceholderColor::new(p.placeholder));
+    // Placeholders are hints on a tonal well, where only muted text holds 4.5:1.
+    properties.insert::<TextInput, _>(PlaceholderColor::new(p.muted));
     properties.insert::<TextInput, _>(PlaceholderTextSize { size: 14. * scale });
     properties.insert::<TextInput, _>(CaretColor { color: p.ink });
     properties.insert::<TextInput, _>(SelectionColor { color: p.selection });

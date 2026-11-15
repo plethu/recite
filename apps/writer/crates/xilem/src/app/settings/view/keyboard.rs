@@ -1,6 +1,6 @@
 use super::*;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset, field_text, search_field};
 use crate::{keyed::keyed, presentation::paragraph};
 use xilem::{
     masonry::{kurbo::Axis, properties::TextAreaLabel},
@@ -51,14 +51,18 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         .collect::<Vec<_>>();
     flex_col((
         label(scale, "Find a command").typeset(Type::Section, scale),
-        text_input(
-            app.settings.query.clone(),
-            |app: &mut App, value: String| app.search_shortcuts(value),
-        )
-        .text_size(field_text(scale))
-        .placeholder("Search shortcuts")
-        .prop(TextAreaLabel::new("Search shortcuts"))
-        .width(width.min(600.).px()),
+        search_field(
+            scale,
+            app.theme.palette.muted,
+            false,
+            text_input(
+                app.settings.query.clone(),
+                |app: &mut App, value: String| app.search_shortcuts(value),
+            )
+            .text_size(field_text(scale))
+            .prop(TextAreaLabel::new("Search shortcuts"))
+            .width(width.min(600.).px()),
+        ),
         label(scale, format!("{count} matching commands")),
         radio_group(
             flex_col(choices)

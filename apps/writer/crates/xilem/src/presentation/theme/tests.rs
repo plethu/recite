@@ -371,3 +371,56 @@ fn a_selected_segment_is_a_flush_stamp_that_keeps_its_box_through_every_state() 
         assert_ne!(border, palette.accent);
     }
 }
+
+#[test]
+fn fields_are_tonal_wells_whose_bottom_rule_follows_the_host_and_whose_focus_rings_the_well() {
+    use recite_writer_session::palette::WELL;
+    for dark in [false, true] {
+        let config = WriterConfig {
+            theme: if dark {
+                WriterTheme::Dark
+            } else {
+                WriterTheme::Light
+            },
+            ..Default::default()
+        };
+        let palette = palette(&config);
+        let paper = NewWidget::new(TextInput::new("Relay Desk"));
+        let desk = NewWidget::new(TextInput::new("Find a beat"))
+            .with_class(ControlStyle::DeskField.class())
+            .with_class(ControlStyle::SearchField.class());
+        let (paper_id, desk_id) = (paper.id(), desk.id());
+        let mut harness = TestHarness::create_with_size(
+            properties(&palette, 1.),
+            NewWidget::new(Flex::column().with_fixed(paper).with_fixed(desk)),
+            (500, 200),
+        );
+        let field = |harness: &TestHarness<Flex>, id| {
+            let widget = harness.get_widget_with_id(id);
+            (
+                widget.ctx().border_box().size(),
+                widget.get_prop::<Background>().clone(),
+                widget.get_prop::<BorderColor>().color,
+                widget.get_prop::<BorderWidth>().width.get(),
+                *widget.get_prop::<BoxShadow>(),
+                widget.get_prop::<Padding>().left.get(),
+            )
+        };
+        let (size, fill, border, _, rule, left) = field(&harness, paper_id);
+        assert_eq!(fill, Background::Color(palette.ink.with_alpha(WELL)));
+        assert_eq!(border, Color::TRANSPARENT, "no outline at rest");
+        assert_eq!(
+            (rule.color, rule.offset),
+            (palette.well_rule, (0., 1.).into())
+        );
+        let (_, _, _, _, desk_rule, desk_left) = field(&harness, desk_id);
+        assert_eq!(desk_rule.color, palette.desk_well_rule);
+        assert_eq!(desk_left - left, crate::presentation::search::LEAD);
+        harness.focus_on(Some(paper_id));
+        let focused = field(&harness, paper_id);
+        assert_eq!(
+            (focused.0, focused.2, focused.3),
+            (size, palette.accent, 2.)
+        );
+    }
+}

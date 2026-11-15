@@ -1,7 +1,7 @@
 //! Frontend views and native glue over `recite_writer_app::workspaces::declarations`.
 use super::*;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset, field_text, search_field};
 pub(crate) use recite_writer_app::workspaces::declarations::*;
 mod outcome;
 mod producer;
@@ -74,12 +74,17 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 )
             }),
         label(scale, "Search declarations"),
-        text_input(panel.query.clone(), |writer: &mut Writer, query| {
-            writer.workspaces.declarations.filter(query)
-        })
-        .placeholder("Find a declaration by name or kind")
-        .text_size(field_text(scale))
-        .prop(TextAreaLabel::new("Search declarations")),
+        search_field(
+            scale,
+            writer.palette.muted,
+            false,
+            text_input(panel.query.clone(), |writer: &mut Writer, query| {
+                writer.workspaces.declarations.filter(query)
+            })
+            .placeholder("Name or kind")
+            .text_size(field_text(scale))
+            .prop(TextAreaLabel::new("Search declarations")),
+        ),
         label(
             scale,
             if panel.matches.is_empty() {

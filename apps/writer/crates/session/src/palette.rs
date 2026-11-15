@@ -12,6 +12,8 @@ pub const TONAL: f32 = 0.08;
 /// A hovered tonal action: half again the rest tint; more would drop accent text under 4.5:1 on
 /// dark floating panels.
 pub const TONAL_HOVER: f32 = 0.12;
+/// A field's well: this much ink over its host, closed by a bottom rule.
+pub const WELL: f32 = 0.06;
 /// A disabled tonal action keeps its shape at half the rest tint; its text turns muted.
 pub const TONAL_DISABLED: f32 = 0.04;
 /// The primary action's fill alpha while hovered and pressed, over whatever hosts it.
@@ -30,7 +32,6 @@ pub struct Palette<C = Rgba> {
     pub boundary: C,
     pub ink: C,
     pub muted: C,
-    pub placeholder: C,
     pub accent: C,
     pub on_accent: C,
     pub selection: C,
@@ -50,6 +51,9 @@ pub struct Palette<C = Rgba> {
     /// Filled ink for the primary action and the active segment; text on it is `on_stamp`.
     pub stamp: C,
     pub on_stamp: C,
+    /// The bottom rule of a field's well on paper, and on the grained desk; see `field_rule`.
+    pub well_rule: C,
+    pub desk_well_rule: C,
     /// Plum multiplied by teal: the darkest ink, used where two inks meet.
     pub overprint: C,
     /// Overprint navy in light mode; on dark paper it would not separate, so dark uses `floating`.
@@ -77,7 +81,6 @@ impl Palette<Rgba> {
                 &mut p.boundary,
                 &mut p.ink,
                 &mut p.muted,
-                &mut p.placeholder,
                 &mut p.accent,
                 &mut p.on_accent,
                 &mut p.selection,
@@ -101,7 +104,13 @@ impl Palette<Rgba> {
                 *c = c.monochrome();
             }
         }
-        p
+        p.with_rules()
+    }
+    /// Choose the field rules for this palette's own inks and hosts.
+    fn with_rules(mut self) -> Self {
+        self.well_rule = self.field_rule(&self.papers());
+        self.desk_well_rule = self.field_rule(&[self.grained_desk()]);
+        self
     }
     pub fn new(dark: bool) -> Self {
         let surface = color(dark, (250, 246, 239), (42, 38, 46));
@@ -124,7 +133,6 @@ impl Palette<Rgba> {
             boundary: color(dark, (127, 116, 119), (153, 139, 154)),
             ink,
             muted,
-            placeholder: color(dark, (113, 98, 109), (175, 157, 172)),
             accent: color(dark, (104, 62, 98), (212, 174, 204)),
             on_accent: color(dark, (255, 251, 245), (40, 25, 39)),
             selection: color(dark, (234, 221, 232), (72, 54, 72)),
@@ -145,6 +153,8 @@ impl Palette<Rgba> {
             teal_text: color(dark, (15, 107, 111), (130, 216, 213)),
             // 12% second ink on paper; on dark paper, 14% mint over the surface.
             plate: color(dark, (214, 221, 213), (54, 63, 69)),
+            well_rule: ink,
+            desk_well_rule: ink,
             overprint,
             status_bar: if dark { floating } else { overprint },
             status_edge: if dark { rule } else { overprint },
@@ -158,6 +168,7 @@ impl Palette<Rgba> {
             // The identity print recipe's grain ink; the dark variant is a later pass.
             grain: Rgba::from_rgb(64, 46, 51),
         }
+        .with_rules()
     }
 
     /// A hovered control's fill: ink laid over `base`.
@@ -168,6 +179,25 @@ impl Palette<Rgba> {
     /// `amount` of ink laid over `base`: a tonal fill, as the eye sees it on that host.
     pub fn tint(&self, base: Rgba, amount: f32) -> Rgba {
         Rgba::mix(base, self.ink, amount)
+    }
+
+    /// The bottom rule that identifies a field's well on every one of `hosts`: `boundary` where it
+    /// holds 3:1 against both the host and the well, otherwise `ink`.
+    pub fn field_rule(&self, hosts: &[Rgba]) -> Rgba {
+        let holds = |host: &Rgba| {
+            Rgba::contrast(self.boundary, *host) >= 3.
+                && Rgba::contrast(self.boundary, self.tint(*host, WELL)) >= 3.
+        };
+        if hosts.iter().all(holds) {
+            self.boundary
+        } else {
+            self.ink
+        }
+    }
+
+    /// The paper hosts a field can sit on away from the desk.
+    pub fn papers(&self) -> [Rgba; 4] {
+        [self.canvas, self.surface, self.inset, self.floating]
     }
 
     /// The primary fill at `alpha` over `base`.
@@ -202,7 +232,6 @@ impl<C> Palette<C> {
             boundary: convert(self.boundary),
             ink: convert(self.ink),
             muted: convert(self.muted),
-            placeholder: convert(self.placeholder),
             accent: convert(self.accent),
             on_accent: convert(self.on_accent),
             selection: convert(self.selection),
@@ -217,6 +246,8 @@ impl<C> Palette<C> {
             wordmark: convert(self.wordmark),
             stamp: convert(self.stamp),
             on_stamp: convert(self.on_stamp),
+            well_rule: convert(self.well_rule),
+            desk_well_rule: convert(self.desk_well_rule),
             overprint: convert(self.overprint),
             status_bar: convert(self.status_bar),
             status_edge: convert(self.status_edge),

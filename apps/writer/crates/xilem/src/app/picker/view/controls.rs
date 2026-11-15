@@ -1,7 +1,8 @@
 //! Query input, scope selection and concise search guidance.
 use super::*;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset, field_text, search_field};
+use xilem::peniko::Color;
 
 pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
@@ -59,21 +60,23 @@ pub(super) fn heading(scale: f32, mode: Mode, width: f64) -> impl WidgetView<App
 
 pub(super) fn query(
     scale: f32,
-    mode: Mode,
     picker: Option<&Picker>,
     width: f64,
+    ink: Color,
 ) -> impl WidgetView<App> + use<> {
-    sized_box(
+    search_field(
+        scale,
+        ink,
+        false,
         text_input(
             picker.map_or_else(String::new, |picker| picker.query.clone()),
             |app: &mut App, value: String| app.filter_picker(value),
         )
-        .placeholder(mode.title())
         .text_size(field_text(scale))
         .on_enter(|app: &mut App, _| app.submit_picker())
         .on_cancel(|app: &mut App, _| app.dismiss_picker())
         .prop(TextAreaLabel::new("Search query"))
-        .prop(QueryField(true)),
+        .prop(QueryField(true))
+        .width(width.px()),
     )
-    .width(width.px())
 }

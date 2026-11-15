@@ -18,6 +18,12 @@ pub(crate) enum ControlStyle {
     /// The chosen segment of a group: a solid stamp.
     Selected,
     Manuscript,
+    /// A field on paper: the default well, named so a field can move between hosts in place.
+    Field,
+    /// A field on the grained desk, where the paper rule would fall under 3:1.
+    DeskField,
+    /// A search field, padded for its leading icon.
+    SearchField,
     /// A compact icon face with even padding.
     Icon,
 }
@@ -31,6 +37,9 @@ impl ControlStyle {
             Self::Segment => "writer-segment",
             Self::Selected => "writer-selected",
             Self::Manuscript => "writer-manuscript",
+            Self::Field => "writer-field",
+            Self::DeskField => "writer-desk-field",
+            Self::SearchField => "writer-search-field",
             Self::Icon => "writer-icon",
         }
     }

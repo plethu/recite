@@ -96,7 +96,7 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                             width,
                         )
                     }),
-                    query(scale, mode, picker, width),
+                    query(scale, picker, width, app.theme.palette.muted),
                     paragraph(scale, mode.guidance(), width),
                     label(scale, result_count(picker, page, count)),
                     (count == 0).then(|| label(scale, empty_message(mode, picker))),

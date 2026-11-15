@@ -7,7 +7,7 @@ use super::super::tokens::{Type, size};
 use super::*;
 use recite_writer_session::palette::{
     INK_HOVER, PRIMARY_HOVER, PRIMARY_PRESSED, STAMP_HOVER, STAMP_PRESSED, TONAL, TONAL_DISABLED,
-    TONAL_HOVER,
+    TONAL_HOVER, WELL,
 };
 
 /// How one kind of control looks in each state.
@@ -22,6 +22,11 @@ struct Look {
     /// Whether pressing sinks the face; fields keep their text still under the pointer.
     sinks: bool,
     padding: (f64, f64),
+    /// A field's 1px bottom rule, drawn as a hard shadow one pixel below the well; `None` leaves
+    /// the shadow alone.
+    rule: Option<Color>,
+    /// Extra padding before the content, for a leading icon painted beneath it.
+    lead: f64,
 }
 
 /// The focus and pressed border width.
@@ -42,6 +47,8 @@ impl Look {
             border: 1.,
             sinks: true,
             padding,
+            rule: None,
+            lead: 0.,
         };
         let stamp = |amount| p.stamp.lerp_rect(p.on_stamp, amount);
         // Secondary actions on sheets, panels and dialogs: a tint of ink over the host, no border.
@@ -54,6 +61,8 @@ impl Look {
             border: 1.,
             sinks: true,
             padding: text,
+            rule: None,
+            lead: 0.,
         };
         vec![
             (None, tonal()),
@@ -75,6 +84,8 @@ impl Look {
                     border: 1.,
                     sinks: true,
                     padding: text,
+                    rule: None,
+                    lead: 0.,
                 },
             ),
             (
@@ -88,6 +99,8 @@ impl Look {
                     border: STRONG,
                     sinks: true,
                     padding: text,
+                    rule: None,
+                    lead: 0.,
                 },
             ),
         ]
@@ -100,7 +113,7 @@ impl Look {
         Padding {
             top: (vertical - take + sink).px(),
             bottom: (vertical - take - sink).px(),
-            left: (horizontal - take + sink).px(),
+            left: (horizontal + self.lead - take + sink).px(),
             right: (horizontal - take - sink).px(),
         }
     }
@@ -129,6 +142,9 @@ impl Look {
             rest = rest
                 .with(Background::Color(fill))
                 .with(BorderColor { color: border });
+        }
+        if let Some(rule) = self.rule {
+            rest = rest.with(BoxShadow::new(rule, (0., 1.)));
         }
         stack.push_layer(selector.clone(), rest);
         let (fill, border) = self.hover;
@@ -196,32 +212,72 @@ pub(super) fn pressable<W: Widget>(
     properties.insert_stack::<W>(stack);
 }
 
-/// Text inputs and checkboxes: opaque hover so a field never shows the desk, and no sinking.
-/// Manuscript fields have no frame at rest and a hairline of padding for the 2px focus border.
+/// Text inputs: a tonal well closed by a bottom rule, a 2px accent ring around the whole well on
+/// focus, and no sinking. Wells on the grained desk take the desk's rule, and search fields leave
+/// room for their leading icon. Manuscript fields have no frame at rest and a hairline of padding
+/// for the 2px focus border.
 pub(super) fn field<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, scale: f64) {
-    let look = |rest, border: Color, padding| Look {
-        rest,
-        hover: (p.hover, border),
-        pressed: (p.pressed, border),
+    let well = |rule, lead| Look {
+        rest: Some((p.ink.with_alpha(WELL), Color::TRANSPARENT)),
+        hover: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
+        pressed: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
         focus: Some(p.accent),
-        disabled: (
-            rest.map_or(p.inset, |(fill, _)| fill),
-            rest.map_or(p.rule, |(_, border)| border),
-        ),
+        disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
         border: 1.,
         sinks: false,
-        padding,
+        padding: (6. * scale, 12. * scale),
+        rule: Some(rule),
+        lead,
     };
+    let lead = super::super::search::LEAD * scale;
+    let (desk, search) = (
+        ControlStyle::DeskField.class(),
+        ControlStyle::SearchField.class(),
+    );
     let mut stack = PropertyStack::new();
-    look(None, p.boundary, (6. * scale, 12. * scale)).push(&mut stack, &Selector::new());
-    look(
-        Some((Color::TRANSPARENT, Color::TRANSPARENT)),
-        Color::TRANSPARENT,
-        (1., 1.),
-    )
+    for (selector, rule, lead) in [
+        (Selector::new(), p.well_rule, 0.),
+        (Selector::classes(&[desk]), p.desk_well_rule, 0.),
+        (Selector::classes(&[search]), p.well_rule, lead),
+        (Selector::classes(&[desk, search]), p.desk_well_rule, lead),
+    ] {
+        well(rule, lead).push(&mut stack, &selector);
+    }
+    Look {
+        rest: Some((Color::TRANSPARENT, Color::TRANSPARENT)),
+        hover: (p.hover, Color::TRANSPARENT),
+        pressed: (p.pressed, Color::TRANSPARENT),
+        focus: Some(p.accent),
+        disabled: (Color::TRANSPARENT, Color::TRANSPARENT),
+        border: 1.,
+        sinks: false,
+        padding: (1., 1.),
+        rule: Some(Color::TRANSPARENT),
+        lead: 0.,
+    }
     .push(
         &mut stack,
         &Selector::classes(&[ControlStyle::Manuscript.class()]),
     );
+    properties.insert_stack::<W>(stack);
+}
+
+/// Checkboxes: no chip at rest, a full-row ink hover, and the box drawn in the boundary colour.
+/// The toolkit strokes its focus and hover ring in the border colour, so focus turns it accent.
+pub(super) fn check<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, scale: f64) {
+    let mut stack = PropertyStack::new();
+    Look {
+        rest: Some((Color::TRANSPARENT, p.boundary)),
+        hover: (p.ink.with_alpha(INK_HOVER), p.boundary),
+        pressed: (p.pressed, p.boundary),
+        focus: Some(p.accent),
+        disabled: (Color::TRANSPARENT, p.rule),
+        border: 1.,
+        sinks: false,
+        padding: (6. * scale, 12. * scale),
+        rule: None,
+        lead: 0.,
+    }
+    .push(&mut stack, &Selector::new());
     properties.insert_stack::<W>(stack);
 }

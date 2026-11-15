@@ -27,6 +27,8 @@ pub(crate) enum Icon {
     Colon,
     /// A move grip: two columns of three dots, filled.
     Grip,
+    /// A magnifier: the leading mark of a search field.
+    Search,
 }
 impl Icon {
     fn filled(self) -> bool {
@@ -90,6 +92,11 @@ impl Icon {
                 path.line_to((17., 8.));
                 path.curve_to((22.33, 8.), (22.33, 16.), (17., 16.));
                 path.line_to((14., 16.));
+            }
+            Self::Search => {
+                path.extend(Circle::new((10.5, 10.5), 5.5).path_elements(0.1));
+                path.move_to((14.5, 14.5));
+                path.line_to((19., 19.));
             }
             Self::Undo | Self::Redo => {
                 path.move_to((8., 5.));

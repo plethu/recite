@@ -2,7 +2,7 @@
 use super::*;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset, field_text, search_field};
 use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
 
 pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
@@ -37,15 +37,18 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         label(scale, "Fields and selection").typeset(Type::Section, scale),
         segments(palette, choices),
         label(scale, "Find a destination"),
-        flex_row((
+        flex_row((search_field(
+            scale,
+            palette.muted,
+            false,
             text_input(state.query.clone(), |state: &mut Specimen, text| {
                 state.query = text
             })
-            .placeholder("Search scene titles…")
+            .placeholder("Scene title")
             .text_size(field_text(scale))
             .prop(TextAreaLabel::new("Find a destination"))
             .width(640.px()),
-        )),
+        ),)),
         label(scale, format!("Destination: {}", state.destination)),
         flex_col(destinations)
             .cross_axis_alignment(CrossAxisAlignment::Start)

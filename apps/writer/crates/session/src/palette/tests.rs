@@ -1,20 +1,7 @@
 use super::*;
 
-fn luminance(color: Rgba) -> f64 {
-    let linear = |channel: u8| {
-        let channel = f64::from(channel) / 255.;
-        if channel <= 0.04045 {
-            channel / 12.92
-        } else {
-            ((channel + 0.055) / 1.055).powf(2.4)
-        }
-    };
-    0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
-}
-
 fn contrast(a: Rgba, b: Rgba) -> f64 {
-    let (a, b) = (luminance(a), luminance(b));
-    (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    Rgba::contrast(a, b)
 }
 
 #[test]
@@ -243,4 +230,43 @@ fn the_primary_keeps_its_text_in_both_modes_while_hovered_and_pressed() {
         (dark.on_accent.r, dark.on_accent.g, dark.on_accent.b),
         (40, 25, 39)
     );
+}
+
+#[test]
+fn a_field_well_is_identified_by_a_rule_of_three_to_one_on_every_host() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        let desk = [p.grained_desk()];
+        for (hosts, rule) in [
+            (&p.papers()[..], p.field_rule(&p.papers())),
+            (&desk[..], p.field_rule(&desk)),
+        ] {
+            for &host in hosts {
+                let well = p.tint(host, WELL);
+                for background in [host, well] {
+                    assert!(
+                        contrast(rule, background) >= 3.,
+                        "field rule: dark={dark} monochrome={monochrome} {host:?}: {}",
+                        contrast(rule, background)
+                    );
+                }
+                // Text, and the muted hints that replace placeholders, hold on the well and its
+                // hover.
+                for fill in [well, p.hover_over(host)] {
+                    for text in [p.ink, p.muted] {
+                        assert!(contrast(text, fill) >= 4.5, "well text: {host:?}");
+                    }
+                }
+            }
+        }
+        // Papers keep the quieter boundary; the light grained desk falls to ink (2.98:1).
+        assert_eq!(p.field_rule(&p.papers()), p.boundary);
+        if !dark {
+            assert_eq!(p.field_rule(&desk), p.ink);
+        }
+        assert_eq!(
+            (p.well_rule, p.desk_well_rule),
+            (p.field_rule(&p.papers()), p.field_rule(&desk))
+        );
+    }
 }

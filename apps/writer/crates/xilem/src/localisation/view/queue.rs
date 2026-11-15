@@ -1,7 +1,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, field_text};
+use crate::presentation::{Type, Typeset, field_text, search_field};
 use crate::presentation::{manuscript_text, print};
 use xilem::masonry::kurbo::Axis;
 pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -58,15 +58,18 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .collect::<Vec<_>>();
     flex_col((
         flex_row((
-            sized_box(
+            search_field(
+                scale,
+                writer.palette.muted,
+                false,
                 text_input(state.query.text.clone(), Writer::set_catalogue_query)
                     .text_size(field_text(scale))
-                    .prop(TextAreaLabel::new("Search translations")),
-            )
-            .width(
-                (writer.script_width() - 200. * f64::from(scale))
-                    .max(180.)
-                    .px(),
+                    .prop(TextAreaLabel::new("Search translations"))
+                    .width(
+                        (writer.script_width() - 200. * f64::from(scale))
+                            .max(180.)
+                            .px(),
+                    ),
             ),
             text_button(scale, "Search translations", Writer::search_catalogue)
                 .disabled(blocked || !state.has_catalogue()),
