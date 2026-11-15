@@ -2,6 +2,7 @@
 use super::*;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
+use crate::presentation::slip::slip;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 use crate::presentation::{group::named, print};
@@ -17,48 +18,48 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
     let width = (600. * f64::from(scale))
         .min(state.viewport.width - 48.)
         .max(280.);
-    sized_box(named(
-        "Document actions menu",
-        flex_col((
-            flex_row((
-                label(scale, "Document actions")
-                    .typeset(Type::Section, scale)
-                    .flex(1.),
-                print::action(
-                    scale,
-                    "Dismiss document actions",
-                    false,
-                    Writer::dismiss_document_menu,
-                ),
-            ))
-            .gap(space::SIBLINGS.px()),
-            map_message_result(
-                flex_col((
-                    portal(content(state, width - 26.))
-                        .constrain_horizontal(true)
+    slip(
+        &state.palette,
+        sized_box(named(
+            "Document actions menu",
+            flex_col((
+                flex_row((
+                    label(scale, "Document actions")
+                        .typeset(Type::Section, scale)
                         .flex(1.),
-                    footer(state),
+                    print::action(
+                        scale,
+                        "Dismiss document actions",
+                        false,
+                        Writer::dismiss_document_menu,
+                    ),
                 ))
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(space::TEXT.px()),
-                |state: &mut Writer, result: MessageResult<()>| {
-                    if matches!(result, MessageResult::Action(())) {
-                        state.close_document_menu();
-                    }
-                    result
-                },
-            )
-            .flex(1.),
+                .gap(space::SIBLINGS.px()),
+                map_message_result(
+                    flex_col((
+                        portal(content(state, width - 26.))
+                            .constrain_horizontal(true)
+                            .flex(1.),
+                        footer(state),
+                    ))
+                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                    .gap(space::TEXT.px()),
+                    |state: &mut Writer, result: MessageResult<()>| {
+                        if matches!(result, MessageResult::Action(())) {
+                            state.close_document_menu();
+                        }
+                        result
+                    },
+                )
+                .flex(1.),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(space::TEXT.px())
+            .prop(Region(Some(Pane::DocumentActions))),
         ))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .gap(space::TEXT.px())
-        .prop(Region(Some(Pane::DocumentActions))),
-    ))
-    .dims((width.px(), (state.viewport.height * 0.65).px()))
-    .padding(space::KINDS.px())
-    .background_color(state.palette.inset)
-    .border_color(state.palette.accent)
-    .border_width(1.px())
+        .dims((width.px(), (state.viewport.height * 0.65).px()))
+        .padding(space::KINDS.px()),
+    )
 }
 
 fn action_axis(state: &Writer, width: f64) -> Axis {

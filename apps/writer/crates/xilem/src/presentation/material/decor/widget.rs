@@ -68,6 +68,10 @@ impl Widget for Decor {
             // The tile repeats from the desk's origin, so it never moves under the pointer.
             painter.fill(ctx.content_box(), grain).draw();
         }
+        if let Decoration::Backdrop(dim, screen) = &self.decoration {
+            painter.fill(ctx.content_box(), *dim).draw();
+            painter.fill(ctx.content_box(), screen).draw();
+        }
     }
     fn post_paint(
         &mut self,

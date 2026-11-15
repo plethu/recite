@@ -25,6 +25,10 @@ impl App {
     pub(crate) fn with_writer(writer: Writer) -> Self {
         Self::wrap(Shell::with_writer(writer))
     }
+    /// Print the modal backdrop's hatch, the gallery's comparison with its dot screen.
+    pub(crate) fn print_hatch(&mut self) {
+        self.theme.print_hatch();
+    }
     /// The look the native window would use for the current preferences.
     pub(crate) fn gallery_look(&mut self, initial: bool) -> Look {
         self.theme.refresh(&self.shell.preferences.config.writer);

@@ -1,12 +1,17 @@
 mod chrome;
 use super::*;
-use crate::presentation::{group::named, material::desk};
+use crate::presentation::{
+    group::named,
+    material::{backdrop, desk},
+};
 use chrome::app_bar;
 use xilem::{
     WidgetView,
-    masonry::layout::{AsUnit, UnitPoint},
+    masonry::layout::{AsUnit, Dim, UnitPoint},
     style::{Padding, Style},
-    view::{CrossAxisAlignment, FlexExt, flex_col, indexed_stack, sized_box, zstack},
+    view::{
+        CrossAxisAlignment, FlexExt, MainAxisAlignment, flex_col, indexed_stack, sized_box, zstack,
+    },
 };
 pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     let width = app.viewport.width;
@@ -41,14 +46,31 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                             )
                             .disabled(app.picker.is_some()),
                             indexed_stack((
-                                // Pickers stay above the status bar at every interface scale.
-                                sized_box(picker::view::picker(app)).padding(Padding {
+                                // Pickers stay above the status bar at every interface scale, and
+                                // their backdrop leaves the status bar readable.
+                                sized_box(backdrop(
+                                    app.theme.palette.backdrop,
+                                    app.theme.screen.clone(),
+                                    flex_col((picker::view::picker(app),))
+                                        .main_axis_alignment(MainAxisAlignment::Center)
+                                        .cross_axis_alignment(CrossAxisAlignment::Center)
+                                        .dims(Dim::Stretch),
+                                ))
+                                .padding(Padding {
                                     bottom: status_bar.px(),
                                     ..Padding::all(0.px())
-                                }),
+                                })
+                                .dims(Dim::Stretch),
                                 sized_box(flex_col(())).dims((0.px(), 0.px())),
                             ))
-                            .active(usize::from(app.picker.is_none())),
+                            .active(usize::from(app.picker.is_none()))
+                            // Only an open picker's backdrop covers the workspace; otherwise the
+                            // empty layer must not sit over it and take its pointer events.
+                            .dims(if app.picker.is_some() {
+                                Dim::Stretch
+                            } else {
+                                Dim::Auto
+                            }),
                         ))
                         .alignment(UnitPoint::CENTER)
                         .flex(1.),

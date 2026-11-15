@@ -12,7 +12,9 @@ use xilem::{
     view::{canvas, sized_box},
 };
 
+mod backdrop;
 mod decor;
+pub(crate) use backdrop::{Texture, backdrop, screen};
 mod grain;
 pub(crate) use decor::{Bar, Decorated, Decoration, Edge};
 pub(crate) use grain::{desk, grain};

@@ -1,5 +1,6 @@
 use super::{App, Entry, Item, Mode, PAGE, Picker, Purpose, Search};
 use crate::presentation::row::RowButton;
+use crate::presentation::slip::slip;
 use crate::presentation::space;
 use crate::presentation::{fit_content, label, paragraph, text_button};
 use crate::presentation::{group::dialog, manuscript_search, search_label};
@@ -47,7 +48,7 @@ impl UsesProperty<ActiveResult> for RowButton {}
 pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     let compact = app.viewport.height < 600. * f64::from(scale);
-    let padding = if compact { 16. } else { 24. };
+    let padding = if compact { space::KINDS } else { space::GROUPS };
     let width =
         (app.viewport.width - 4. * padding).clamp(240., (760. * f64::from(scale)).min(1000.));
     let picker = app.picker.as_ref();
@@ -70,58 +71,61 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
         .collect::<Vec<_>>();
     dialog(
         mode.title(),
-        fit_content(
-            sized_box(
-                flex_col((
-                    heading(scale, mode, width),
-                    picker
-                        .filter(|picker| {
-                            matches!(picker.purpose, super::Purpose::Search(_))
-                                && picker.mode() != Mode::Commands
-                        })
-                        .map(|_| scopes(app, width)),
-                    app.writer.as_ref().map(|writer| {
-                        let beat = writer.reading.selected.as_deref().map(display_name);
-                        paragraph(
-                            scale,
-                            beat.map_or_else(
-                                || writer.session.model().document().key().to_string(),
-                                |beat| {
-                                    format!("{beat} · {}", writer.session.model().document().key())
-                                },
-                            ),
-                            width,
+        slip(
+            &app.theme.palette,
+            fit_content(
+                sized_box(
+                    flex_col((
+                        heading(scale, mode, width),
+                        picker
+                            .filter(|picker| {
+                                matches!(picker.purpose, super::Purpose::Search(_))
+                                    && picker.mode() != Mode::Commands
+                            })
+                            .map(|_| scopes(app, width)),
+                        app.writer.as_ref().map(|writer| {
+                            let beat = writer.reading.selected.as_deref().map(display_name);
+                            paragraph(
+                                scale,
+                                beat.map_or_else(
+                                    || writer.session.model().document().key().to_string(),
+                                    |beat| {
+                                        format!(
+                                            "{beat} · {}",
+                                            writer.session.model().document().key()
+                                        )
+                                    },
+                                ),
+                                width,
+                            )
+                        }),
+                        query(scale, picker, width, app.theme.palette.muted),
+                        paragraph(scale, mode.guidance(), width),
+                        label(scale, result_count(picker, page, count)),
+                        (count == 0).then(|| label(scale, empty_message(mode, picker))),
+                        portal(
+                            flex_col(rows)
+                                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                                .gap(0.px()),
                         )
-                    }),
-                    query(scale, picker, width, app.theme.palette.muted),
-                    paragraph(scale, mode.guidance(), width),
-                    label(scale, result_count(picker, page, count)),
-                    (count == 0).then(|| label(scale, empty_message(mode, picker))),
-                    portal(
-                        flex_col(rows)
-                            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                            .gap(space::SIBLINGS.px()),
-                    )
-                    .constrain_horizontal(true)
-                    .flex(1.),
-                    pagination(scale, picker, page, count),
-                    label(scale, mode.keyboard_help()),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(
-                    if compact {
-                        space::SIBLINGS
-                    } else {
-                        space::TEXT
-                    }
-                    .px(),
-                ),
-            )
-            .width((width + 2. * padding).px())
-            .padding(padding.px())
-            .background_color(app.theme.palette.canvas)
-            .border_width(1.px())
-            .border_color(app.theme.palette.accent),
+                        .constrain_horizontal(true)
+                        .flex(1.),
+                        pagination(scale, picker, page, count),
+                        label(scale, mode.keyboard_help()),
+                    ))
+                    .cross_axis_alignment(CrossAxisAlignment::Start)
+                    .gap(
+                        if compact {
+                            space::SIBLINGS
+                        } else {
+                            space::TEXT
+                        }
+                        .px(),
+                    ),
+                )
+                .width((width + 2. * padding).px())
+                .padding(padding.px()),
+            ),
         ),
     )
     .dims(Dim::FitContent)

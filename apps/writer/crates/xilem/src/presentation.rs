@@ -24,6 +24,7 @@ mod radio;
 pub(crate) mod row;
 mod search;
 pub(crate) mod segments;
+pub(crate) mod slip;
 pub(crate) use search::search_field;
 mod shaped_text;
 pub(crate) use shaped_text::ShapedText;
@@ -47,6 +48,9 @@ pub(super) struct Theme {
     pub properties: Arc<DefaultProperties>,
     /// The desk's grain in this palette's grain ink.
     pub grain: Option<ImageBrush>,
+    /// The modal backdrop's print texture in this palette's screen ink.
+    pub screen: ImageBrush,
+    texture: material::Texture,
     wordmark: Result<Arc<usvg::Tree>, String>,
     hero: Result<Arc<usvg::Tree>, String>,
 }
@@ -66,8 +70,17 @@ impl Theme {
             wordmark: identity::load(config),
             hero: identity::load_hero(config),
             grain: material::grain(palette.grain),
+            screen: material::screen(material::Texture::default(), palette.screen),
+            texture: material::Texture::default(),
             palette,
         }
+    }
+    /// Print the modal backdrop's hatch instead of its dot screen: the gallery's comparison for
+    /// the maintainer, kept across theme refreshes.
+    #[cfg(test)]
+    pub fn print_hatch(&mut self) {
+        self.texture = material::Texture::Hatch;
+        self.screen = material::screen(self.texture, self.palette.screen);
     }
     pub fn refresh(&mut self, config: &WriterConfig) {
         let key = (
@@ -76,7 +89,10 @@ impl Theme {
             config.presentation.value(WriterPresentationField::UiScale),
         );
         if self.key != key {
+            let texture = self.texture;
             *self = Self::new(config);
+            self.texture = texture;
+            self.screen = material::screen(texture, self.palette.screen);
         }
     }
 }

@@ -315,3 +315,22 @@ fn a_selected_row_keeps_its_text_and_bar_on_the_plate_at_rest_and_hovered() {
         }
     }
 }
+
+#[test]
+fn a_modal_panel_is_edged_in_ink_that_holds_three_to_one_against_the_dim() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        // The dim lies over whatever the window shows: desk, papers and the darkest ink.
+        for base in [p.grained_desk(), p.canvas, p.surface, p.floating] {
+            for under in p.dimmed(base) {
+                assert!(
+                    contrast(p.ink, under) >= 3.,
+                    "panel edge: dark={dark} monochrome={monochrome} {base:?}: {}",
+                    contrast(p.ink, under)
+                );
+            }
+        }
+        // The screen is a light texture, never a second dim.
+        assert!(p.screen.a <= 26 && p.backdrop.a >= 115);
+    }
+}

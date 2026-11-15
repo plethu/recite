@@ -40,7 +40,10 @@ pub struct Palette<C = Rgba> {
     pub selection: C,
     pub hover: C,
     pub pressed: C,
+    /// The modal dim: overprint navy at 45% on paper, black at 55% on dark paper.
     pub backdrop: C,
+    /// The paper-coloured dot screen printed over the dim, at its own alpha.
+    pub screen: C,
     pub shadow: C,
     pub error: C,
     /// Riso second ink: plates, rules and decoration only, never text in light mode.
@@ -89,6 +92,8 @@ impl Palette<Rgba> {
                 &mut p.selection,
                 &mut p.hover,
                 &mut p.pressed,
+                &mut p.backdrop,
+                &mut p.screen,
                 &mut p.error,
                 &mut p.wordmark,
                 &mut p.stamp,
@@ -141,7 +146,18 @@ impl Palette<Rgba> {
             selection: color(dark, (234, 221, 232), (72, 54, 72)),
             hover: color(dark, (238, 229, 231), (58, 51, 61)),
             pressed: color(dark, (218, 203, 215), (82, 66, 82)),
-            backdrop: Rgba::from_argb(110, 0, 0, 0),
+            backdrop: if dark {
+                Rgba::from_argb(140, 0, 0, 0)
+            } else {
+                Rgba {
+                    a: 115,
+                    ..overprint
+                }
+            },
+            screen: Rgba {
+                a: if dark { 15 } else { 26 },
+                ..Rgba::from_rgb(243, 233, 223)
+            },
             // Soft blurred shadows are gone; elevation is a hard offset plate (`material::offset`).
             shadow: Rgba::TRANSPARENT,
             error: color(dark, (137, 51, 48), (246, 191, 178)),
@@ -208,6 +224,18 @@ impl Palette<Rgba> {
         Rgba::mix(base, self.accent, alpha)
     }
 
+    /// `base` under the modal dim, and under the dim with the screen's paper dots.
+    pub fn dimmed(&self, base: Rgba) -> [Rgba; 2] {
+        let opaque = |color: Rgba| Rgba { a: 255, ..color };
+        let dim = Rgba::mix(
+            base,
+            opaque(self.backdrop),
+            f32::from(self.backdrop.a) / 255.,
+        );
+        let dotted = Rgba::mix(dim, opaque(self.screen), f32::from(self.screen.a) / 255.);
+        [dim, dotted]
+    }
+
     /// The darkest point of the grained desk, where text on the desk is checked.
     pub fn grained_desk(&self) -> Rgba {
         Rgba::mix(self.canvas, self.grain, GRAIN_PEAK)
@@ -241,6 +269,7 @@ impl<C> Palette<C> {
             hover: convert(self.hover),
             pressed: convert(self.pressed),
             backdrop: convert(self.backdrop),
+            screen: convert(self.screen),
             shadow: convert(self.shadow),
             error: convert(self.error),
             teal: convert(self.teal),

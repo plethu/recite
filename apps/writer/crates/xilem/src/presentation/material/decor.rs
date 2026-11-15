@@ -18,8 +18,11 @@ pub(crate) enum Decoration {
     /// A 2px ring inside the child's edge while focus is within it, for filled controls whose
     /// own border would vanish into the fill.
     Ring(Option<Color>),
-    /// A 2px bar along the child's bottom: a chosen tab's underline or a chosen segment's mark.
+    /// A 2px bar along one edge: a chosen tab's underline, a chosen segment's mark or a selected
+    /// row's leading bar.
     Bar(Option<Bar>),
+    /// The modal backdrop over the whole child: a dim, then a print texture, beneath the child.
+    Backdrop(Color, ImageBrush),
 }
 
 /// Where a [`Decoration::Bar`] sits inside its child.

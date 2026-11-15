@@ -299,6 +299,22 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
     }
     record.scene(
         Meta {
+            id: "overlay.backdrop-hatch",
+            group: "Overlays",
+            title: "Command picker over the hatch backdrop",
+            intent: "The maintainer's comparison: the modal dim under a 45° paper hatch instead of the shipped dot screen.",
+        },
+        |record| {
+            let directory = sample();
+            let mut app = App::with_writer(open(directory.path(), "relay_hub.recite"));
+            app.print_hatch();
+            let mut stage = stage(app, variant);
+            stage.act(|app| app.open_picker(Search::Commands));
+            stage.shot(record, "Command picker, hatch backdrop");
+        },
+    );
+    record.scene(
+        Meta {
             id: "overlay.close",
             group: "Overlays",
             title: "Close with unsaved work",
