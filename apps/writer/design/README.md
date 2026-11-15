@@ -22,7 +22,8 @@ modules:
   scene with no beats, a representative branching scene, an unapplied draft and focus mode; Map
   and Split; source needing repair; Preview; Localise with a catalogue and with none; the
   translations queue; Build, Rename, Declarations, disk changes and source updates; preferences;
-  the command, go-to, find and passage pickers; and the unsaved-close decision.
+  the command, go-to, find and passage pickers, and the command picker over the hatch backdrop
+  that the maintainer compares with the shipped dot screen; and the unsaved-close decision.
 - **Transitions**: welcome to examples, switching workspaces, running a command, closing with
   unsaved work, control states (rest, hover, pressed, keyboard focus), a Tab walk, and a preview
   reply. Each step is a frame; `strips/` joins them into one image per sequence.
