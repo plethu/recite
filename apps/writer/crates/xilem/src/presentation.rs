@@ -19,6 +19,7 @@ pub(crate) mod identity;
 pub(crate) mod material;
 pub(crate) mod print;
 pub(crate) use icons::{Icon, mark};
+pub(crate) mod number;
 mod radio;
 mod search;
 pub(crate) mod segments;

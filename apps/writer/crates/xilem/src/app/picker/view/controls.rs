@@ -1,42 +1,39 @@
 //! Query input, scope selection and concise search guidance.
 use super::*;
-use crate::presentation::space;
+use crate::presentation::segments::{segment, segments_along};
 use crate::presentation::{Type, Typeset, field_text, search_field};
 use xilem::peniko::Color;
 
 pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     let mode = app.picker.as_ref().map(Picker::mode);
-    radio_group(
-        flex_row(
-            [
-                ("Scenes / beats", Search::GoTo, Mode::GoTo),
-                ("Saved project", Search::ProjectText, Mode::ProjectText),
-                ("This beat", Search::Passages, Mode::Passages),
-            ]
-            .map(|(title, search, selected)| {
-                radio_button(
-                    scale,
-                    title,
-                    mode == Some(selected),
-                    move |app: &mut App| app.switch_search(search),
-                )
-                .disabled(
-                    selected == Mode::ProjectText
-                        && app
-                            .writer
-                            .as_ref()
-                            .is_none_or(|writer| writer.session.project().is_none()),
-                )
-            }),
-        )
-        .direction(if width < 360. * f64::from(scale) {
+    // One segmented track, stacked where the picker is too narrow for a row.
+    segments_along(
+        &app.theme.palette,
+        if width < 360. * f64::from(scale) {
             Axis::Vertical
         } else {
             Axis::Horizontal
-        })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::SIBLINGS.px()),
+        },
+        [
+            ("Scenes / beats", Search::GoTo, Mode::GoTo),
+            ("Saved project", Search::ProjectText, Mode::ProjectText),
+            ("This beat", Search::Passages, Mode::Passages),
+        ]
+        .map(|(title, search, selected)| {
+            segment(
+                scale,
+                &app.theme.palette,
+                title,
+                mode == Some(selected),
+                selected == Mode::ProjectText
+                    && app
+                        .writer
+                        .as_ref()
+                        .is_none_or(|writer| writer.session.project().is_none()),
+                move |app: &mut App| app.switch_search(search),
+            )
+        }),
     )
 }
 

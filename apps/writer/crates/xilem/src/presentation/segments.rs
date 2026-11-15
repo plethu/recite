@@ -13,6 +13,7 @@ use xilem::{
     WidgetView,
     masonry::{
         core::ArcStr,
+        kurbo::Axis,
         layout::{AsUnit, Dim},
         parley::style::FontWeight,
         properties::CheckmarkSize,
@@ -20,7 +21,7 @@ use xilem::{
     },
     peniko::Color,
     style::Style,
-    view::{FlexSequence, flex_row, radio_group, sized_box},
+    view::{CrossAxisAlignment, FlexSequence, flex_row, radio_group, sized_box},
 };
 
 /// How far a chosen segment's bar sits above the chip's bottom edge.
@@ -78,10 +79,24 @@ pub(crate) fn segments<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
     palette: &Palette<Color>,
     choices: Seq,
 ) -> impl WidgetView<S> + use<S, Seq> {
-    sized_box(radio_group(flex_row(choices).gap(0.px())))
-        .width(Dim::MaxContent)
-        .background_color(palette.ink.with_alpha(TONAL))
-        .corner_radius(2.px())
+    segments_along(palette, Axis::Horizontal, choices)
+}
+
+/// One tonal track around flush segments laid along `axis`, for windows too narrow for a row.
+pub(crate) fn segments_along<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
+    palette: &Palette<Color>,
+    axis: Axis,
+    choices: Seq,
+) -> impl WidgetView<S> + use<S, Seq> {
+    sized_box(radio_group(
+        flex_row(choices)
+            .direction(axis)
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(0.px()),
+    ))
+    .width(Dim::MaxContent)
+    .background_color(palette.ink.with_alpha(TONAL))
+    .corner_radius(2.px())
 }
 
 pub(crate) fn tab<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(

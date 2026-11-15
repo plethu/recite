@@ -1,7 +1,8 @@
 use super::*;
+use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
-use crate::presentation::{label, prose, radio_button, text_button};
+use crate::presentation::{label, prose, text_button};
 use xilem::{
     WidgetView,
     masonry::{kurbo::Axis, layout::AsUnit},
@@ -43,22 +44,22 @@ mod tests;
 fn navigation(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     flex_row((
-        radio_group(
-            flex_row((
-                radio_button(
+        segments(
+            &app.theme.palette,
+            [
+                ("Personal preferences", false),
+                ("Keyboard shortcuts", true),
+            ]
+            .map(|(title, keys)| {
+                segment(
                     scale,
-                    "Personal preferences",
-                    !app.settings.keyboard,
-                    |app: &mut App| app.settings.keyboard = false,
-                ),
-                radio_button(
-                    scale,
-                    "Keyboard shortcuts",
-                    app.settings.keyboard,
-                    |app: &mut App| app.settings.keyboard = true,
-                ),
-            ))
-            .gap(space::TEXT.px()),
+                    &app.theme.palette,
+                    title,
+                    app.settings.keyboard == keys,
+                    false,
+                    move |app: &mut App| app.settings.keyboard = keys,
+                )
+            }),
         ),
         text_button(scale, "Project settings…", |app: &mut App| {
             app.open_project_settings()

@@ -290,6 +290,30 @@ pub(super) fn field<W: Widget>(properties: &mut DefaultProperties, p: &Palette<C
     properties.insert_stack::<W>(stack);
 }
 
+/// Number fields: the paper well, padded so a stepper target and the well's edges make one row.
+pub(super) fn number<W: Widget>(
+    properties: &mut DefaultProperties,
+    p: &Palette<Color>,
+    scale: f64,
+) {
+    let target = 24.;
+    let mut stack = PropertyStack::new();
+    Look {
+        rest: Some((p.ink.with_alpha(WELL), Color::TRANSPARENT)),
+        hover: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
+        pressed: (p.ink.with_alpha(INK_HOVER), Color::TRANSPARENT),
+        focus: Some(p.accent),
+        disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
+        border: 1.,
+        sinks: false,
+        padding: (((size::ROW - target) * scale - 2.) / 2., 4. * scale),
+        rule: Some(p.well_rule),
+        lead: 0.,
+    }
+    .push(&mut stack, &Selector::new(), STRONG);
+    properties.insert_stack::<W>(stack);
+}
+
 /// Checkboxes and plain radios: no chip at rest, a full-row ink hover, and the indicator drawn in
 /// the boundary colour. The toolkit strokes its focus and hover ring in the border colour, so
 /// focus turns both accent.

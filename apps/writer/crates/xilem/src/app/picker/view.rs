@@ -1,7 +1,7 @@
 use super::{App, Entry, Item, Mode, PAGE, Picker, Purpose, Search};
 use crate::presentation::space;
 use crate::presentation::{fit_content, label, paragraph, text_button};
-use crate::presentation::{group::dialog, manuscript_search, radio_button, search_label};
+use crate::presentation::{group::dialog, manuscript_search, search_label};
 use recite_writer_session::choices::display_name;
 use xilem::core::one_of::Either;
 use xilem::masonry::widgets;
@@ -16,8 +16,7 @@ use xilem::{
     },
     style::Style,
     view::{
-        CrossAxisAlignment, FlexExt, button, flex_col, flex_row, portal, radio_group, sized_box,
-        text_input,
+        CrossAxisAlignment, FlexExt, button, flex_col, flex_row, portal, sized_box, text_input,
     },
 };
 mod controls;

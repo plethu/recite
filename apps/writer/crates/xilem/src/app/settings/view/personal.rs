@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
@@ -71,65 +72,51 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
         .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
         .gap(space::REGIONS.px()),
         label(scale, "Appearance").typeset(Type::Section, scale),
-        radio_group(
-            flex_row((
-                radio_button(
-                    scale,
+        choices(
+            app,
+            [
+                (
                     "Light theme",
                     writer.theme == WriterTheme::Light,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterTheme(WriterTheme::Light))
-                    },
+                    UserConfigEdit::WriterTheme(WriterTheme::Light),
                 ),
-                radio_button(
-                    scale,
+                (
                     "Dark theme",
                     writer.theme == WriterTheme::Dark,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterTheme(WriterTheme::Dark))
-                    },
+                    UserConfigEdit::WriterTheme(WriterTheme::Dark),
                 ),
-            ))
-            .gap(space::TEXT.px()),
+            ],
         ),
         label(scale, "Editing").typeset(Type::Section, scale),
-        radio_group(
-            flex_row((
-                radio_button(
-                    scale,
+        choices(
+            app,
+            [
+                (
                     "Standard keymap",
                     config.ui.keymap == Keymap::Standard,
-                    |app: &mut App| app.update_preference(UserConfigEdit::Keymap(Keymap::Standard)),
+                    UserConfigEdit::Keymap(Keymap::Standard),
                 ),
-                radio_button(
-                    scale,
+                (
                     "Vim keymap",
                     config.ui.keymap == Keymap::Vim,
-                    |app: &mut App| app.update_preference(UserConfigEdit::Keymap(Keymap::Vim)),
+                    UserConfigEdit::Keymap(Keymap::Vim),
                 ),
-            ))
-            .gap(space::TEXT.px()),
+            ],
         ),
-        radio_group(
-            flex_row((
-                radio_button(
-                    scale,
+        choices(
+            app,
+            [
+                (
                     "Script pane on the left",
                     writer.pane_side == WriterPaneSide::Left,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterPaneSide(WriterPaneSide::Left))
-                    },
+                    UserConfigEdit::WriterPaneSide(WriterPaneSide::Left),
                 ),
-                radio_button(
-                    scale,
+                (
                     "Script pane on the right",
                     writer.pane_side == WriterPaneSide::Right,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterPaneSide(WriterPaneSide::Right))
-                    },
+                    UserConfigEdit::WriterPaneSide(WriterPaneSide::Right),
                 ),
-            ))
-            .gap(space::TEXT.px()),
+            ],
         ),
         checkbox(
             "Split map and script",
@@ -151,4 +138,26 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
+}
+
+/// A preference with two choices: one segmented track, one Tab stop.
+fn choices(
+    app: &App,
+    options: [(&'static str, bool, UserConfigEdit); 2],
+) -> impl WidgetView<App> + use<> {
+    let scale = crate::presentation::scale(&app.preferences.config.writer);
+    let palette = &app.theme.palette;
+    segments(
+        palette,
+        options.map(|(title, chosen, edit)| {
+            segment(
+                scale,
+                palette,
+                title,
+                chosen,
+                false,
+                move |app: &mut App| app.update_preference(edit.clone()),
+            )
+        }),
+    )
 }

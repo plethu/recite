@@ -110,6 +110,40 @@ class NativeWindow:
             None,
         )
 
+    def find_spin(self, label):
+        """A named spin button, which offers the Value interface its visible caption lacks."""
+        return next(
+            (
+                node
+                for node, name in self.nodes()
+                if name == label
+                and "org.a11y.atspi.Value" in self.call(node, "Accessible", "GetInterfaces")[0]
+            ),
+            None,
+        )
+
+    def spin_value(self, label):
+        """A named spin button's current value, or None while it is absent."""
+        node = self.find_spin(label)
+        if node is None:
+            return None
+        return self.api.property_value(self.bus, node, "org.a11y.atspi.Value", "CurrentValue")
+
+    def set_spin(self, label, value):
+        """Set a named spin button as assistive technology does, leaving focus where it is."""
+        node = self.wait(lambda: self.find_spin(label), "spin button: " + label)
+        self.api.call(
+            self.bus,
+            node,
+            "org.freedesktop.DBus.Properties",
+            "Set",
+            self.api.GLib.Variant(
+                "(ssv)",
+                ("org.a11y.atspi.Value", "CurrentValue", self.api.GLib.Variant("d", float(value))),
+            ),
+        )
+        self.wait(lambda: self.spin_value(label) == value, f"{label} at {value}")
+
     def document_control(self, label):
         """Follow the document menu's named native group and its own viewport."""
 

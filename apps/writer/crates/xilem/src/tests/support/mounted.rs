@@ -87,6 +87,21 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
         });
         self.settle();
     }
+    /// Step a named spin button once, as assistive technology would.
+    pub fn step(&mut self, name: &str, up: bool) {
+        let id = self.find(name);
+        self.harness.process_access_event(accesskit::ActionRequest {
+            action: if up {
+                accesskit::Action::Increment
+            } else {
+                accesskit::Action::Decrement
+            },
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: id.to_raw().into(),
+            data: None,
+        });
+        self.settle();
+    }
     pub fn activate_prefix(&mut self, prefix: &str) {
         let mut pending = vec![self.harness.root_widget().as_dyn()];
         let caption = loop {

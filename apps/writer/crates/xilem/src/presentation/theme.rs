@@ -3,6 +3,7 @@ mod states;
 #[cfg(test)]
 mod tests;
 
+use super::number::NumberField;
 use super::*;
 use xilem::masonry::theme;
 use xilem::masonry::{
@@ -28,6 +29,7 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     control::<Button>(&mut properties, p, scale, states::pressable::<Button>);
     control::<RadioButton>(&mut properties, p, scale, states::choosable::<RadioButton>);
     control::<TextInput>(&mut properties, p, scale, states::field::<TextInput>);
+    control::<NumberField>(&mut properties, p, scale, states::number::<NumberField>);
     control::<Checkbox>(&mut properties, p, scale, states::check::<Checkbox>);
     properties.insert::<Checkbox, _>(CheckmarkColor { color: p.accent });
     properties.insert::<RadioButton, _>(CheckmarkColor { color: p.accent });
