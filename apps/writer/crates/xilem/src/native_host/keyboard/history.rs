@@ -20,6 +20,40 @@ pub(super) fn key(context: &Context, key: &keyboard::Key, modifiers: Modifiers) 
     };
     Some(Action::Command(command))
 }
+/// Primary+Up and Primary+Down move between the scene's beats in Script.
+pub(super) fn beat_key(
+    context: &Context,
+    key: &keyboard::Key,
+    modifiers: Modifiers,
+) -> Option<Action> {
+    if context.screen != Some(crate::workspaces::Screen::Write)
+        || context.picker_open
+        || modifiers
+            != (Modifiers {
+                primary: true,
+                ..Modifiers::default()
+            })
+    {
+        return None;
+    }
+    match key {
+        keyboard::Key::Named(NamedKey::ArrowDown) => Some(Action::StepBeat { forward: true }),
+        keyboard::Key::Named(NamedKey::ArrowUp) => Some(Action::StepBeat { forward: false }),
+        _ => None,
+    }
+}
+/// Escape leaves focus mode when nothing nearer, such as a picker, takes it.
+pub(super) fn focus_key(
+    context: &Context,
+    key: &keyboard::Key,
+    modifiers: Modifiers,
+) -> Option<Action> {
+    (context.attention.is_focused()
+        && !context.picker_open
+        && modifiers == Modifiers::default()
+        && *key == keyboard::Key::Named(NamedKey::Escape))
+    .then_some(Action::Command(WriterCommand::Focus))
+}
 impl Keyboard {
     pub(super) fn history_mouse(
         &mut self,

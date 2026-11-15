@@ -100,7 +100,7 @@ fn editor(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             text_button(scale, "Reset shortcuts", |app: &mut App| app.reset_shortcuts()),
             changed.then(|| label(scale, "Unsaved binding")),
         )).gap(space::SIBLINGS.px()),
-        paragraph(scale, if cfg!(target_os = "macos") { "Primary means Command. Leave empty to disable. Apply, Undo and Redo belong to the focused editor." } else { "Primary means Ctrl. Leave empty to disable. Apply, Undo and Redo belong to the focused editor." }, width),
+        paragraph(scale, if cfg!(target_os = "macos") { "Primary means Command. Leave empty to disable. Apply, Undo and Redo belong to the focused editor. Primary+Up and Primary+Down move between beats." } else { "Primary means Ctrl. Leave empty to disable. Apply, Undo and Redo belong to the focused editor. Primary+Up and Primary+Down move between beats." }, width),
         app.settings.feedback.as_ref().map(|feedback| paragraph(scale, feedback.clone(), width)),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px()).width(width.px())
 }

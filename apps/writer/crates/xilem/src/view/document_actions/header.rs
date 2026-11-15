@@ -1,7 +1,10 @@
 //! Adaptive document navigation keeps project tools available without displacing their content.
 use super::*;
-use crate::presentation::Icon;
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::row::named_row;
 use crate::presentation::space;
+use crate::presentation::{Icon, Type};
+use xilem::view::FlexSpacer;
 use xilem::view::{GridExt, GridTrackSize, grid};
 
 pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -57,45 +60,36 @@ pub(in crate::view) fn project_header(state: &Writer) -> impl WidgetView<Writer>
     ))
 }
 
+/// Focus mode keeps one quiet way out at the top right; Save, Close and Copy link live in
+/// Commands.
 pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    flex_col((
-        label(state.ui_scale(), state.document_caption()),
-        temporary_notice(state),
-        flex_row((
-            text_button(state.ui_scale(), "Exit focus", Writer::toggle_focus).disabled(
+    let scale = state.ui_scale();
+    flex_row((
+        // Example changes are discarded on close; focus mode keeps saying so.
+        state.session.project_root().is_none().then(|| {
+            print::meta(
+                scale,
+                "Temporary example · changes are discarded when this window closes",
+            )
+            .color(state.palette.muted)
+        }),
+        FlexSpacer::Flex(1.),
+        styled(
+            ControlStyle::Action,
+            named_row(
+                "Exit focus",
+                Type::Control.label(scale, "Exit focus · Esc"),
+                Writer::toggle_focus,
+            )
+            .disabled(
                 state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
             ),
-            state.session.project().map(|_| {
-                print::emphasised_action(
-                    state.ui_scale(),
-                    "Save file",
-                    &state.palette,
-                    state.save_is_primary(),
-                    state.phase() != Phase::Writing
-                        || state.navigation.busy()
-                        || state.work.busy()
-                        || state.localisation.saving()
-                        || state.source_repair_pending(),
-                    Writer::save,
-                )
-            }),
-            text_button(state.ui_scale(), "Close", Writer::request_close)
-                .disabled(state.phase() != Phase::Writing),
-            copy_link(state),
-        ))
-        .gap(space::SIBLINGS.px()),
+        ),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
-}
-
-fn temporary_notice(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    state.session.project_root().is_none().then(|| {
-        label(
-            state.ui_scale(),
-            "Temporary example · changes are discarded when this window closes",
-        )
-    })
+    .padding(xilem::style::Padding::from_vh(
+        space::UNIT.px(),
+        space::KINDS.px(),
+    ))
 }
 
 fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -139,8 +133,4 @@ fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ),
     ))
     .gap(space::SIBLINGS.px())
-}
-fn copy_link(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    text_button(state.ui_scale(), "Copy link", Writer::copy_link)
-        .disabled(state.phase() != Phase::Writing || state.project_action_blocked())
 }
