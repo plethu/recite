@@ -231,8 +231,6 @@ fn mounted_project_text_pages_load_all_matches_and_apply_the_field_only_on_navig
     mounted.activate("Workspace");
     mounted.activate("Find project text");
     mounted.type_text("Search query", "Shared");
-    mounted.activate("Next results");
-    mounted.activate("Previous results");
     mounted.activate("Load more matches");
     assert!(
         mounted

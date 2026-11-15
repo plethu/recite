@@ -1,7 +1,8 @@
-//! Query input, scope selection and concise search guidance.
+//! The query field and the scope segment.
 use super::*;
 use crate::presentation::segments::{segment, segments_along};
-use crate::presentation::{Type, Typeset, field_text, search_field};
+use crate::presentation::tokens::breakpoint;
+use crate::presentation::{field_text, search_field};
 use xilem::peniko::Color;
 
 pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
@@ -10,7 +11,7 @@ pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     // One segmented track, stacked where the picker is too narrow for a row.
     segments_along(
         &app.theme.palette,
-        if width < 360. * f64::from(scale) {
+        if width < breakpoint::SEGMENTS * f64::from(scale) {
             Axis::Vertical
         } else {
             Axis::Horizontal
@@ -37,24 +38,6 @@ pub(super) fn scopes(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     )
 }
 
-pub(super) fn heading(scale: f32, mode: Mode, width: f64) -> impl WidgetView<App> + use<> {
-    let wide = width >= 300. * f64::from(scale);
-    flex_row((
-        label(scale, mode.title())
-            .typeset(Type::Section, scale)
-            .prop(LineBreaking::WordWrap)
-            .flex(if wide { 1. } else { 0. }),
-        text_button(scale, "Close search", |app: &mut App| app.dismiss_picker()),
-    ))
-    .direction(if wide {
-        Axis::Horizontal
-    } else {
-        Axis::Vertical
-    })
-    .width(width.px())
-    .gap(space::SIBLINGS.px())
-}
-
 pub(super) fn query(
     scale: f32,
     picker: Option<&Picker>,
@@ -65,7 +48,8 @@ pub(super) fn query(
         scale,
         ink,
         false,
-        Some(width),
+        // The close action shares the line.
+        Some(width - print::icon_action_width(scale) - space::SIBLINGS),
         text_input(
             picker.map_or_else(String::new, |picker| picker.query.clone()),
             |app: &mut App, value: String| app.filter_picker(value),

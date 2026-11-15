@@ -186,6 +186,11 @@ pub(crate) fn end_rule<S: 'static>(
         .width(width.px())
 }
 
+/// An icon action's width: its face and the Icon style's padding and 1px border either side.
+pub(crate) fn icon_action_width(scale: f32) -> f64 {
+    (super::icons::FACE + 2. * super::space::UNIT) * f64::from(scale) + 2.
+}
+
 /// Keep the ordinary native button and its name when the compact face is an icon.
 pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,

@@ -114,7 +114,18 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
     pub fn activate_selected(&mut self, name: &str) {
         let id = self
             .selected_matching(|caption| caption == name)
-            .unwrap_or_else(|| panic!("Missing selected control {name}"));
+            .unwrap_or_else(|| {
+                let tree = self.harness.access_tree();
+                let mut pending = vec![tree.state().root()];
+                let mut selected = Vec::new();
+                while let Some(node) = pending.pop() {
+                    if node.is_selected() == Some(true) {
+                        selected.push(node.label());
+                    }
+                    pending.extend(node.children());
+                }
+                panic!("Missing selected control {name}; selected: {selected:?}")
+            });
         self.click(id);
     }
     /// Activate the selected control whose name starts with `prefix`.
@@ -198,31 +209,38 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
             .map_or(id, |input| input.area_pod().id());
         self.harness.focus_on(Some(area));
     }
+    /// Deliver every queued native action to its view; whether there were any.
+    fn deliver_actions(&mut self) -> bool {
+        let mut delivered = false;
+        while let Some((action, source)) = self.harness.pop_action_erased() {
+            let path = self
+                .context
+                .get_id_path(source)
+                .expect("live native action")
+                .clone();
+            let mut message = MessageCtx::new(
+                std::mem::take(self.context.environment()),
+                path,
+                DynMessage(action),
+            );
+            let result = self.harness.edit_root_widget(|root| {
+                self.view
+                    .message(&mut self.local, &mut message, root, &mut self.state)
+            });
+            assert!(
+                !matches!(result, MessageResult::Stale),
+                "live mounted control must route to its view"
+            );
+            *self.context.environment() = message.finish().0;
+            delivered = true;
+        }
+        delivered
+    }
+    /// Run actions and rebuilds until a redraw raises no further action, such as a virtual list
+    /// asking for the lines it has scrolled to.
     pub fn settle(&mut self) {
+        let mut changed = self.deliver_actions();
         for _ in 0..20 {
-            let mut changed = false;
-            while let Some((action, source)) = self.harness.pop_action_erased() {
-                let path = self
-                    .context
-                    .get_id_path(source)
-                    .expect("live native action")
-                    .clone();
-                let mut message = MessageCtx::new(
-                    std::mem::take(self.context.environment()),
-                    path,
-                    DynMessage(action),
-                );
-                let result = self.harness.edit_root_widget(|root| {
-                    self.view
-                        .message(&mut self.local, &mut message, root, &mut self.state)
-                });
-                assert!(
-                    !matches!(result, MessageResult::Stale),
-                    "live mounted control must route to its view"
-                );
-                *self.context.environment() = message.finish().0;
-                changed = true;
-            }
             let next = (self.make)(&mut self.state);
             self.harness.edit_root_widget(|root| {
                 next.rebuild(
@@ -235,9 +253,11 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
             });
             self.view = next;
             self.harness.redraw();
-            if !changed {
+            let raised = self.deliver_actions();
+            if !changed && !raised {
                 return;
             }
+            changed = raised;
         }
         panic!("Mounted component did not settle");
     }

@@ -8,9 +8,7 @@ mod controls;
 mod disclosure;
 pub(crate) use disclosure::{disclosure, disclosure_width, route_toggle};
 mod styled_text;
-pub(crate) use emphasized_text::{
-    manuscript_comparison, manuscript_search, search_label, source_comparison,
-};
+pub(crate) use emphasized_text::{manuscript_comparison, search_label, source_comparison};
 pub(crate) use styled_text::{manuscript_text, source_text};
 pub(crate) mod control_style;
 pub(crate) mod grid;

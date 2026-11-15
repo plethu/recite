@@ -3,7 +3,7 @@
 //! Every state keeps the control's border box: a wider border takes its width from the padding,
 //! and a pressed face sinks one pixel down and right inside the same box.
 use super::super::control_style::ControlStyle;
-use super::super::tokens::{Type, size};
+use super::super::tokens::{Type, size, space};
 use super::*;
 mod wells;
 use recite_writer_session::palette::{
@@ -92,7 +92,10 @@ impl Look {
             (Some(ControlStyle::Navigation), quiet(text)),
             (Some(ControlStyle::Segment), quiet(text)),
             (Some(ControlStyle::Manuscript), quiet(text)),
-            (Some(ControlStyle::Icon), quiet((4. * scale, 4. * scale))),
+            (
+                Some(ControlStyle::Icon),
+                quiet((space::UNIT * scale, space::UNIT * scale)),
+            ),
             (Some(ControlStyle::Tab), quiet(text)),
             (Some(ControlStyle::Row), quiet(text)),
             (

@@ -33,6 +33,8 @@ pub(crate) enum Icon {
     Pin,
     /// A pen nib: rename this object.
     Rename,
+    /// Two crossed strokes: close this slip or sheet.
+    Close,
 }
 impl Icon {
     fn filled(self) -> bool {
@@ -123,6 +125,12 @@ impl Icon {
                 path.move_to((11., 19.));
                 path.line_to((19., 19.));
             }
+            Self::Close => {
+                path.move_to((7., 7.));
+                path.line_to((17., 17.));
+                path.move_to((17., 7.));
+                path.line_to((7., 17.));
+            }
             Self::Search => {
                 path.extend(Circle::new((10.5, 10.5), 5.5).path_elements(0.1));
                 path.move_to((14.5, 14.5));
@@ -152,6 +160,10 @@ pub(crate) struct Face {
 }
 /// The scale of a small mark beside a control's words, such as a search glyph or a grip.
 pub(crate) const SMALL: f32 = 0.8;
+/// An icon's face at 100%, drawn on a 24-unit grid.
+pub(crate) const FACE: f64 = 20.;
+/// The grid icon paths are drawn on.
+const GRID: f64 = 24.;
 /// A decorative face named `name`, for marks that replace a glyph inside other content.
 pub(crate) fn mark(scale: f32, name: &'static str, icon: Icon, color: Color) -> Face {
     face(scale, name, icon, color)

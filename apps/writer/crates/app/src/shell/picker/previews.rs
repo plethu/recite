@@ -1,25 +1,22 @@
-//! Only the visible passage snippets are prepared, at query and result-page boundaries.
-pub use super::{Entry, Item, PAGE};
+//! Passage snippets are prepared once per query for every match the picker lists.
+pub use super::{Entry, Item};
 
 #[derive(Default)]
 pub struct Previews {
-    page: Option<usize>,
+    prepared: bool,
     text: Vec<String>,
 }
 impl Previews {
     pub(crate) fn invalidate(&mut self) {
-        self.page = None;
+        self.prepared = false;
         self.text.clear();
     }
-    pub fn prepare(&mut self, entries: &[Entry], matches: &[usize], query: &str, active: usize) {
-        let page = active / PAGE;
-        if self.page == Some(page) {
+    pub fn prepare(&mut self, entries: &[Entry], matches: &[usize], query: &str) {
+        if self.prepared {
             return;
         }
         self.text = matches
             .iter()
-            .skip(page * PAGE)
-            .take(PAGE)
             .map(|index| match &entries[*index].item {
                 Item::Passage { passage, .. } => {
                     recite_writer_model::passage_excerpt(&passage.text, query, 120)
@@ -27,12 +24,9 @@ impl Previews {
                 _ => String::new(),
             })
             .collect();
-        self.page = Some(page);
+        self.prepared = true;
     }
     pub fn get(&self, position: usize) -> Option<&str> {
-        (self.page == Some(position / PAGE))
-            .then(|| self.text.get(position % PAGE))
-            .flatten()
-            .map(String::as_str)
+        self.text.get(position).map(String::as_str)
     }
 }

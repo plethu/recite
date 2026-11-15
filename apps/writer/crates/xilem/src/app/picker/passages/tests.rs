@@ -156,9 +156,9 @@ fn long_beat_lookup_shares_prose_and_keeps_native_result_mounting_constant() {
                 .as_ptr(),
             preview
         );
-        app.next_picker_page();
+        // Every listed match has its snippet, not only those near the active one.
         let picker = app.picker.as_ref().unwrap();
-        assert!(picker.previews.get(PAGE).unwrap().contains("Courier 6"));
+        assert!(picker.previews.get(5).unwrap().contains("Courier 6"));
         app.filter_picker(format!("Courier {passages}"));
         let picker = app.picker.as_ref().unwrap();
         assert_eq!(picker.matches.len(), 1);

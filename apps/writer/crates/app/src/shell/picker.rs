@@ -7,7 +7,7 @@ pub use crate::rules::selection;
 use recite_config::WriterCommand;
 use recite_writer_session::commands::targets;
 use recite_writer_session::location::Location;
-pub const PAGE: usize = 5;
+use std::ops::Range;
 /// One opening has a distinct authority even when its mode and query are identical.
 #[derive(Clone, Default)]
 pub struct PickerInstance(Arc<()>);
@@ -84,6 +84,10 @@ pub struct Picker {
     limit: usize,
     pub total: usize,
     pub previews: previews::Previews,
+    /// The results the list shows, as it last reported them.
+    visible: Range<usize>,
+    /// The first result the list shows; it moves only to keep the active result in view.
+    pub anchor: usize,
 }
 impl Mode {
     pub fn title(self) -> &'static str {
@@ -112,6 +116,8 @@ impl Picker {
             active: 0,
             limit: 100,
             previews: Default::default(),
+            visible: 0..0,
+            anchor: 0,
         };
         picker.prepare_previews();
         picker
@@ -128,12 +134,20 @@ impl Picker {
     fn select(&mut self, active: usize) {
         self.active = active;
         self.revision.advance();
-        self.prepare_previews();
+        // Keep the active result in the list: bring it in at the edge it left by, or to the top
+        // before the list has reported what it shows.
+        if !self.visible.contains(&active) {
+            self.anchor = if self.visible.is_empty() || active < self.visible.start {
+                active
+            } else {
+                active + 1 - self.visible.len()
+            };
+        }
     }
     fn prepare_previews(&mut self) {
         if self.mode() == Mode::Passages {
             self.previews
-                .prepare(&self.entries, &self.matches, &self.query, self.active);
+                .prepare(&self.entries, &self.matches, &self.query);
         }
     }
 }
@@ -173,10 +187,17 @@ impl Shell {
             picker.step(forward);
         }
     }
+    /// The list scrolled to show `visible`.
+    pub fn picker_scrolled(&mut self, visible: Range<usize>) {
+        if let Some(picker) = &mut self.picker {
+            picker.visible = visible;
+        }
+    }
     pub fn filter_picker(&mut self, query: String) {
         if let Some(picker) = &mut self.picker {
             picker.query = query;
             picker.active = 0;
+            picker.anchor = 0;
             picker.limit = 100;
         }
         self.refresh_picker();
@@ -184,18 +205,6 @@ impl Shell {
     pub fn submit_picker(&mut self) {
         let active = self.picker.as_ref().map_or(0, |picker| picker.active);
         self.activate_picker(active);
-    }
-    pub fn previous_picker_page(&mut self) {
-        if let Some(picker) = &mut self.picker {
-            picker.select(picker.active.saturating_sub(PAGE));
-        }
-    }
-    pub fn next_picker_page(&mut self) {
-        if let Some(picker) = &mut self.picker {
-            picker.select(
-                ((picker.active / PAGE + 1) * PAGE).min(picker.matches.len().saturating_sub(1)),
-            );
-        }
     }
     pub fn load_picker_matches(&mut self) {
         if let Some(picker) = &mut self.picker {
@@ -313,51 +322,28 @@ impl Shell {
 }
 
 impl Mode {
-    /// What this search does and how its choices are committed.
-    pub fn guidance(self) -> &'static str {
-        match self {
-            Mode::Commands => {
-                "Up/Down to choose. Enter runs the command. Esc returns to your document."
-            }
-            Mode::GoTo => {
-                "Find a scene or beat by name. Opening keeps your edits; Save writes them to disk."
-            }
-            Mode::ProjectText => "Saved text · Save to include edits.",
-            Mode::Passages => "This beat, including your text edits. Opening keeps your changes.",
-            Mode::RulesChoices => {
-                "Enter stages a value. Apply or Save commits it; Esc keeps your current draft."
-            }
-            Mode::Destinations => {
-                "Choose a beat or END. Your current draft is applied; Save writes the change to disk."
-            }
-            Mode::RenameBeat => {
-                "Choose a beat to rename. This updates the proposal; Esc keeps the current proposal."
-            }
-        }
-    }
     /// The keys this search answers to.
     pub fn keyboard_help(self) -> &'static str {
         match self {
-            Mode::Commands => "Up/Down: choose · Enter: run · Esc: return",
+            Mode::Commands => "Up/Down choose · Enter runs · Esc returns",
             Mode::RulesChoices | Mode::Destinations | Mode::RenameBeat => {
-                "Up/Down: choose · Enter: choose · Esc: return"
+                "Up/Down choose · Enter picks · Esc returns"
             }
-            _ => "Up/Down: choose · Enter: open · Esc: return",
+            _ => "Up/Down choose · Enter opens · Esc returns",
         }
     }
 }
-/// Result totals and paging for the visible matches.
-pub fn result_count(picker: Option<&Picker>, page: usize, count: usize) -> String {
-    if count <= PAGE && picker.is_none_or(|picker| picker.total <= count) {
-        return format!("{count} {}", if count == 1 { "result" } else { "results" });
-    }
+/// The picker's one hint line: how many results there are, then its keys.
+pub fn hint(picker: Option<&Picker>) -> String {
+    let count = picker.map_or(0, |picker| picker.matches.len());
     let total = picker
         .filter(|picker| picker.total > count)
         .map_or_else(String::new, |picker| format!(" of {}", picker.total));
+    let mode = picker.map_or(Mode::Commands, Picker::mode);
     format!(
-        "{count}{total} results · page {} of {}",
-        page + 1,
-        count.div_ceil(PAGE).max(1)
+        "{count}{total} {} · {}",
+        if count == 1 { "result" } else { "results" },
+        mode.keyboard_help()
     )
 }
 /// The message shown when a search has no visible matches.

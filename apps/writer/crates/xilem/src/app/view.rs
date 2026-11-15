@@ -5,6 +5,7 @@ use crate::presentation::{
     group::named,
     material::{backdrop, desk},
     space,
+    tokens::size,
 };
 use chrome::app_bar;
 use xilem::{
@@ -19,6 +20,7 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
         writer.viewport.width = width;
     }
     let slot = slot::writer_slot(app);
+    let scale = f64::from(crate::presentation::scale(&app.preferences.config.writer));
     // The status bar's height: its vertical padding and one Meta line.
     let status_bar = if app.writer.is_some() && !app.show_welcome() && !app.settings_open() {
         2. * space::UNIT
@@ -55,9 +57,15 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                                     app.theme.screen.clone(),
                                     // A stack bounds the picker by the layer, so it
                                     // scrolls its results rather than overflow at 200%.
-                                    zstack((picker::view::picker(app),))
-                                        .alignment(UnitPoint::CENTER)
-                                        .dims(Dim::Stretch),
+                                    zstack((sized_box(picker::view::picker(app)).padding(
+                                        Padding::top(
+                                            // Below the tab row, a picker opens at a fixed
+                                            // height from the window's top edge.
+                                            ((size::PICKER_TOP - size::ROW) * scale).px(),
+                                        ),
+                                    ),))
+                                    .alignment(UnitPoint::TOP)
+                                    .dims(Dim::Stretch),
                                 ))
                                 .padding(Padding {
                                     bottom: status_bar.px(),

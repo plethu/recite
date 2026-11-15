@@ -6,7 +6,7 @@ use xilem::masonry::{accesskit::Role, core::Widget, testing::TestHarness};
 #[test]
 fn highlighted_search_results_keep_complete_native_text() {
     let text = "The café courier takes tram 39.";
-    let view = manuscript_search(20., text.into(), "CAFÉ 39".into());
+    let view = search_label(20., text.into(), "CAFÉ 39".into());
     let label = ShapedText::new(text)
         .with_ranged_styles(view.styles())
         .prepare()

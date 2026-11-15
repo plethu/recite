@@ -44,6 +44,11 @@ pub(crate) mod size {
     pub const FIELD_INSET: f64 = 2.;
     /// The least width of the file tab, and of the wordmark's column while the scene list hides.
     pub const TAB_MIN: f64 = 96.;
+    /// A picker's width, and how far below the window's top edge it opens.
+    pub const PICKER_WIDTH: f64 = 640.;
+    pub const PICKER_TOP: f64 = 72.;
+    /// The most result lines a picker shows at once; the rest scroll.
+    pub const PICKER_ROWS: usize = 8;
 }
 
 /// A text control's padding and 1px border before its words, at `scale`: where a heading or
@@ -66,6 +71,8 @@ pub(crate) mod sidebar {
 pub(crate) mod breakpoint {
     /// The toolbar shows labels and the history buttons from this width.
     pub const TOOLBAR: f64 = 600.;
+    /// Segments narrower than this stack.
+    pub const SEGMENTS: f64 = 360.;
 }
 
 /// Text in a single-line field. A text input's accessible bounds are its line box, so fields
