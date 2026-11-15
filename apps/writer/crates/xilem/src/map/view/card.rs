@@ -1,9 +1,11 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
+use crate::presentation::marks::{GLYPH, Mark, THICKNESS, marked, wedge_glyph};
 use crate::presentation::space;
-use crate::presentation::{Icon, excerpt, mark, print};
+use crate::presentation::{Icon, SMALL, excerpt, mark, print};
 use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
+use xilem::core::one_of::Either;
 use xilem::masonry::{
     parley::style::FontWeight,
     properties::{self, BoxShadow},
@@ -20,6 +22,18 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         title.push_str(" · end");
     }
     let selected = scene.selected.as_deref() == Some(&block.id);
+    // The galley's margin marks repeat here: the reading beat's bar, and a wedge on a beat with a
+    // problem, which the card's name also says.
+    let reading = state.reading.selected.as_deref() == Some(block.id.as_str());
+    let problem = state
+        .beat_problems()
+        .iter()
+        .any(|(beat, _)| beat == &block.id);
+    let name = if problem {
+        format!("{title} · Problem")
+    } else {
+        title.clone()
+    };
     let disabled = state.phase() != crate::Phase::Writing
         || !scene
             .projection
@@ -27,10 +41,21 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     let zoom = scene.camera.zoom;
     let width = f64::from(scene.node(index).width);
     let contents = flex_col((
-        label(1., title.clone())
-            .font(print::font(FONT_UI))
-            .weight(FontWeight::SEMI_BOLD)
-            .text_size(16_f32.max(14. / zoom)),
+        {
+            let heading = label(1., title.clone())
+                .font(print::font(FONT_UI))
+                .weight(FontWeight::SEMI_BOLD)
+                .text_size(16_f32.max(14. / zoom));
+            if problem {
+                Either::A(
+                    flex_row((heading, wedge_glyph(GLYPH, state.palette.error)))
+                        .cross_axis_alignment(CrossAxisAlignment::Center)
+                        .gap(space::UNIT.px()),
+                )
+            } else {
+                Either::B(heading)
+            }
+        },
         flex_col((
             label(1., synopsis.speaker.clone())
                 .text_size(13_f32.max(11. / zoom))
@@ -69,7 +94,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     .border_width(0.px());
     let focus = input::input(
         input::Kind::Card {
-            title: title.clone(),
+            title: name,
             selected,
         },
         false,
@@ -120,7 +145,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
                 input::Kind::Grip(title),
                 state.config.ui.keymap == recite_config::Keymap::Vim,
                 // A painted grip; the image keeps the glyph's name inside the named control.
-                mark(0.8, "⠿", Icon::Grip, state.palette.muted),
+                mark(SMALL, "⠿", Icon::Grip, state.palette.muted),
                 move |state: &mut Writer, action| {
                     state.map_input(Source::Grip(move_id.clone()), action)
                 },
@@ -136,7 +161,19 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             }),
         )
     });
-    zstack((focus, grip))
+    // Only the reading beat's card carries a mark, so the others mount nothing for it.
+    let mark = reading.then(|| {
+        marked(
+            &state.palette,
+            Some(if state.session.model().has_draft() {
+                Mark::Unsaved
+            } else {
+                Mark::Current
+            }),
+            flex_col(()).dims((THICKNESS.px(), HEIGHT.px())),
+        )
+    });
+    zstack((focus, grip, mark))
         .alignment(UnitPoint::TOP_LEFT)
         .dims((scene.node(index).width.px(), HEIGHT.px()))
 }

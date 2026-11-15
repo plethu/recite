@@ -1,7 +1,10 @@
 //! Window identity and workspace commands live outside the manuscript's reading measure.
+use crate::presentation::material::{Bar, Edge, bar};
 use crate::presentation::segments::{tab, tabs};
-use crate::presentation::space;
-use crate::presentation::{identity, label, paragraph, print};
+use crate::presentation::sheet_text::one_line;
+use crate::presentation::tokens::size;
+use crate::presentation::{Type, space};
+use crate::presentation::{identity, paragraph, print};
 use crate::{
     Phase, Writer,
     app::{App, picker},
@@ -10,7 +13,7 @@ use xilem::{
     WidgetView,
     masonry::{kurbo::Axis, layout::AsUnit, parley::style::FontWeight},
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, sized_box},
+    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, sized_box},
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
@@ -60,32 +63,39 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             app.writer
                 .as_ref()
                 .map_or(220., |writer| {
-                    writer.navigation_width().max(96. * f64::from(scale))
+                    writer
+                        .navigation_width()
+                        .max(size::TAB_MIN * f64::from(scale))
                 })
                 .px(),
         ),
-        app.writer
-            .as_ref()
-            .filter(|writer| writer.viewport.width >= 1100. * f64::from(scale))
-            .map(|writer| {
-                flex_col((
-                    sized_box(
-                        label(scale, writer.session.model().document().key().to_string())
-                            .weight(FontWeight::SEMI_BOLD)
-                            .color(app.theme.palette.ink),
+        // The file tab takes the row's spare width and ends in an ellipsis when that is short of
+        // its name; assistive technology reads the whole name.
+        app.writer.as_ref().map(|writer| {
+            flex_col((bar(
+                Some(Bar::solid(app.theme.palette.teal, Edge::Bottom, 0., 0.)),
+                sized_box(
+                    one_line(
+                        writer.session.model().document().key().to_string(),
+                        Type::Control,
+                        scale,
+                        app.theme.palette.ink,
                     )
-                    .padding(xilem::style::Padding::from_vh(
-                        space::UNIT.px(),
-                        space::SIBLINGS.px(),
-                    )),
-                    flex_col(())
-                        .height(1.px())
-                        .background_color(app.theme.palette.teal),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(0.px())
-            }),
-        xilem::view::FlexSpacer::Flex(1.),
+                    .weight(FontWeight::SEMI_BOLD),
+                )
+                .padding(xilem::style::Padding::from_vh(
+                    space::UNIT.px(),
+                    space::SIBLINGS.px(),
+                )),
+            ),))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .flex(1.)
+        }),
+        if app.writer.is_some() {
+            xilem::view::FlexSpacer::Fixed(0.px())
+        } else {
+            xilem::view::FlexSpacer::Flex(1.)
+        },
         app.writer
             .as_ref()
             .filter(|writer| {

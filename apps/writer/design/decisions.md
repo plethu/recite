@@ -24,6 +24,13 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
 - **Structure.** A paper sidebar, a tab row that is always present, a one-row toolbar and an ink
   status bar. Script reads as a manuscript: speaker labels in the margin, destinations inline, an
   end-mark and folio. Map has a dot grid, teal return edges and offset cards.
+- **Galley.** Script is one continuous scene on a sheet grid (`presentation/grid.rs`): pad,
+  margin column, measure capped at 68 characters, destination column. Every beat is set at the
+  same metrics; only the selected one mounts fields, so choosing a beat never reflows the page. A
+  sticky running head and foot carry the place. Below a 480px measure the paper goes full-bleed.
+- **Margin marks.** One vocabulary in the galley margin, the scene list and on map cards: a solid
+  teal bar for the current beat, a plum halftone bar for unsaved work, an error wedge for a
+  problem. They differ in shape as well as ink; only the galley's wedge takes focus.
 - **Motion.** Nothing animates differently from the platform; reduced motion is unchanged. Motion
   added later must answer a user action and honour the reduced-motion preference.
 - **Vocabulary.** Writer says scene, beat and reply; the docs glossary maps those to block and

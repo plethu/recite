@@ -19,7 +19,8 @@ source produces the same pixels on any host. Fixtures live in
 modules:
 
 - **Stills**: welcome and project creation; Script with a new starter project, an empty beat, a
-  scene with no beats, a representative branching scene, an unapplied draft and focus mode; Map
+  scene with no beats, a representative branching scene, an unapplied draft, focus mode, the
+  galley at a later beat under its running head, the margin marks and the smallest reading size; Map
   and Split; source needing repair; Preview; Localise with a catalogue and with none; the
   translations queue; Build, Rename, Declarations, disk changes and source updates; preferences;
   the command, go-to, find and passage pickers, and the command picker over the hatch backdrop
