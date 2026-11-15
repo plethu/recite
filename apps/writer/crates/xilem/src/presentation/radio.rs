@@ -26,6 +26,8 @@ impl UsesProperty<GroupStop> for RadioButton {}
 
 pub(crate) struct Radio<F> {
     text: ArcStr,
+    /// The full name assistive technology reads, where the visible text is a short face.
+    name: Option<ArcStr>,
     checked: bool,
     size: f32,
     weight: FontWeight,
@@ -41,6 +43,7 @@ pub(crate) fn radio_button<S: 'static>(
 ) -> Radio<impl Fn(&mut S) + Send + Sync + 'static> {
     Radio {
         text: text.into(),
+        name: None,
         checked,
         size: super::Type::Control.size(scale),
         weight: super::Type::Control.weight(),
@@ -50,6 +53,11 @@ pub(crate) fn radio_button<S: 'static>(
     }
 }
 impl<F> Radio<F> {
+    /// Read `name` instead of the visible text, which stays a short face such as "Light".
+    pub fn accessible_label(mut self, name: Option<ArcStr>) -> Self {
+        self.name = name;
+        self
+    }
     pub fn label_color(mut self, color: Color) -> Self {
         self.label_color = Some(color);
         self
@@ -77,8 +85,11 @@ impl<S: 'static, F: Fn(&mut S) + Send + Sync + 'static> View<S, (), ViewCtx> for
         if let Some(color) = self.label_color {
             label = label.with_props(ContentColor::new(color));
         }
-        let mut pod = ctx
-            .with_action_widget(|ctx| ctx.create_pod(RadioButton::from_label(self.checked, label)));
+        let mut radio = RadioButton::from_label(self.checked, label);
+        if let Some(name) = &self.name {
+            radio = radio.with_accessible_label(name.clone());
+        }
+        let mut pod = ctx.with_action_widget(|ctx| ctx.create_pod(radio));
         pod.new_widget = pod.new_widget.with_props(GroupStop(self.checked));
         pod.new_widget.options.disabled = self.disabled;
         (pod, ())
@@ -96,6 +107,9 @@ impl<S: 'static, F: Fn(&mut S) + Send + Sync + 'static> View<S, (), ViewCtx> for
         }
         if old.text != self.text {
             RadioButton::set_text(&mut element, self.text.clone());
+        }
+        if old.name != self.name {
+            RadioButton::set_accessible_label(&mut element, self.name.clone());
         }
         if old.checked != self.checked {
             RadioButton::set_checked(&mut element, self.checked);

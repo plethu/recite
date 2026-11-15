@@ -27,15 +27,30 @@ use xilem::{
 /// How far a chosen segment's bar sits above the chip's bottom edge.
 const LIFT: f64 = 4.;
 
-fn choice<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(
+/// One choice: its visible face, and the full name read in its place when the face is short.
+struct Title {
+    face: ArcStr,
+    name: Option<ArcStr>,
+}
+impl<T: Into<ArcStr>> From<T> for Title {
+    fn from(face: T) -> Self {
+        Self {
+            face: face.into(),
+            name: None,
+        }
+    }
+}
+
+fn choice<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,
     palette: &Palette<Color>,
-    title: T,
+    title: Title,
     selected: bool,
     disabled: bool,
     select: F,
-) -> impl WidgetView<S, Widget = RadioButton> + use<S, T, F> {
-    radio_button(scale, title, selected, select)
+) -> impl WidgetView<S, Widget = RadioButton> + use<S, F> {
+    radio_button(scale, title.face, selected, select)
+        .accessible_label(title.name)
         .label_color(if disabled { palette.muted } else { palette.ink })
         .weight(if selected {
             FontWeight::SEMI_BOLD
@@ -57,6 +72,46 @@ pub(crate) fn segment<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync +
     disabled: bool,
     select: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
+    chip(
+        scale,
+        palette,
+        Title::from(title),
+        selected,
+        disabled,
+        select,
+    )
+}
+
+/// A segment showing the short `face` ("Light") and read by its full `name` ("Light theme"), for
+/// a choice whose row label already says what is chosen.
+pub(crate) fn segment_named<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+    scale: f32,
+    palette: &Palette<Color>,
+    (face, name): (&'static str, &'static str),
+    selected: bool,
+    select: F,
+) -> impl WidgetView<S> + use<S, F> {
+    chip(
+        scale,
+        palette,
+        Title {
+            face: face.into(),
+            name: Some(name.into()),
+        },
+        selected,
+        false,
+        select,
+    )
+}
+
+fn chip<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+    scale: f32,
+    palette: &Palette<Color>,
+    title: Title,
+    selected: bool,
+    disabled: bool,
+    select: F,
+) -> impl WidgetView<S> + use<S, F> {
     bar(
         selected.then_some(Bar::solid(
             palette.ink,
@@ -112,7 +167,14 @@ pub(crate) fn tab<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'st
         selected.then_some(Bar::solid(palette.teal, Edge::Bottom, 0., 0.)),
         styled(
             ControlStyle::Tab,
-            choice(scale, palette, title, selected, disabled, select),
+            choice(
+                scale,
+                palette,
+                Title::from(title),
+                selected,
+                disabled,
+                select,
+            ),
         ),
     )
 }

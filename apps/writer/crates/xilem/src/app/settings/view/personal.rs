@@ -1,10 +1,10 @@
 use super::*;
-use crate::presentation::segments::{segment, segments_along};
+use crate::presentation::segments::{segment_named, segments};
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, print, space};
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
-use xilem::masonry::kurbo::Axis;
 use xilem::masonry::properties::LineBreaking;
-use xilem::view::checkbox;
+use xilem::view::{FlexExt, checkbox};
 mod reading;
 
 pub(super) fn personal(app: &App, width: f64) -> impl WidgetView<App> + use<> {
@@ -13,10 +13,13 @@ pub(super) fn personal(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(writer);
     let presentation = writer.presentation;
     let check = |caption: &'static str, checked: bool, edit: fn(bool) -> UserConfigEdit| {
-        checkbox(caption, checked, move |app: &mut App, value| {
-            app.update_preference(edit(value))
-        })
-        .text_size(Type::Body.size(scale))
+        check_row(
+            scale,
+            width,
+            caption,
+            checked,
+            move |app: &mut App, value| app.update_preference(edit(value)),
+        )
     };
     flex_col((
         group(scale, "Reading and layout", reading::reading(app, width)),
@@ -26,15 +29,16 @@ pub(super) fn personal(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             flex_col((
                 choices(
                     app,
-                    Axis::Horizontal,
+                    width,
+                    "Theme",
                     [
                         (
-                            "Light theme",
+                            ("Light", "Light theme"),
                             writer.theme == WriterTheme::Light,
                             UserConfigEdit::WriterTheme(WriterTheme::Light),
                         ),
                         (
-                            "Dark theme",
+                            ("Dark", "Dark theme"),
                             writer.theme == WriterTheme::Dark,
                             UserConfigEdit::WriterTheme(WriterTheme::Dark),
                         ),
@@ -60,38 +64,41 @@ pub(super) fn personal(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             flex_col((
                 choices(
                     app,
-                    Axis::Horizontal,
+                    width,
+                    "Keymap",
                     [
                         (
-                            "Standard keymap",
+                            ("Standard", "Standard keymap"),
                             config.ui.keymap == Keymap::Standard,
                             UserConfigEdit::Keymap(Keymap::Standard),
                         ),
                         (
-                            "Vim keymap",
+                            ("Vim", "Vim keymap"),
                             config.ui.keymap == Keymap::Vim,
                             UserConfigEdit::Keymap(Keymap::Vim),
                         ),
                     ],
                 ),
-                // Two long choices stack on the sheet's narrow measure.
                 choices(
                     app,
-                    Axis::Vertical,
+                    width,
+                    "Script pane",
                     [
                         (
-                            "Script pane on the left",
+                            ("Left", "Script pane on the left"),
                             writer.pane_side == WriterPaneSide::Left,
                             UserConfigEdit::WriterPaneSide(WriterPaneSide::Left),
                         ),
                         (
-                            "Script pane on the right",
+                            ("Right", "Script pane on the right"),
                             writer.pane_side == WriterPaneSide::Right,
                             UserConfigEdit::WriterPaneSide(WriterPaneSide::Right),
                         ),
                     ],
                 ),
-                checkbox(
+                check_row(
+                    scale,
+                    width,
                     "Split map and script",
                     presentation.split(),
                     move |app: &mut App, value| {
@@ -99,8 +106,7 @@ pub(super) fn personal(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                             presentation.with_split(value),
                         ))
                     },
-                )
-                .text_size(Type::Body.size(scale)),
+                ),
                 check(
                     "Always show shortcut hints",
                     writer.shortcut_hints,
@@ -158,26 +164,60 @@ fn group<V: WidgetView<App>>(
         .gap(space::TEXT.px())
 }
 
-/// A preference with two choices: one segmented track, one Tab stop.
+/// One preference: its label on the left and its control against the sheet's right edge, on a
+/// row's height so every preference keeps one rhythm.
+pub(super) fn row<V: WidgetView<App>>(
+    scale: f32,
+    width: f64,
+    caption: &'static str,
+    control: V,
+) -> impl WidgetView<App> + use<V> {
+    flex_row((
+        Type::Body
+            .label(scale, caption)
+            .prop(LineBreaking::WordWrap)
+            .flex(1.),
+        control,
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(space::SIBLINGS.px())
+    .width(width.px())
+}
+
+/// A checkbox across the whole row, so its hover and its target span the row.
+fn check_row<F: Fn(&mut App, bool) + Send + Sync + 'static>(
+    scale: f32,
+    width: f64,
+    caption: &'static str,
+    checked: bool,
+    edit: F,
+) -> impl WidgetView<App> + use<F> {
+    checkbox(caption, checked, edit)
+        .text_size(Type::Body.size(scale))
+        .dims((width.px(), (size::ROW * f64::from(scale)).px()))
+}
+
+/// A preference with two choices, labelled on the left: one compact segmented track on the
+/// right, one Tab stop, each choice read by its full name.
 fn choices(
     app: &App,
-    axis: Axis,
-    options: [(&'static str, bool, UserConfigEdit); 2],
+    width: f64,
+    caption: &'static str,
+    options: [((&'static str, &'static str), bool, UserConfigEdit); 2],
 ) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     let palette = &app.theme.palette;
-    segments_along(
-        palette,
-        axis,
-        options.map(|(title, chosen, edit)| {
-            segment(
-                scale,
-                palette,
-                title,
-                chosen,
-                false,
-                move |app: &mut App| app.update_preference(edit.clone()),
-            )
-        }),
+    row(
+        scale,
+        width,
+        caption,
+        segments(
+            palette,
+            options.map(|(title, chosen, edit)| {
+                segment_named(scale, palette, title, chosen, move |app: &mut App| {
+                    app.update_preference(edit.clone())
+                })
+            }),
+        ),
     )
 }

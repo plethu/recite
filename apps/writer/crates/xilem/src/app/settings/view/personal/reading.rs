@@ -1,8 +1,6 @@
 use super::*;
 use crate::presentation::number::{Range, Spin, number_field};
 use crate::presentation::space;
-use xilem::masonry::properties::LineBreaking;
-use xilem::view::FlexExt;
 
 pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let presentation = app.preferences.config.writer.presentation;
@@ -18,8 +16,10 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     .map(|(caption, field)| {
         let (min, max) = field.bounds();
         let value = presentation.value(field);
-        flex_row((
-            label(scale, caption).prop(LineBreaking::WordWrap).flex(1.),
+        super::row(
+            scale,
+            width,
+            caption,
             number_field(
                 scale,
                 caption,
@@ -40,11 +40,7 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                     Spin::To(target) => app.set_presentation(field, target.round() as u16),
                 },
             ),
-        ))
-        // The label on the left, the field against the sheet's right edge.
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(space::SIBLINGS.px())
-        .width(width.px())
+        )
     })
     .collect::<Vec<_>>();
     flex_col(fields)
