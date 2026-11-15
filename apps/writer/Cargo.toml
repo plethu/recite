@@ -41,6 +41,13 @@ debug = 0
 [profile.dev.package.masonry_winit]
 opt-level = 3
 
+# Damage tracking and scene recording run on every redraw; unoptimized they add about 1 ms each.
+[profile.dev.package.masonry_core]
+opt-level = 3
+
+[profile.dev.package.masonry_imaging]
+opt-level = 3
+
 [profile.dev.package.softbuffer]
 opt-level = 3
 
