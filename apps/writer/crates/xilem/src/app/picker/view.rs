@@ -1,10 +1,10 @@
 use super::{App, Entry, Item, Mode, PAGE, Picker, Purpose, Search};
+use crate::presentation::row::RowButton;
 use crate::presentation::space;
 use crate::presentation::{fit_content, label, paragraph, text_button};
 use crate::presentation::{group::dialog, manuscript_search, search_label};
 use recite_writer_session::choices::display_name;
 use xilem::core::one_of::Either;
-use xilem::masonry::widgets;
 use xilem::{
     WidgetView,
     masonry::{
@@ -15,9 +15,7 @@ use xilem::{
         widgets::TextInput,
     },
     style::Style,
-    view::{
-        CrossAxisAlignment, FlexExt, button, flex_col, flex_row, portal, sized_box, text_input,
-    },
+    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, portal, sized_box, text_input},
 };
 mod controls;
 mod results;
@@ -44,7 +42,7 @@ impl Property for ActiveResult {
         &OTHER
     }
 }
-impl UsesProperty<ActiveResult> for widgets::Button {}
+impl UsesProperty<ActiveResult> for RowButton {}
 
 pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);

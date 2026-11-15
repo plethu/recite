@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def selected(window, word):
-    return any(name.startswith("Selected · ") and word in name for _, name in window.nodes())
+    return window.selected(lambda name: word in name) is not None
 
 
 def dialog_focus(window):

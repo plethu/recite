@@ -4,20 +4,13 @@ use crate::attention::{Pane, Region};
 use crate::map::Workspace;
 use crate::navigation::rail::{FILE_PAGE, beat_page_size};
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::row::{listed, row};
 use crate::presentation::space;
 use crate::presentation::{disclosure, disclosure_width, group::named, print};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
-use xilem::peniko::Color;
 use xilem::view::{button, portal};
-use xilem::{
-    masonry::{
-        imaging::Painter,
-        kurbo::{Affine, BezPath},
-    },
-    view::canvas,
-};
 
 pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let documents = if state.session.project_root().is_some() {
@@ -207,47 +200,43 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .map(|block| {
             let id = block.id().to_string();
             let current = selected == Some(id.as_str());
-            styled(
-                ControlStyle::Navigation,
-                button(
-                    outline_caption(
-                        state,
-                        current,
-                        label(
-                            scale,
-                            format!(
-                                "{}{}{}",
-                                if block.is_default() { "Start · " } else { "" },
-                                display_name(&id),
-                                if block.has_end_destination() {
-                                    " · end"
-                                } else {
-                                    ""
-                                }
-                            ),
-                        )
-                        .weight(if current {
-                            FontWeight::SEMI_BOLD
-                        } else {
-                            FontWeight::NORMAL
-                        })
-                        .prop(LineBreaking::WordWrap),
-                    ),
+            // The current beat is the list's selected row: the plate, the ink bar and the state.
+            listed(
+                &state.palette,
+                current,
+                row(
+                    current,
+                    label(
+                        scale,
+                        format!(
+                            "{}{}{}",
+                            if block.is_default() { "Start · " } else { "" },
+                            display_name(&id),
+                            if block.has_end_destination() {
+                                " · end"
+                            } else {
+                                ""
+                            }
+                        ),
+                    )
+                    .weight(if current {
+                        FontWeight::SEMI_BOLD
+                    } else {
+                        FontWeight::NORMAL
+                    })
+                    .prop(LineBreaking::WordWrap)
+                    .width((state.drawer_width() - 48. - OUTLINE_INSET).px()),
                     move |state: &mut Writer| state.inspect(id.clone()),
                 )
-                .disabled(closing)
-                .background_color(if current {
-                    state.palette.plate
-                } else {
-                    Color::TRANSPARENT
-                }),
+                .disabled(closing),
             )
         })
         .collect::<Vec<_>>();
     flex_col((
         flex_col(entries)
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(space::UNIT.px()),
+            .gap(0.px())
+            .padding(xilem::style::Padding::left(OUTLINE_INSET.px())),
         (pages > 1).then(|| {
             flex_col((
                 text_button(scale, "Previous beats", move |state: &mut Writer| {
@@ -267,38 +256,8 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .gap(space::TEXT.px())
 }
 
-fn outline_caption<V: WidgetView<Writer, Widget: Sized>>(
-    state: &Writer,
-    current: bool,
-    text: V,
-) -> impl WidgetView<Writer> + use<V> {
-    let scale = f64::from(state.ui_scale());
-    let teal = state.palette.teal;
-    let marker = 12. * scale + 8.;
-    let text = text.width((state.drawer_width() - 48. - if current { marker } else { 0. }).px());
-    if !current {
-        return Either::B(text.padding(xilem::style::Padding::left(marker.px())));
-    }
-    Either::A(
-        flex_row((
-            canvas(move |_: &mut Writer, _, recording, _| {
-                let mut diamond = BezPath::new();
-                diamond.move_to((6., 1.));
-                diamond.line_to((11., 6.));
-                diamond.line_to((6., 11.));
-                diamond.line_to((1., 6.));
-                diamond.close_path();
-                Painter::new(recording)
-                    .fill(diamond, teal)
-                    .transform(Affine::scale(scale))
-                    .draw();
-            })
-            .dims(((12. * scale).px(), (12. * scale).px())),
-            text,
-        ))
-        .gap(space::SIBLINGS.px()),
-    )
-}
+/// Beats sit inside their scene: indented past the scene's disclosure chevron.
+const OUTLINE_INSET: f64 = 12.;
 
 fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();

@@ -297,3 +297,21 @@ fn mode_switch_marks_hold_three_to_one_where_they_sit() {
         }
     }
 }
+
+#[test]
+fn a_selected_row_keeps_its_text_and_bar_on_the_plate_at_rest_and_hovered() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        for fill in [p.plate, Rgba::mix(p.plate, p.ink, PLATE_HOVER)] {
+            for text in [p.ink, p.muted, p.accent] {
+                assert!(
+                    contrast(text, fill) >= 4.5,
+                    "row text: dark={dark} monochrome={monochrome} {fill:?}: {}",
+                    contrast(text, fill)
+                );
+            }
+            // The leading ink bar marks the selection beside the plate's own tint.
+            assert!(contrast(p.ink, fill) >= 3.);
+        }
+    }
+}

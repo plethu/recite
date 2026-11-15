@@ -36,7 +36,7 @@ fn command<V: WidgetView<App, Widget = Passthrough>>(
     let caption = commands::label(command, focused);
     mounted.activate("Commands");
     mounted.replace_text("Search query", &caption);
-    mounted.activate(&format!("Selected · {caption}"));
+    mounted.activate_selected(&caption);
     assert!(mounted.state.picker.is_none(), "{caption} must execute");
 }
 
@@ -246,7 +246,7 @@ fn mounted_project_text_pages_load_all_matches_and_apply_the_field_only_on_navig
     );
     assert!(!mounted.state.writer.as_ref().unwrap().navigation.busy());
     mounted.replace_text("Search query", "needle129");
-    mounted.activate_prefix("Selected · scene.recite · ");
+    mounted.activate_selected_prefix("scene.recite · ");
     assert!(mounted.state.picker.is_none());
     support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
     let model = mounted.state.writer.as_ref().unwrap().session.model();

@@ -90,10 +90,8 @@ fn thousand_declarations_mount_only_one_page_and_project_screens_render_at_perso
                 if node.role() == Role::Button
                     && let Some(label) = node.label()
                 {
-                    rows += usize::from(
-                        label.starts_with("Declaration · ")
-                            || label.starts_with("Selected · speaker_"),
-                    );
+                    rows +=
+                        usize::from(label.starts_with("speaker_") && label.ends_with(" · Speaker"));
                 }
                 pending.extend(node.children());
             }

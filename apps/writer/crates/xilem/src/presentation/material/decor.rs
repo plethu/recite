@@ -26,10 +26,21 @@ pub(crate) enum Decoration {
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Bar {
     pub color: Color,
-    /// Distance in from the left and right edges.
+    /// Which edge the bar runs along.
+    pub edge: Edge,
+    /// Distance in from both ends of that edge.
     pub inset: f64,
-    /// Distance up from the bottom edge to the bar's lower edge.
+    /// Distance in from that edge to the bar.
     pub lift: f64,
+}
+
+/// The edge a [`Bar`] runs along.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum Edge {
+    /// Under a tab or a segment's label.
+    Bottom,
+    /// Down the leading side of a selected row.
+    Leading,
 }
 
 pub(crate) struct Decorated<V> {

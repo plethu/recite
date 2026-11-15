@@ -6,7 +6,7 @@
 //! - **Tabs** (Write | Localise): quiet text; the chosen tab is semibold over a 2px underline in
 //!   the second ink, which holds 3:1 on the grained desk.
 use super::control_style::{ControlStyle, styled};
-use super::material::{Bar, bar};
+use super::material::{Bar, Edge, bar};
 use super::{Type, radio_button, space};
 use recite_writer_session::palette::{Palette, TONAL};
 use xilem::{
@@ -60,6 +60,7 @@ pub(crate) fn segment<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync +
     bar(
         selected.then_some(Bar {
             color: palette.ink,
+            edge: Edge::Bottom,
             inset: 12. * f64::from(scale),
             lift: LIFT * f64::from(scale),
         }),
@@ -110,6 +111,7 @@ pub(crate) fn tab<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'st
     bar(
         selected.then_some(Bar {
             color: palette.teal,
+            edge: Edge::Bottom,
             inset: 0.,
             lift: 0.,
         }),

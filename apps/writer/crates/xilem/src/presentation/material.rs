@@ -14,7 +14,7 @@ use xilem::{
 
 mod decor;
 mod grain;
-pub(crate) use decor::{Bar, Decorated, Decoration};
+pub(crate) use decor::{Bar, Decorated, Decoration, Edge};
 pub(crate) use grain::{desk, grain};
 
 /// Filled controls show keyboard focus as a ring of `color` inside their edge.

@@ -6,7 +6,8 @@ use super::super::control_style::ControlStyle;
 use super::super::tokens::{Type, size};
 use super::*;
 use recite_writer_session::palette::{
-    INK_HOVER, PRIMARY_HOVER, PRIMARY_PRESSED, TONAL, TONAL_DISABLED, TONAL_HOVER, WELL,
+    INK_HOVER, PLATE_HOVER, PRIMARY_HOVER, PRIMARY_PRESSED, TONAL, TONAL_DISABLED, TONAL_HOVER,
+    WELL,
 };
 
 /// How one kind of control looks in each state.
@@ -71,6 +72,22 @@ impl Look {
             (Some(ControlStyle::Manuscript), quiet(text)),
             (Some(ControlStyle::Icon), quiet((4. * scale, 4. * scale))),
             (Some(ControlStyle::Tab), quiet(text)),
+            (Some(ControlStyle::Row), quiet(text)),
+            (
+                Some(ControlStyle::RowSelected),
+                Self {
+                    rest: Some((p.plate, Color::TRANSPARENT)),
+                    hover: (p.plate.lerp_rect(p.ink, PLATE_HOVER), Color::TRANSPARENT),
+                    pressed: (p.pressed, p.ink),
+                    focus: Some(p.accent),
+                    disabled: (p.plate, Color::TRANSPARENT),
+                    border: 1.,
+                    sinks: true,
+                    padding: text,
+                    rule: None,
+                    lead: 0.,
+                },
+            ),
             (
                 Some(ControlStyle::Chosen),
                 Self {

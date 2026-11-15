@@ -121,10 +121,8 @@ def run(api, bus, registry, binary, output):
                     key("p", control=True)
                     fill(window, "Search query", "missing courier")
                     window.wait(
-                        lambda: any(
-                            name.startswith("Selected · ")
-                            and "missing courier" in name.lower().replace("_", " ")
-                            for _, name in window.nodes()
+                        lambda: window.selected(
+                            lambda name: "missing courier" in name.lower().replace("_", " ")
                         ),
                         "selected Missing Courier result",
                     )

@@ -4,6 +4,7 @@ mod states;
 mod tests;
 
 use super::number::NumberField;
+use super::row::RowButton;
 use super::*;
 use xilem::masonry::theme;
 use xilem::masonry::{
@@ -28,6 +29,7 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     text::<ShapedText>(&mut properties, p);
     control::<Button>(&mut properties, p, scale, states::pressable::<Button>);
     control::<RadioButton>(&mut properties, p, scale, states::choosable::<RadioButton>);
+    control::<RowButton>(&mut properties, p, scale, states::pressable::<RowButton>);
     control::<TextInput>(&mut properties, p, scale, states::field::<TextInput>);
     control::<NumberField>(&mut properties, p, scale, states::number::<NumberField>);
     control::<Checkbox>(&mut properties, p, scale, states::check::<Checkbox>);

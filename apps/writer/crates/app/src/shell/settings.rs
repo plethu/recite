@@ -9,7 +9,6 @@ pub struct Settings {
     pub keyboard: bool,
     pub command: WriterCommand,
     pub drafts: BTreeMap<WriterCommand, String>,
-    pub page: usize,
     pub query: String,
     pub feedback: Option<String>,
 }
@@ -29,13 +28,11 @@ impl Default for Settings {
             keyboard: false,
             command: WriterCommand::Save,
             drafts: BTreeMap::new(),
-            page: 0,
             query: String::new(),
             feedback: None,
         }
     }
 }
-pub const COMMANDS_PER_PAGE: usize = 8;
 fn commands() -> impl Iterator<Item = WriterCommand> {
     WriterCommand::ALL
         .iter()
@@ -56,7 +53,6 @@ impl Shell {
     }
     pub fn search_shortcuts(&mut self, query: String) {
         self.settings.query = query;
-        self.settings.page = 0;
     }
     pub fn open_project_settings(&mut self) {
         if let Some(writer) = &mut self.writer {
@@ -67,11 +63,6 @@ impl Shell {
     }
     pub(crate) fn show_settings(&mut self) {
         self.settings_open = true;
-        self.settings.page = self
-            .matching_shortcuts()
-            .position(|command| command == self.settings.command)
-            .unwrap_or(0)
-            / COMMANDS_PER_PAGE;
     }
     fn store_preference(&mut self, edit: UserConfigEdit) -> Result<(), String> {
         self.preferences.update(edit)?;

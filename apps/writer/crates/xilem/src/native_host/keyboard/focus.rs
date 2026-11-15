@@ -4,10 +4,10 @@ use crate::app::keyboard::CommandGeneration;
 use crate::app::picker;
 use crate::attention::{EditRequest, EditingTarget};
 use crate::localisation::{TranslationField, TranslationTarget};
+use crate::presentation::row::RowButton;
 use crate::rules::view;
 use xilem::masonry::accesskit;
 use xilem::masonry::core::{Widget, WidgetRef};
-use xilem::masonry::widgets;
 
 #[derive(Clone, Default, PartialEq)]
 pub(super) enum Kind {
@@ -134,8 +134,8 @@ impl Focus {
 }
 fn role(widget: WidgetRef<'_, dyn Widget>) -> Kind {
     if widget
-        .downcast::<widgets::Button>()
-        .is_some_and(|button| button.get_prop::<picker::ActiveResult>().0)
+        .downcast::<RowButton>()
+        .is_some_and(|row| row.get_prop::<picker::ActiveResult>().0)
     {
         return Kind::ActiveResult;
     }

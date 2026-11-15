@@ -110,6 +110,18 @@ class NativeWindow:
             None,
         )
 
+    def selected(self, matches):
+        """A node in the SELECTED state, such as a list's active row, whose name `matches`."""
+        bit = 1 << int(self.api.Atspi.StateType.SELECTED)
+        return next(
+            (
+                node
+                for node, name in self.nodes()
+                if matches(name) and self.call(node, "Accessible", "GetState")[0][0] & bit
+            ),
+            None,
+        )
+
     def find_spin(self, label):
         """A named spin button, which offers the Value interface its visible caption lacks."""
         return next(

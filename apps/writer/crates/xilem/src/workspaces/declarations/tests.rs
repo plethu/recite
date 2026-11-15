@@ -44,10 +44,10 @@ fn mounted_declaration_search_pages_and_complete_details_preserve_the_manuscript
     mounted.activate("Previous declaration detail");
     assert!(mounted.contains_text("Actor starts"));
     mounted.activate("Next declarations");
-    mounted.activate("Declaration · actor06 · Speaker");
+    mounted.activate("actor06 · Speaker");
     mounted.activate("Previous declarations");
     mounted.type_text("Search declarations", "actor06");
-    assert!(mounted.contains_text("Selected · actor06 · Speaker"));
+    assert!(mounted.is_selected("actor06 · Speaker"));
     assert!(!mounted.contains_text("actor00 · Speaker"));
     assert!(!mounted.contains_text("Next declarations"));
     assert!(!mounted.contains_text("Previous declarations"));
@@ -61,7 +61,7 @@ fn mounted_declaration_search_pages_and_complete_details_preserve_the_manuscript
     mounted.replace_text("Search declarations", "actor06");
     mounted.activate("Declaration source");
     mounted.activate("Inspect declarations");
-    assert!(mounted.contains_text("Selected · actor06 · Speaker"));
+    assert!(mounted.is_selected("actor06 · Speaker"));
     assert_eq!(
         mounted.state.session.model().draft(),
         "Unapplied manuscript remains."

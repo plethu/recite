@@ -1,4 +1,4 @@
-use super::{Bar, Decoration};
+use super::{Bar, Decoration, Edge};
 use xilem::masonry::kurbo::Rect;
 use xilem::masonry::{
     accesskit::{Node, Role},
@@ -75,14 +75,28 @@ impl Widget for Decor {
         _: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        if let Decoration::Bar(Some(Bar { color, inset, lift })) = self.decoration {
-            let edge = ctx.border_box();
-            let bar = Rect::new(
-                edge.x0 + inset,
-                edge.y1 - lift - BAR,
-                edge.x1 - inset,
-                edge.y1 - lift,
-            );
+        if let Decoration::Bar(Some(Bar {
+            color,
+            edge,
+            inset,
+            lift,
+        })) = self.decoration
+        {
+            let border = ctx.border_box();
+            let bar = match edge {
+                Edge::Bottom => Rect::new(
+                    border.x0 + inset,
+                    border.y1 - lift - BAR,
+                    border.x1 - inset,
+                    border.y1 - lift,
+                ),
+                Edge::Leading => Rect::new(
+                    border.x0 + lift,
+                    border.y0 + inset,
+                    border.x0 + lift + BAR,
+                    border.y1 - inset,
+                ),
+            };
             painter.fill(bar, color).draw();
         }
         if let Decoration::Ring(Some(color)) = self.decoration

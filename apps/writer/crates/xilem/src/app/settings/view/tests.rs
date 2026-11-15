@@ -54,14 +54,11 @@ fn personal_preferences_apply_through_mounted_controls_and_retain_shortcut_draft
     mounted.activate("Keyboard shortcuts");
     mounted.replace_text("Shortcut binding", "Primary+Alt+S");
     assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
-    mounted.activate("Next commands");
-    mounted.activate("Previous commands");
     assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
     let binding = mounted.find("Shortcut binding");
     mounted.replace_text("Search shortcuts", "source");
     assert_eq!(mounted.find("Shortcut binding"), binding);
     assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
-    assert_eq!(mounted.state.settings.page, 0);
     mounted.replace_text("Search shortcuts", "");
     mounted.activate("Save shortcut");
     assert_eq!(

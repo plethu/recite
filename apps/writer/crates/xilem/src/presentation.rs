@@ -21,6 +21,7 @@ pub(crate) mod print;
 pub(crate) use icons::{Icon, mark};
 pub(crate) mod number;
 mod radio;
+pub(crate) mod row;
 mod search;
 pub(crate) mod segments;
 pub(crate) use search::search_field;

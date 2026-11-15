@@ -1,5 +1,5 @@
 use super::*;
-use crate::presentation::radio_button;
+use crate::presentation::row::{listed, row};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset, field_text, search_field};
 use crate::{keyed::keyed, presentation::paragraph};
@@ -26,27 +26,32 @@ pub(super) fn keyboard(app: &App) -> impl WidgetView<App> + use<> {
 fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     let count = app.matching_shortcuts().count();
-    let page = app.settings.page;
-    let pages = count.div_ceil(COMMANDS_PER_PAGE).max(1);
+    // Every match is one row; the page scrolls, so the list needs no paging.
     let choices = app
         .matching_shortcuts()
-        .skip(page * COMMANDS_PER_PAGE)
-        .take(COMMANDS_PER_PAGE)
         .map(|command| {
             let binding = app.preferences.config.writer.shortcuts.binding(command);
-            radio_button(
-                scale,
-                format!(
-                    "{} · {}",
-                    command_label(command),
-                    if binding.is_empty() {
-                        "Disabled"
-                    } else {
-                        binding
-                    }
+            let selected = app.settings.command == command;
+            listed(
+                &app.theme.palette,
+                selected,
+                row(
+                    selected,
+                    label(
+                        scale,
+                        format!(
+                            "{} · {}",
+                            command_label(command),
+                            if binding.is_empty() {
+                                "Disabled"
+                            } else {
+                                binding
+                            }
+                        ),
+                    )
+                    .typeset(Type::Control, scale),
+                    move |app: &mut App| app.choose_shortcut(command),
                 ),
-                app.settings.command == command,
-                move |app: &mut App| app.choose_shortcut(command),
             )
         })
         .collect::<Vec<_>>();
@@ -65,25 +70,10 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             .prop(TextAreaLabel::new("Search shortcuts")),
         ),
         label(scale, format!("{count} matching commands")),
-        radio_group(
-            flex_col(choices)
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(space::SIBLINGS.px()),
-        ),
-        (pages > 1).then(|| {
-            flex_row((
-                text_button(scale, "Previous commands", |app: &mut App| {
-                    app.settings.page = app.settings.page.saturating_sub(1)
-                })
-                .disabled(page == 0),
-                label(scale, format!("Commands {} of {pages}", page + 1)),
-                text_button(scale, "Next commands", |app: &mut App| {
-                    app.settings.page += 1
-                })
-                .disabled(page + 1 >= pages),
-            ))
-            .gap(space::SIBLINGS.px())
-        }),
+        flex_col(choices)
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(0.px())
+            .width(width.min(600.).px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())

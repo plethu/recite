@@ -16,7 +16,6 @@ fn unfinished_shortcuts_survive_switching_commands_and_reopening_settings() {
     app.choose_shortcut(WriterCommand::Source);
     app.search_shortcuts("save".into());
     app.show_settings();
-    assert_eq!(app.settings.page, 0);
     assert!(
         app.matching_shortcuts()
             .all(|command| command != WriterCommand::Source)

@@ -1,5 +1,6 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use recite_writer_model::RuleEffect;
 use xilem::masonry::properties;
@@ -147,27 +148,30 @@ fn delivery_modes(
     index: usize,
     effect: &RuleEffect,
 ) -> impl WidgetView<Writer> + use<> {
+    // One choice of several: a segmented track, the current mode chosen.
     let modes = effect
         .allowed_modes
         .iter()
         .map(|mode| {
             let mode = *mode;
-            let selected = mode == effect.mode;
-            text_button(
+            segment(
                 state.ui_scale(),
+                &state.palette,
                 format!(
-                    "{}Delivery: {}",
-                    if selected { "Selected · " } else { "" },
+                    "Delivery: {}",
                     recite_writer_app::rules::effect_mode_name(mode)
                 ),
-                move |state: &mut Writer| state.effect_mode(index, mode),
+                mode == effect.mode,
+                !state.rules_editable(),
+                move |state: &mut Writer| {
+                    if state.rules_editable() {
+                        state.effect_mode(index, mode);
+                    }
+                },
             )
-            .disabled(!state.rules_editable() || selected)
         })
         .collect::<Vec<_>>();
-    flex_col(modes)
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::UNIT.px())
+    segments(&state.palette, modes)
 }
 fn actions(
     state: &Writer,

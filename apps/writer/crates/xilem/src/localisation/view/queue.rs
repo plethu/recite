@@ -1,5 +1,6 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::segments::{segment, segments_along};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset, field_text, search_field};
 use crate::presentation::{manuscript_text, print};
@@ -101,29 +102,28 @@ fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let state = &writer.localisation;
     flex_row((
-        radio_group(
-            flex_row(
-                [
-                    ("All entries", Filter::All),
-                    ("Needs attention", Filter::Attention),
-                    ("Unsaved translations", Filter::Unsaved),
-                ]
-                .map(|(caption, filter)| {
-                    crate::presentation::radio_button(
-                        scale,
-                        caption,
-                        state.query.filter == filter,
-                        move |writer: &mut Writer| writer.localisation.query.filter = filter,
-                    )
-                }),
-            )
-            .direction(if wide {
+        segments_along(
+            &writer.palette,
+            if wide {
                 Axis::Horizontal
             } else {
                 Axis::Vertical
-            })
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(space::SIBLINGS.px()),
+            },
+            [
+                ("All entries", Filter::All),
+                ("Needs attention", Filter::Attention),
+                ("Unsaved translations", Filter::Unsaved),
+            ]
+            .map(|(caption, filter)| {
+                segment(
+                    scale,
+                    &writer.palette,
+                    caption,
+                    state.query.filter == filter,
+                    false,
+                    move |writer: &mut Writer| writer.localisation.query.filter = filter,
+                )
+            }),
         ),
         label(
             scale,

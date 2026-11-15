@@ -7,7 +7,7 @@ use xilem::{
     WidgetView,
     masonry::{kurbo::Axis, layout::AsUnit},
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, portal, radio_group, sized_box},
+    view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, portal, sized_box},
 };
 
 pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {

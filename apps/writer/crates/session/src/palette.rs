@@ -12,6 +12,9 @@ pub const TONAL: f32 = 0.08;
 /// A hovered tonal action: half again the rest tint; more would drop accent text under 4.5:1 on
 /// dark floating panels.
 pub const TONAL_HOVER: f32 = 0.12;
+/// A hovered selected row: ink over the plate, lighter than other hovers so accent text keeps
+/// 4.5:1 on dark mint plates.
+pub const PLATE_HOVER: f32 = 0.06;
 /// A field's well: this much ink over its host, closed by a bottom rule.
 pub const WELL: f32 = 0.06;
 /// A disabled tonal action keeps its shape at half the rest tint; its text turns muted.

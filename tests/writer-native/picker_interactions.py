@@ -74,7 +74,7 @@ def run(api, bus, registry, binary, output):
                 type_text("other")
                 key("Down")
                 window.wait(
-                    lambda: window.find_text("Selected · zz-other.recite · Other"),
+                    lambda: window.selected(lambda name: name == "zz-other.recite · Other"),
                     "keyboard result selection",
                 )
                 capture(output, "-go-to")
@@ -120,7 +120,7 @@ def run(api, bus, registry, binary, output):
                 type_text("recite")
                 key("Down")
                 window.wait(
-                    lambda: window.find_text("Selected · scene.recite · Opening"),
+                    lambda: window.selected(lambda name: name == "scene.recite · Opening"),
                     "accepted repeated scene target",
                 )
                 key("Return")

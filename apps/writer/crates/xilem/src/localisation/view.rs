@@ -27,8 +27,8 @@ use xilem::{
     },
     style::Style,
     view::{
-        CrossAxisAlignment, button, checkbox, flex_col, flex_row, indexed_stack, radio_group,
-        sized_box, text_input,
+        CrossAxisAlignment, button, checkbox, flex_col, flex_row, indexed_stack, sized_box,
+        text_input,
     },
 };
 

@@ -87,6 +87,52 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
         });
         self.settle();
     }
+    /// The selected control whose name satisfies `matches`, such as a list's active row.
+    fn selected_matching(&self, matches: impl Fn(&str) -> bool) -> Option<WidgetId> {
+        let mut pending = vec![self.harness.root_widget().as_dyn()];
+        while let Some(widget) = pending.pop() {
+            if widget.ctx().is_stashed() {
+                continue;
+            }
+            if native_label(&self.harness, widget.id()).is_some_and(|name| matches(&name))
+                && self
+                    .harness
+                    .access_node(widget.id())
+                    .is_some_and(|node| node.is_selected() == Some(true))
+            {
+                return Some(widget.id());
+            }
+            pending.extend(widget.children());
+        }
+        None
+    }
+    /// Whether some control named `name` is the selected one in its list.
+    pub fn is_selected(&self, name: &str) -> bool {
+        self.selected_matching(|caption| caption == name).is_some()
+    }
+    /// Activate the selected control named `name`.
+    pub fn activate_selected(&mut self, name: &str) {
+        let id = self
+            .selected_matching(|caption| caption == name)
+            .unwrap_or_else(|| panic!("Missing selected control {name}"));
+        self.click(id);
+    }
+    /// Activate the selected control whose name starts with `prefix`.
+    pub fn activate_selected_prefix(&mut self, prefix: &str) {
+        let id = self
+            .selected_matching(|caption| caption.starts_with(prefix))
+            .unwrap_or_else(|| panic!("Missing selected control {prefix}…"));
+        self.click(id);
+    }
+    fn click(&mut self, id: WidgetId) {
+        self.harness.process_access_event(accesskit::ActionRequest {
+            action: accesskit::Action::Click,
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: id.to_raw().into(),
+            data: None,
+        });
+        self.settle();
+    }
     /// Step a named spin button once, as assistive technology would.
     pub fn step(&mut self, name: &str, up: bool) {
         let id = self.find(name);

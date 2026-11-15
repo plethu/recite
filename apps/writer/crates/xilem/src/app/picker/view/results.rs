@@ -1,5 +1,6 @@
 //! Bounded, selectable native search results and their page controls.
 use super::*;
+use crate::presentation::row::{listed, row};
 use crate::presentation::space;
 
 pub(super) fn result(
@@ -34,11 +35,8 @@ pub(super) fn result(
                 Purpose::Search(_) => false,
             }),
     };
-    let title = format!(
-        "{}{}",
-        if selected { "Selected · " } else { "" },
-        entry.title
-    );
+    // The row's `selected` state marks the active result; its name is the entry alone.
+    let title = entry.title.clone();
     let detail = if enabled {
         match &entry.item {
             Item::Passage { .. } => app
@@ -52,30 +50,30 @@ pub(super) fn result(
     } else {
         "Unavailable in this context".into()
     };
-    button(
-        flex_col((
-            search_label((14. * scale).min(0.75 * reading_size), title, query.clone()),
-            (!detail.is_empty()).then(|| {
-                let prose = matches!(entry.item, Item::Passage { .. } | Item::Location(_));
-                let width = (width - 24. * f64::from(scale)).max(160.);
-                if prose {
-                    Either::A(manuscript_search(reading_size, detail, query).width(width.px()))
-                } else {
-                    Either::B(paragraph(scale, detail, width))
-                }
-            }),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::UNIT.px()),
-        move |app: &mut App| app.activate_picker(position),
+    listed(
+        &app.theme.palette,
+        selected,
+        row(
+            selected,
+            flex_col((
+                search_label((14. * scale).min(0.75 * reading_size), title, query.clone()),
+                (!detail.is_empty()).then(|| {
+                    let prose = matches!(entry.item, Item::Passage { .. } | Item::Location(_));
+                    let width = (width - 24. * f64::from(scale)).max(160.);
+                    if prose {
+                        Either::A(manuscript_search(reading_size, detail, query).width(width.px()))
+                    } else {
+                        Either::B(paragraph(scale, detail, width))
+                    }
+                }),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::UNIT.px()),
+            move |app: &mut App| app.activate_picker(position),
+        )
+        .disabled(!enabled)
+        .prop(ActiveResult(selected)),
     )
-    .disabled(!enabled)
-    .background_color(if selected {
-        app.theme.palette.selection
-    } else {
-        app.theme.palette.surface
-    })
-    .prop(ActiveResult(selected))
 }
 
 pub(super) fn pagination(

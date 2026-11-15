@@ -1,5 +1,8 @@
 //! Frontend views and native glue over `recite_writer_app::workspaces::declarations`.
 use super::*;
+use crate::WriterLayout;
+use crate::presentation::row::{listed, row};
+use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset, field_text, search_field};
 pub(crate) use recite_writer_app::workspaces::declarations::*;
@@ -9,40 +12,49 @@ mod source;
 #[cfg(test)]
 mod tests;
 use crate::attention::{Pane, Region};
-use crate::presentation::{label, paragraph, radio_button, text_button};
+use crate::presentation::{label, paragraph, text_button};
 use recite_writer_session::declarations::SchemaOutputStatus;
 use xilem::{
     WidgetView,
     masonry::layout::AsUnit,
     masonry::properties::TextAreaLabel,
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, radio_group, text_input},
+    view::{CrossAxisAlignment, flex_col, flex_row, text_input},
 };
 
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
         label(scale, "Declarations").typeset(Type::Display, scale),
-        radio_group(flex_row((
-            radio_button(
-                scale,
-                "Inspect declarations",
-                writer.workspaces.declarations.mode == Mode::Inspect,
-                |writer: &mut Writer| writer.workspaces.declarations.mode = Mode::Inspect,
+        segments(
+            &writer.palette,
+            (
+                segment(
+                    scale,
+                    &writer.palette,
+                    "Inspect declarations",
+                    writer.workspaces.declarations.mode == Mode::Inspect,
+                    false,
+                    |writer: &mut Writer| writer.workspaces.declarations.mode = Mode::Inspect,
+                ),
+                segment(
+                    scale,
+                    &writer.palette,
+                    "Declaration source",
+                    writer.workspaces.declarations.mode == Mode::Source,
+                    false,
+                    Writer::show_declaration_source,
+                ),
+                segment(
+                    scale,
+                    &writer.palette,
+                    "Producer",
+                    writer.workspaces.declarations.mode == Mode::Producer,
+                    false,
+                    Writer::show_declaration_producer,
+                ),
             ),
-            radio_button(
-                scale,
-                "Declaration source",
-                writer.workspaces.declarations.mode == Mode::Source,
-                Writer::show_declaration_source,
-            ),
-            radio_button(
-                scale,
-                "Producer",
-                writer.workspaces.declarations.mode == Mode::Producer,
-                Writer::show_declaration_producer,
-            ),
-        ))),
+        ),
         xilem::view::indexed_stack((
             inspection(writer),
             source::panel(writer),
@@ -139,22 +151,25 @@ fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             .map(|index| {
                 let Row { name, kind, .. } = &panel.rows[*index];
                 let (name, kind) = (name.clone(), kind.clone());
-                text_button(
-                    writer.ui_scale(),
-                    format!(
-                        "{} · {name} · {kind}",
-                        if panel.selected == Some(*index) {
-                            "Selected"
-                        } else {
-                            "Declaration"
-                        }
+                let selected = panel.selected == Some(*index);
+                listed(
+                    &writer.palette,
+                    selected,
+                    row(
+                        selected,
+                        label(writer.ui_scale(), format!("{name} · {kind}"))
+                            .typeset(Type::Control, writer.ui_scale()),
+                        move |writer: &mut Writer| {
+                            writer.workspaces.declarations.choose(&name, &kind)
+                        },
                     ),
-                    move |writer: &mut Writer| writer.workspaces.declarations.choose(&name, &kind),
                 )
             })
             .collect::<Vec<_>>(),
     )
-    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+    .gap(0.px())
+    .width(writer.script_width().px())
 }
 
 fn declaration_detail(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
