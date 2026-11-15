@@ -81,6 +81,11 @@ impl<S, V, F> Row<S, V, F> {
         self.disabled = disabled;
         self
     }
+    /// Name the row `name` instead of by its content.
+    pub fn named(mut self, name: Option<ArcStr>) -> Self {
+        self.name = name;
+        self
+    }
 }
 
 const CONTENT: ViewId = ViewId::new(0);
@@ -95,8 +100,9 @@ impl<S: 'static, V: WidgetView<S>, F: Fn(&mut S) + Send + Sync + 'static> View<S
         let (child, local) = ctx.with_id(CONTENT, |ctx| self.child.build(ctx, state));
         let mut pod = ctx.with_action_widget(|ctx| {
             ctx.create_pod(match (&self.name, self.selected) {
-                (Some(name), _) => RowButton::named(name.clone(), child.new_widget),
-                (None, selected) => RowButton::new(selected.unwrap_or(false), child.new_widget),
+                (Some(name), None) => RowButton::named(name.clone(), child.new_widget),
+                (name, selected) => RowButton::new(selected.unwrap_or(false), child.new_widget)
+                    .with_name(name.clone()),
             })
         });
         pod.new_widget.options.disabled = self.disabled;

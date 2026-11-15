@@ -43,6 +43,12 @@ impl RowButton {
             child: child.erased().to_pod(),
         }
     }
+    /// The row named `name` rather than by its content, where its content is abbreviated or
+    /// carries a mark the name has to say aloud.
+    pub fn with_name(mut self, name: Option<ArcStr>) -> Self {
+        self.name = name;
+        self
+    }
     pub fn set_name(this: &mut WidgetMut<'_, Self>, name: Option<ArcStr>) {
         this.widget.name = name;
         this.ctx.request_accessibility_update();

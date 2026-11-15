@@ -137,7 +137,7 @@ def exercise(window, po, output, results, scale):
     if window.find("Scenes…"):
         window.act("Scenes…")
     else:
-        window.act("Find scene or beat…")
+        window.act("Find scene, beat or text…")
     fill(window, "Search query", "opening")
     key("Return")
     reveal_field(window, FIRST)

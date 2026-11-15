@@ -125,13 +125,13 @@ def run(api, bus, registry, binary, output):
                 )
                 key("Return")
                 window.wait(lambda: not window.find("Search query"), "lookup accepted")
-                window.focus(window.find_action("Find scene or beat…"))
+                window.focus(window.find_action("Find scene, beat or text…"))
                 type_text("n")
                 window.wait(
                     lambda: document_caption(window, "zz-other.recite", selected=True),
                     "next lookup match",
                 )
-                window.focus(window.find_action("Find scene or beat…"))
+                window.focus(window.find_action("Find scene, beat or text…"))
                 type_text("N")
                 window.wait(
                     lambda: document_caption(window, "scene.recite", selected=True),
@@ -143,7 +143,7 @@ def run(api, bus, registry, binary, output):
                 type_text("other")
                 key("Escape")
                 window.wait(lambda: not window.find("Search query"), "cancelled search")
-                window.focus(window.find_action("Find scene or beat…"))
+                window.focus(window.find_action("Find scene, beat or text…"))
                 type_text("n")
                 window.wait(
                     lambda: document_caption(window, "zz-other.recite", selected=True),

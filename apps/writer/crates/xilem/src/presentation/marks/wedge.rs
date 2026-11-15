@@ -29,6 +29,9 @@ pub(crate) struct Wedge {
     description: ArcStr,
     ink: Color,
     ring: Color,
+    /// The side of a decorative wedge, which repeats a problem inside a control that already says
+    /// so; `None` for the focusable 24px control.
+    glyph: Option<f64>,
 }
 impl Wedge {
     pub fn new(name: ArcStr, description: ArcStr, (ink, ring): (Color, Color)) -> Self {
@@ -37,6 +40,14 @@ impl Wedge {
             description,
             ink,
             ring,
+            glyph: None,
+        }
+    }
+    /// A decorative wedge `side` square in `ink`: neither focusable nor read aloud.
+    pub fn glyph(side: f64, ink: Color) -> Self {
+        Self {
+            glyph: Some(side),
+            ..Self::new(ArcStr::from(""), ArcStr::from(""), (ink, ink))
         }
     }
     pub fn set(
@@ -60,6 +71,9 @@ impl Widget for Wedge {
         _: &mut PropertiesMut<'_>,
         event: &PointerEvent,
     ) {
+        if self.glyph.is_some() {
+            return;
+        }
         match event {
             PointerEvent::Down(..) => {
                 ctx.request_focus();
@@ -109,16 +123,17 @@ impl Widget for Wedge {
         _: LenReq,
         _: Option<Length>,
     ) -> Length {
-        SIDE.px()
+        self.glyph.unwrap_or(SIDE).px()
     }
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let edge = ctx.border_box();
+        let inset = self.glyph.map_or(1., |side| side / SIDE);
         // A wedge pointing into the text: a filled triangle in the error ink.
         let mut wedge = BezPath::new();
-        wedge.move_to((edge.x0 + 7., edge.y0 + 6.));
-        wedge.line_to((edge.x1 - 6., edge.y0 + edge.height() / 2.));
-        wedge.line_to((edge.x0 + 7., edge.y1 - 6.));
+        wedge.move_to((edge.x0 + 7. * inset, edge.y0 + 6. * inset));
+        wedge.line_to((edge.x1 - 6. * inset, edge.y0 + edge.height() / 2.));
+        wedge.line_to((edge.x0 + 7. * inset, edge.y1 - 6. * inset));
         wedge.close_path();
         painter.fill(wedge, self.ink).draw();
         if ctx.is_focus_target() {
@@ -132,9 +147,17 @@ impl Widget for Wedge {
         }
     }
     fn accessibility_role(&self) -> Role {
-        Role::Button
+        if self.glyph.is_some() {
+            Role::GenericContainer
+        } else {
+            Role::Button
+        }
     }
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
+        if self.glyph.is_some() {
+            node.set_hidden();
+            return;
+        }
         node.set_label(&*self.name);
         node.set_description(&*self.description);
         node.add_action(Action::Click);
@@ -143,7 +166,7 @@ impl Widget for Wedge {
         ChildrenIds::new()
     }
     fn accepts_focus(&self) -> bool {
-        true
+        self.glyph.is_none()
     }
 }
 
@@ -208,5 +231,47 @@ impl<S: 'static, F: Fn(&mut S) + Send + Sync + 'static> View<S, (), ViewCtx> for
         } else {
             MessageResult::Stale
         }
+    }
+}
+
+/// A decorative wedge `side` square in `ink`, for a row or card whose name already says there is
+/// a problem.
+pub(crate) fn wedge_glyph(side: f64, ink: Color) -> GlyphView {
+    GlyphView { side, ink }
+}
+pub(crate) struct GlyphView {
+    side: f64,
+    ink: Color,
+}
+impl ViewMarker for GlyphView {}
+impl<S: 'static> View<S, (), ViewCtx> for GlyphView {
+    type Element = Pod<Wedge>;
+    type ViewState = ();
+    fn build(&self, ctx: &mut ViewCtx, _: &mut S) -> (Self::Element, ()) {
+        (ctx.create_pod(Wedge::glyph(self.side, self.ink)), ())
+    }
+    fn rebuild(
+        &self,
+        old: &Self,
+        _: &mut (),
+        _: &mut ViewCtx,
+        mut element: Mut<'_, Self::Element>,
+        _: &mut S,
+    ) {
+        if old.side != self.side || old.ink != self.ink {
+            element.widget.glyph = Some(self.side);
+            (element.widget.ink, element.widget.ring) = (self.ink, self.ink);
+            element.ctx.request_layout();
+        }
+    }
+    fn teardown(&self, _: &mut (), _: &mut ViewCtx, _: Mut<'_, Self::Element>) {}
+    fn message(
+        &self,
+        _: &mut (),
+        _: &mut MessageCtx,
+        _: Mut<'_, Self::Element>,
+        _: &mut S,
+    ) -> MessageResult<()> {
+        MessageResult::Stale
     }
 }

@@ -59,7 +59,7 @@ def run(api, bus, registry, binary, output):
                 key("f", control=True, shift=True)
                 window.wait(lambda: window.find("Exit focus"), "writing focus")
                 assert manuscript(window) == node
-                assert not window.find("SCENES")
+                assert not window.find("Find scene, beat or text…")
                 window.wait(lambda: focused(window, node), "native focused manuscript")
                 key("z", control=True)
                 window.wait(lambda: window.text(node) == "The last tram waits.", "retained undo")
@@ -77,7 +77,9 @@ def run(api, bus, registry, binary, output):
                 assert window.find("Exit focus")
                 results["nested_picker_restores_focus_without_leaving_writing_mode"] = True
                 key("f", control=True, shift=True)
-                window.wait(lambda: window.find("SCENES"), "workspace restored")
+                window.wait(
+                    lambda: window.find("Find scene, beat or text…"), "workspace restored"
+                )
                 window.focus(node)
                 prefix(window)
                 capture(output, "-prefix")

@@ -1,12 +1,18 @@
 use super::*;
+mod outline;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::map::Workspace;
 use crate::navigation::rail::{FILE_PAGE, beat_page_size};
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::row::{listed, row};
+use crate::presentation::marks::{Mark, marked};
+use crate::presentation::row::{listed, named_row, row};
+use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
-use crate::presentation::{disclosure, disclosure_width, group::named, print};
+use crate::presentation::tokens::sidebar;
+use crate::presentation::{Icon, SMALL, Type, control_inset, mark};
+use crate::presentation::{disclosure, disclosure_width, group::named};
+use outline::outline;
 use recite_writer_session::choices::display_name;
 use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
@@ -27,57 +33,48 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let documents = if state.session.project_root().is_some() {
         Either::A(project_files(state))
     } else {
-        Either::B(examples(state))
+        Either::B(
+            flex_col((examples(state), outline(state)))
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(space::SIBLINGS.px()),
+        )
     };
     sized_box(named(
         "Scene navigation",
         portal(
-            flex_col((
-                print::caps(state.ui_scale(), "SCENES").color(state.palette.muted),
-                search_controls(state),
-                documents,
-                outline(state),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(space::SIBLINGS.px())
-            .padding(space::KINDS.px()),
+            flex_col((search_entry(state), documents))
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(space::KINDS.px())
+                .padding(space::KINDS.px()),
         )
         .constrain_horizontal(true),
     ))
     .width(sidebar_width(state).px())
     .prop(Region(Some(Pane::Navigation)))
 }
-fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let blocked = state.project_action_blocked();
-    flex_col((
-        styled(
-            ControlStyle::Navigation,
-            button(
-                label(state.ui_scale(), "Search project words…")
-                    .weight(FontWeight::MEDIUM)
-                    .color(state.palette.accent)
-                    .prop(LineBreaking::WordWrap)
-                    .width((sidebar_width(state) - 48.).px()),
-                |state: &mut Writer| state.request_search(Search::ProjectText),
-            )
-            .disabled(blocked || state.session.project().is_none()),
-        ),
-        styled(
-            ControlStyle::Navigation,
-            button(
-                label(state.ui_scale(), "Find scene or beat…")
-                    .weight(FontWeight::MEDIUM)
-                    .color(state.palette.accent)
-                    .prop(LineBreaking::WordWrap)
-                    .width((sidebar_width(state) - 48.).px()),
-                |state: &mut Writer| state.request_search(Search::GoTo),
-            )
-            .disabled(blocked),
-        ),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(space::UNIT.px())
+
+/// One field-shaped entry that opens the search for scenes, beats and words.
+fn search_entry(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    styled(
+        ControlStyle::Entry,
+        named_row(
+            SEARCH,
+            flex_row((
+                mark(scale * SMALL, "", Icon::Search, state.palette.muted),
+                one_line(SEARCH, Type::Body, scale, state.palette.muted).flex(1.),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .gap(space::SIBLINGS.px())
+            .width((sidebar_width(state) - 2. * space::KINDS - 2. * control_inset(scale)).px()),
+            |state: &mut Writer| state.request_search(Search::GoTo),
+        )
+        .disabled(state.project_action_blocked()),
+    )
 }
+/// The search entry's words and name.
+const SEARCH: &str = "Find scene, beat or text…";
+
 fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.project_action_blocked();
@@ -124,26 +121,38 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
             } else {
                 title
             };
-            styled(
-                ControlStyle::Navigation,
-                button(
-                    disclosure(
-                        scale,
-                        current,
-                        ink,
-                        label(
+            // A scene row in Control semibold, its beats nested below it when it is open. Unsaved
+            // work carries the halftone mark beside the words that say so.
+            let row = marked(
+                &state.palette,
+                dirty.then_some(Mark::Unsaved),
+                styled(
+                    ControlStyle::Navigation,
+                    button(
+                        disclosure(
                             scale,
-                            format!("{caption}{}", if dirty { " · Unsaved" } else { "" }),
-                        )
-                        .weight(FontWeight::SEMI_BOLD)
-                        .color(ink)
-                        .prop(LineBreaking::WordWrap)
-                        .width((sidebar_width(state) - 48. - disclosure_width(scale)).px()),
-                    ),
-                    move |state: &mut Writer| state.switch(&path),
-                )
-                .disabled(closing),
-            )
+                            current,
+                            ink,
+                            one_line(
+                                format!("{caption}{}", if dirty { " · Unsaved" } else { "" }),
+                                Type::Control,
+                                scale,
+                                ink,
+                            )
+                            .weight(FontWeight::SEMI_BOLD)
+                            .width(
+                                (sidebar_width(state) - sidebar::ROW - disclosure_width(scale))
+                                    .px(),
+                            ),
+                        ),
+                        move |state: &mut Writer| state.switch(&path),
+                    )
+                    .disabled(closing),
+                ),
+            );
+            flex_col((row, current.then(|| outline(state))))
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(0.px())
         })
         .collect::<Vec<_>>();
     flex_col((
@@ -162,7 +171,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 ),
             )
             .prop(LineBreaking::WordWrap)
-            .width((sidebar_width(state) - 48.).px())
+            .width((sidebar_width(state) - sidebar::ROW).px())
         }),
         state
             .session
@@ -188,87 +197,8 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
-    .width((sidebar_width(state) - 24.).px())
+    .width((sidebar_width(state) - sidebar::COLUMN).px())
 }
-
-fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    let closing = state.project_action_blocked();
-    let blocks = state.session.model().document().block_summaries();
-    // Short scenes use the slots otherwise occupied by pagination controls.
-    let page_size = beat_page_size(blocks.len());
-    let pages = blocks.len().div_ceil(page_size).max(1);
-    let page = state.beat_page.min(pages - 1);
-    let selected = if state.visible_workspace() == Workspace::Map {
-        state.map_selected()
-    } else {
-        state.reading.selected.as_deref()
-    };
-    let entries = blocks
-        .iter()
-        .skip(page * page_size)
-        .take(page_size)
-        .map(|block| {
-            let id = block.id().to_string();
-            let current = selected == Some(id.as_str());
-            // The current beat is the list's selected row: the plate, the ink bar and the state.
-            listed(
-                &state.palette,
-                current,
-                row(
-                    current,
-                    label(
-                        scale,
-                        format!(
-                            "{}{}{}",
-                            if block.is_default() { "Start · " } else { "" },
-                            display_name(&id),
-                            if block.has_end_destination() {
-                                " · end"
-                            } else {
-                                ""
-                            }
-                        ),
-                    )
-                    .weight(if current {
-                        FontWeight::SEMI_BOLD
-                    } else {
-                        FontWeight::NORMAL
-                    })
-                    .prop(LineBreaking::WordWrap)
-                    .width((sidebar_width(state) - 48. - OUTLINE_INSET).px()),
-                    move |state: &mut Writer| state.inspect(id.clone()),
-                )
-                .disabled(closing),
-            )
-        })
-        .collect::<Vec<_>>();
-    flex_col((
-        flex_col(entries)
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(0.px())
-            .padding(xilem::style::Padding::left(OUTLINE_INSET.px())),
-        (pages > 1).then(|| {
-            flex_col((
-                text_button(scale, "Previous beats", move |state: &mut Writer| {
-                    state.beat_page = page.saturating_sub(1)
-                })
-                .disabled(closing || page == 0),
-                text_button(scale, "Next beats", move |state: &mut Writer| {
-                    state.beat_page = (page + 1).min(pages - 1)
-                })
-                .disabled(closing || page + 1 >= pages),
-            ))
-            .gap(space::SIBLINGS.px())
-        }),
-        (pages > 1).then(|| label(scale, format!("Beats · page {} of {pages}", page + 1))),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::TEXT.px())
-}
-
-/// Beats sit inside their scene: indented past the scene's disclosure chevron.
-const OUTLINE_INSET: f64 = 12.;
 
 fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();

@@ -6,11 +6,13 @@ mod tests;
 mod wedge;
 use super::material::{Bar, Decorated, Edge, bar};
 use recite_writer_session::palette::Palette;
-pub(crate) use wedge::wedge;
+pub(crate) use wedge::{wedge, wedge_glyph};
 use xilem::peniko::Color;
 
 /// A margin bar's thickness.
 pub(crate) const THICKNESS: f64 = 3.;
+/// A decorative wedge's side, where a row or card repeats a problem its name already gives.
+pub(crate) const GLYPH: f64 = 16.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Mark {

@@ -2,6 +2,8 @@
 //! same whether or not its fields are mounted. Assistive technology reads it as a label in reading
 //! order.
 use super::ShapedText;
+use std::num::NonZeroUsize;
+use xilem::masonry::parley::style::FontWeight;
 use xilem::{
     Pod, ViewCtx,
     core::{MessageCtx, MessageResult, Mut, View, ViewMarker},
@@ -16,6 +18,10 @@ pub(crate) struct SheetText {
     text: ArcStr,
     size: f32,
     color: Color,
+    families: &'static [&'static str],
+    weight: FontWeight,
+    /// One line ending in an ellipsis instead of wrapping; the full text is still read aloud.
+    single: bool,
 }
 /// `text` in the reading face at `size`, in `color`.
 pub(crate) fn sheet_text(text: impl Into<ArcStr>, size: f32, color: Color) -> SheetText {
@@ -23,6 +29,32 @@ pub(crate) fn sheet_text(text: impl Into<ArcStr>, size: f32, color: Color) -> Sh
         text: text.into(),
         size,
         color,
+        families: recite_writer_session::typography::FONT_PROSE,
+        weight: FontWeight::NORMAL,
+        single: false,
+    }
+}
+/// `text` set in `role` at `scale` on one line, abbreviated with an ellipsis where it would not
+/// fit; assistive technology reads the whole text.
+pub(crate) fn one_line(
+    text: impl Into<ArcStr>,
+    role: super::Type,
+    scale: f32,
+    color: Color,
+) -> SheetText {
+    SheetText {
+        text: text.into(),
+        size: role.size(scale),
+        color,
+        families: role.families(),
+        weight: role.weight(),
+        single: true,
+    }
+}
+impl SheetText {
+    pub fn weight(mut self, weight: FontWeight) -> Self {
+        self.weight = weight;
+        self
     }
 }
 impl ViewMarker for SheetText {}
@@ -31,10 +63,10 @@ impl<S: 'static> View<S, (), ViewCtx> for SheetText {
     type ViewState = ();
     fn build(&self, _: &mut ViewCtx, _: &mut S) -> (Self::Element, ()) {
         let text = ShapedText::new(self.text.clone())
-            .with_style(StyleProperty::FontFamily(super::print::font(
-                recite_writer_session::typography::FONT_PROSE,
-            )))
-            .with_style(StyleProperty::FontSize(self.size));
+            .with_style(StyleProperty::FontFamily(super::print::font(self.families)))
+            .with_style(StyleProperty::FontSize(self.size))
+            .with_style(StyleProperty::FontWeight(self.weight))
+            .with_max_lines(self.single.then_some(NonZeroUsize::MIN));
         (
             Pod::new_with_props(
                 text,
@@ -61,6 +93,9 @@ impl<S: 'static> View<S, (), ViewCtx> for SheetText {
         }
         if self.color != previous.color {
             text.insert_prop(ContentColor::new(self.color));
+        }
+        if self.weight != previous.weight {
+            ShapedText::insert_style(&mut text, StyleProperty::FontWeight(self.weight));
         }
     }
     fn teardown(&self, _: &mut (), _: &mut ViewCtx, _: Mut<'_, Self::Element>) {}
