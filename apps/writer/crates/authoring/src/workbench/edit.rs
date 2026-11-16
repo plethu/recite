@@ -131,6 +131,7 @@ impl EditRequest {
                     dirty: false,
                     preview: None,
                     page: None,
+                    transcript: Vec::new(),
                     script_selection: origin.script.clone(),
                     source_validation: super::SourceValidation::default(),
                 };

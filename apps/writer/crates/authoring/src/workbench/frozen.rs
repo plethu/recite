@@ -14,6 +14,7 @@ impl Workbench {
             draft_revision: self.draft_revision,
             preview: None,
             page: None,
+            transcript: Vec::new(),
             script_selection: self.script_selection.clone(),
             source_validation: self.source_validation,
         })

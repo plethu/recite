@@ -54,6 +54,13 @@ pub struct PreviewPage {
     pub waiting_effect: Option<recite_core::EffectId>,
 }
 
+/// A page a preview has moved past: the lines it showed and the reply chosen after them.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreviewTurn {
+    pub text: String,
+    pub reply: Option<String>,
+}
+
 /// The compiled asset remains fixed until an explicit new preview is started.
 pub struct Preview {
     session: OwnedPreview,

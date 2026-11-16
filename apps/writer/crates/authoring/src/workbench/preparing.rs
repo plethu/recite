@@ -77,6 +77,7 @@ impl NavigationRequest {
             dirty: self.selection.dirty,
             preview: None,
             page: None,
+            transcript: Vec::new(),
             source_validation: self.selection.source_validation,
         };
         Ok(PreparedNavigation {

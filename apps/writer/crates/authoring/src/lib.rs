@@ -24,7 +24,7 @@ pub use examples::{WRITER_EXAMPLES, WriterExample};
 pub use flow::{SceneLink, scene_endings, scene_links};
 pub use preview::{
     CatalogueRevision, Preview, PreviewCatalogue, PreviewError, PreviewPage, PreviewProvenance,
-    PreviewSetup,
+    PreviewSetup, PreviewTurn,
 };
 pub use projection::{Passage, PassageContent, PassageKind};
 pub use recovery::RecoveredDraft;

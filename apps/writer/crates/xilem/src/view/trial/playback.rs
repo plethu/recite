@@ -61,6 +61,7 @@ pub(super) fn playback(
         && page.condition.is_none()
         && page.waiting_effect.is_none();
     flex_col((
+        transcript(state),
         (!page.ended && !page.text.is_empty()).then(|| {
             flex_row((
                 sized_box(manuscript_text(state.reading_size(), page.text.clone()))
@@ -138,6 +139,41 @@ pub(super) fn playback(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
+}
+
+/// What the preview has already shown, oldest first: each page's lines in the manuscript face and
+/// the reply chosen after them, quieter, so the conversation reads as it went.
+fn transcript(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let width = state.script_width();
+    let turns = state
+        .session
+        .model()
+        .preview_transcript()
+        .iter()
+        .map(|turn| {
+            flex_col((
+                (!turn.text.is_empty()).then(|| {
+                    flex_row((
+                        sized_box(manuscript_text(state.reading_size(), turn.text.clone()))
+                            .width(width.px()),
+                    ))
+                }),
+                turn.reply.as_ref().map(|reply| {
+                    sheet_text(
+                        format!("→ {reply}"),
+                        Sheet::Reply.size(state.reading_size()),
+                        state.palette.muted,
+                    )
+                    .width(width.px())
+                }),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::SIBLINGS.px())
+        })
+        .collect::<Vec<_>>();
+    flex_col(turns)
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::TEXT.px())
 }
 
 fn condition(
