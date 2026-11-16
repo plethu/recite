@@ -3,7 +3,6 @@ use super::{App, ProjectField};
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::pane;
 use crate::presentation::segments::{tab, tabs};
-use crate::presentation::slip::slip;
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
 use crate::presentation::{Type, Typeset};
@@ -50,11 +49,11 @@ impl Layout {
         Self {
             scale,
             width,
-            // Inside the slip's padding, beside Browse folders where the column is wide.
+            // Beside Browse folders where the column is wide.
             field_width: if wide {
-                width - BROWSE * f64::from(scale) - space::SIBLINGS - 2. * space::KINDS
+                width - BROWSE * f64::from(scale) - space::SIBLINGS
             } else {
-                width - 2. * space::KINDS
+                width
             },
             direction: if wide {
                 Axis::Horizontal
@@ -126,7 +125,7 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             "Open a project or create one to start writing.",
             width,
         ),
-        // Opening and creating are two tabs over one compact slip of fields.
+        // Opening and creating are two tabs over their fields on the desk.
         tabs(
             "Project",
             (
@@ -148,15 +147,10 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 ),
             ),
         ),
-        slip(
-            &app.theme.palette,
-            sized_box(
-                flex_col((folder(app, layout), app.creating.then(|| name(app, layout))))
-                    .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(space::TEXT.px()),
-            )
-            .padding(space::KINDS.px()),
-        ),
+        // The fields sit on the desk under their tab, not in a card of their own.
+        flex_col((folder(app, layout), app.creating.then(|| name(app, layout))))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::TEXT.px()),
         super::feedback::details(app, scale, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)

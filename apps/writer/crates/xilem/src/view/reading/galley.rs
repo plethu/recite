@@ -20,7 +20,7 @@ use xilem::masonry::{
     properties::LineBreaking,
     widgets::Flex,
 };
-use xilem::view::{FlexSpacer, sized_box};
+use xilem::view::{FlexSpacer, MainAxisAlignment, sized_box};
 mod read_only;
 #[cfg(test)]
 mod tests;
@@ -67,15 +67,18 @@ pub(super) fn galley<V: WidgetView<Writer>>(
     flex_col((
         scene_title(state, &grid),
         flex_col(before).gap(0.px()),
-        selected.map(|index| {
+        selected.filter(|_| !first).map(|_| rule(state, &grid)),
+        // The selected beat carries one current bar from its heading through its last line.
+        marked(
+            &state.palette,
+            selected.map(|_| Mark::Current),
             flex_col((
-                (!first).then(|| rule(state, &grid)),
-                heading(state, &grid, index, total, &problems),
+                selected.map(|index| heading(state, &grid, index, total, &problems)),
+                body,
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(0.px())
-        }),
-        body,
+            .gap(0.px()),
+        ),
         flex_col(after).gap(0.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -169,41 +172,43 @@ fn heading(
             .disabled(blocked),
         ))
     };
-    marked(
-        &state.palette,
-        selected.then_some(Mark::Current),
+    // The selected beat's bar runs down the whole beat, so the heading carries none of its own.
+    flex_row((
         flex_row((
-            flex_row((
-                FlexSpacer::Flex(1.),
-                problem.map(|message| {
-                    wedge(
-                        format!("Problem in {name}"),
-                        message,
-                        (state.palette.error, state.palette.accent),
-                        move |state: &mut Writer| state.edit_beat(index),
-                    )
-                }),
-            ))
-            .width(grid.margin.px()),
-            // The heading hugs its words, so a focused heading's ring stays inside the measure. A
-            // rename's slip floats over the window from under it, so nothing below moves.
-            sized_box(flex_col((title,)).cross_axis_alignment(if renaming_here {
-                // The rename field takes the heading's measure.
-                CrossAxisAlignment::Stretch
-            } else {
-                CrossAxisAlignment::Start
-            }))
-            .prop(SlipAnchor(
-                selected && rename::hangs_from(state, &id, Place::Heading),
-            ))
-            .flex(1.),
-            selected.then(|| actions(state, blocked)),
+            FlexSpacer::Flex(1.),
+            problem.map(|message| {
+                wedge(
+                    format!("Problem in {name}"),
+                    message,
+                    (state.palette.error, state.palette.accent),
+                    move |state: &mut Writer| state.edit_beat(index),
+                )
+            }),
         ))
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap((grid.gutter() - inset).max(0.).px())
-        .width(grid.row().px())
-        .prop(SelectedBeat(selected)),
-    )
+        .width(grid.margin.px()),
+        // The heading hugs its words, so a focused heading's ring stays inside the measure. A
+        // rename's slip floats over the window from under it, so nothing below moves.
+        // Centred in the row, so the heading's line and its tools share one centre line.
+        sized_box(
+            flex_col((title,))
+                .main_axis_alignment(MainAxisAlignment::Center)
+                .cross_axis_alignment(if renaming_here {
+                    // The rename field takes the heading's measure.
+                    CrossAxisAlignment::Stretch
+                } else {
+                    CrossAxisAlignment::Start
+                }),
+        )
+        .prop(SlipAnchor(
+            selected && rename::hangs_from(state, &id, Place::Heading),
+        ))
+        .flex(1.),
+        selected.then(|| actions(state, blocked)),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap((grid.gutter() - inset).max(0.).px())
+    .width(grid.row().px())
+    .prop(SelectedBeat(selected))
 }
 
 /// The selected beat's quiet icon actions, always in the Tab order.

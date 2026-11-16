@@ -1,6 +1,6 @@
 use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::segments::{segment_named, segments};
+use crate::presentation::segments::{segment_named, segments_on_paper};
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, print, space};
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
@@ -215,7 +215,7 @@ fn choices(
         scale,
         width,
         caption,
-        segments(
+        segments_on_paper(
             palette,
             options.map(|(title, chosen, edit)| {
                 segment_named(scale, palette, title, chosen, move |app: &mut App| {

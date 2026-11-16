@@ -77,7 +77,13 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                                 indexed_stack((
                                     flex_row((FlexSpacer::Flex(1.), settings::settings(app)))
                                         .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                                        // Below the toolbar too, so it covers none of it.
                                         .padding(Padding {
+                                            top: ((size::PICKER_TOP - size::ROW)
+                                                * f64::from(crate::presentation::scale(
+                                                    &app.preferences.config.writer,
+                                                )))
+                                            .px(),
                                             bottom: status_bar.px(),
                                             ..Padding::all(0.px())
                                         })

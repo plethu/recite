@@ -4,6 +4,7 @@ use crate::native_host::keyboard::{focus::slip_anchor, tab::to_tab_stop};
 use crate::tests::support::{self, mounted::Mounted};
 use crate::workspaces::tests::ToolDriver;
 use xilem::masonry::{
+    accesskit::Role,
     core::{Widget, WidgetId, WidgetRef},
     widgets::{Passthrough, SizedBox},
 };
@@ -69,6 +70,49 @@ fn tab_and_shift_tab_never_reach_the_tab_row_behind_a_modal() {
             }
         }
     }
+}
+
+#[test]
+fn the_status_bar_is_inert_behind_the_close_decision() {
+    // A missing destination gives the status bar its problem count, which is a button.
+    let directory = support::project(":: start default\nHello.\n-> missing\n").unwrap();
+    let mut app = App::with_writer(support::open(&directory).unwrap());
+    if let Some(writer) = app.writer.as_mut() {
+        writer.change(|model| {
+            model.set_draft("Unsaved line.".into());
+            Ok(())
+        });
+    }
+    let problems = |mounted: &Mounted<App, _>| {
+        let tree = mounted.harness.access_tree();
+        let mut pending = vec![tree.state().root()];
+        let mut found = Vec::new();
+        while let Some(node) = pending.pop() {
+            if node
+                .label()
+                .is_some_and(|label| label.ends_with("problem") || label.ends_with("problems"))
+                && node.role() == Role::Button
+            {
+                found.push(node.is_disabled());
+            }
+            pending.extend(node.children());
+        }
+        found
+    };
+    let mut mounted = Mounted::new(app, page);
+    mounted.settle();
+    assert_eq!(
+        problems(&mounted),
+        vec![false],
+        "the count is live while writing"
+    );
+    mounted.state.request_close();
+    mounted.settle();
+    assert_eq!(
+        problems(&mounted),
+        vec![true],
+        "the count is inert behind the decision"
+    );
 }
 
 #[test]

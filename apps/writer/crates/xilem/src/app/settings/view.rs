@@ -5,7 +5,7 @@ use super::*;
 use crate::app::keyboard::{DefaultFocus, ModalSurface};
 use crate::presentation::group::dialog;
 use crate::presentation::pane;
-use crate::presentation::segments::{segment, segments};
+use crate::presentation::segments::{segment, segments_on_paper};
 use crate::presentation::slip::slip;
 use crate::presentation::tokens::size;
 use crate::presentation::{Icon, Type, label, print, prose, space, text_button};
@@ -84,7 +84,7 @@ mod tests;
 /// Preferences and shortcuts: one segmented choice of page.
 fn pages(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    segments(
+    segments_on_paper(
         &app.theme.palette,
         [
             ("Personal preferences", false),

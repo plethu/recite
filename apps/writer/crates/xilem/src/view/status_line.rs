@@ -14,8 +14,25 @@ pub(super) fn status_height(scale: f32) -> f64 {
     2. * space::UNIT + f64::from(Type::Meta.metrics().1 * scale)
 }
 
+/// How much of its ink the bar's words keep behind a modal.
+const DIMMED: f32 = 0.45;
+
 pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
+    // Behind the close decision the bar is inert and its words dim with the rest of the window;
+    // the backdrop's overprint is the bar's own ink, so it cannot dim the bar by itself.
+    let dimmed = state.phase() != Phase::Writing;
+    let fade = |color: xilem::peniko::Color| {
+        if dimmed {
+            color.with_alpha(DIMMED)
+        } else {
+            color
+        }
+    };
+    let (text, signal) = (
+        fade(state.palette.status_text),
+        fade(state.palette.status_signal),
+    );
     let diagnostics = state.session.model().document().diagnostic_snapshot();
     let refusal = state.reading_refusal();
     let saved = if state.session.project_root().is_none() {
@@ -26,8 +43,8 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
         "Saved to disk"
     };
     flex_row((
-        print::meta(state.ui_scale(), saved).color(state.palette.status_text),
-        print::separator(state.ui_scale(), state.palette.status_text),
+        print::meta(state.ui_scale(), saved).color(text),
+        print::separator(state.ui_scale(), text),
         if let (None, false, Some(count)) = (
             refusal,
             state.unfinished_trial_edit().is_some() && state.trial.visible,
@@ -41,7 +58,7 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
                         state.ui_scale(),
                         format!("{count} problem{}", if count == 1 { "" } else { "s" }),
                     )
-                    .color(state.palette.status_text),
+                    .color(text),
                     Writer::reveal_first_problem,
                 ),
             ))
@@ -59,9 +76,9 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 )
                 .color(
                     if refusal.is_none() && state.unfinished_trial_edit().is_none() {
-                        state.palette.status_signal
+                        signal
                     } else {
-                        state.palette.status_text
+                        text
                     },
                 ),
             )
@@ -70,22 +87,15 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
             && !workspace::Layout::resolve(state).split_available)
             .then(|| {
                 (
-                    print::separator(state.ui_scale(), state.palette.status_text),
-                    print::meta(state.ui_scale(), "Split needs a wider window")
-                        .color(state.palette.status_text),
+                    print::separator(state.ui_scale(), text),
+                    print::meta(state.ui_scale(), "Split needs a wider window").color(text),
                 )
             }),
         (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
             (
-                print::separator(state.ui_scale(), state.palette.status_text),
+                print::separator(state.ui_scale(), text),
                 // One line, ending in an ellipsis where it would not fit; read in full.
-                one_line(
-                    state.status.clone(),
-                    Type::Meta,
-                    state.ui_scale(),
-                    state.palette.status_text,
-                )
-                .flex(1.),
+                one_line(state.status.clone(), Type::Meta, state.ui_scale(), text).flex(1.),
             )
         }),
         // A beat renamed in place reports here, with its Undo while the report stands.
@@ -93,7 +103,7 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
             styled(
                 ControlStyle::Status,
                 button(
-                    print::meta(state.ui_scale(), "Undo rename").color(state.palette.status_text),
+                    print::meta(state.ui_scale(), "Undo rename").color(text),
                     Writer::undo_project_rename,
                 ),
             )
@@ -107,8 +117,7 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 styled(
                     ControlStyle::Status,
                     button(
-                        print::meta(state.ui_scale(), "Cancel build")
-                            .color(state.palette.status_text),
+                        print::meta(state.ui_scale(), "Cancel build").color(text),
                         Writer::cancel_build,
                     ),
                 )

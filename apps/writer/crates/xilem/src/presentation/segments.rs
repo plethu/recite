@@ -169,6 +169,27 @@ pub(crate) fn segments_along<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
     axis: Axis,
     choices: Seq,
 ) -> impl WidgetView<S> + use<S, Seq> {
+    track(palette, axis, choices, 0.)
+}
+
+/// Segments on floating paper, whose chosen chip is the paper's own colour: the track shows a
+/// rim around every chip, so the chosen one still reads as the raised chip with its ink bar.
+pub(crate) fn segments_on_paper<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
+    palette: &Palette<Color>,
+    choices: Seq,
+) -> impl WidgetView<S> + use<S, Seq> {
+    track(palette, Axis::Horizontal, choices, RIM)
+}
+
+/// How far a track on floating paper shows around its chips.
+const RIM: f64 = 2.;
+
+fn track<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
+    palette: &Palette<Color>,
+    axis: Axis,
+    choices: Seq,
+    rim: f64,
+) -> impl WidgetView<S> + use<S, Seq> {
     sized_box(radio_group(
         flex_row(choices)
             .direction(axis)
@@ -176,6 +197,7 @@ pub(crate) fn segments_along<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
             .gap(0.px()),
     ))
     .width(Dim::MaxContent)
+    .padding(rim.px())
     .background_color(palette.ink.with_alpha(TONAL))
     .corner_radius(2.px())
 }
