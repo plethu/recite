@@ -1,5 +1,6 @@
 //! States of the in-place flows: slips, banners and edits on the object itself.
 use super::*;
+use crate::workspaces::rename::inline::{Place, Target};
 use crate::workspaces::tests::{ToolDriver, finish_build};
 
 pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Variant) {
@@ -97,7 +98,7 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             id: "script.rename",
             group: "Script",
             title: "Inline rename",
-            intent: "Rename beat turns the selected beat's heading into a field; Enter reviews the rename, and a slip under the heading says what it changes before Rename stages it.",
+            intent: "Rename beat turns the selected beat's heading, or F2 or a double-click its sidebar row, into a field; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
         },
         |record| {
             let directory = sample();
@@ -105,20 +106,33 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
                 App::with_writer(open(directory.path(), "relay_hub.recite")),
                 variant,
             );
-            stage.act(|app| {
-                if let Some(writer) = &mut app.writer {
-                    writer.rename_beat();
-                    writer.edit_inline_rename("front_desk".into());
-                }
-            });
+            rename_in(&mut stage, Place::Heading, false);
             stage.shot(record, "Renaming in place");
-            stage.act(|app| {
-                if let Some(writer) = &mut app.writer {
-                    let mut tools = ToolDriver::new(writer);
-                    writer.commit_inline_rename();
-                    tools.finish(writer);
-                }
-            });
+            rename_in(&mut stage, Place::Heading, true);
+            stage.shot(record, "What the rename changes");
+            rename_in(&mut stage, Place::Outline, false);
+            stage.shot(record, "Renaming in the sidebar");
+            rename_in(&mut stage, Place::Outline, true);
+            stage.shot(record, "What the rename changes, from the sidebar");
+        },
+    );
+    record.scene(
+        Meta {
+            id: "map.rename",
+            group: "Map",
+            title: "Inline rename on a card",
+            intent: "F2 or a double-click turns a card's title into a field; the consequence slip hangs under the card, inside the map.",
+        },
+        |record| {
+            let directory = sample();
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "relay_hub.recite")),
+                variant,
+            );
+            command(&mut stage, WriterCommand::Map);
+            rename_in(&mut stage, Place::Card, false);
+            stage.shot(record, "Renaming a card");
+            rename_in(&mut stage, Place::Card, true);
             stage.shot(record, "What the rename changes");
         },
     );
@@ -172,4 +186,32 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             stage.shot(record, "Destination");
         },
     );
+}
+
+/// Rename the reading beat in place at `place`, typing a new name, and once `reviewed` let the
+/// review finish so its slip shows; any rename already open is cancelled first.
+fn rename_in<V: WidgetView<App, Widget = Passthrough>>(
+    stage: &mut Stage<App, V>,
+    place: Place,
+    reviewed: bool,
+) {
+    stage.act(|app| {
+        if let Some(writer) = &mut app.writer {
+            writer.cancel_inline_rename();
+            let beat = match place {
+                Place::Card => writer.map_selected().map(str::to_owned),
+                _ => writer.reading.selected.clone(),
+            };
+            let Some(beat) = beat else {
+                return;
+            };
+            let mut tools = ToolDriver::new(writer);
+            writer.rename_beat_in(Target { beat, place });
+            writer.edit_inline_rename("front_desk".into());
+            if reviewed {
+                writer.commit_inline_rename();
+                tools.finish(writer);
+            }
+        }
+    });
 }

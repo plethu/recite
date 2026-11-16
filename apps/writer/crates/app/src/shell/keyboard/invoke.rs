@@ -76,6 +76,11 @@ impl Shell {
                     picker.placement = Some((x, y));
                 }
             }
+            Action::RenameBeat(target) => {
+                if let Some(writer) = &mut self.writer {
+                    writer.rename_beat_in(target);
+                }
+            }
             Action::StepBeat { forward } => {
                 if let Some(writer) = &mut self.writer {
                     writer.step_beat(forward);

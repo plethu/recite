@@ -166,6 +166,7 @@ impl Keyboard {
                 enter,
                 action,
                 first_press: event.state == ElementState::Pressed && !event.repeat,
+                renames: focus::renames(root),
             },
         );
         if consumed && event.state == ElementState::Pressed {
@@ -209,6 +210,11 @@ impl Keyboard {
             bindings::resolve(context, &kind, stroke.input, stroke.enter, stroke.action)
         else {
             return false;
+        };
+        // Rename beat on a sidebar row or map card renames that beat there.
+        let action = match (action, stroke.renames) {
+            (Action::Command(WriterCommand::Rename), Some(target)) => Action::RenameBeat(target),
+            (action, _) => action,
         };
         // Clear the hint before a command can retire this keyboard scope.
         self.vim.cancel(context);

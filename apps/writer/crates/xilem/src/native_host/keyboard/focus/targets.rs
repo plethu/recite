@@ -1,6 +1,8 @@
 //! The widgets focus moves to: the picker's query or active result, a modal surface's default
 //! control, the first problem wedge, and the control an opened picker hangs from.
 use super::*;
+use crate::app::keyboard::{RenamesBeat, ReturnFocus};
+use crate::workspaces::rename::inline::Target;
 
 pub(super) fn find(root: &RenderRoot, kind: Kind) -> Option<WidgetId> {
     let mut pending = vec![root.get_layer_root(0)];
@@ -41,6 +43,30 @@ pub(super) fn default_focus(root: &RenderRoot) -> Option<WidgetId> {
         pending.extend(widget.children());
     }
     None
+}
+/// The enabled, mounted control marked to take focus back when its predecessor is gone.
+pub(super) fn return_focus(root: &RenderRoot) -> Option<WidgetId> {
+    let mut pending = vec![root.get_layer_root(0)];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() || widget.ctx().is_disabled() {
+            continue;
+        }
+        if widget
+            .downcast::<Button>()
+            .is_some_and(|button| button.get_prop::<ReturnFocus>().0)
+        {
+            return Some(widget.id());
+        }
+        pending.extend(widget.children());
+    }
+    None
+}
+/// The beat the focused sidebar row or map card renames in place, if one has focus.
+pub(in crate::native_host::keyboard) fn renames(root: &RenderRoot) -> Option<Target> {
+    let focused = root.get_widget(root.focused_widget()?)?;
+    focused
+        .downcast::<Button>()
+        .and_then(|button| button.get_prop::<RenamesBeat>().0.clone())
 }
 /// A picker opened from a combobox control hangs from that control's bottom-left corner.
 pub(super) fn place_picker(root: &RenderRoot, context: &Context, opener: Option<WidgetId>) {

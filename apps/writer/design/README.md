@@ -24,7 +24,8 @@ source produces the same pixels on any host. Fixtures live in
   and Split; source needing repair; Preview; Localise with a catalogue and with none; the
   translations queue; Build, Rename, Declarations, disk changes and source updates; the in-place
   flows (`in_place` module): the Configure preview slip, the disk-change banner, the Build result
-  slip, the beat renamed in place with its consequence slip, and the insertion affordances with
+  slip, the beat renamed in place on its heading, sidebar row and map card with its consequence
+  slip, and the insertion affordances with
   the speaker and destination slips; preferences;
   the command, go-to, find and passage pickers, and the command picker over the hatch backdrop
   that the maintainer compares with the shipped dot screen; and the unsaved-close decision.

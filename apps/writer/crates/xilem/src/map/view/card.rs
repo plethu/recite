@@ -1,8 +1,10 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
+use crate::app::keyboard::{RenamesBeat, ReturnFocus};
 use crate::presentation::marks::{GLYPH, Mark, THICKNESS, marked, wedge_glyph};
 use crate::presentation::space;
-use crate::presentation::{Icon, SMALL, excerpt, mark, print};
+use crate::presentation::{Icon, SMALL, Type, excerpt, mark, print};
+use crate::workspaces::rename::inline::{self as rename, Place, Target};
 use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
 use xilem::core::one_of::Either;
@@ -13,9 +15,12 @@ use xilem::masonry::{
 use xilem::view::PointerButton;
 use xilem::{peniko::Color, style::Padding};
 
+/// A card title's size, and its floor on screen as the map zooms out.
+const TITLE: f32 = 16.;
+const TITLE_FLOOR: f32 = 14.;
+
 pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetView<Writer> + use<> {
     let block = &scene.projection.graph.blocks[index];
-    let synopsis = &scene.projection.synopsis[index];
     let id = block.id.clone();
     let mut title = recite_writer_session::choices::display_name(&block.id);
     if scene.projection.graph.endings.contains(&block.id) {
@@ -40,58 +45,74 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             .is_current(state.session.model().document());
     let zoom = scene.camera.zoom;
     let width = f64::from(scene.node(index).width);
-    let contents = flex_col((
-        {
-            let heading = label(1., title.clone())
-                .font(print::font(FONT_UI))
-                .weight(FontWeight::SEMI_BOLD)
-                .text_size(16_f32.max(14. / zoom));
-            if problem {
-                Either::A(
-                    flex_row((heading, wedge_glyph(GLYPH, state.palette.error)))
-                        .cross_axis_alignment(CrossAxisAlignment::Center)
-                        .gap(space::UNIT.px()),
-                )
-            } else {
-                Either::B(heading)
-            }
+    let target = Target {
+        beat: id.clone(),
+        place: Place::Card,
+    };
+    let heading = label(1., title.clone())
+        .font(print::font(FONT_UI))
+        .weight(FontWeight::SEMI_BOLD)
+        .text_size(TITLE.max(TITLE_FLOOR / zoom));
+    let heading = if problem {
+        Either::A(
+            flex_row((heading, wedge_glyph(GLYPH, state.palette.error)))
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .gap(space::UNIT.px()),
+        )
+    } else {
+        Either::B(heading)
+    };
+    let face = if selected {
+        state
+            .palette
+            .surface
+            .lerp_rect(state.palette.selection, 0.35)
+    } else {
+        state.palette.surface
+    };
+    // F2 or a double-click renames the beat in place: a face whose title is the field lies over
+    // the card, which keeps its name, state and focus beneath, and over its grip.
+    let renaming = rename::editing(state, &block.id, Place::Card).map(|inline| {
+        let field = rename::field(
+            inline,
+            Type::Control,
+            TITLE.max(TITLE_FLOOR / zoom) / Type::Control.metrics().0,
+        );
+        let field = sized_box(field).width((width - 2. * space::TEXT).px());
+        // Past the reading beat's mark, which stays in view at the card's leading edge.
+        placed::placed(
+            Affine::translate((THICKNESS, 0.)),
+            sized_box(contents(state, scene, index, field))
+                .padding(Padding {
+                    left: (space::TEXT - THICKNESS).px(),
+                    ..Padding::all(space::TEXT.px())
+                })
+                .dims(((width - THICKNESS).px(), HEIGHT.px()))
+                .background_color(face),
+        )
+    });
+    let returning = state.rename_return() == Some(&target);
+    let body = button_any_pointer(
+        contents(state, scene, index, heading),
+        move |state: &mut Writer, pointer| {
+            let press = match pointer {
+                None => Press::Keyboard,
+                Some(PointerButton::Primary) => Press::Primary,
+                Some(_) => Press::Secondary,
+            };
+            state.press_map_beat(id.clone(), press);
         },
-        flex_col((
-            label(1., synopsis.speaker.clone())
-                .text_size(13_f32.max(11. / zoom))
-                .color(state.palette.muted),
-            excerpt(synopsis.prose.clone(), zoom).width((width - 24.).px()),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::UNIT.px()),
-        (!synopsis.annotations.is_empty()).then(|| {
-            label(1., synopsis.annotations.join(" · "))
-                .text_size(13_f32.max(11. / zoom))
-                .color(state.palette.muted)
-        }),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
-    .dims(((width - 24.).px(), (HEIGHT - 24.).px()));
-    let focus_id = id.clone();
-    let move_id = id.clone();
-    let body = button_any_pointer(contents, move |state: &mut Writer, pointer| {
-        let press = match pointer {
-            None => Press::Keyboard,
-            Some(PointerButton::Primary) => Press::Primary,
-            Some(_) => Press::Secondary,
-        };
-        state.press_map_beat(id.clone(), press);
-    })
+    )
     .disabled(disabled)
-    .prop(properties::Dimensions::fixed(
-        scene.node(index).width.px(),
-        HEIGHT.px(),
-    ))
+    .prop(properties::Dimensions::fixed(width.px(), HEIGHT.px()))
     .padding(Padding::all(space::TEXT.px()))
     .background_color(Color::TRANSPARENT)
     .border_color(Color::TRANSPARENT)
-    .border_width(0.px());
+    .border_width(0.px())
+    .prop(RenamesBeat(Some(target)))
+    .prop(ReturnFocus(returning));
+    let focus_id = block.id.clone();
+    let move_id = block.id.clone();
     let focus = input::input(
         input::Kind::Card {
             title: name,
@@ -109,14 +130,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             .filter(|focus| focus.beat == block.id)
             .and_then(|_| canvas::focus_request(scene)),
     )
-    .background_color(if selected {
-        state
-            .palette
-            .surface
-            .lerp_rect(state.palette.selection, 0.35)
-    } else {
-        state.palette.surface
-    })
+    .background_color(face)
     .border_color(if selected {
         state.palette.accent
     } else {
@@ -173,7 +187,39 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             flex_col(()).dims((THICKNESS.px(), HEIGHT.px())),
         )
     });
-    zstack((focus, grip, mark))
+    // The rename face comes last: a zstack inserts a new layer only at its end.
+    zstack((focus, grip, mark, renaming))
         .alignment(UnitPoint::TOP_LEFT)
         .dims((scene.node(index).width.px(), HEIGHT.px()))
+}
+
+/// A card's words under `title`: the speaker, the opening prose and its annotations.
+fn contents<T: WidgetView<Writer>>(
+    state: &Writer,
+    scene: &Scene,
+    index: usize,
+    title: T,
+) -> impl WidgetView<Writer> + use<T> {
+    let synopsis = &scene.projection.synopsis[index];
+    let zoom = scene.camera.zoom;
+    let width = f64::from(scene.node(index).width);
+    flex_col((
+        title,
+        flex_col((
+            label(1., synopsis.speaker.clone())
+                .text_size(13_f32.max(11. / zoom))
+                .color(state.palette.muted),
+            excerpt(synopsis.prose.clone(), zoom).width((width - 24.).px()),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::UNIT.px()),
+        (!synopsis.annotations.is_empty()).then(|| {
+            label(1., synopsis.annotations.join(" · "))
+                .text_size(13_f32.max(11. / zoom))
+                .color(state.palette.muted)
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
+    .dims(((width - 24.).px(), (HEIGHT - 24.).px()))
 }

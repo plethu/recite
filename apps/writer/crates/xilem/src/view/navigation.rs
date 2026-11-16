@@ -1,6 +1,8 @@
 use super::*;
 use crate::presentation::pane;
 mod outline;
+#[cfg(test)]
+mod tests;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::map::Workspace;

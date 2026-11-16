@@ -1,6 +1,8 @@
 //! Viewport composition and route painting share one coordinate transform.
 use super::*;
-use crate::{presentation::group, view::workspace};
+use crate::presentation::{fit_content, group, space};
+use crate::view::workspace;
+use crate::workspaces::rename::inline as rename;
 use xilem::masonry::imaging::record;
 use xilem::masonry::kurbo::{self, CubicBez, Line, Point, Vec2};
 use xilem::masonry::properties;
@@ -39,6 +41,7 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         zstack((
             drawing,
             group::list("Scene beats", super::cards::cards(cards)),
+            rename_slip(state, scene, width),
         ))
         .alignment(UnitPoint::TOP_LEFT),
         |state: &mut Writer, action| state.map_input(Source::Viewport, action),
@@ -61,6 +64,25 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         ))
         .width(width.px()),
     )
+}
+/// The consequence slip of a card renamed in place, under the card and inside the viewport.
+fn rename_slip(
+    state: &Writer,
+    scene: &Scene,
+    viewport: f64,
+) -> Option<impl WidgetView<Writer> + use<>> {
+    let inline = state.inline_rename()?;
+    let index = *scene.projection.graph.ids.get(&inline.beat)?;
+    let room = (viewport - 2. * space::KINDS).max(0.);
+    let width = rename::slip_width(state.ui_scale()).min(room);
+    let slip = rename::consequence(state, rename::Place::Card, width, rename::Actions::Row)?;
+    let node = scene.node(index);
+    let camera = scene.camera;
+    let x = f64::from(node.x * camera.zoom + camera.x)
+        .min(viewport - width - space::KINDS)
+        .max(space::KINDS);
+    let y = f64::from((node.y + HEIGHT) * camera.zoom + camera.y) + space::TEXT;
+    Some(placed::placed(Affine::translate((x, y)), fit_content(slip)))
 }
 /// Routes and the overview share viewport coordinates; the routes widget paints the grid.
 fn draw(state: &Writer, recording: &mut record::Scene) {

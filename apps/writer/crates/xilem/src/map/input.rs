@@ -117,7 +117,7 @@ impl Widget for InputWidget {
         {
             let clicks = std::mem::take(&mut self.clicks);
             if clicks == 2 && press.button == Some(xilem::view::PointerButton::Primary) {
-                ctx.submit_action::<NativeAction>(Input::Open);
+                ctx.submit_action::<NativeAction>(Input::Rename);
                 ctx.set_handled();
                 return;
             }

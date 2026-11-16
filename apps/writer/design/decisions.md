@@ -49,10 +49,13 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
   teal bar for the current beat, a plum halftone bar for unsaved work, an error wedge for a
   problem. They differ in shape as well as ink; only the galley's wedge takes focus.
 - **In place, not forms.** A change happens on the object it changes. Rename beat (F2, the
-  command or the heading's pen) turns the selected beat's heading into a field; Enter reviews the
-  project rename and a slip under the heading says what it changes ("Renames a to b in 3
-  references across 2 files") with Rename, Review all changes and Cancel; Esc cancels and focus
-  returns to where it was. Rename stages one Undo step and the status line offers Undo; only a
+  command or the heading's pen) turns the selected beat's heading into a field; F2 or a
+  double-click on a sidebar beat row or a map card does the same to that row or card (in Map the
+  command renames on the selected card, and a card's double-click renames rather than opens:
+  Enter and Open script open it). Enter reviews the project rename and a slip under the field says
+  what it changes ("Renames a to b in 3 references across 2 files") with Rename, Review all
+  changes and Cancel, stacked in the narrow sidebar; Esc cancels and focus returns to where it
+  was, or to the row or card under its new name when the field took its place. Rename stages one Undo step and the status line offers Undo; only a
   refused rename opens the full page. Insertion affordances ("+ Line", "+ Reply", "+ Beat") sit
   after the beat, never between rows, so choosing a passage never moves another; Line and Reply
   insert after the passage being written when it is of their kind. The passage being written

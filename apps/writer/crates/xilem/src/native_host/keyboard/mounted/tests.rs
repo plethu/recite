@@ -266,3 +266,80 @@ fn composition_and_window_blur_guard_native_commands_and_preserve_the_text_field
     assert_eq!(root.focused_widget(), Some(query));
     assert_eq!(field(&root, SCRIPT), script);
 }
+
+#[test]
+fn rename_beat_on_a_sidebar_row_or_map_card_renames_that_beat_there() {
+    use crate::app::keyboard::RenamesBeat;
+    use crate::workspaces::rename::inline::{Place, Target};
+    use xilem::winit::keyboard::{Key as NativeKey, KeyCode, PhysicalKey as NativePhysical};
+    let (mut root, _signals) = mounted();
+    let mut keyboard = Keyboard::default();
+    let (context, messages) = context();
+    input::scope(&mut root, context);
+    keyboard.synchronize(&mut root);
+    let card = root.get_widget_with_tag(MAP).unwrap().id();
+    root.focus_on(Some(card));
+    let f2 = NativeKey::Named(NamedKey::F2);
+    let press = Keystroke {
+        logical_key: &f2,
+        physical_key: NativePhysical::Code(KeyCode::F2),
+        state: ElementState::Pressed,
+        repeat: false,
+    };
+    let release = Keystroke {
+        state: ElementState::Released,
+        ..press
+    };
+    let rename = |root: &RenderRoot, keyboard: &mut Keyboard| {
+        assert!(keyboard.key_event(root, press, false));
+        assert!(keyboard.key_event(root, release, false));
+        messages
+            .try_recv()
+            .unwrap()
+            .downcast::<Invocation>()
+            .unwrap()
+            .action
+    };
+    // Elsewhere F2 is the command, which renames the selected beat where it shows.
+    assert_eq!(
+        rename(&root, &mut keyboard),
+        Action::Command(WriterCommand::Rename)
+    );
+    let target = Target {
+        beat: "later".into(),
+        place: Place::Card,
+    };
+    root.edit_widget(card, |mut widget| {
+        widget.insert_prop(RenamesBeat(Some(target.clone())));
+    });
+    assert_eq!(rename(&root, &mut keyboard), Action::RenameBeat(target));
+}
+
+#[test]
+fn a_closing_modal_returns_focus_to_the_successor_of_a_control_it_replaced() {
+    use crate::app::keyboard::{DefaultFocus, ReturnFocus};
+    let (mut root, _signals) = mounted();
+    let mut keyboard = Keyboard::default();
+    let card = root.get_widget_with_tag(MAP).unwrap().id();
+    let result = root.get_widget_with_tag(RESULT).unwrap().id();
+    let script = root.get_widget_with_tag(SCRIPT).unwrap().id();
+    root.edit_widget(script, |mut widget| {
+        widget.insert_prop(DefaultFocus(true));
+    });
+    root.edit_widget(result, |mut widget| {
+        widget.insert_prop(ReturnFocus(true));
+    });
+    root.focus_on(Some(card));
+    // A rename opens over the card: its field takes focus.
+    let (mut renaming, _) = context();
+    renaming.modal = Some(Modal::Rename);
+    input::scope(&mut root, renaming);
+    keyboard.synchronize(&mut root);
+    assert_eq!(root.focused_widget(), Some(field(&root, SCRIPT)));
+    // The card it was typed over was rebuilt meanwhile; focus goes to the marked successor.
+    root.edit_widget(card, |mut widget| widget.ctx.set_disabled(true));
+    let (context, _) = context();
+    input::scope(&mut root, context);
+    keyboard.synchronize(&mut root);
+    assert_eq!(root.focused_widget(), Some(result));
+}

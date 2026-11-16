@@ -106,7 +106,7 @@ fn the_configure_preview_slip_is_a_modal_that_escape_dismisses() {
 
 #[test]
 fn escape_cancels_a_beat_renamed_in_place() {
-    use crate::workspaces::rename::inline::{Inline, Stage};
+    use crate::workspaces::rename::inline::{Inline, Place, Stage};
     use keyboard::{Action, Generations, Invocation, Modal, Scope};
     let directory = test_support::project(SOURCE).unwrap();
     let mut shell = Shell::with_writer(test_support::open(&directory).unwrap());
@@ -120,6 +120,7 @@ fn escape_cancels_a_beat_renamed_in_place() {
         beat: "start".into(),
         name: "begin".into(),
         stage: Stage::Editing,
+        place: Place::Heading,
     });
     assert_eq!(modal(&shell), Some(Modal::Rename));
     let captured = Scope::capture(&shell);

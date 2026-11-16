@@ -1,5 +1,6 @@
 //! A tagged immutable keyboard context routes native host messages to the shell through Xilem.
 use super::App;
+use crate::workspaces::rename::inline::Target;
 use recite_config::WriterShortcuts;
 pub(crate) use recite_writer_app::shell::keyboard::*;
 use std::sync::Arc;
@@ -46,6 +47,29 @@ impl Property for PickerAnchor {
     }
 }
 impl UsesProperty<PickerAnchor> for Button {}
+
+/// Marks a sidebar beat row or map card: F2 on it renames its beat in place there.
+#[derive(Clone, Default, PartialEq)]
+pub(crate) struct RenamesBeat(pub Option<Target>);
+impl Property for RenamesBeat {
+    fn static_default() -> &'static Self {
+        static NONE: RenamesBeat = RenamesBeat(None);
+        &NONE
+    }
+}
+impl UsesProperty<RenamesBeat> for Button {}
+
+/// Marks the control focus returns to when a modal surface closes and the control focused before
+/// it was rebuilt meanwhile, such as the sidebar row whose name became the rename field.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct ReturnFocus(pub bool);
+impl Property for ReturnFocus {
+    fn static_default() -> &'static Self {
+        static OTHER: ReturnFocus = ReturnFocus(false);
+        &OTHER
+    }
+}
+impl UsesProperty<ReturnFocus> for Button {}
 
 /// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it.
 #[derive(Clone, Copy, Default, PartialEq)]

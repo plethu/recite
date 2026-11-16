@@ -1,5 +1,6 @@
 //! Winit's keys in the terms of Writer's keybindings, borrowed from the window event.
 use super::*;
+use crate::workspaces::rename::inline::Target;
 
 pub(super) fn key(key: &keyboard::Key) -> Key<'_> {
     match key {
@@ -45,6 +46,8 @@ pub(super) struct Stroke<'a> {
     pub(super) enter: bool,
     pub(super) action: Option<Action>,
     pub(super) first_press: bool,
+    /// The beat a focused sidebar row or map card renames in place.
+    pub(super) renames: Option<Target>,
 }
 
 /// The window event keeps ownership of text and platform data while policy borrows its keys.

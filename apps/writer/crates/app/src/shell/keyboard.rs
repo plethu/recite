@@ -2,6 +2,7 @@
 use super::*;
 pub use crate::attention::{DocumentMenu, EditingTarget, FieldRestoration, PaneMotion};
 pub use crate::localisation::TranslationTarget;
+use crate::workspaces::rename::inline::Target as RenameTarget;
 use recite_config::{WriterCommand, WriterShortcuts};
 
 mod invoke;
@@ -81,6 +82,8 @@ pub enum Action {
     DismissModal(Modal),
     /// A digit key: the preview's numbered reply.
     ChoosePreview(usize),
+    /// F2 on a sidebar beat row or a map card: rename that beat in place there.
+    RenameBeat(RenameTarget),
     /// Ctrl+Down and Ctrl+Up: the next or previous beat of the scene.
     StepBeat {
         forward: bool,

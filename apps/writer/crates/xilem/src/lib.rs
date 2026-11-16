@@ -2,6 +2,8 @@
 //!
 //! Authoring state and workflows live in `recite_writer_app`; this crate renders them, adapts
 //! native input and accessibility, and drives their asynchronous work.
+// The window's composed view type nests deeper than the default limit lets the compiler prove.
+#![recursion_limit = "256"]
 mod app;
 mod attention;
 mod editor_work;

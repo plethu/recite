@@ -85,13 +85,13 @@ fn enter_reviews_the_rename_and_the_slip_stages_it_as_one_undo_step() {
 fn cancel_and_an_unchanged_name_leave_the_project_untouched() {
     let (_directory, mut writer, _runtime) = selected_old();
     let mut tools = ToolDriver::new(&mut writer);
-    writer.begin_inline_rename();
+    writer.rename_beat();
     writer.commit_inline_rename();
     assert!(
         writer.inline_rename().is_none(),
         "an unchanged name ends it"
     );
-    writer.begin_inline_rename();
+    writer.rename_beat();
     writer.edit_inline_rename("new".into());
     writer.commit_inline_rename();
     tools.finish(&mut writer);
@@ -120,7 +120,7 @@ fn cancel_and_an_unchanged_name_leave_the_project_untouched() {
 fn a_refused_rename_and_review_all_changes_open_the_rename_page() {
     let (_directory, mut writer, _runtime) = selected_old();
     let mut tools = ToolDriver::new(&mut writer);
-    writer.begin_inline_rename();
+    writer.rename_beat();
     writer.edit_inline_rename("start".into());
     writer.commit_inline_rename();
     tools.finish(&mut writer);
@@ -137,11 +137,83 @@ fn a_refused_rename_and_review_all_changes_open_the_rename_page() {
         ("old", "start")
     );
     writer.show_workspace(crate::map::Workspace::Script);
-    writer.begin_inline_rename();
+    writer.rename_beat();
     writer.edit_inline_rename("new".into());
     writer.commit_inline_rename();
     tools.finish(&mut writer);
     writer.review_inline_rename();
     assert!(writer.inline_rename().is_none());
     assert!(!writer.workspaces.rename.changes.is_empty());
+}
+
+#[test]
+fn a_sidebar_row_or_map_card_renames_in_place_and_returns_focus_there() {
+    let (_directory, mut writer, _runtime) = selected_old();
+    let mut tools = ToolDriver::new(&mut writer);
+    let row = Target {
+        beat: "start".into(),
+        place: Place::Outline,
+    };
+    // While the window is too narrow for the sidebar, no row shows to rename in.
+    writer.viewport.width = 600.;
+    writer.rename_beat_in(row.clone());
+    assert!(writer.inline_rename().is_none());
+    writer.viewport.width = 1200.;
+    // A row names any beat of the open scene, not only the selected one.
+    writer.rename_beat_in(row.clone());
+    let inline = writer.inline_rename().unwrap();
+    assert_eq!(
+        (inline.beat.as_str(), inline.place, inline.stage),
+        ("start", Place::Outline, Stage::Editing)
+    );
+    writer.cancel_inline_rename();
+    assert_eq!(writer.rename_return(), Some(&row));
+    // A beat the scene lacks, or a card while no map shows, begins nothing.
+    writer.rename_beat_in(Target {
+        beat: "missing".into(),
+        place: Place::Outline,
+    });
+    writer.rename_beat_in(Target {
+        beat: "old".into(),
+        place: Place::Card,
+    });
+    assert!(writer.inline_rename().is_none());
+    writer.rename_beat_in(Target {
+        beat: "old".into(),
+        place: Place::Outline,
+    });
+    assert!(
+        writer.rename_return().is_none(),
+        "a new rename forgets the last return"
+    );
+    writer.edit_inline_rename("new".into());
+    writer.commit_inline_rename();
+    tools.finish(&mut writer);
+    assert_eq!(writer.inline_rename().unwrap().stage, Stage::Reviewed);
+    writer.confirm_inline_rename();
+    tools.finish(&mut writer);
+    assert!(writer.inline_rename().is_none());
+    // Focus returns to the row under the beat's new name.
+    assert_eq!(
+        writer.rename_return(),
+        Some(&Target {
+            beat: "new".into(),
+            place: Place::Outline
+        })
+    );
+}
+
+#[test]
+fn a_double_click_on_a_card_and_rename_beat_in_map_rename_on_the_card() {
+    use crate::map::tests::{Input, Source, fixture};
+    let mut fixture = fixture().unwrap();
+    let writer = &mut fixture.writer;
+    writer.map_input(Source::Card("later".into()), Input::Rename);
+    let inline = writer.inline_rename().expect("renaming on the card");
+    assert_eq!((inline.beat.as_str(), inline.place), ("later", Place::Card));
+    assert_eq!(writer.map_selected(), Some("later"));
+    writer.cancel_inline_rename();
+    writer.rename_beat();
+    let inline = writer.inline_rename().expect("renaming the selected card");
+    assert_eq!((inline.beat.as_str(), inline.place), ("later", Place::Card));
 }

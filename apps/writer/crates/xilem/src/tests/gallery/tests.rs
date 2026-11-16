@@ -20,6 +20,7 @@ const EXTREMES: &[&str] = &[
     "script.build-result",
     "script.rename",
     "script.choices",
+    "map.rename",
     "tools.declarations",
 ];
 

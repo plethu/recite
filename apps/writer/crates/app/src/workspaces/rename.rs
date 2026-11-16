@@ -14,8 +14,10 @@ pub struct Panel {
     pub page: usize,
     pub report: Option<Report>,
     pub report_page: usize,
-    /// The selected beat renamed in place, from its heading field to the staged change.
+    /// A beat renamed in place, from its field to the staged change.
     pub inline: Option<inline::Inline>,
+    /// The row or card a finished inline rename returns focus to.
+    pub returning: Option<inline::Target>,
     /// The status sentence of the last inline rename, while the status line can still undo it.
     pub undo_offer: Option<String>,
 }

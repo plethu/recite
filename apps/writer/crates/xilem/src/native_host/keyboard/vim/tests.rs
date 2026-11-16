@@ -118,6 +118,7 @@ fn configured_commands_clear_the_prefix_hint_before_retiring_the_keyboard_scope(
             enter: false,
             action: None,
             first_press: true,
+            renames: None,
         }
     ));
     assert!(matches!(

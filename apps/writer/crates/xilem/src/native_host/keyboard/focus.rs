@@ -12,7 +12,8 @@ use xilem::masonry::core::{Widget, WidgetRef};
 use xilem::masonry::widgets::{Button, TextInput};
 
 mod targets;
-use targets::{default_focus, find, first_wedge, place_picker};
+pub(super) use targets::renames;
+use targets::{default_focus, find, first_wedge, place_picker, return_focus};
 
 #[derive(Clone, Default, PartialEq)]
 pub(super) enum Kind {
@@ -94,8 +95,11 @@ impl Focus {
                 self.enter_modal(root);
             }
             (Some(_), None) => {
-                if let Some(Some(target)) = self.modal_return.take() {
-                    root.focus_on(Some(target));
+                if let Some(Some(target)) = self.modal_return.take()
+                    && !root.focus_on(Some(target))
+                {
+                    // The control was rebuilt, as a renamed row is: focus its successor.
+                    root.focus_on(return_focus(root));
                 }
             }
             _ => self.enter_modal(root),
