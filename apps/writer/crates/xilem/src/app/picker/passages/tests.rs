@@ -72,7 +72,7 @@ fn saved_text_and_current_beat_lookup_open_the_matching_off_page_passage() {
 }
 
 #[test]
-fn accepted_navigation_reveals_the_destination_rail_without_opening_other_documents() {
+fn accepted_navigation_selects_the_destination_without_opening_other_documents() {
     let directory = support::project(&long_beat(40)).unwrap();
     for n in 0..9 {
         let source = (0..20)
@@ -92,17 +92,17 @@ fn accepted_navigation_reveals_the_destination_rail_without_opening_other_docume
         ..Location::default()
     }));
     support::finish_navigation(writer, &mut jobs).unwrap();
-    assert_eq!(writer.beat_page, 2);
-    assert_eq!(writer.file_page, 2);
-    assert_eq!(writer.session.project().unwrap().sessions().count(), 2);
-    writer.file_page = 0;
-    writer.beat_page = 0;
-    writer.configure(writer.config.clone());
-    assert_eq!(
-        (writer.file_page, writer.beat_page),
-        (0, 0),
-        "ordinary presentation must not snap a browsed rail page back"
+    assert!(
+        writer
+            .session
+            .project()
+            .unwrap()
+            .current()
+            .path()
+            .ends_with("other_8.recite")
     );
+    assert_eq!(writer.reading.selected.as_deref(), Some("beat_18"));
+    assert_eq!(writer.session.project().unwrap().sessions().count(), 2);
 }
 
 #[test]

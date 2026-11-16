@@ -94,7 +94,7 @@ fn failed_inactive_save_keeps_the_window_open_and_displays_the_conflicting_file(
 }
 
 #[test]
-fn file_pages_bound_native_controls_without_opening_unvisited_documents() {
+fn every_file_is_a_row_without_opening_unvisited_documents() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     for index in 0..12 {
         fs::write(
@@ -104,19 +104,14 @@ fn file_pages_bound_native_controls_without_opening_unvisited_documents() {
         .unwrap();
     }
     let mut writer = open(&directory).unwrap();
-    assert_eq!(
-        writer.file_page, 3,
-        "initial selection reveals the current file"
+    let labels = labels(&mut writer).unwrap();
+    assert!(labels.iter().any(|label| label == "File 00"));
+    assert!(labels.iter().any(|label| label == "File 11"));
+    assert!(
+        !labels
+            .iter()
+            .any(|label| label == "Next files" || label == "Previous files"),
+        "the scene list scrolls instead of paging"
     );
-    writer.file_page = 0;
-    let before = labels(&mut writer).unwrap();
-    assert!(before.iter().any(|label| label == "File 00"));
-    assert!(!before.iter().any(|label| label == "File 04"));
-    click(&mut writer, &["Next files"]).unwrap();
-    let after = labels(&mut writer).unwrap();
-    assert!(after.iter().any(|label| label == "File 04"));
-    assert!(!after.iter().any(|label| label == "File 00"));
-    click(&mut writer, &["Previous files"]).unwrap();
-    assert_eq!(writer.file_page, 0);
     assert_eq!(writer.session.project().unwrap().sessions().count(), 1);
 }

@@ -4,10 +4,11 @@ use super::*;
 use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::presentation::double_click::double_click;
 use crate::presentation::marks::{GLYPH, wedge_glyph};
+use crate::presentation::print;
 use crate::workspaces::rename::inline::{self as rename, Place, Target};
 use recite_compiler::authoring::BlockDefinitionSummary;
 
-/// What every beat row of the page shares.
+/// What every beat row shares.
 struct Rows<'a> {
     selected: Option<&'a str>,
     problems: Vec<(String, String)>,
@@ -16,14 +17,15 @@ struct Rows<'a> {
     closing: bool,
 }
 
+/// The most beats a scene lists in full.
+const ALL_BEATS: usize = 12;
+/// How many beats a longer scene lists around the selected one.
+const WINDOW: usize = 8;
+
 pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.project_action_blocked();
     let blocks = state.session.model().document().block_summaries();
-    // Short scenes use the slots otherwise occupied by pagination controls.
-    let page_size = beat_page_size(blocks.len());
-    let pages = blocks.len().div_ceil(page_size).max(1);
-    let page = state.beat_page.min(pages - 1);
     let rows = Rows {
         selected: if state.visible_workspace() == Workspace::Map {
             state.map_selected()
@@ -34,12 +36,32 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
         width: sidebar_width(state) - sidebar::ROW - sidebar::OUTLINE,
         closing,
     };
-    let shown = blocks
+    // A scene of up to ALL_BEATS beats lists them all; a longer one lists the WINDOW around the
+    // selected beat, which moves with the selection, and counts the rest. Nothing pages.
+    let selected = blocks
         .iter()
-        .skip(page * page_size)
-        .take(page_size)
-        .collect::<Vec<_>>();
-    // The row renamed in place splits the page, so the other rows stay plain rows.
+        .position(|block| Some(block.id().as_str()) == rows.selected)
+        .unwrap_or(0);
+    let (start, end) = if blocks.len() <= ALL_BEATS {
+        (0, blocks.len())
+    } else {
+        let start = selected
+            .saturating_sub(WINDOW / 2)
+            .min(blocks.len() - WINDOW);
+        (start, start + WINDOW)
+    };
+    let shown = blocks[start..end].iter().collect::<Vec<_>>();
+    let more = |count: usize, place: &str| {
+        (count > 0).then(|| {
+            print::meta(
+                scale,
+                format!("{count} more beats {place} · Find reaches them"),
+            )
+            .color(state.palette.muted)
+        })
+    };
+    let (above, below) = (more(start, "above"), more(blocks.len() - end, "below"));
+    // The row renamed in place splits the list, so the other rows stay plain rows.
     let renamed = state
         .inline_rename()
         .filter(|inline| inline.place == Place::Outline)
@@ -58,28 +80,10 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .iter()
         .map(|block| beat_row(state, &rows, block))
         .collect::<Vec<_>>();
-    flex_col((
-        flex_col((before, renamed, after))
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(0.px())
-            .padding(xilem::style::Padding::left(sidebar::OUTLINE.px())),
-        (pages > 1).then(|| {
-            flex_col((
-                text_button(scale, "Previous beats", move |state: &mut Writer| {
-                    state.beat_page = page.saturating_sub(1)
-                })
-                .disabled(closing || page == 0),
-                text_button(scale, "Next beats", move |state: &mut Writer| {
-                    state.beat_page = (page + 1).min(pages - 1)
-                })
-                .disabled(closing || page + 1 >= pages),
-            ))
-            .gap(space::SIBLINGS.px())
-        }),
-        (pages > 1).then(|| label(scale, format!("Beats · page {} of {pages}", page + 1))),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::TEXT.px())
+    flex_col((above, before, renamed, after, below))
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .gap(0.px())
+        .padding(xilem::style::Padding::left(sidebar::OUTLINE.px()))
 }
 
 /// A beat's row: pressing it reads the beat; F2 or a double-click renames it in place.

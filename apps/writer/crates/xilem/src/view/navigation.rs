@@ -6,7 +6,6 @@ mod tests;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::map::Workspace;
-use crate::navigation::rail::{FILE_PAGE, beat_page_size};
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::marks::{Mark, marked};
 use crate::presentation::row::{listed, named_row, row};
@@ -86,12 +85,9 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .session
         .project()
         .map_or(&[][..], |project| project.documents());
-    let pages = documents.len().div_ceil(FILE_PAGE).max(1);
-    let page = state.file_page.min(pages - 1);
+    // Every file is a row; the scene list scrolls rather than paging.
     let files = documents
         .iter()
-        .skip(page * FILE_PAGE)
-        .take(FILE_PAGE)
         .map(|document| {
             let path = document.path.clone();
             let project = state.session.project();
@@ -185,28 +181,17 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
         flex_col(files)
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .gap(space::SIBLINGS.px()),
-        (pages > 1).then(|| {
-            flex_col((
-                text_button(scale, "Previous files", move |state: &mut Writer| {
-                    state.file_page = page.saturating_sub(1)
-                })
-                .disabled(closing || page == 0),
-                text_button(scale, "Next files", move |state: &mut Writer| {
-                    state.file_page = (page + 1).min(pages - 1)
-                })
-                .disabled(closing || page + 1 >= pages),
-            ))
-            .gap(space::SIBLINGS.px())
-        }),
-        (pages > 1).then(|| label(scale, format!("Files · page {} of {pages}", page + 1))),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
     .width((sidebar_width(state) - sidebar::COLUMN).px())
 }
 
+/// The temporary examples as list rows: the open one selected, all of them left-aligned.
 fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
+    let current = state.session.model().document().key().as_str();
+    let width = sidebar_width(state) - sidebar::ROW;
     flex_col((
         label(scale, "Temporary examples"),
         flex_col(
@@ -214,24 +199,14 @@ fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .iter()
                 .enumerate()
                 .map(|(index, example)| {
-                    styled(
-                        ControlStyle::Navigation,
-                        button(
-                            label(
-                                scale,
-                                format!(
-                                    "{}{}",
-                                    if example.name
-                                        == state.session.model().document().key().as_str()
-                                    {
-                                        "Current · "
-                                    } else {
-                                        ""
-                                    },
-                                    example.name
-                                ),
-                            )
-                            .prop(LineBreaking::WordWrap),
+                    let selected = example.name == current;
+                    listed(
+                        &state.palette,
+                        selected,
+                        row(
+                            selected,
+                            one_line(example.name, Type::Control, scale, state.palette.ink)
+                                .width(width.px()),
                             move |state: &mut Writer| state.select_example(index),
                         )
                         .disabled(state.phase() != Phase::Writing),
@@ -239,8 +214,9 @@ fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 })
                 .collect::<Vec<_>>(),
         )
-        .gap(space::SIBLINGS.px()),
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .gap(0.px()),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(space::TEXT.px())
 }
