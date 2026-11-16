@@ -56,7 +56,7 @@ impl Shell {
             (Some(writer), WriterCommand::Declarations) => {
                 writer.open_project_workspace(Open::Declarations)
             }
-            (Some(writer), WriterCommand::Build) => writer.open_project_workspace(Open::Build),
+            (Some(writer), WriterCommand::Build) => writer.build_scenes(),
             (Some(writer), WriterCommand::Rename) => writer.open_project_workspace(Open::Rename),
             (Some(writer), WriterCommand::NextMatch | WriterCommand::PreviousMatch) => {
                 writer.repeat_lookup(command == WriterCommand::NextMatch)

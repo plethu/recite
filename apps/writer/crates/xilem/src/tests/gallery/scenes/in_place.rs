@@ -1,5 +1,6 @@
 //! States of the in-place flows: slips, banners and edits on the object itself.
 use super::*;
+use crate::workspaces::tests::finish_build;
 
 pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Variant) {
     record.scene(
@@ -57,6 +58,38 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
                 }
             });
             stage.shot(record, "Changed on disk");
+        },
+    );
+    record.scene(
+        Meta {
+            id: "script.build-result",
+            group: "Workspaces",
+            title: "Build result slip",
+            intent: "Build as a command: the writing view stays, and the result waits on a slip above the status line; a failure offers its report.",
+        },
+        |record| {
+            let directory = sample();
+            let manifest = directory.path().join("recite.project.toml");
+            let sample_manifest = std::fs::read_to_string(&manifest).unwrap();
+            let declared = sample_manifest.clone()
+                + "[[scenes]]\nid = \"relay_desk\"\nasset = \"build/relay_desk.recitec\"\nblock = \"relay_desk\"\nparticipants = [\"mara\"]\n";
+            std::fs::write(&manifest, declared).unwrap();
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "relay_hub.recite")),
+                variant,
+            );
+            let build = |app: &mut App| {
+                if let Some(writer) = &mut app.writer {
+                    writer.build_scenes();
+                    finish_build(writer);
+                }
+            };
+            stage.act(build);
+            stage.shot(record, "Built");
+            // A manifest without scenes fails the same way on every machine.
+            std::fs::write(&manifest, sample_manifest).unwrap();
+            stage.act(build);
+            stage.shot(record, "Build did not complete");
         },
     );
 }

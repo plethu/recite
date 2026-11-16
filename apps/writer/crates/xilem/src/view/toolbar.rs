@@ -152,6 +152,11 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
     .gap(space::UNIT.px())
 }
 
+/// The status line's height: one Meta line and its padding.
+pub(super) fn status_height(scale: f32) -> f64 {
+    2. * space::UNIT + f64::from(Type::Meta.metrics().1 * scale)
+}
+
 pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
     let diagnostics = state.session.model().document().diagnostic_snapshot();
@@ -222,14 +227,27 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .flex(1.),
             )
         }),
+        // A build runs as a command: its progress is the status sentence, and it cancels here.
+        state
+            .session
+            .project()
+            .is_some_and(|project| project.files().builds.busy())
+            .then(|| {
+                styled(
+                    ControlStyle::Status,
+                    button(
+                        print::meta(state.ui_scale(), "Cancel build")
+                            .color(state.palette.status_text),
+                        Writer::cancel_build,
+                    ),
+                )
+            }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap((space::SIBLINGS * f64::from(state.ui_scale())).px())
     // One line and its padding tall, whether or not the problem count is a button.
     .padding(xilem::style::Padding::from_vh(0.px(), space::KINDS.px()))
-    .dims(Dimensions::AUTO.with_height(
-        (2. * space::UNIT + f64::from(Type::Meta.metrics().1 * state.ui_scale())).px(),
-    ))
+    .dims(Dimensions::AUTO.with_height(status_height(state.ui_scale()).px()))
     .background_color(state.palette.status_bar)
 }
 

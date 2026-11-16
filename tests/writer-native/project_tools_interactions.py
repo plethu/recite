@@ -92,6 +92,8 @@ def run(api, bus, registry, binary, output):
                 )
                 results["project_tools_preserve_native_field_identity_and_undo"] = True
                 command(window, "Build scenes")
+                window.wait(lambda: window.find("Build options"), "build result slip")
+                window.act("Build options")
                 window.wait(lambda: window.find("Build saved"), "build workspace")
                 window.wait(
                     lambda: window.find_text(
@@ -113,7 +115,8 @@ def run(api, bus, registry, binary, output):
                 before = asset.read_bytes()
                 assert window.text(manuscript(window)) == "The last tram waits.x"
                 results["build_saved_preserves_unapplied_draft_and_completes_after_return"] = True
-                command(window, "Build scenes")
+                window.wait(lambda: window.find("Build options"), "hidden build result slip")
+                window.act("Build options")
                 window.wait(lambda: window.find("Save all and build"), "save-build action")
                 window.act("Save all and build")
                 window.wait(

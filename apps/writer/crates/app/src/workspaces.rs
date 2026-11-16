@@ -1,5 +1,6 @@
 //! Project screens retain writing widgets; durable state remains in the shared project owner.
 mod builds;
+pub use builds::BuildResult;
 pub mod declarations;
 pub mod external;
 pub mod location;
@@ -52,6 +53,8 @@ pub struct Workspaces {
     pub build_page: usize,
     pub build_feedback: Vec<String>,
     pub feedback_page: usize,
+    /// A build finished away from the build page, so its result waits on a slip.
+    pub build_result: bool,
     pub tools: tools::Tools,
     pub context_refresh: Option<ContextUpdate>,
     pub schema_feedback: Vec<String>,
@@ -103,6 +106,9 @@ impl Writer {
             Open::Settings => project.files().settings.is_some(),
             Open::Rename => true,
         });
+        if matches!(action, Open::Build) {
+            self.workspaces.build_result = false;
+        }
         if retained && self.phase == Phase::Writing && !self.navigation.busy() && !self.work.busy()
         {
             self.attention.leave_focus();

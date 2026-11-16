@@ -8,7 +8,7 @@ use crate::{
     keyed::keyed,
     map::Workspace,
     tests::support::{self, mounted::Mounted},
-    workspaces::Screen,
+    workspaces::{Screen, tests::finish_build},
 };
 use recite_config::WriterCommand;
 use recite_writer_session::commands;
@@ -172,7 +172,6 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     );
     for (command_id, screen) in [
         (WriterCommand::Declarations, Screen::Declarations),
-        (WriterCommand::Build, Screen::Build),
         (WriterCommand::Rename, Screen::Rename),
     ] {
         command(&mut mounted, command_id);
@@ -183,6 +182,18 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
         mounted.state.writer.as_mut().unwrap().return_to_writing();
         mounted.settle();
     }
+    // Build is a command: it runs from the writing view, which stays, and reports on a slip.
+    command(&mut mounted, WriterCommand::Build);
+    let writer = mounted.state.writer.as_mut().unwrap();
+    assert!(writer.workspaces.screen == Screen::Write);
+    finish_build(writer);
+    mounted.settle();
+    mounted.activate("Build options");
+    support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
+    mounted.settle();
+    assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Build);
+    mounted.state.writer.as_mut().unwrap().return_to_writing();
+    mounted.settle();
     mounted.activate("Workspace");
     mounted.activate("Projects");
     assert!(mounted.state.show_welcome());

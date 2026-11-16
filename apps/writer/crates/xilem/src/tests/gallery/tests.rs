@@ -17,6 +17,7 @@ const EXTREMES: &[&str] = &[
     "overlay.close",
     "preview.configure",
     "script.disk-changed",
+    "script.build-result",
 ];
 
 /// Transitions whose meaning depends on contrast alone.

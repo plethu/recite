@@ -2,6 +2,7 @@
 use crate::{Phase, Writer};
 pub(crate) use recite_writer_app::workspaces::*;
 mod builds;
+pub(crate) use builds::result as build_result;
 mod declarations;
 mod external;
 mod rename;

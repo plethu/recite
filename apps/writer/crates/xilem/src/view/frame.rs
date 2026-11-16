@@ -1,13 +1,16 @@
 //! The fixed writing shell retains content while its contextual panel comes and goes.
 use super::{Phase, Writer, document_actions, navigation, reference, retained, toolbar};
 use crate::presentation::group::inert;
-use crate::presentation::pane;
+use crate::presentation::{fit_content, pane, space};
 use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, UnitPoint},
     peniko::Color,
-    style::Style,
-    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, zstack},
+    style::{Padding, Style},
+    view::{
+        CrossAxisAlignment, FlexExt, ZStackExt, flex_col, flex_row, indexed_stack, sized_box,
+        zstack,
+    },
 };
 
 pub(super) fn frame<V: WidgetView<Writer>>(
@@ -62,6 +65,16 @@ pub(super) fn frame<V: WidgetView<Writer>>(
             .document_menu()
             .is_open()
             .then(|| document_actions::panel(state)),
+        // A build's result waits on a slip just above the status line that reports it.
+        crate::workspaces::build_result(state).map(|result| {
+            sized_box(fit_content(result))
+                .padding(Padding {
+                    left: space::KINDS.px(),
+                    bottom: (toolbar::status_height(state.ui_scale()) + space::SIBLINGS).px(),
+                    ..Padding::ZERO
+                })
+                .alignment(UnitPoint::BOTTOM_LEFT)
+        }),
         // Closing with unsaved work is decided on a slip over the dimmed document.
         document_actions::close_decision(state),
     ))
