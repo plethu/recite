@@ -1,13 +1,16 @@
 //! Transient native lookup keeps the mounted manuscript and its input history intact.
 mod choices;
+mod commands;
 mod index;
 mod previews;
+mod wording;
 use super::*;
 pub use crate::rules::selection;
 use recite_config::WriterCommand;
 use recite_writer_session::commands::targets;
 use recite_writer_session::location::Location;
 use std::ops::Range;
+pub use wording::{empty_message, hint};
 /// One opening has a distinct authority even when its mode and query are identical.
 #[derive(Clone, Default)]
 pub struct PickerInstance(Arc<()>);
@@ -94,20 +97,6 @@ pub struct Picker {
     /// Where a combobox slip hangs from the label that opened it, in window pixels; a picker
     /// opened any other way sits below the tab row.
     pub placement: Option<(u32, u32)>,
-}
-impl Mode {
-    pub fn title(self) -> &'static str {
-        match self {
-            Self::Commands => "Commands",
-            Self::GoTo => "Go to scene or beat",
-            Self::ProjectText => "Find project text",
-            Self::Passages => "Find in this beat",
-            Self::RulesChoices => "Choose reply rule value",
-            Self::Destinations => "Change destination",
-            Self::Speakers => "Change speaker",
-            Self::RenameBeat => "Choose a beat to rename",
-        }
-    }
 }
 impl Picker {
     pub fn new(purpose: Purpose, entries: Vec<Entry>) -> Self {
@@ -275,93 +264,5 @@ impl Shell {
             ) => self.activate_editor_choice(item),
             _ => {}
         }
-    }
-    pub fn command_enabled(&self, command: WriterCommand) -> bool {
-        use WriterCommand as C;
-        let Some(writer) = &self.writer else {
-            return matches!(command, C::OpenProject | C::Settings | C::Close);
-        };
-        if writer.phase != Phase::Writing {
-            return false;
-        }
-        let idle = !writer.work.busy() && !writer.navigation.busy() && !writer.session.read_only();
-        match command {
-            C::Commands | C::GoTo | C::Find | C::OpenProject | C::Settings | C::Close => true,
-            C::Save | C::SaveAll => {
-                idle && !writer.localisation.saving()
-                    && (command != C::SaveAll || !writer.localisation.working())
-                    && !writer.source_repair_pending()
-                    && writer.session.project().is_some()
-            }
-            C::Source => idle && !writer.external.busy() && writer.session.project().is_some(),
-            C::Apply => idle && writer.session.model().has_draft(),
-            C::Undo => {
-                idle && (writer.session.model().has_draft()
-                    || writer.session.model().document().can_undo()
-                    || writer.has_project_history(false))
-            }
-            C::Redo => {
-                idle && (writer.session.model().document().can_redo()
-                    || writer.has_project_history(true))
-            }
-            C::Script | C::Map | C::Split | C::AddBeat | C::Focus => idle,
-            C::Sidebar => !writer.attention.is_focused(),
-            C::CopyLink => !writer.project_action_blocked(),
-            C::PaneLeft | C::PaneRight | C::PaneUp | C::PaneDown => true,
-            C::NextMatch | C::PreviousMatch => idle,
-            C::AddLine | C::AddReply => {
-                idle && writer
-                    .session
-                    .model()
-                    .selected_block()
-                    .ok()
-                    .flatten()
-                    .is_some()
-            }
-            C::Preview => idle,
-            C::Declarations | C::Build | C::Rename => idle && writer.session.project().is_some(),
-            C::Localise => !writer.project_action_blocked() && writer.session.project().is_some(),
-            C::Back | C::Forward => {
-                idle && writer
-                    .navigation
-                    .history
-                    .step(command == C::Forward)
-                    .is_some()
-            }
-        }
-    }
-}
-
-impl Mode {
-    /// The keys this search answers to.
-    pub fn keyboard_help(self) -> &'static str {
-        match self {
-            Mode::Commands => "Up/Down choose · Enter runs · Esc returns",
-            Mode::RulesChoices | Mode::Destinations | Mode::Speakers | Mode::RenameBeat => {
-                "Up/Down choose · Enter picks · Esc returns"
-            }
-            _ => "Up/Down choose · Enter opens · Esc returns",
-        }
-    }
-}
-/// The picker's one hint line: how many results there are, then its keys.
-pub fn hint(picker: Option<&Picker>) -> String {
-    let count = picker.map_or(0, |picker| picker.matches.len());
-    let total = picker
-        .filter(|picker| picker.total > count)
-        .map_or_else(String::new, |picker| format!(" of {}", picker.total));
-    let mode = picker.map_or(Mode::Commands, Picker::mode);
-    format!(
-        "{count}{total} {} · {}",
-        if count == 1 { "result" } else { "results" },
-        mode.keyboard_help()
-    )
-}
-/// The message shown when a search has no visible matches.
-pub fn empty_message(mode: Mode, picker: Option<&Picker>) -> &'static str {
-    if mode == Mode::ProjectText && picker.is_some_and(|picker| picker.query.trim().is_empty()) {
-        "Enter words to search the saved project."
-    } else {
-        "No matching results."
     }
 }

@@ -1,5 +1,7 @@
 //! The fixed writing shell retains content while its contextual panel comes and goes.
-use super::{Phase, Writer, document_actions, navigation, reference, retained, toolbar};
+use super::{
+    Phase, Writer, document_actions, navigation, reference, retained, status_line, toolbar,
+};
 use crate::presentation::group::inert;
 use crate::presentation::{fit_content, pane, space};
 use xilem::{
@@ -56,7 +58,7 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .gap(0.px())
                 .flex(1.),
-                toolbar::status(state),
+                status_line::status_line(state),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .gap(0.px()),
@@ -70,7 +72,7 @@ pub(super) fn frame<V: WidgetView<Writer>>(
             sized_box(fit_content(result))
                 .padding(Padding {
                     left: space::KINDS.px(),
-                    bottom: (toolbar::status_height(state.ui_scale()) + space::SIBLINGS).px(),
+                    bottom: (status_line::status_height(state.ui_scale()) + space::SIBLINGS).px(),
                     ..Padding::ZERO
                 })
                 .alignment(UnitPoint::BOTTOM_LEFT)

@@ -40,6 +40,7 @@ mod source_repair;
 use document_actions::recovery_copy;
 mod frame;
 pub(crate) mod reference;
+mod status_line;
 mod toolbar;
 
 fn retained<V: WidgetView<Writer>>(child: V, visible: bool) -> impl WidgetView<Writer> {
