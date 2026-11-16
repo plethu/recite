@@ -1,6 +1,7 @@
 //! Production manuscript/source fonts and the authored surface palette.
 use super::*;
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 use crate::presentation::{manuscript_text, source_text};
 
@@ -11,14 +12,14 @@ pub(super) fn samples(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         paragraph(
             scale,
             "Reading: 20 px · Source: 15 px. These text sizes are independent of UI scale.",
-            640.,
+            size::MEASURE,
         ),
-        flex_row((manuscript_text(20., state.manuscript.clone()).width(640.px()),)),
+        flex_row((manuscript_text(20., state.manuscript.clone()).width(size::MEASURE.px()),)),
         flex_row((source_text(
             15.,
             ":: harbour default\n> @narrator\n  The last tram waits.\n-> END",
         )
-        .width(640.px()),)),
+        .width(size::MEASURE.px()),)),
         label(scale, "Surfaces and selection").typeset(Type::Section, scale),
         surface(state, "Reading surface", state.theme.palette.surface),
         surface(state, "Inset control surface", state.theme.palette.inset),
@@ -34,6 +35,6 @@ fn surface(
 ) -> impl WidgetView<Specimen> + use<> {
     label(state.scale(), caption)
         .padding(space::KINDS.px())
-        .width(640.px())
+        .width(size::MEASURE.px())
         .background_color(color)
 }

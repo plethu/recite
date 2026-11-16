@@ -2,6 +2,7 @@
 use super::*;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset, search_field};
 use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
 
@@ -41,7 +42,7 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             scale,
             palette.muted,
             false,
-            Some(640.),
+            Some(size::MEASURE),
             text_input(state.query.clone(), |state: &mut Specimen, text| {
                 state.query = text
             })
@@ -63,7 +64,7 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             .text_size(20.)
             .prop(TextAreaLabel::new("Specimen manuscript")),
         )
-        .dims((640.px(), 180.px())),
+        .dims((size::MEASURE.px(), 180.px())),
         print::text_toggle(
             scale,
             ("Reviewed translation", "Reviewed"),

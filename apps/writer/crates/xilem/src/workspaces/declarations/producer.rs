@@ -1,5 +1,6 @@
 //! Frontend views over `recite_writer_app::workspaces::declarations::producer`.
 use super::*;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 use recite_writer_session::declarations::DeclarationAction;
 
@@ -35,7 +36,7 @@ pub(crate) fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         paragraph(
             scale,
             panel.pages.get(panel.page).cloned().unwrap_or_default(),
-            640.,
+            size::MEASURE,
         ),
         flex_row((
             text_button(scale, "Previous command detail", |writer: &mut Writer| {

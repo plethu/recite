@@ -2,6 +2,7 @@ use super::*;
 use crate::WriterLayout;
 use crate::presentation::segments::{segment, segments_along};
 use crate::presentation::space;
+use crate::presentation::tokens::{breakpoint, size};
 use crate::presentation::{Type, Typeset, search_field};
 use crate::presentation::{manuscript_text, print};
 use xilem::masonry::kurbo::Axis;
@@ -10,8 +11,12 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let state = &writer.localisation;
     let blocked = writer.project_action_blocked() || state.slot.read_only();
     let width = writer.content_width();
-    let wide = width >= 600. * f64::from(scale);
-    let measure = if wide { (width - 24.) / 2. } else { width };
+    let wide = width >= breakpoint::TWO_COLUMNS * f64::from(scale);
+    let measure = if wide {
+        (width - space::GROUPS) / 2.
+    } else {
+        width
+    };
     let rows = state
         .queue
         .rows
@@ -63,7 +68,7 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             scale,
             writer.palette.muted,
             false,
-            Some(writer.script_width().max(180.)),
+            Some(writer.script_width().max(size::FIELD_MIN)),
             text_input(state.query.text.clone(), Writer::set_catalogue_query)
                 .typeset(Type::Body, scale)
                 .disabled(!state.has_catalogue())

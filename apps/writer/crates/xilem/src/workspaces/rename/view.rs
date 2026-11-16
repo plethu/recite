@@ -1,4 +1,5 @@
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 mod comparison;
 use super::*;
@@ -175,7 +176,11 @@ pub(crate) fn recovery(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
     };
     Some(
         flex_col((
-            paragraph(writer.ui_scale(), message, writer.content_width().min(640.)),
+            paragraph(
+                writer.ui_scale(),
+                message,
+                writer.content_width().min(size::MEASURE),
+            ),
             (reason == RecoveryReason::RetryCheckpoint).then(|| {
                 text_button(
                     writer.ui_scale(),
@@ -197,7 +202,7 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             paragraph(
                 writer.ui_scale(),
                 text.clone(),
-                writer.content_width().min(640.),
+                writer.content_width().min(size::MEASURE),
             ),
             (pages.len() > 1).then(|| {
                 flex_row((

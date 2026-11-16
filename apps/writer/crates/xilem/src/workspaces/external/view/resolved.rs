@@ -2,6 +2,7 @@
 use super::*;
 use crate::attention::PaneEntry;
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 use xilem::{masonry::properties::LineBreaking, view::FlexExt};
 
@@ -9,15 +10,22 @@ pub(super) fn panel(writer: &Writer, resolved: &Resolved) -> impl WidgetView<Wri
     let (heading, explanation) = match resolved.resolution {
         Resolution::KeepWriter => (
             "Writer version kept",
-            "Your accepted document, field draft and Undo history are retained. This decision did not write the source file. Save writes your accepted result over the inspected disk version.",
+            "Your accepted document, field draft and Undo history are \
+             retained. This decision did not write the source file. Save \
+             writes your accepted result over the inspected disk version.",
         ),
         Resolution::UseInspectedDisk => (
             "Inspected disk version loaded",
-            "The inspected disk version is now the accepted document. The previous session is archived, and Undo restores the previous accepted source. This decision did not write the source file.",
+            "The inspected disk version is now the accepted document. The \
+             previous session is archived, and Undo restores the previous \
+             accepted source. This decision did not write the source \
+             file.",
         ),
         Resolution::Merged => (
             "Reviewed merge adopted",
-            "The validated merge is now the accepted document as one Undo step. This decision did not write the source file. Save writes the accepted merge over the inspected disk version.",
+            "The validated merge is now the accepted document as one Undo \
+             step. This decision did not write the source file. Save \
+             writes the accepted merge over the inspected disk version.",
         ),
     };
     let scale = writer.ui_scale();
@@ -42,11 +50,15 @@ pub(super) fn panel(writer: &Writer, resolved: &Resolved) -> impl WidgetView<Wri
         .width(writer.content_width().px()),
         paragraph(scale, path.display().to_string(), writer.content_width()),
         report(writer),
-        paragraph(scale, explanation, writer.content_width().min(640.)),
+        paragraph(
+            scale,
+            explanation,
+            writer.content_width().min(size::MEASURE),
+        ),
         paragraph(
             scale,
             "A complete recovery copy was kept; its location is available above.",
-            writer.content_width().min(640.),
+            writer.content_width().min(size::MEASURE),
         ),
         text_button(
             scale,

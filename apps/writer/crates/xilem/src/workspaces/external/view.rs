@@ -1,8 +1,11 @@
 use super::*;
 use crate::presentation::space;
+use crate::presentation::tokens::{breakpoint, size};
 use crate::{
     attention::{Pane, Region},
-    presentation::{label, manuscript_text, paragraph, print, source_comparison, text_button},
+    presentation::{
+        Type, label, manuscript_text, paragraph, print, source_comparison, text_button,
+    },
 };
 use xilem::{
     WidgetView,
@@ -16,17 +19,31 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     if let Some(resolved) = writer.workspaces.external.resolved() {
         return Either::A(resolved::panel(writer, resolved));
     }
-    Either::B(flex_col((
-        crate::view::tool_head(writer, "Compare disk changes", resolution(writer)),
-        paragraph(writer.ui_scale(), "Review the versions before choosing a resolution. Each decision keeps a complete recovery copy. Save writes the accepted result.", 640.),
-        report(writer),
-        comparison(writer),
-        pending(writer),
-        actions(writer),
-        merge(writer),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px()).prop(Region(Some(Pane::External))))
+    Either::B(
+        flex_col((
+            crate::view::tool_head(writer, "Compare disk changes", resolution(writer)),
+            paragraph(
+                writer.ui_scale(),
+                "Review the versions before choosing a resolution. Each \
+                 decision keeps a complete recovery copy. Save writes the \
+                 accepted result.",
+                size::MEASURE,
+            ),
+            report(writer),
+            comparison(writer),
+            pending(writer),
+            actions(writer),
+            merge(writer),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::TEXT.px())
+        .prop(Region(Some(Pane::External))),
+    )
 }
 mod resolved;
+
+/// An unapplied field draft is shown in its manuscript face at this size, before the UI scale.
+const DRAFT_TEXT: f32 = 16.;
 /// The resolution choice in the sheet's head: inspect, keep, or the primary, adopt the inspected
 /// disk version.
 fn resolution(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -57,35 +74,93 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let stale = !writer.external_comparison_current();
     let scale = writer.ui_scale();
     flex_col((
-        paragraph(scale, "Keep Writer version preserves the accepted document, field draft and Undo history; your next Save replaces the inspected disk version. Use inspected disk version archives the complete current session, then adopts the disk version as one Undo step.", 640.),
-        text_button(scale, "Export merge draft", Writer::export_merge_draft).disabled(blocked || stale),
-        paragraph(scale, "Combine versions in your IDE, then import the reviewed merge below.", 640.),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
+        paragraph(
+            scale,
+            "Keep Writer version preserves the accepted document, field \
+             draft and Undo history; your next Save replaces the \
+             inspected disk version. Use inspected disk version archives \
+             the complete current session, then adopts the disk version \
+             as one Undo step.",
+            size::MEASURE,
+        ),
+        text_button(scale, "Export merge draft", Writer::export_merge_draft)
+            .disabled(blocked || stale),
+        paragraph(
+            scale,
+            "Combine versions in your IDE, then import the reviewed merge below.",
+            size::MEASURE,
+        ),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
 }
 fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.external;
     let inspection = panel.inspection()?;
     let scale = writer.ui_scale();
-    Some(flex_col((
-        label(scale, inspection.path.file_name().unwrap_or_default().to_string_lossy().into_owned()),
-        inspection.changes.get(panel.page).map(|change| {
-            flex_col((
-                label(scale, format!("Changed passage · {} · {} of {}", change.caption, panel.page + 1, inspection.changes.len())),
-                paired_sources(writer, change),
-            )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
-        }),
-        inspection.changes.is_empty().then(|| paragraph(scale, "The accepted source matches the inspected disk version. Any unapplied field draft is shown separately.", 640.)),
-        (inspection.changes.len() > 1).then(|| flex_row((
-            text_button(scale, "Previous source comparison", |writer: &mut Writer| writer.workspaces.external.page = writer.workspaces.external.page.saturating_sub(1)).disabled(panel.page == 0),
-            text_button(scale, "More source comparison", |writer: &mut Writer| writer.workspaces.external.page += 1).disabled(panel.page + 1 >= inspection.changes.len()),
-        )).gap(space::SIBLINGS.px())),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px()))
+    Some(
+        flex_col((
+            label(
+                scale,
+                inspection
+                    .path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
+            ),
+            inspection.changes.get(panel.page).map(|change| {
+                flex_col((
+                    label(
+                        scale,
+                        format!(
+                            "Changed passage · {} · {} of {}",
+                            change.caption,
+                            panel.page + 1,
+                            inspection.changes.len()
+                        ),
+                    ),
+                    paired_sources(writer, change),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(space::SIBLINGS.px())
+            }),
+            inspection.changes.is_empty().then(|| {
+                paragraph(
+                    scale,
+                    "The accepted source matches the inspected disk version. Any \
+                     unapplied field draft is shown separately.",
+                    size::MEASURE,
+                )
+            }),
+            (inspection.changes.len() > 1).then(|| {
+                flex_row((
+                    text_button(
+                        scale,
+                        "Previous source comparison",
+                        |writer: &mut Writer| {
+                            writer.workspaces.external.page =
+                                writer.workspaces.external.page.saturating_sub(1)
+                        },
+                    )
+                    .disabled(panel.page == 0),
+                    text_button(scale, "More source comparison", |writer: &mut Writer| {
+                        writer.workspaces.external.page += 1
+                    })
+                    .disabled(panel.page + 1 >= inspection.changes.len()),
+                ))
+                .gap(space::SIBLINGS.px())
+            }),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::TEXT.px()),
+    )
 }
 fn paired_sources(writer: &Writer, change: &ComparisonRow) -> impl WidgetView<Writer> + use<> {
     let available = writer.content_width();
-    let wide = available >= 920. * f64::from(writer.ui_scale());
+    let wide = available >= breakpoint::COMPARISON * f64::from(writer.ui_scale());
     let width = if wide {
-        (available - 12.) / 2.
+        (available - space::TEXT) / 2.
     } else {
         available
     };
@@ -132,11 +207,11 @@ fn source(
         flex_col((
             label(scale, caption),
             flex_row((sized_box(source_comparison(
-                14. * scale,
+                Type::Body.size(scale),
                 value,
                 other.cloned().unwrap_or_default(),
             ))
-            .width((width - 24.).px()),)),
+            .width((width - space::GROUPS).px()),)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(space::SIBLINGS.px()),
@@ -164,8 +239,13 @@ fn pending(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                         pages.len().max(1)
                     ),
                 ),
-                flex_row((sized_box(manuscript_text(16. * scale, value))
-                    .width((writer.content_width() - 24.).min(640.).px()),)),
+                flex_row(
+                    (sized_box(manuscript_text(DRAFT_TEXT * scale, value)).width(
+                        (writer.content_width() - space::GROUPS)
+                            .min(size::MEASURE)
+                            .px(),
+                    ),),
+                ),
                 (pages.len() > 1).then(|| {
                     flex_row((
                         text_button(scale, "Previous field draft part", |writer: &mut Writer| {
@@ -199,11 +279,36 @@ fn merge(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
         label(scale, "Merge in your editor"),
-        paragraph(scale, "Export a separate source draft containing your pending prose. Edit it in your IDE, then import it here. Import validates the result against the inspected session and disk version; Save writes the accepted merge.", 640.),
-        artifact.map(|artifact| paragraph(scale, format!("Merge draft: {}", artifact.source.display()), 640.)),
-        text_button(scale, "Open merge draft in editor", Writer::open_merge_draft).disabled(blocked || writer.external.busy() || artifact.is_none()),
-        text_button(scale, "Import reviewed merge", Writer::import_reviewed_merge).disabled(blocked || stale || artifact.is_none()),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
+        paragraph(
+            scale,
+            "Export a separate source draft containing your pending \
+             prose. Edit it in your IDE, then import it here. Import \
+             validates the result against the inspected session and disk \
+             version; Save writes the accepted merge.",
+            size::MEASURE,
+        ),
+        artifact.map(|artifact| {
+            paragraph(
+                scale,
+                format!("Merge draft: {}", artifact.source.display()),
+                size::MEASURE,
+            )
+        }),
+        text_button(
+            scale,
+            "Open merge draft in editor",
+            Writer::open_merge_draft,
+        )
+        .disabled(blocked || writer.external.busy() || artifact.is_none()),
+        text_button(
+            scale,
+            "Import reviewed merge",
+            Writer::import_reviewed_merge,
+        )
+        .disabled(blocked || stale || artifact.is_none()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
 }
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.external;
@@ -211,7 +316,11 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     Some(
         flex_col((
-            paragraph(scale, value.clone(), writer.content_width().min(640.)),
+            paragraph(
+                scale,
+                value.clone(),
+                writer.content_width().min(size::MEASURE),
+            ),
             (panel.report.len() > 1).then(|| {
                 flex_row((
                     text_button(

@@ -1,6 +1,7 @@
 //! The specimen composes the same buttons, fields, palette and manuscript text as Writer.
 use crate::presentation::pane;
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 mod inputs;
 mod samples;
@@ -20,7 +21,7 @@ pub(super) fn specimen(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         sized_box(
             flex_col((
                 header(state),
-                paragraph(state.scale(), state.message.clone(), 640.),
+                paragraph(state.scale(), state.message.clone(), size::MEASURE),
                 actions(state),
                 inputs::inputs(state),
                 samples::samples(state),
@@ -39,11 +40,11 @@ fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         flex_row((label(state.scale(), "Recite · native component specimen")
             .typeset(Type::Display, state.scale())
             .prop(LineBreaking::WordWrap)
-            .width(640.px()),)),
+            .width(size::MEASURE.px()),)),
         paragraph(
             state.scale(),
             "Production controls and typography. Changes here last only for this window.",
-            640.,
+            size::MEASURE,
         ),
         flex_row((
             text_button(

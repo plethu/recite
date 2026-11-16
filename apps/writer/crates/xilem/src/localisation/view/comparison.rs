@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 
 pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -12,23 +13,102 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
             .comparison_is_current(&comparison.inspection)
     });
     let blocked = writer.project_action_blocked() || state.slot.read_only();
-    Some(flex_col((
-        label(scale, "Catalogue disk comparison").typeset(Type::Section, scale),
-        text_button(scale, "Return to translation queue", |writer: &mut Writer| writer.catalogue_action(work::Action::Query)).disabled(blocked),
-        comparison.changes.get(comparison.page).map(|row| flex_col((
-            paragraph(scale, format!("{} · part {} of {}", row.caption, comparison.page + 1, comparison.changes.len()), 640.),
-            versions::versions(writer, row, "Writer translation draft", "Inspected PO translation"),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())),
-        comparison.changes.is_empty().then(|| paragraph(scale, "There are no translation drafts to compare with the inspected PO file.", 640.)),
-        (comparison.changes.len() > 1).then(|| flex_col((
-            text_button(scale, "Previous catalogue comparison", |writer: &mut Writer| { if let Some(comparison) = &mut writer.localisation.comparison { comparison.page = comparison.page.saturating_sub(1); } }).disabled(comparison.page == 0),
-            text_button(scale, "More catalogue comparison", |writer: &mut Writer| { if let Some(comparison) = &mut writer.localisation.comparison { comparison.page += 1; } }).disabled(comparison.page + 1 >= comparison.changes.len()),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())),
-        (!current).then(|| paragraph(scale, "The catalogue changed since this comparison. Inspect it again before choosing a version.", 640.)),
-        text_button(scale, "Inspect current catalogue disk version", Writer::compare_catalogue).disabled(blocked),
-        text_button(scale, "Keep translation drafts", |writer: &mut Writer| writer.resolve_catalogue(ExternalDecision::KeepDrafts)).disabled(blocked || !current),
-        paragraph(scale, "Keeps compatible drafts against the inspected PO file and marks them for review. Save publishes them.", 640.),
-        text_button(scale, "Use inspected PO file", |writer: &mut Writer| writer.resolve_catalogue(ExternalDecision::UseDisk)).disabled(blocked || !current),
-        paragraph(scale, "Discards current translation drafts and loads the inspected PO file.", 640.),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px()))
+    Some(
+        flex_col((
+            label(scale, "Catalogue disk comparison").typeset(Type::Section, scale),
+            text_button(
+                scale,
+                "Return to translation queue",
+                |writer: &mut Writer| writer.catalogue_action(work::Action::Query),
+            )
+            .disabled(blocked),
+            comparison.changes.get(comparison.page).map(|row| {
+                flex_col((
+                    paragraph(
+                        scale,
+                        format!(
+                            "{} · part {} of {}",
+                            row.caption,
+                            comparison.page + 1,
+                            comparison.changes.len()
+                        ),
+                        size::MEASURE,
+                    ),
+                    versions::versions(
+                        writer,
+                        row,
+                        "Writer translation draft",
+                        "Inspected PO translation",
+                    ),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(space::SIBLINGS.px())
+            }),
+            comparison.changes.is_empty().then(|| {
+                paragraph(
+                    scale,
+                    "There are no translation drafts to compare with the \
+                     inspected PO file.",
+                    size::MEASURE,
+                )
+            }),
+            (comparison.changes.len() > 1).then(|| {
+                flex_col((
+                    text_button(
+                        scale,
+                        "Previous catalogue comparison",
+                        |writer: &mut Writer| {
+                            if let Some(comparison) = &mut writer.localisation.comparison {
+                                comparison.page = comparison.page.saturating_sub(1);
+                            }
+                        },
+                    )
+                    .disabled(comparison.page == 0),
+                    text_button(scale, "More catalogue comparison", |writer: &mut Writer| {
+                        if let Some(comparison) = &mut writer.localisation.comparison {
+                            comparison.page += 1;
+                        }
+                    })
+                    .disabled(comparison.page + 1 >= comparison.changes.len()),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(space::SIBLINGS.px())
+            }),
+            (!current).then(|| {
+                paragraph(
+                    scale,
+                    "The catalogue changed since this comparison. Inspect it \
+                     again before choosing a version.",
+                    size::MEASURE,
+                )
+            }),
+            text_button(
+                scale,
+                "Inspect current catalogue disk version",
+                Writer::compare_catalogue,
+            )
+            .disabled(blocked),
+            text_button(scale, "Keep translation drafts", |writer: &mut Writer| {
+                writer.resolve_catalogue(ExternalDecision::KeepDrafts)
+            })
+            .disabled(blocked || !current),
+            paragraph(
+                scale,
+                "Keeps compatible drafts against the inspected PO file and \
+                 marks them for review. Save publishes them.",
+                size::MEASURE,
+            ),
+            text_button(scale, "Use inspected PO file", |writer: &mut Writer| {
+                writer.resolve_catalogue(ExternalDecision::UseDisk)
+            })
+            .disabled(blocked || !current),
+            paragraph(
+                scale,
+                "Discards current translation drafts and loads the inspected PO file.",
+                size::MEASURE,
+            ),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::TEXT.px()),
+    )
 }

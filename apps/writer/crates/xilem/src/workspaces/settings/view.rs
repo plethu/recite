@@ -1,4 +1,5 @@
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 mod preview;
 use super::*;
@@ -201,7 +202,7 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             paragraph(
                 writer.ui_scale(),
                 page.clone(),
-                writer.content_width().min(640.),
+                writer.content_width().min(size::MEASURE),
             ),
             (panel.feedback.len() > 1).then(|| {
                 flex_row((

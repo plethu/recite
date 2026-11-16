@@ -3,6 +3,7 @@
 use super::{Evidence, Target, Writer};
 use crate::presentation::banner::banner;
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, print, space};
 use crate::{Phase, presentation::paragraph};
 use recite_writer_session::project::ExternalDecision;
@@ -39,7 +40,7 @@ pub(crate) fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 .notices
                 .warning
                 .as_ref()
-                .map(|warning| paragraph(writer.ui_scale(), warning.clone(), 640.)),
+                .map(|warning| paragraph(writer.ui_scale(), warning.clone(), size::MEASURE)),
             notice(writer),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)

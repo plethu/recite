@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 pub fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -50,7 +51,7 @@ fn content(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                     })
                     .disabled(panel.page + 1 >= panel.preview.len()),
                 )),
-                paragraph(scale, page.clone(), 640.),
+                paragraph(scale, page.clone(), size::MEASURE),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::SIBLINGS.px()),

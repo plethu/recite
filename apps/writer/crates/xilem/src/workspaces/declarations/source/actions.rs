@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::space;
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 
 /// The sheet's one primary while the declaration source is shown and valid: save it and generate.
@@ -68,7 +69,7 @@ pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             .disabled(blocked)
         }),
         if let Validation::Invalid(error) = &writer.workspaces.declarations.source.validation {
-            Some(paragraph(scale, error.clone(), 640.))
+            Some(paragraph(scale, error.clone(), size::MEASURE))
         } else {
             None
         },

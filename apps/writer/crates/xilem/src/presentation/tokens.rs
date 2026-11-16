@@ -42,6 +42,10 @@ pub(crate) mod size {
     pub const CONTROL_PAD: f64 = 12.;
     /// A field's padding and border before its text, at every scale.
     pub const FIELD_INSET: f64 = 2.;
+    /// A search field's least width.
+    pub const FIELD_MIN: f64 = 180.;
+    /// The longest line of guidance and report prose on a sheet, at every scale.
+    pub const MEASURE: f64 = 640.;
     /// The least width of the file tab, and of the wordmark's column while the scene list hides.
     pub const TAB_MIN: f64 = 96.;
     /// A picker's width, and how far below the window's top edge it opens.
@@ -86,6 +90,12 @@ pub(crate) mod breakpoint {
     pub const TOOLBAR: f64 = 600.;
     /// Segments narrower than this stack.
     pub const SEGMENTS: f64 = 360.;
+    /// A sheet's few stacked actions share a row from this width.
+    pub const ACTIONS: f64 = 350.;
+    /// Two equal columns share a sheet from this width, such as the queue and its entry.
+    pub const TWO_COLUMNS: f64 = 600.;
+    /// Two versions of a source sit side by side from this width.
+    pub const COMPARISON: f64 = 920.;
     /// A field and its button share a row from this width.
     pub const FIELD_ROW: f64 = 480.;
     /// A banner's or a sheet head's actions share its row from this width.

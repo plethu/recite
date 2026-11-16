@@ -2,6 +2,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::space;
+use crate::presentation::tokens::breakpoint;
 use crate::presentation::{Type, Typeset};
 use crate::presentation::{label, paragraph, text_button};
 use xilem::masonry::kurbo;
@@ -48,12 +49,33 @@ fn heading(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<
     let width = state.script_width();
     flex_col((
         label(scale, "Reply rules").typeset(Type::Section, scale),
-        paragraph(scale, format!("{} · Destination: {}", rules.text,
-            rules.destination.as_deref().unwrap_or("No destination")), width),
-        paragraph(scale, "Conditions control when this reply is available. Effects belong to its destination and can also run when another reply reaches that beat.", width),
-        rules.has_other_statements.then(|| paragraph(scale,
-            "Other statements are preserved. Effect order can change only when the destination contains direct effects alone.", width)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px())
+        paragraph(
+            scale,
+            format!(
+                "{} · Destination: {}",
+                rules.text,
+                rules.destination.as_deref().unwrap_or("No destination")
+            ),
+            width,
+        ),
+        paragraph(
+            scale,
+            "Conditions control when this reply is available. Effects \
+             belong to its destination and can also run when another \
+             reply reaches that beat.",
+            width,
+        ),
+        rules.has_other_statements.then(|| {
+            paragraph(
+                scale,
+                "Other statements are preserved. Effect order can change only \
+                 when the destination contains direct effects alone.",
+                width,
+            )
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::TEXT.px())
 }
 fn additions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -112,7 +134,7 @@ fn reply_actions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> 
         .disabled(!state.rules_editable()),
     ))
     .direction(
-        if state.script_width() >= 350. * f64::from(state.ui_scale()) {
+        if state.script_width() >= breakpoint::ACTIONS * f64::from(state.ui_scale()) {
             kurbo::Axis::Horizontal
         } else {
             kurbo::Axis::Vertical
