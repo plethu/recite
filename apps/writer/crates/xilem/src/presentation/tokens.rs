@@ -38,6 +38,9 @@ pub(crate) mod size {
     /// A text control on a page or sheet, and a list row. The agreed 32 rounded up past the
     /// comparison reference's 32.2, so no hit target shrinks.
     pub const ROW: f64 = 33.;
+    /// An icon button's square hit area around its 20px face: as tall as the text buttons it
+    /// replaced, never smaller than the comparison reference.
+    pub const ICON_TARGET: f64 = 32.;
     /// The least hit target, after WCAG 2.2 AA §2.5.8, at every scale.
     pub const TARGET: f64 = 24.;
     /// A text control's padding either side of its words.

@@ -108,7 +108,7 @@ pub(in crate::view::reading) fn route_to(
         ControlStyle::Action,
         button(
             route_toggle(
-                glyph,
+                (glyph, state.ui_scale()),
                 state.destination_expanded(destination),
                 state.palette.teal_text,
                 size,

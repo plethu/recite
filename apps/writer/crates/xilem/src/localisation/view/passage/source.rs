@@ -93,7 +93,7 @@ fn destination(
                     ControlStyle::Action,
                     button(
                         route_toggle(
-                            writer.ui_scale(),
+                            (writer.ui_scale(), writer.ui_scale()),
                             writer.destination_expanded(destination),
                             writer.palette.teal_text,
                             14. * writer.ui_scale(),

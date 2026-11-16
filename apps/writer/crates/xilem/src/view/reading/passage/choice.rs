@@ -138,7 +138,7 @@ pub(super) fn destination(
         ControlStyle::Action,
         button(
             route_toggle(
-                glyph,
+                (glyph, state.ui_scale()),
                 false,
                 color,
                 size,

@@ -92,7 +92,7 @@ fn write_capture(root: &std::path::Path, nodes: serde_json::Value, lint: serde_j
     .unwrap();
     fs::write(
         root.join("manifest.json"),
-        json!({ "entries": [{ "id": "scene--light", "frames": [{
+        json!({ "entries": [{ "id": "scene--light", "variant": "light", "frames": [{
             "name": "scene--light--00",
             "file": "frames/scene--light--00.webp",
             "a11y": "a11y/scene--light--00.json",
@@ -105,10 +105,12 @@ fn write_capture(root: &std::path::Path, nodes: serde_json::Value, lint: serde_j
 
 #[test]
 fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_renames_for_review() {
-    let control = |label: &str, focusable: bool, width: f64| {
-        json!({ "role": "Button", "label": label, "interactive": true, "focusable": focusable,
-                "disabled": false, "bounds": [0., 0., width, 32.] })
+    let sized = |role: &str, label: &str, focusable: bool, (width, height): (f64, f64)| {
+        json!({ "role": role, "label": label, "interactive": true, "focusable": focusable,
+                "disabled": false, "bounds": [0., 0., width, height] })
     };
+    let control =
+        |label: &str, focusable: bool, width: f64| sized("Button", label, focusable, (width, 32.));
     let focused = |mut node: serde_json::Value| {
         node["focused"] = json!(true);
         node
@@ -119,7 +121,10 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
         json!([
             control("Save", true, 64.),
             control("Map", true, 48.),
-            focused(control("Close", true, 32.))
+            focused(control("Close", true, 32.)),
+            control("Pin", true, 110.),
+            sized("Button", "Open", true, (120., 40.)),
+            sized("MultilineTextInput", "Line", true, (400., 60.))
         ]),
         json!([]),
     );
@@ -129,7 +134,13 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
         json!([
             control("Save", false, 64.),
             focused(control("Map", true, 18.)),
-            control("Exit", true, 32.)
+            control("Exit", true, 32.),
+            // An icon face that replaced the text: 30 high where the reference was 32.
+            sized("Button", "Pin", true, (30., 30.)),
+            // Tighter than the reference but still 32 high: a larger target may come down to 32.
+            sized("Button", "Open", true, (32., 32.)),
+            // One line shorter: a multiline field's height follows its text.
+            sized("MultilineTextInput", "Line", true, (400., 40.))
         ]),
         json!(["unnamed Button at [0.0, 0.0, 10.0, 10.0]"]),
     );
@@ -137,7 +148,7 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
         serde_json::from_str(&fs::read_to_string(current.path().join("manifest.json")).unwrap())
             .unwrap();
     let report = compare(current.path(), &manifest, baseline.path()).unwrap();
-    assert_eq!(report.regressions.len(), 3, "{:?}", report.regressions);
+    assert_eq!(report.regressions.len(), 4, "{:?}", report.regressions);
     assert!(
         report
             .regressions
@@ -149,6 +160,12 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
             .regressions
             .iter()
             .any(|r| r.contains("\"Map\" target shrank"))
+    );
+    assert!(
+        report
+            .regressions
+            .iter()
+            .any(|r| r.contains("\"Pin\" target shrank from 110x32 to 30x30"))
     );
     assert!(
         report

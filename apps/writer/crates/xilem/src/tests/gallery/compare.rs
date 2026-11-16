@@ -1,4 +1,5 @@
 //! Compare a fresh capture with the signed-off baseline: pixels for review, accessibility for gates.
+use super::Variant;
 use super::record::MINIMUM_TARGET;
 use image::{Rgba, RgbaImage};
 use serde_json::{Value, json};
@@ -22,16 +23,30 @@ pub(crate) struct Report {
     pub review: Vec<String>,
 }
 
-fn frames(manifest: &Value) -> BTreeMap<String, (String, Value)> {
+/// A held target's smaller side may fall to its reference, capped at this many logical pixels per
+/// unit of UI scale: a 32px control stays 32px, and a larger one may tighten to 32px.
+const HELD_TARGET: f64 = 32.;
+
+/// Each frame by name, with its entry's id and UI scale.
+fn frames(manifest: &Value) -> BTreeMap<String, (String, f64, Value)> {
     let mut frames = BTreeMap::new();
     for entry in manifest["entries"].as_array().into_iter().flatten() {
         let id = entry["id"].as_str().unwrap_or("").to_owned();
+        let scale = ui_scale(entry["variant"].as_str().unwrap_or(""));
         for frame in entry["frames"].as_array().into_iter().flatten() {
             let name = frame["name"].as_str().unwrap_or("").to_owned();
-            frames.insert(name, (id.clone(), frame.clone()));
+            frames.insert(name, (id.clone(), scale, frame.clone()));
         }
     }
     frames
+}
+
+/// The UI scale a gallery variant renders at, 1 for an unknown one.
+fn ui_scale(variant: &str) -> f64 {
+    Variant::ALL
+        .iter()
+        .find(|known| known.id == variant)
+        .map_or(1., |known| f64::from(known.ui_scale) / 100.)
 }
 
 pub(crate) fn compare(current: &Path, manifest: &Value, baseline: &Path) -> Option<Report> {
@@ -50,11 +65,11 @@ pub(crate) fn compare(current: &Path, manifest: &Value, baseline: &Path) -> Opti
     }
     let _ = fs::create_dir_all(&diffs);
     let mut report = Report::default();
-    for (name, (entry, old)) in &before {
+    for (name, (entry, _, old)) in &before {
         if !ran.contains(entry) {
             continue;
         }
-        let Some((_, new)) = after.get(name) else {
+        let Some((_, scale, new)) = after.get(name) else {
             report.missing.push(name.clone());
             continue;
         };
@@ -75,11 +90,9 @@ pub(crate) fn compare(current: &Path, manifest: &Value, baseline: &Path) -> Opti
                 .unwrap_or(Value::Null)
         };
         accessibility(
-            name,
-            &read(baseline, old),
-            &read(current, new),
-            old,
-            new,
+            (name, *scale),
+            (&read(baseline, old), &read(current, new)),
+            (old, new),
             &mut report,
         );
     }
@@ -180,12 +193,19 @@ fn lint(frame: &Value) -> BTreeSet<String> {
         .collect()
 }
 
+/// Whether a target of `new` size is smaller than one of `old` size allows: under the reference
+/// or 24px on either side, or, where the target is `held` at a UI scale, its smaller side under
+/// the reference's, capped at 32px at that scale.
+fn shrank((ow, oh): (f64, f64), (nw, nh): (f64, f64), held: Option<f64>) -> bool {
+    nw < ow.min(MINIMUM_TARGET)
+        || nh < oh.min(MINIMUM_TARGET)
+        || held.is_some_and(|scale| nw.min(nh) < ow.min(oh).min(HELD_TARGET * scale) - 0.5)
+}
+
 fn accessibility(
-    name: &str,
-    before: &Value,
-    after: &Value,
-    old: &Value,
-    new: &Value,
+    (name, scale): (&str, f64),
+    (before, after): (&Value, &Value),
+    (old, new): (&Value, &Value),
     report: &mut Report,
 ) {
     let (was, now) = (focused(before), focused(after));
@@ -222,8 +242,10 @@ fn accessibility(
                     .review
                     .push(format!("{name}: {role} {label:?} is now disabled"));
             }
+            // A multiline field's height follows its text, so only the 24px floor holds it.
+            let held = (role != "MultilineTextInput").then_some(scale);
             if let (Some((ow, oh)), Some((nw, nh))) = (size(old), size(new))
-                && (nw < ow.min(MINIMUM_TARGET) || nh < oh.min(MINIMUM_TARGET))
+                && shrank((ow, oh), (nw, nh), held)
             {
                 report.regressions.push(format!(
                     "{name}: {role} {label:?} target shrank from {ow}x{oh} to {nw}x{nh}"

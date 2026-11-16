@@ -1,14 +1,14 @@
 //! Disclosure state is a painted chevron beside the text, and the button that holds it reports
 //! the native `expanded` state, so the chevron is decoration and no glyph enters the name.
 use super::icons::{Icon, face};
-use crate::presentation::space;
+use crate::presentation::{Type, space};
 use xilem::{
     WidgetView,
     core::one_of::Either,
     masonry::layout::AsUnit,
     peniko::Color,
     style::Style,
-    view::{CrossAxisAlignment, flex_row},
+    view::{CrossAxisAlignment, flex_row, sized_box},
 };
 
 /// The chevron's size relative to 20px icon faces, to sit with 14px interface text.
@@ -32,14 +32,18 @@ pub(crate) fn disclosure<S: 'static, V: WidgetView<S>>(
 
 /// A destination toggle: `→` while closed and a painted chevron while open. Its button is named
 /// with the arrow in both states (`route_name`) and reports `expanded`.
+///
+/// The destination is set in the manuscript's type, which does not grow with the UI scale; a
+/// strut a Control line tall at `ui_scale` keeps the toggle at least a text control's row tall,
+/// so its hit target grows with the interface like every other control's.
 pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
-    scale: f32,
+    (scale, ui_scale): (f32, f32),
     expanded: bool,
     color: Color,
     text_size: f32,
     text: V,
 ) -> impl WidgetView<S> + use<S, V> {
-    if expanded {
+    let face = if expanded {
         Either::A(disclosure(scale, true, color, text))
     } else {
         Either::B(
@@ -50,7 +54,14 @@ pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
             .cross_axis_alignment(CrossAxisAlignment::Center)
             .gap((space::UNIT * f64::from(scale)).px()),
         )
-    }
+    };
+    let line = f64::from(Type::Control.metrics().1 * ui_scale);
+    flex_row((
+        sized_box(flex_row(())).width(0.px()).height(line.px()),
+        face,
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(0.px())
 }
 
 /// A destination toggle's name in both states: the arrow and the destination's display name.

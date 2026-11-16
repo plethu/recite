@@ -1,6 +1,6 @@
 //! A scaled label for Masonry's native radio interaction and accessibility.
 use recite_writer_session::typography::FONT_UI;
-use xilem::masonry::parley::style::FontWeight;
+use xilem::masonry::parley::style::{FontWeight, LineHeight};
 use xilem::peniko::Color;
 use xilem::{
     Pod, ViewCtx,
@@ -29,7 +29,8 @@ pub(crate) struct Radio<F> {
     /// The full name assistive technology reads, where the visible text is a short face.
     name: Option<ArcStr>,
     checked: bool,
-    size: f32,
+    /// Font size and line height: a Control line, so the choice is a row tall like a button.
+    size: (f32, f32),
     weight: FontWeight,
     disabled: bool,
     label_color: Option<Color>,
@@ -45,7 +46,10 @@ pub(crate) fn radio_button<S: 'static>(
         text: text.into(),
         name: None,
         checked,
-        size: super::Type::Control.size(scale),
+        size: {
+            let (size, line) = super::Type::Control.metrics();
+            (size * scale, line * scale)
+        },
         weight: super::Type::Control.weight(),
         disabled: false,
         label_color: None,
@@ -78,7 +82,8 @@ impl<S: 'static, F: Fn(&mut S) + Send + Sync + 'static> View<S, (), ViewCtx> for
     fn build(&self, ctx: &mut ViewCtx, _: &mut S) -> (Self::Element, ()) {
         let mut label = NewWidget::new(
             Label::new(self.text.clone())
-                .with_style(StyleProperty::FontSize(self.size))
+                .with_style(StyleProperty::FontSize(self.size.0))
+                .with_style(StyleProperty::LineHeight(LineHeight::Absolute(self.size.1)))
                 .with_style(StyleProperty::FontWeight(self.weight))
                 .with_style(StyleProperty::FontFamily(super::print::font(FONT_UI))),
         );
@@ -116,9 +121,11 @@ impl<S: 'static, F: Fn(&mut S) + Send + Sync + 'static> View<S, (), ViewCtx> for
             element.insert_prop(GroupStop(self.checked));
         }
         if old.size != self.size {
+            let mut label = RadioButton::label_mut(&mut element);
+            Label::insert_style(&mut label, StyleProperty::FontSize(self.size.0));
             Label::insert_style(
-                &mut RadioButton::label_mut(&mut element),
-                StyleProperty::FontSize(self.size),
+                &mut label,
+                StyleProperty::LineHeight(LineHeight::Absolute(self.size.1)),
             );
         }
         if old.weight != self.weight {

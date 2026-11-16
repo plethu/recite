@@ -3,6 +3,7 @@
 //! Every state keeps the control's border box: a wider border takes its width from the padding,
 //! and a pressed face sinks one pixel down and right inside the same box.
 use super::super::control_style::ControlStyle;
+use super::super::icons::FACE;
 use super::super::tokens::{Type, size, space};
 use super::*;
 mod wells;
@@ -91,6 +92,8 @@ impl Look {
             rule: None,
             lead: 0.,
         };
+        // An icon face centred in its square target, inside a 1px border.
+        let icon = ((size::ICON_TARGET - FACE) / 2. - 1.) * scale;
         vec![
             (None, tonal()),
             (Some(ControlStyle::Tonal), tonal()),
@@ -98,14 +101,8 @@ impl Look {
             (Some(ControlStyle::Navigation), quiet(text)),
             (Some(ControlStyle::Segment), quiet(text)),
             (Some(ControlStyle::Manuscript), quiet(text)),
-            (
-                Some(ControlStyle::Icon),
-                quiet((space::UNIT * scale, space::UNIT * scale)),
-            ),
-            (
-                Some(ControlStyle::IconOn),
-                held((space::UNIT * scale, space::UNIT * scale)),
-            ),
+            (Some(ControlStyle::Icon), quiet((icon, icon))),
+            (Some(ControlStyle::IconOn), held((icon, icon))),
             (Some(ControlStyle::ToggleOn), held(text)),
             (Some(ControlStyle::Tab), quiet(text)),
             (Some(ControlStyle::Row), quiet(text)),
