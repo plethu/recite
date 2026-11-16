@@ -1,5 +1,6 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
+use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
@@ -7,7 +8,7 @@ use crate::presentation::{Icon, Type, print};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::kurbo::Axis;
 use xilem::view::FlexSpacer;
-use xilem::view::{GridExt, GridTrackSize, grid};
+use xilem::view::{GridExt, GridTrackSize, button, grid};
 
 /// One row from about 600 logical pixels: history, workspace modes, then the scene's
 /// tools with Save as the only raised action. Narrower windows move the modes to a second row.
@@ -114,7 +115,7 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
     let history =
         state.viewport.width - state.navigation_width() >= breakpoint::TOOLBAR * f64::from(scale);
     flex_row((
-        print::action(scale, "Try scene", blocked, Writer::start_trial),
+        try_scene(state, blocked),
         history.then(|| {
             print::icon_action(
                 scale,
@@ -150,4 +151,24 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
         }),
     ))
     .gap(space::UNIT.px())
+}
+
+/// "Try scene" reports itself pressed while Preview fills the pane, so the toolbar says which
+/// view is showing; pressing it runs the scene again with the current inputs, and "Return to
+/// writing" leaves Preview.
+fn try_scene(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
+    let previewing = state.trial.visible;
+    styled(
+        if previewing {
+            ControlStyle::ToggleOn
+        } else {
+            ControlStyle::Action
+        },
+        button(
+            Type::Control.label(state.ui_scale(), "Try scene"),
+            Writer::start_trial,
+        )
+        .toggled(previewing)
+        .disabled(blocked),
+    )
 }

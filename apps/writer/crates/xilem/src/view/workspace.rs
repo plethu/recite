@@ -165,7 +165,8 @@ pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> 
                 state.ui_scale(),
                 &state.palette,
                 title,
-                honoured == workspace,
+                // While Preview fills the pane no workspace is showing, so none is chosen.
+                honoured == workspace && !state.trial.visible,
                 state.phase() != Phase::Writing
                     || (workspace == Workspace::Split && !split_available)
                     || (workspace != Workspace::Script

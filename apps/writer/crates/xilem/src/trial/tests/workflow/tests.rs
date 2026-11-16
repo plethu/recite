@@ -46,6 +46,9 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.activate("Try scene");
     finish(&mut mounted.state, requests.try_recv().unwrap()).unwrap();
     mounted.settle();
+    // Preview fills the pane: no workspace is chosen, and Try scene reports itself pressed.
+    assert!(mounted.is_toggled("Script", false));
+    assert!(mounted.is_toggled("Try scene", true));
     mounted.activate("Answer true");
     assert_eq!(
         mounted.state.session.model().preview_page().unwrap().text,

@@ -127,6 +127,23 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
         )
         .is_some()
     }
+    /// Whether some control named `name` reports itself toggled (checked or pressed) as `on`.
+    pub fn is_toggled(&self, name: &str, on: bool) -> bool {
+        let toggled = if on {
+            accesskit::Toggled::True
+        } else {
+            accesskit::Toggled::False
+        };
+        self.in_state(
+            |caption| caption == name,
+            |harness, id| {
+                harness
+                    .access_node(id)
+                    .is_some_and(|node| node.data().toggled() == Some(toggled))
+            },
+        )
+        .is_some()
+    }
     /// Whether some control named `name` is the selected one in its list.
     pub fn is_selected(&self, name: &str) -> bool {
         self.selected_matching(|caption| caption == name).is_some()
