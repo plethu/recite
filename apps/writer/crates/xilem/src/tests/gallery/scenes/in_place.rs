@@ -126,8 +126,8 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
         Meta {
             id: "script.choices",
             group: "Script",
-            title: "Speaker and destination slips",
-            intent: "The line being written names its speaker on a button whose choice hangs from the label; a reply's destination choice hangs below its row.",
+            title: "Insertion, speaker and destination slips",
+            intent: "After the beat, + Line and + Reply insert after the passage being written; beside them its speaker or destination choice opens as a slip hanging from the control.",
         },
         |record| {
             let directory = sample();
