@@ -73,7 +73,9 @@ def configuration_focus_and_tab(window):
 
     def visible_and_focused(caption):
         node = (
-            field(window, caption) if caption == "Find preview language" else window.find(caption)
+            field(window, caption)
+            if caption in ("Find preview language", "Preview wording")
+            else window.find(caption)
         )
         return focused_in_content(window, node)
 
@@ -83,8 +85,8 @@ def configuration_focus_and_tab(window):
     )
     key("Tab")
     window.wait(
-        lambda: visible_and_focused("Search preview languages"),
-        "Tab reaches the visible language search action",
+        lambda: visible_and_focused("Preview wording"),
+        "Tab reaches the preview wording; the language list filters as it is typed",
     )
     key("Tab", shift=True)
     window.wait(
@@ -114,7 +116,6 @@ def exercise(window, po, output, results):
     results["native_tab_reveals_preview_input"] = True
     reveal_field(window, "Find preview language")
     fill(window, "Find preview language", "fr-CA")
-    action(window, "Search preview languages")
     action(window, "Preview in French (Canada) · fr-CA")
     reveal_text(window, "Preview language:", prefix=True)
     action(window, "Done with preview inputs")

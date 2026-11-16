@@ -18,8 +18,7 @@ fn binding_view(count: usize) -> (usize, Writer) {
     let mut writer = open(&directory).unwrap();
     writer.trial.settings.open = true;
     writer.trial.visible = true;
-    writer.trial.settings.query = "fr".into();
-    writer.search_preview_languages();
+    writer.set_preview_language_query("fr".into());
     let mut context = ViewCtx::new(
         Arc::new(support::NoProxy),
         Arc::new(tokio::runtime::Runtime::new().unwrap()),

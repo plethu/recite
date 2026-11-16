@@ -2,6 +2,7 @@
 use super::*;
 use crate::app::keyboard::ModalSurface;
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::fit_content;
 use crate::presentation::group::dialog;
 use crate::presentation::slip::OFFSET;
 use crate::presentation::space;
@@ -9,7 +10,6 @@ use crate::presentation::tokens::size;
 use crate::presentation::{self, Icon};
 use crate::presentation::{Type, Typeset};
 use recite_writer_session::messages::{MsgId, text};
-use xilem::masonry::layout::Dim;
 use xilem::{masonry::properties, view::checkbox};
 
 mod language;
@@ -24,36 +24,39 @@ pub(super) fn slip(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let inner = width - 2. * space::KINDS - 2.;
     let disabled = state.phase() != Phase::Writing || state.session.read_only();
     // Room for the slip's stock offset inside the transcript's area.
+    // The slip hugs its fields up to the transcript's height, and scrolls inside past that.
     sized_box(presentation::slip::slip(
         &state.palette,
-        sized_box(dialog(
-            "Configure preview",
-            flex_col((
-                flex_row((
-                    label(scale, "Configure preview")
-                        .typeset(Type::Section, scale)
+        fit_content(
+            sized_box(dialog(
+                "Configure preview",
+                flex_col((
+                    flex_row((
+                        label(scale, "Configure preview")
+                            .typeset(Type::Section, scale)
+                            .flex(1.),
+                        print::icon_action(
+                            scale,
+                            "Done with preview inputs",
+                            Icon::Close,
+                            &state.palette,
+                            false,
+                            Writer::close_trial_inputs,
+                        ),
+                    ))
+                    .cross_axis_alignment(CrossAxisAlignment::Center)
+                    .gap(space::SIBLINGS.px()),
+                    pane("Preview inputs", editor(state, disabled, inner))
+                        .constrain_horizontal(true)
                         .flex(1.),
-                    print::icon_action(
-                        scale,
-                        "Done with preview inputs",
-                        Icon::Close,
-                        &state.palette,
-                        false,
-                        Writer::close_trial_inputs,
-                    ),
                 ))
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .gap(space::SIBLINGS.px()),
-                pane("Preview inputs", editor(state, disabled, inner))
-                    .constrain_horizontal(true)
-                    .flex(1.),
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(space::TEXT.px()),
             ))
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(space::TEXT.px()),
-        ))
-        .dims((width.px(), Dim::Stretch))
-        .padding(space::KINDS.px())
-        .prop(ModalSurface(true)),
+            .width(width.px())
+            .padding(space::KINDS.px())
+            .prop(ModalSurface(true)),
+        ),
     ))
     .padding(Padding {
         right: OFFSET.px(),
@@ -63,11 +66,15 @@ pub(super) fn slip(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 
 fn editor(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer> + use<> {
-    let settings = &state.trial.settings;
     let scale = state.ui_scale();
+    // One line: what a change here applies to.
     let help = paragraph(
         scale,
-        "Starting or restarting captures these settings. Changes here apply to the next run; the current conversation keeps its captured inputs.",
+        if matches!(state.trial.settings.review, Review::Diagnostic) {
+            "Values were valid when checked. Changes apply to the next run."
+        } else {
+            "Changes apply to the next run; this one keeps its inputs."
+        },
         width,
     );
     let drafts = styled(
@@ -80,23 +87,28 @@ fn editor(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer>
         .text_size(Type::Body.size(scale))
         .disabled(disabled),
     );
+    // Groups sit one group gap apart; a label sits one unit above its field.
     flex_col((
-        matches!(settings.review, Review::Diagnostic).then(|| {
-            paragraph(
-                scale,
-                "Values were valid when checked. Changes below apply to the next run.",
-                width,
-            )
-        }),
         help,
         language::selector(state, disabled, width),
-        label(scale, "Preview wording (empty for default)"),
-        wording(state, disabled, width),
+        flex_col((
+            label(scale, "Preview wording (empty for default)"),
+            wording(state, disabled, width),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::UNIT.px()),
         drafts,
-        values::values(state, disabled, width),
+        // Without interpolations there is no values group, nor its gap.
+        (!state
+            .session
+            .model()
+            .document()
+            .preview_bindings()
+            .is_empty())
+        .then(|| values::values(state, disabled, width)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::TEXT.px())
+    .gap(space::GROUPS.px())
 }
 
 fn wording(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer> + use<> {

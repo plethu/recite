@@ -85,9 +85,20 @@ impl Writer {
         };
     }
 
-    pub fn search_preview_languages(&mut self) {
+    /// Filter the preview languages as the query is typed, from the first page.
+    pub fn set_preview_language_query(&mut self, query: String) {
         let settings = &mut self.trial.settings;
-        settings.languages = languages::matches(&settings.query);
+        settings.languages = languages::matches(&query);
+        settings.query = query;
         settings.language_page = 0;
     }
+    /// Preview in the source language only, or leave that for the language chosen below.
+    pub fn use_source_language_only(&mut self) {
+        self.trial.settings.locale.clear();
+        self.trial.settings.languages.clear();
+        self.trial.settings.query.clear();
+    }
 }
+
+#[cfg(test)]
+mod tests;

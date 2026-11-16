@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 use crate::{attention::PaneEntry, trial::Review};
@@ -11,45 +12,52 @@ pub(super) fn selector(
 ) -> impl WidgetView<Writer> + use<> {
     let settings = &state.trial.settings;
     let scale = state.ui_scale();
-    let caption = if settings.locale.is_empty() {
-        "Source language only".into()
-    } else {
-        format!(
-            "Preview language: {}",
-            languages::caption(&settings.locale).unwrap_or_else(|| settings.locale.clone())
-        )
-    };
+    let source_only = settings.locale.is_empty();
     flex_col((
-        paragraph(scale, caption, width),
-        text_button(scale, "Use source language only", |state: &mut Writer| {
-            state.trial.settings.locale.clear();
-            state.trial.settings.languages.clear();
-        })
-        .disabled(disabled || settings.locale.is_empty()),
+        // On until a language is chosen below; choosing it again returns to the source.
+        styled(
+            ControlStyle::Flush,
+            checkbox(
+                "Use source language only",
+                source_only,
+                |state: &mut Writer, on| {
+                    if on {
+                        state.use_source_language_only();
+                    }
+                },
+            )
+            .text_size(Type::Body.size(scale))
+            .disabled(disabled || source_only),
+        ),
+        (!source_only).then(|| {
+            paragraph(
+                scale,
+                format!(
+                    "Preview language: {}",
+                    languages::caption(&settings.locale).unwrap_or_else(|| settings.locale.clone())
+                ),
+                width,
+            )
+        }),
+        // The list filters as the query is typed.
         flex_col((
             label(scale, "Find preview language"),
             sized_box(
                 text_input(settings.query.clone(), |state: &mut Writer, value| {
-                    state.trial.settings.query = value
+                    state.set_preview_language_query(value)
                 })
                 .typeset(Type::Body, scale)
                 .disabled(disabled)
                 .prop(properties::TextAreaLabel::new("Find preview language")),
             )
             .width(width.px()),
-            text_button(
-                scale,
-                "Search preview languages",
-                Writer::search_preview_languages,
-            )
-            .disabled(disabled),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::SIBLINGS.px())
+        .gap(space::UNIT.px())
         .prop(PaneEntry(
             state.configuring_trial() && matches!(state.trial.settings.review, Review::Inputs),
         )),
-        choices(state, disabled),
+        (!settings.languages.is_empty()).then(|| choices(state, disabled)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
