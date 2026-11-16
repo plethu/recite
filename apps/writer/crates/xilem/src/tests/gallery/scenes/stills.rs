@@ -310,6 +310,15 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
                 ) {
                     location.catalogue = Some("fr.po".into());
                 }
+                if matches!(screen, Screen::Disk) {
+                    // Another editor changes the source after Writer read it, so the comparison
+                    // has a difference to show side by side.
+                    let path = directory.path().join(document);
+                    let source = std::fs::read_to_string(&path).expect("sample source");
+                    let changed = source.replace("take a bucket.", "bring your own bucket.");
+                    assert_ne!(changed, source, "the sample's line to change");
+                    std::fs::write(&path, changed).expect("changed sample source");
+                }
                 visit(&mut stage, location);
                 stage.shot(record, title);
             },
