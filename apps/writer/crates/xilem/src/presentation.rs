@@ -12,6 +12,7 @@ mod styled_text;
 pub(crate) use emphasized_text::{manuscript_comparison, search_label, source_comparison};
 pub(crate) use styled_text::{manuscript_text, source_text};
 pub(crate) mod control_style;
+pub(crate) mod diff;
 pub(crate) mod double_click;
 pub(crate) mod grid;
 pub(crate) mod group;

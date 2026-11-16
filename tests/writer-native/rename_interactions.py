@@ -79,8 +79,8 @@ def run(api, bus, registry, binary, output):
                 if window.find("Review all changes"):
                     capture_settled(window, output, "-inline")
                     window.act("Review all changes")
-                    window.wait(lambda: window.find("Edit rename proposal"), "reviewed rename page")
-                    window.act("Edit rename proposal")
+                    window.wait(lambda: window.find("Cancel rename"), "reviewed rename page")
+                    window.act("Cancel rename")
                 window.wait(lambda: window.find("Original beat name"), "rename proposal")
                 results["inline_rename_reaches_the_rename_page"] = True
                 fill(window, "New beat name", "new")
@@ -107,34 +107,18 @@ def run(api, bus, registry, binary, output):
                 window.wait(
                     lambda: window.find_text("Rename reviewed.", prefix=True), "reviewed rename"
                 )
-                window.reveal_end("More rename changes")
+                # The review lists every changed reference as a row: file, beat and line.
+                window.wait(
+                    lambda: window.find_text("zz-other.recite · ", prefix=True),
+                    "reference row in another file",
+                )
                 capture_settled(window, output, "-review")
-                visited = set()
-                for _ in range(30):
-                    caption = window.wait(
-                        lambda: window.find_text("Review ·", prefix=True), "review caption"
-                    )
-                    visited.add(window.text(caption))
-                    if not window.enabled("More rename changes"):
-                        break
-                    previous = window.text(caption)
-                    window.act("More rename changes")
-                    window.wait(
-                        lambda: (
-                            window.find_text("Review ·", prefix=True)
-                            and window.text(window.find_text("Review ·", prefix=True)) != previous
-                        ),
-                        "next rename change",
-                    )
-                else:
-                    raise AssertionError("rename review did not finish")
-                assert any("zz-other.recite" in caption for caption in visited)
-                assert any("recite.project.toml" in caption for caption in visited)
+                assert window.find_text("recite.project.toml · line ", prefix=True)
                 assert source.read_text() == before and other.read_text() == reference
                 assert manifest.read_text() == original
                 results["review_covers_references_and_manifest_without_writing_sources"] = True
-                window.reveal_start("Stage rename")
-                window.act("Stage rename")
+                window.reveal_start("Rename")
+                window.act("Rename")
                 window.wait(
                     lambda: window.find_text("Project rename staged.", prefix=True),
                     "grouped rename",

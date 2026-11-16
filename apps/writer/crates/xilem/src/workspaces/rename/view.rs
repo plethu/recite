@@ -13,7 +13,7 @@ use xilem::{
     WidgetView,
     masonry::{kurbo::Axis, layout::AsUnit, properties::TextAreaLabel},
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, sized_box, text_input},
+    view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, text_input},
 };
 
 pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -85,36 +85,14 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .gap(space::SIBLINGS.px())
     .prop(PaneEntry(true))
 }
+/// While reviewing, the proposal reads as one line: the beat and its new id.
 fn summary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
-    let wide = writer.content_width() >= 520. * f64::from(writer.ui_scale());
-    let measure = if wide {
-        writer.content_width() - 160. * f64::from(writer.ui_scale()) - 16.
-    } else {
-        writer.content_width()
-    };
-    flex_row((
-        paragraph(
-            writer.ui_scale(),
-            format!("{} → {}", panel.block, panel.name),
-            measure,
-        ),
-        text_button(
-            writer.ui_scale(),
-            "Choose existing beat",
-            Writer::choose_rename_beat,
-        )
-        .disabled(writer.project_action_blocked()),
-    ))
-    .direction(if wide {
-        Axis::Horizontal
-    } else {
-        Axis::Vertical
-    })
-    .gap(space::KINDS.px())
+    let scale = writer.ui_scale();
+    print::id(scale, format!("{} → {}", panel.block, panel.name))
 }
-/// The sheet's own actions: Review is its primary while proposing; once reviewed, Stage rename is,
-/// beside a tonal way back to the proposal.
+/// The sheet's own actions: Review is its primary while proposing; once reviewed, Rename is,
+/// beside a tonal Cancel back to the proposal.
 fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
     let blocked = writer.project_action_blocked();
@@ -128,13 +106,14 @@ fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + u
         || panel.block.trim() == panel.name.trim();
     flex_row((
         reviewing.then(|| {
-            text_button(scale, "Edit rename proposal", Writer::discard_rename_review)
+            text_button(scale, "Cancel", Writer::discard_rename_review)
+                .accessible_label("Cancel rename")
                 .disabled(blocked)
         }),
         print::primary_action(
             scale,
             if reviewing {
-                "Stage rename"
+                "Rename"
             } else {
                 "Review project rename"
             },
@@ -193,37 +172,17 @@ pub(crate) fn recovery(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
         .gap(space::SIBLINGS.px()),
     )
 }
+/// The last rename's report, every part of it.
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    let panel = &writer.workspaces.rename;
-    let pages = panel.report.as_ref()?.pages();
-    let text = pages.get(panel.report_page)?;
+    let pages = writer.workspaces.rename.report.as_ref()?.pages();
+    let width = writer.content_width().min(size::MEASURE);
     Some(
-        flex_col((
-            paragraph(
-                writer.ui_scale(),
-                text.clone(),
-                writer.content_width().min(size::MEASURE),
-            ),
-            (pages.len() > 1).then(|| {
-                flex_row((
-                    text_button(
-                        writer.ui_scale(),
-                        "Previous rename report",
-                        |writer: &mut Writer| {
-                            writer.workspaces.rename.report_page =
-                                writer.workspaces.rename.report_page.saturating_sub(1)
-                        },
-                    )
-                    .disabled(panel.report_page == 0),
-                    text_button(
-                        writer.ui_scale(),
-                        "More rename report",
-                        |writer: &mut Writer| writer.workspaces.rename.report_page += 1,
-                    )
-                    .disabled(panel.report_page + 1 >= pages.len()),
-                ))
-            }),
-        ))
+        flex_col(
+            pages
+                .iter()
+                .map(|text| paragraph(writer.ui_scale(), text.clone(), width))
+                .collect::<Vec<_>>(),
+        )
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(space::SIBLINGS.px()),
     )

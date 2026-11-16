@@ -10,10 +10,9 @@ pub(crate) use selection::BeatChoice;
 pub struct Panel {
     pub block: String,
     pub name: String,
+    /// The reviewed rename's changed references, one row each.
     pub changes: Vec<Change>,
-    pub page: usize,
     pub report: Option<Report>,
-    pub report_page: usize,
     /// A beat renamed in place, from its field to the staged change.
     pub inline: Option<inline::Inline>,
     /// The row or card a finished inline rename returns focus to.
@@ -40,15 +39,12 @@ impl Panel {
     }
     pub(super) fn replace(&mut self, pages: Vec<Change>) {
         self.changes = pages;
-        self.page = 0;
     }
     pub(super) fn report(&mut self, report: Option<&str>) {
         self.report = report.map(|report| Report::Problem(text::pages(report)));
-        self.report_page = 0;
     }
     pub(super) fn inform(&mut self, report: &str) {
         self.report = Some(Report::Information(text::pages(report)));
-        self.report_page = 0;
     }
 }
 impl Writer {
