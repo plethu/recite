@@ -61,17 +61,21 @@ pub(super) fn inputs(writer: &Writer) -> Option<String> {
         },
     ))
 }
+/// Whether a build cannot start now: the project is busy, has no outputs, or is closing.
+pub(super) fn build_blocked(writer: &Writer, busy: bool, empty: bool) -> bool {
+    writer.declaration_action_blocked()
+        || busy
+        || empty
+        || writer.phase() != Phase::Writing
+        || writer.navigation.busy()
+        || writer.work.busy()
+}
 pub(super) fn build_actions(
     writer: &Writer,
     busy: bool,
     empty: bool,
 ) -> impl WidgetView<Writer> + use<> {
-    let blocked = writer.declaration_action_blocked()
-        || busy
-        || empty
-        || writer.phase() != Phase::Writing
-        || writer.navigation.busy()
-        || writer.work.busy();
+    let blocked = build_blocked(writer, busy, empty);
     // The sheet's own action is its one primary; Save stays tonal in the toolbar.
     flex_row((
         text_button(

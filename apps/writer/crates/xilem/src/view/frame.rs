@@ -3,12 +3,12 @@ use super::{
     Phase, Writer, document_actions, navigation, reference, retained, status_line, toolbar,
 };
 use crate::presentation::group::inert;
-use crate::presentation::{fit_content, pane, space};
+use crate::presentation::pane;
 use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, UnitPoint},
     peniko::Color,
-    style::{Padding, Style},
+    style::Style,
     view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, zstack},
 };
 
@@ -55,16 +55,9 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .gap(0.px())
                 .flex(1.),
-                // A build's result is seated on the status line that reports it: the work above
-                // gives it room rather than lying under it.
-                crate::workspaces::build_result(state).map(|result| {
-                    flex_row((fit_content(result),)).padding(Padding {
-                        left: space::KINDS.px(),
-                        top: space::SIBLINGS.px(),
-                        bottom: space::SIBLINGS.px(),
-                        ..Padding::ZERO
-                    })
-                }),
+                // A build's result is a bar seated on the status line that reports it, across
+                // the window: the work above gives up only the bar's height.
+                crate::workspaces::build_result(state),
                 status_line::status_line(state),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
