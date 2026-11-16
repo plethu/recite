@@ -46,7 +46,6 @@ pub enum Filter {
 pub struct Query {
     pub text: String,
     pub filter: Filter,
-    pub page: usize,
 }
 pub struct Row {
     pub id: PoEntryId,
@@ -56,10 +55,11 @@ pub struct Row {
     pub translation: String,
 }
 #[derive(Default)]
+/// The matching entries the queue lists (the first of them, for a very large catalogue) and how
+/// many match in all. The list scrolls; it does not page.
 pub struct Queue {
     pub rows: Vec<Row>,
     pub total: usize,
-    pub page: usize,
 }
 #[derive(Clone, PartialEq, Eq)]
 pub struct EntryKey {

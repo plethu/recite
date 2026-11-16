@@ -192,7 +192,8 @@ fn catalogue_size_and_long_sources_do_not_increase_mounted_queue_cost() {
         writer.catalogue_action(work::Action::Reload);
         driver.finish(&mut writer);
         assert_eq!(writer.localisation.queue.total, count);
-        assert_eq!(writer.localisation.queue.rows.len(), 8);
+        // The queue lists the first 200 matches however large the catalogue is.
+        assert_eq!(writer.localisation.queue.rows.len(), 200);
         assert!(
             writer
                 .localisation
@@ -225,7 +226,7 @@ fn catalogue_size_and_long_sources_do_not_increase_mounted_queue_cost() {
             );
             pending.extend(node.children());
         }
-        assert_eq!(rows, 8);
+        assert_eq!(rows, 200);
         measurements.push(nodes);
         println!(
             "{count} entries / {source_length} source characters: {nodes} mounted native nodes, {rows} queue rows"

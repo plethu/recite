@@ -79,7 +79,6 @@ impl Writer {
         self.catalogue_action(work::Action::FlushForClose);
     }
     pub fn search_catalogue(&mut self) {
-        self.localisation.query.page = 0;
         self.catalogue_action(work::Action::Query);
     }
     pub fn inspect_translation(&mut self, key: &EntryKey) {

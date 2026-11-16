@@ -65,7 +65,6 @@ impl Writer {
             }
             Ok(Outcome::Queue { queue, message }) => {
                 self.localisation.queue = std::mem::take(queue);
-                self.localisation.query.page = self.localisation.queue.page;
                 self.catalogue_feedback(std::mem::take(message));
             }
             Err(error) => self.catalogue_feedback(error.clone()),

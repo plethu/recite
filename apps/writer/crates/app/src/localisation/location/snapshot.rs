@@ -16,7 +16,6 @@ impl Localisation {
         location.entry = None;
         location.query = self.query.text.clone();
         location.attention = self.query.filter == Filter::Attention;
-        location.page = self.query.page;
         if !active {
             return;
         }

@@ -78,21 +78,16 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::TEXT.px()),
-        (state.queue.total > 8).then(|| {
-            flex_row((
-                text_button(scale, "Previous translations", |writer: &mut Writer| {
-                    writer.localisation.query.page =
-                        writer.localisation.query.page.saturating_sub(1);
-                    writer.catalogue_action(work::Action::Query);
-                })
-                .disabled(blocked || state.queue.page == 0),
-                text_button(scale, "More translations", |writer: &mut Writer| {
-                    writer.localisation.query.page += 1;
-                    writer.catalogue_action(work::Action::Query);
-                })
-                .disabled(blocked || (state.queue.page + 1) * 8 >= state.queue.total),
-            ))
-            .gap(space::SIBLINGS.px())
+        (state.queue.total > state.queue.rows.len()).then(|| {
+            label(
+                scale,
+                format!(
+                    "The first {} are listed. Search to narrow the rest.",
+                    state.queue.rows.len()
+                ),
+            )
+            .typeset(Type::Meta, scale)
+            .color(writer.palette.muted)
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -129,9 +124,13 @@ fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
         label(
             scale,
             format!(
-                "{} matching entries · page {}",
+                "{} matching {}",
                 state.queue.total,
-                state.queue.page + 1
+                if state.queue.total == 1 {
+                    "entry"
+                } else {
+                    "entries"
+                }
             ),
         )
         .typeset(Type::Meta, scale),

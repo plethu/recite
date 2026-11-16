@@ -2,6 +2,7 @@
 pub use super::slot::Owner;
 use super::*;
 use recite_writer_model::Passage;
+use recite_writer_session::choices::display_name;
 use recite_writer_session::localisation::{
     context_data, navigation::Destination as SourceDestination,
 };
@@ -10,6 +11,27 @@ pub struct Presentation {
     pub(crate) queue: Queue,
     pub(crate) entry: Option<Entry>,
     pub(crate) message: &'static str,
+}
+/// The most entries the queue lists at once; a search narrows a larger catalogue.
+pub const QUEUE_ROWS: usize = 200;
+/// Where an entry's line is, in words: its scene and beat, or for a variant whose line has moved,
+/// the beat it was written in and which variant it is. Never a bare context id.
+fn caption(entry: &recite_core::po::PoEntry, passages: &[Passage]) -> String {
+    if let Some(destination) = SourceDestination::resolve(entry, passages) {
+        return destination.caption();
+    }
+    let context = entry.context().unwrap_or_default();
+    let (anchor, variant) = context.split_once('&').unwrap_or((context, ""));
+    let beat = passages
+        .iter()
+        .find(|passage| passage.id == anchor)
+        .map(|passage| display_name(&passage.section));
+    match (beat, variant.is_empty()) {
+        (Some(beat), true) => beat,
+        (Some(beat), false) => format!("{beat} · {variant} variant"),
+        (None, false) => format!("{} variant", display_name(variant)),
+        (None, true) => "Catalogue entry".to_owned(),
+    }
 }
 pub(super) fn describe(
     owner: &Owner,
@@ -27,21 +49,15 @@ pub(super) fn describe(
     if query.filter == Filter::Unsaved {
         matches.retain(|id| catalogue.changed(*id));
     }
-    let page = query.page.min(matches.len().saturating_sub(1) / 8);
     let rows = matches
         .iter()
-        .skip(page * 8)
-        .take(8)
+        .take(QUEUE_ROWS)
         .filter_map(|id| {
             let entry = catalogue.document.entry(*id)?;
             Some(Row {
                 id: *id,
                 source: entry.source_text().chars().take(160).collect(),
-                caption: SourceDestination::resolve(entry, passages.as_deref().unwrap_or_default())
-                    .map_or_else(
-                        || entry.context().unwrap_or("Catalogue entry").to_owned(),
-                        |destination| destination.caption(),
-                    )
+                caption: caption(entry, passages.as_deref().unwrap_or_default())
                     .chars()
                     .take(160)
                     .collect(),
@@ -62,7 +78,6 @@ pub(super) fn describe(
         queue: Queue {
             rows,
             total: matches.len(),
-            page,
         },
         entry,
         message: "Catalogue ready. Drafts stay in Writer until you Save.",

@@ -6,7 +6,7 @@ use std::fs;
 use tokio::sync::mpsc;
 
 #[test]
-fn ordinary_catalogue_history_restores_query_filter_page_and_entry_after_checked_publication() {
+fn ordinary_catalogue_history_restores_query_filter_and_entry_after_checked_publication() {
     let directory = support::project(SOURCE).unwrap();
     let po = (1..=18)
         .map(|index| format!("msgctxt \"line_{index}\"\nmsgid \"Hello {index}\"\nmsgstr \"\"\n\n"))
@@ -30,18 +30,13 @@ fn ordinary_catalogue_history_restores_query_filter_page_and_entry_after_checked
     writer.localisation.query.filter = Filter::Attention;
     writer.search_catalogue();
     tools.finish(&mut writer);
-    writer.localisation.query.page = 1;
-    writer.catalogue_action(work::Action::Query);
+    // A narrower search is a second queue location; the list scrolls rather than paging.
+    writer.set_catalogue_query("Hello 1".into());
     tools.finish(&mut writer);
     let queue = writer.current_location();
     assert_eq!(
-        (
-            queue.screen,
-            queue.query.as_str(),
-            queue.attention,
-            queue.page
-        ),
-        (LinkedScreen::Translations, "Hello", true, 1)
+        (queue.screen, queue.query.as_str(), queue.attention),
+        (LinkedScreen::Translations, "Hello 1", true)
     );
     let key = EntryKey {
         catalogue: writer.localisation.slot.identity().unwrap().clone(),
