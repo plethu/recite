@@ -11,7 +11,7 @@ use xilem::{
     masonry::{
         core::{Property, UsesProperty, WidgetTag},
         properties::Dimensions,
-        widgets::{Button, Passthrough, SizedBox},
+        widgets::{Button, Passthrough, SizedBox, TextInput},
     },
 };
 
@@ -32,6 +32,8 @@ impl Property for DefaultFocus {
     }
 }
 impl UsesProperty<DefaultFocus> for Button {}
+/// A field can be the default too, such as a beat heading renamed in place.
+impl UsesProperty<DefaultFocus> for TextInput {}
 
 /// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it.
 #[derive(Clone, Copy, Default, PartialEq)]

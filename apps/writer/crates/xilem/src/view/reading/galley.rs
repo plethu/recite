@@ -20,6 +20,7 @@ use xilem::masonry::{
 };
 use xilem::view::{FlexSpacer, sized_box};
 mod read_only;
+mod rename;
 #[cfg(test)]
 mod tests;
 use read_only::read_only;
@@ -69,6 +70,7 @@ pub(super) fn galley<V: WidgetView<Writer>>(
             flex_col((
                 (!first).then(|| rule(state, &grid)),
                 heading(state, &grid, index, total, &problems),
+                rename::consequence(state, &grid),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(0.px())
@@ -139,9 +141,23 @@ fn heading(
             state.palette.muted
         })
         .prop(LineBreaking::WordWrap);
-    let title = if selected {
+    // The field gives way to the heading once the review is ready, so focus moves to its slip.
+    let renaming = state.inline_rename().filter(|inline| {
+        selected
+            && inline.beat == id
+            && matches!(
+                inline.stage,
+                rename::Stage::Editing | rename::Stage::Reviewing
+            )
+    });
+    let renaming_here = renaming.is_some();
+    let title = if let Some(inline) = renaming.as_ref() {
+        Either::A(Either::A(rename::field(state, inline)))
+    } else if selected {
         // Padded like the read-only headings' buttons, so every heading starts on one line.
-        Either::A(sized_box(text).padding(Padding::from_vh(0.px(), inset.px())))
+        Either::A(Either::B(
+            sized_box(text).padding(Padding::from_vh(0.px(), inset.px())),
+        ))
     } else {
         Either::B(styled(
             ControlStyle::Action,
@@ -171,7 +187,12 @@ fn heading(
             .width(grid.margin.px()),
             // The heading hugs its words, so a focused heading's ring stays inside the measure.
             flex_col((title,))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .cross_axis_alignment(if renaming_here {
+                    // The rename field takes the heading's measure.
+                    CrossAxisAlignment::Stretch
+                } else {
+                    CrossAxisAlignment::Start
+                })
                 .flex(1.),
             selected.then(|| actions(state, blocked)),
         ))
@@ -192,9 +213,7 @@ fn actions(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
             Icon::Rename,
             &state.palette,
             blocked || state.session.project().is_none(),
-            |state: &mut Writer| {
-                state.open_project_workspace(crate::workspaces::Open::Rename);
-            },
+            Writer::rename_beat,
         ),
         print::icon_toggle(
             scale,

@@ -9,7 +9,7 @@ use crate::presentation::marks::Wedge;
 use crate::rules::view;
 use xilem::masonry::accesskit;
 use xilem::masonry::core::{Widget, WidgetRef};
-use xilem::masonry::widgets::Button;
+use xilem::masonry::widgets::{Button, TextInput};
 
 #[derive(Clone, Default, PartialEq)]
 pub(super) enum Kind {
@@ -76,6 +76,12 @@ impl Focus {
             // A modal mounted after its context: focus it once it has its default control.
             if self.modal.is_some() && self.modal_return.is_none() {
                 self.enter_modal(root);
+            } else if self.modal.is_some() && root.focused_widget().is_none() {
+                // Its focused control went away, as a renamed heading's field gives way to its
+                // slip: focus the new default, keeping where focus returns on close.
+                if let Some(target) = default_focus(root) {
+                    root.focus_on(Some(target));
+                }
             }
             return;
         }
@@ -248,6 +254,11 @@ fn default_focus(root: &RenderRoot) -> Option<WidgetId> {
             .is_some_and(|button| button.get_prop::<DefaultFocus>().0)
         {
             return Some(widget.id());
+        }
+        if let Some(input) = widget.downcast::<TextInput>()
+            && input.get_prop::<DefaultFocus>().0
+        {
+            return Some(input.area_pod().id());
         }
         pending.extend(widget.children());
     }

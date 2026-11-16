@@ -67,7 +67,22 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == prose + "x", "native draft")
                 key("z", control=True)
                 window.wait(lambda: window.text(node) == prose, "native undo")
+                # Rename beat edits the selected beat's heading in place; Enter reviews it and the
+                # consequence slip reaches the full page.
                 command(window, "Rename beat")
+                fill(window, "New beat name", "new")
+                key("Return")
+                window.wait(
+                    lambda: window.find("Review all changes") or window.find("Original beat name"),
+                    "rename consequence slip or refused rename page",
+                )
+                if window.find("Review all changes"):
+                    capture_settled(window, output, "-inline")
+                    window.act("Review all changes")
+                    window.wait(lambda: window.find("Edit rename proposal"), "reviewed rename page")
+                    window.act("Edit rename proposal")
+                window.wait(lambda: window.find("Original beat name"), "rename proposal")
+                results["inline_rename_reaches_the_rename_page"] = True
                 fill(window, "New beat name", "new")
                 proposal = field(window, "New beat name")
                 window.act("Choose existing beat")
@@ -165,6 +180,14 @@ def run(api, bus, registry, binary, output):
                 )
                 results["save_all_publishes_manuscript_references_and_manifest"] = True
                 command(window, "Rename beat")
+                fill(window, "New beat name", "newer")
+                key("Return")
+                window.wait(
+                    lambda: window.find("Review all changes") or window.find("Original beat name"),
+                    "rename consequence slip or refused rename page",
+                )
+                if window.find("Review all changes"):
+                    window.act("Review all changes")
                 window.wait(lambda: window.find("Undo project rename"), "saved grouped Undo")
                 assert not window.find_text("Project rename staged.", prefix=True)
                 capture_settled(window, output, "-saved")

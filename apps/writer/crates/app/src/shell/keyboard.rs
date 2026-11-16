@@ -53,6 +53,8 @@ pub enum Modal {
     CloseDecision,
     /// The Configure preview slip: the next run's inputs.
     PreviewInputs,
+    /// A beat renamed in place, and its consequence slip.
+    Rename,
 }
 pub struct Invocation {
     pub action: Action,
@@ -153,6 +155,12 @@ impl Scope {
                 .is_some_and(|writer| writer.configuring && !self.welcome)
             {
                 Some(Modal::PreviewInputs)
+            } else if self
+                .writer
+                .as_ref()
+                .is_some_and(|writer| writer.renaming && !self.welcome && !self.settings)
+            {
+                Some(Modal::Rename)
             } else {
                 None
             },
@@ -239,6 +247,11 @@ impl Shell {
             Action::DismissModal(Modal::PreviewInputs) => {
                 if let Some(writer) = &mut self.writer {
                     writer.close_trial_inputs();
+                }
+            }
+            Action::DismissModal(Modal::Rename) => {
+                if let Some(writer) = &mut self.writer {
+                    writer.cancel_inline_rename();
                 }
             }
             Action::DismissModal(Modal::CloseDecision) => {

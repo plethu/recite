@@ -103,3 +103,35 @@ fn the_configure_preview_slip_is_a_modal_that_escape_dismisses() {
     assert!(!shell.writer.as_ref().unwrap().configuring_trial());
     assert_eq!(modal(&shell), None);
 }
+
+#[test]
+fn escape_cancels_a_beat_renamed_in_place() {
+    use crate::workspaces::rename::inline::{Inline, Stage};
+    use keyboard::{Action, Generations, Invocation, Modal, Scope};
+    let directory = test_support::project(SOURCE).unwrap();
+    let mut shell = Shell::with_writer(test_support::open(&directory).unwrap());
+    let shortcuts = shell.preferences.config.writer.shortcuts.clone();
+    let modal = |shell: &Shell| {
+        Scope::capture(shell)
+            .context(&shortcuts, Generations::default(), ())
+            .modal
+    };
+    shell.writer.as_mut().unwrap().workspaces.rename.inline = Some(Inline {
+        beat: "start".into(),
+        name: "begin".into(),
+        stage: Stage::Editing,
+    });
+    assert_eq!(modal(&shell), Some(Modal::Rename));
+    let captured = Scope::capture(&shell);
+    assert!(shell.invoke(
+        &captured,
+        &shortcuts,
+        Generations::default(),
+        Invocation {
+            action: Action::DismissModal(Modal::Rename),
+            generation: Generations::default().command,
+        },
+    ));
+    assert!(shell.writer.as_ref().unwrap().inline_rename().is_none());
+    assert_eq!(modal(&shell), None);
+}

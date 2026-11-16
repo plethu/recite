@@ -1,6 +1,6 @@
 //! States of the in-place flows: slips, banners and edits on the object itself.
 use super::*;
-use crate::workspaces::tests::finish_build;
+use crate::workspaces::tests::{ToolDriver, finish_build};
 
 pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Variant) {
     record.scene(
@@ -90,6 +90,36 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             std::fs::write(&manifest, sample_manifest).unwrap();
             stage.act(build);
             stage.shot(record, "Build did not complete");
+        },
+    );
+    record.scene(
+        Meta {
+            id: "script.rename",
+            group: "Script",
+            title: "Inline rename",
+            intent: "Rename beat turns the selected beat's heading into a field; Enter reviews the rename, and a slip under the heading says what it changes before Rename stages it.",
+        },
+        |record| {
+            let directory = sample();
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "relay_hub.recite")),
+                variant,
+            );
+            stage.act(|app| {
+                if let Some(writer) = &mut app.writer {
+                    writer.rename_beat();
+                    writer.edit_inline_rename("front_desk".into());
+                }
+            });
+            stage.shot(record, "Renaming in place");
+            stage.act(|app| {
+                if let Some(writer) = &mut app.writer {
+                    let mut tools = ToolDriver::new(writer);
+                    writer.commit_inline_rename();
+                    tools.finish(writer);
+                }
+            });
+            stage.shot(record, "What the rename changes");
         },
     );
 }

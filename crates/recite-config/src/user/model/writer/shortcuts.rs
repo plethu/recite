@@ -130,6 +130,7 @@ impl WriterCommand {
             Self::Source => "Primary+3",
             Self::Focus => "Primary+Shift+F",
             Self::Sidebar => "Primary+Shift+B",
+            Self::Rename => "F2",
             Self::Split => "Primary+Shift+L",
             _ => "",
         }

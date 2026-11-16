@@ -26,6 +26,8 @@ pub(super) struct DocumentScope {
     pub(super) confirming: bool,
     /// The Configure preview slip is open.
     pub(super) configuring: bool,
+    /// A beat is being renamed in place.
+    pub(super) renaming: bool,
     /// The preview's current replies, which digit keys choose.
     pub(super) preview_choices: usize,
     pub(super) screen: crate::workspaces::Screen,
@@ -52,6 +54,7 @@ impl DocumentScope {
             && self.writing == other.writing
             && self.confirming == other.confirming
             && self.configuring == other.configuring
+            && self.renaming == other.renaming
             && self.preview_choices == other.preview_choices
             && self.screen == other.screen
             && self.document_menu == other.document_menu
@@ -101,6 +104,7 @@ impl Scope {
                         Phase::ConfirmClose | Phase::ConfirmExit | Phase::Closing
                     ),
                     configuring: writer.configuring_trial(),
+                    renaming: writer.inline_rename().is_some(),
                     screen: writer.workspaces.screen,
                     document_menu: writer.document_menu,
                 }

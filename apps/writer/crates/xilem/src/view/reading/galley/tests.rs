@@ -1,5 +1,9 @@
 use super::*;
-use crate::{keyed::keyed, tests::support::mounted::Mounted};
+use crate::workspaces::tests::{ToolDriver, fixture};
+use crate::{
+    keyed::keyed,
+    tests::support::{self, mounted::Mounted},
+};
 use xilem::masonry::widgets::{Passthrough, TextInput};
 
 fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
@@ -60,4 +64,28 @@ fn the_galley_sets_the_whole_scene_with_only_the_selected_beat_editable() {
     for action in ["Rename beat", "Pin reference", "Copy link"] {
         mounted.find(action);
     }
+}
+
+#[test]
+fn rename_beat_turns_the_heading_into_a_field_and_its_review_into_a_slip() {
+    let directory = fixture().unwrap();
+    let writer = support::open(&directory).unwrap();
+    let mut mounted = Mounted::new(writer, surface);
+    let mut tools = ToolDriver::new(&mut mounted.state);
+    mounted.activate("Rename beat");
+    let beat = mounted.state.inline_rename().unwrap().beat.clone();
+    mounted.replace_text("New beat name", "renamed");
+    mounted.state.commit_inline_rename();
+    tools.finish(&mut mounted.state);
+    mounted.settle();
+    // The field gives way to the heading and a slip that says what the rename changes.
+    assert!(!mounted.contains_text("New beat name"));
+    assert!(mounted.contains_text(&format!("Renames {beat} to renamed in")));
+    for action in ["Rename", "Review all changes", "Cancel rename"] {
+        mounted.find(action);
+    }
+    mounted.activate("Cancel rename");
+    assert!(mounted.state.inline_rename().is_none());
+    assert!(!mounted.contains_text("Review all changes"));
+    mounted.find("Rename beat");
 }

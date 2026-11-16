@@ -103,6 +103,8 @@ impl Writer {
                 ..
             } => "Project operation stopped unexpectedly.",
         };
+        let succeeded =
+            matches!(&completed.outcome, Outcome::Ready(Ok(success)) if success.warning.is_none());
         match completed.family {
             Family::Rename => match &completed.outcome {
                 Outcome::Ready(Ok(success)) if success.warning.is_none() => {
@@ -122,6 +124,9 @@ impl Writer {
             .chars()
             .take(240)
             .collect();
+        if matches!(completed.family, Family::Rename) {
+            self.settle_inline_rename(succeeded);
+        }
         Ok(())
     }
     pub fn cancel_project_action(&mut self) {

@@ -1,4 +1,5 @@
 //! Rename composes an explicit proposal, bounded review and exclusive project actions.
+pub mod inline;
 pub mod selection;
 #[cfg(test)]
 mod tests;
@@ -13,6 +14,10 @@ pub struct Panel {
     pub page: usize,
     pub report: Option<Report>,
     pub report_page: usize,
+    /// The selected beat renamed in place, from its heading field to the staged change.
+    pub inline: Option<inline::Inline>,
+    /// The status sentence of the last inline rename, while the status line can still undo it.
+    pub undo_offer: Option<String>,
 }
 pub enum Report {
     Information(Vec<String>),

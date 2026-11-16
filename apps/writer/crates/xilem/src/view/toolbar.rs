@@ -227,6 +227,16 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .flex(1.),
             )
         }),
+        // A beat renamed in place reports here, with its Undo while the report stands.
+        state.offers_rename_undo().then(|| {
+            styled(
+                ControlStyle::Status,
+                button(
+                    print::meta(state.ui_scale(), "Undo rename").color(state.palette.status_text),
+                    Writer::undo_project_rename,
+                ),
+            )
+        }),
         // A build runs as a command: its progress is the status sentence, and it cancels here.
         state
             .session

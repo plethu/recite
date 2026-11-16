@@ -57,7 +57,7 @@ impl Shell {
                 writer.open_project_workspace(Open::Declarations)
             }
             (Some(writer), WriterCommand::Build) => writer.build_scenes(),
-            (Some(writer), WriterCommand::Rename) => writer.open_project_workspace(Open::Rename),
+            (Some(writer), WriterCommand::Rename) => writer.rename_beat(),
             (Some(writer), WriterCommand::NextMatch | WriterCommand::PreviousMatch) => {
                 writer.repeat_lookup(command == WriterCommand::NextMatch)
             }
