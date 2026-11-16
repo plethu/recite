@@ -95,6 +95,23 @@ def configuration_focus_and_tab(window):
     )
 
 
+def source_only_focus_and_tab(window):
+    """While source-only is on, configuration enters on it and offers no language search."""
+
+    def source_only_focused():
+        return focused_in_content(window, window.find("Use source language only"))
+
+    window.wait(source_only_focused, "configuration focuses source-only while it is on")
+    assert window.find("Find preview language") is None, "no language search while source-only"
+    key("Tab")
+    window.wait(
+        lambda: focused_in_content(window, field(window, "Preview wording")),
+        "Tab reaches the preview wording",
+    )
+    key("Tab", shift=True)
+    window.wait(source_only_focused, "Shift+Tab returns to source-only")
+
+
 def exercise(window, po, output, results):
     original = manuscript(window)
     original_text = window.text(original)
@@ -111,6 +128,9 @@ def exercise(window, po, output, results):
     edit(window, "Salut {name}.")
     action(window, "Return to writing")
     window.document_action("Configure preview")
+    source_only_focus_and_tab(window)
+    # Turning source-only off with no language chosen before opens the search for one.
+    action(window, "Use source language only")
     configuration_focus_and_tab(window)
     capture(output, "-language-tab")
     results["native_tab_reveals_preview_input"] = True

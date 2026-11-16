@@ -31,7 +31,8 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.state.trial.sender = Some(sender);
     mounted.activate("Workspace");
     mounted.activate("Configure preview");
-    // The language list filters as the query is typed.
+    // Source-only is on until it is turned off; the language list filters as the query is typed.
+    mounted.activate("Use source language only");
     mounted.type_text("Find preview language", "fr-CA");
     mounted.activate("Preview in French (Canada) · fr-CA");
     mounted.type_text("Preview wording", "formal");

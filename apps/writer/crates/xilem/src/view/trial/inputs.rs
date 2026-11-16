@@ -92,7 +92,7 @@ fn editor(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer>
         help,
         language::selector(state, disabled, width),
         flex_col((
-            label(scale, "Preview wording (empty for default)"),
+            label(scale, "Preview wording"),
             wording(state, disabled, width),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -119,6 +119,9 @@ fn wording(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer
                 state.trial.settings.variant = value;
             },
         )
+        // Empty previews the default wording; the placeholder says so to every reader, since the
+        // accessibility node carries it beside the name.
+        .placeholder("Default")
         .typeset(Type::Body, state.ui_scale())
         .disabled(disabled)
         .prop(properties::TextAreaLabel::new("Preview wording")),

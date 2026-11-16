@@ -12,24 +12,24 @@ pub(super) fn selector(
 ) -> impl WidgetView<Writer> + use<> {
     let settings = &state.trial.settings;
     let scale = state.ui_scale();
-    let source_only = settings.locale.is_empty();
+    let source_only = state.previews_source_only();
+    let entry = state.configuring_trial() && matches!(state.trial.settings.review, Review::Inputs);
     flex_col((
-        // On until a language is chosen below; choosing it again returns to the source.
-        styled(
+        // Off returns to the language chosen before, or opens the search to choose one; while it
+        // is on, no language choice is offered, since none would apply.
+        flex_col((styled(
             ControlStyle::Flush,
             checkbox(
                 "Use source language only",
                 source_only,
-                |state: &mut Writer, on| {
-                    if on {
-                        state.use_source_language_only();
-                    }
-                },
+                |state: &mut Writer, on| state.set_source_language_only(on),
             )
             .text_size(Type::Body.size(scale))
-            .disabled(disabled || source_only),
-        ),
-        (!source_only).then(|| {
+            .disabled(disabled),
+        ),))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .prop(PaneEntry(entry && source_only)),
+        (!source_only && !settings.locale.is_empty()).then(|| {
             paragraph(
                 scale,
                 format!(
@@ -40,24 +40,24 @@ pub(super) fn selector(
             )
         }),
         // The list filters as the query is typed.
-        flex_col((
-            label(scale, "Find preview language"),
-            sized_box(
-                text_input(settings.query.clone(), |state: &mut Writer, value| {
-                    state.set_preview_language_query(value)
-                })
-                .typeset(Type::Body, scale)
-                .disabled(disabled)
-                .prop(properties::TextAreaLabel::new("Find preview language")),
-            )
-            .width(width.px()),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::UNIT.px())
-        .prop(PaneEntry(
-            state.configuring_trial() && matches!(state.trial.settings.review, Review::Inputs),
-        )),
-        (!settings.languages.is_empty()).then(|| choices(state, disabled)),
+        (!source_only).then(|| {
+            flex_col((
+                label(scale, "Find preview language"),
+                sized_box(
+                    text_input(settings.query.clone(), |state: &mut Writer, value| {
+                        state.set_preview_language_query(value)
+                    })
+                    .typeset(Type::Body, scale)
+                    .disabled(disabled)
+                    .prop(properties::TextAreaLabel::new("Find preview language")),
+                )
+                .width(width.px()),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::UNIT.px())
+            .prop(PaneEntry(entry))
+        }),
+        (!source_only && !settings.languages.is_empty()).then(|| choices(state, disabled)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
@@ -78,10 +78,7 @@ fn choices(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
             text_button(
                 scale,
                 format!("Preview in {} · {locale}", choice.title),
-                move |state: &mut Writer| {
-                    state.trial.settings.locale = locale.clone();
-                    state.trial.settings.languages.clear();
-                },
+                move |state: &mut Writer| state.choose_preview_language(locale.clone()),
             )
             .disabled(disabled)
         })

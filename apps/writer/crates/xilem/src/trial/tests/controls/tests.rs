@@ -27,7 +27,7 @@ fn preview_submission_retains_identity_through_preparation_cancellation_and_rest
         let mut mounted = Mounted::new(writer, surface);
         mounted.state.trial.sender = Some(sender);
         let submit = mounted.find("Start preview");
-        assert!(mounted.contains_text("Preview wording (empty for default)"));
+        assert!(mounted.contains_text("Preview wording"));
         mounted.activate("Start preview");
         let request = requests.try_recv().unwrap();
         assert_eq!(mounted.find("Preparing preview…"), submit);
