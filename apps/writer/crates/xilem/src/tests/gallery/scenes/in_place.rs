@@ -24,4 +24,39 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             stage.shot(record, "Configure preview");
         },
     );
+    record.scene(
+        Meta {
+            id: "script.disk-changed",
+            group: "Workspaces",
+            title: "Disk change banner",
+            intent: "A change made outside Writer, as a banner at the top of the sheet with Compare, Keep mine and Use disk version.",
+        },
+        |record| {
+            let directory = sample();
+            let path = directory.path().join("relay_hub.recite");
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "relay_hub.recite")),
+                variant,
+            );
+            let source = std::fs::read_to_string(&path).unwrap();
+            std::fs::write(&path, source.replacen("Mara", "Mara Vey", 1)).unwrap();
+            stage.act(|app| {
+                if let Some(writer) = &mut app.writer {
+                    let evidence = writer
+                        .session
+                        .project()
+                        .unwrap()
+                        .files()
+                        .external_check(&path)
+                        .unwrap()
+                        .observe();
+                    writer.notices.found.insert(
+                        crate::notices::Target::Source(path.clone()),
+                        crate::notices::Evidence::Source(evidence),
+                    );
+                }
+            });
+            stage.shot(record, "Changed on disk");
+        },
+    );
 }

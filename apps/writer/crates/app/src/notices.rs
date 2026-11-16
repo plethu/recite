@@ -1,4 +1,4 @@
-//! Advisory disk changes never apply drafts or adopt a file without explicit comparison.
+//! Advisory disk changes never apply drafts or adopt a file without an explicit decision.
 pub mod listener;
 mod observation;
 mod worker;
@@ -8,7 +8,7 @@ pub use crate::{
 };
 use recite_writer_session::{
     external::{Affected, Changes},
-    project::{ExternalCheck, ExternalObservation},
+    project::{ExternalCheck, ExternalDecision, ExternalObservation},
 };
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc, watch};
@@ -241,6 +241,23 @@ impl Writer {
                 self.compare_noticed_catalogue(&scope);
             }
             _ => (),
+        }
+    }
+    /// Whether the selected notice is a current change to the open document, which its banner
+    /// can settle in place with Keep mine or Use disk version.
+    pub fn noticed_change_settles(&self) -> bool {
+        matches!(
+            self.notices.selected(),
+            Some((Target::Source(path), Evidence::Source(observation)))
+                if self.session.project().is_some_and(|project| {
+                    project.current().path() == path && observation.is_current(project.files())
+                })
+        )
+    }
+    /// Keep mine or Use disk version for the open document's noticed change.
+    pub fn settle_noticed_change(&mut self, decision: ExternalDecision) {
+        if self.phase == Phase::Writing && self.noticed_change_settles() {
+            self.settle_disk_changes(decision);
         }
     }
 }

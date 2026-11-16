@@ -8,6 +8,9 @@ use std::path::PathBuf;
 pub enum Action {
     Compare,
     Resolve(ExternalDecision),
+    /// Compare and resolve in one checkout, from the disk-change banner's Keep mine and Use disk
+    /// version: the decision is the same as on the comparison page, with the same recovery copy.
+    Settle(ExternalDecision),
     ExportMerge,
     ImportMerge(PathBuf),
 }
@@ -26,7 +29,11 @@ impl Action {
                     "Disk comparison ready. Your current field draft is retained.",
                 ))
             }
-            Self::Resolve(decision) => {
+            Self::Resolve(decision) | Self::Settle(decision) => {
+                if matches!(self, Self::Settle(_)) {
+                    files.compare_external(model)?;
+                    control.checkpoint()?;
+                }
                 let resolution = files.resolve_external_with_control(model, *decision, control)?;
                 Ok(adopted(
                     resolution,

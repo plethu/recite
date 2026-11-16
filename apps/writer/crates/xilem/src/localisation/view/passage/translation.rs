@@ -25,7 +25,7 @@ pub(super) fn translation(
     flex_col((
         current.as_ref().map(|(translation, draft)| fields(writer, row, translation, draft, width)),
         current.is_none().then(|| paragraph(writer.ui_scale(), if writer.localisation.has_catalogue() {
-            "No matching entry for this source wording. Review source updates in the translation queue."
+            "No matching entry for this source wording; the banner above reviews source updates."
         } else { "No catalogue selected." }, width)),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
 }

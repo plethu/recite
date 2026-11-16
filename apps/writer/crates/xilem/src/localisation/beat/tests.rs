@@ -395,3 +395,10 @@ fn a_translation_row_discloses_its_details_in_place_and_reports_its_reviewed_tog
             .details
     );
 }
+#[test]
+fn a_source_update_banner_heads_the_beat_while_a_passage_lacks_a_catalogue_entry() {
+    let (_directory, writer) = fixture();
+    let mounted = Mounted::new(writer, surface);
+    assert!(mounted.contains_text("Source changed · 1 passage without a catalogue entry"));
+    mounted.find("Review source updates");
+}

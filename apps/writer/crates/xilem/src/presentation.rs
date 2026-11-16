@@ -4,6 +4,7 @@ mod excerpt;
 mod fit_content;
 pub(crate) use excerpt::excerpt;
 pub(crate) use fit_content::fit_content;
+pub(crate) mod banner;
 mod controls;
 mod disclosure;
 pub(crate) use disclosure::{disclosure, disclosure_width, route_name, route_toggle};

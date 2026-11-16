@@ -139,6 +139,20 @@ impl Writer {
     pub fn use_inspected_disk(&mut self) {
         self.external_action(ExternalAction::Resolve(ExternalDecision::UseInspectedDisk));
     }
+    /// Settle the open document's disk change without the comparison page: Keep mine or Use disk
+    /// version from its banner. The comparison page stays one Compare away.
+    pub fn settle_disk_changes(&mut self, decision: ExternalDecision) {
+        if self.project_action_blocked() {
+            return;
+        }
+        let Some(project) = self.session.project() else {
+            return;
+        };
+        self.workspaces
+            .external
+            .start_comparison(project.current().path());
+        self.external_action(ExternalAction::Settle(decision));
+    }
     pub fn export_merge_draft(&mut self) {
         self.external_action(ExternalAction::ExportMerge);
     }

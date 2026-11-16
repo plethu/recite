@@ -4,6 +4,7 @@ mod context;
 mod incoming;
 mod source;
 mod translation;
+mod updates;
 use super::*;
 use crate::{attention::PaneEntry, keyed::column, presentation::print};
 use recite_writer_session::choices::display_name;
@@ -67,6 +68,7 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
                 ),
             )
             .color(writer.palette.muted),
+            updates::updates(writer, beat, width),
             actions(writer),
             incoming::incoming(writer, beat),
             paragraph(

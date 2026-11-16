@@ -80,6 +80,53 @@ fn native_comparison_keeps_pending_prose_or_adopts_disk_without_writing_source()
     }
 }
 #[test]
+fn the_disk_change_banner_keeps_mine_or_uses_disk_in_place_with_a_recovery_copy() {
+    use crate::notices::{Evidence, Target};
+    for decision in [
+        ExternalDecision::KeepWriter,
+        ExternalDecision::UseInspectedDisk,
+    ] {
+        let (directory, mut writer, mut jobs) = fixture();
+        writer
+            .session
+            .edit(|model| {
+                model.select(View::Passage("ffee6p8".into())).unwrap();
+                model.set_draft("Pending manuscript.".into());
+                Ok(())
+            })
+            .unwrap();
+        let path = directory.path().join("scene.recite");
+        fs::write(&path, SOURCE.replace("Hello.", "External.")).unwrap();
+        let evidence = writer
+            .session
+            .project()
+            .unwrap()
+            .files()
+            .external_check(&path)
+            .unwrap()
+            .observe();
+        writer
+            .notices
+            .found
+            .insert(Target::Source(path.clone()), Evidence::Source(evidence));
+        assert!(writer.noticed_change_settles());
+        let screen = writer.workspaces.screen;
+        writer.settle_noticed_change(decision);
+        finish(&mut writer, &mut jobs);
+        // The sheet stays where it was; the status line reports the result.
+        assert!(writer.workspaces.screen == screen);
+        assert!(writer.recovery_copy.as_ref().unwrap().is_file());
+        let model = writer.session.model();
+        if decision == ExternalDecision::KeepWriter {
+            assert_eq!(model.draft(), "Pending manuscript.");
+            assert_eq!(model.document().source(), SOURCE);
+        } else {
+            assert_eq!(model.draft(), "External.");
+        }
+        assert!(fs::read_to_string(&path).unwrap().contains("External."));
+    }
+}
+#[test]
 fn merge_handoff_import_retains_selection_and_one_history_step() {
     let (directory, mut writer, mut jobs) = fixture();
     compare(&mut writer, &mut jobs, directory.path());
