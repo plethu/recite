@@ -15,14 +15,17 @@ mise exec -- just writer gallery-bless target/g     # after maintainer sign-off 
 Each scene mounts the production `App` view with the window's theme, Writer's bundled fonts and
 live workers, then rasterises it with Vello CPU. No compositor or GPU is involved, so the same
 source produces the same pixels on any host. Fixtures live in
-`crates/xilem/src/tests/gallery/scenes.rs` and the scenes in its `stills` and `transitions`
-modules:
+`crates/xilem/src/tests/gallery/scenes.rs` and the scenes in its `stills`, `in_place` and
+`transitions` modules:
 
 - **Stills**: welcome and project creation; Script with a new starter project, an empty beat, a
   scene with no beats, a representative branching scene, an unapplied draft, focus mode, the
   galley at a later beat under its running head, the margin marks and the smallest reading size; Map
   and Split; source needing repair; Preview; Localise with a catalogue and with none; the
-  translations queue; Build, Rename, Declarations, disk changes and source updates; preferences;
+  translations queue; Build, Rename, Declarations, disk changes and source updates; the in-place
+  flows (`in_place` module): the Configure preview slip, the disk-change banner, the Build result
+  slip, the beat renamed in place with its consequence slip, and the insertion affordances with
+  the speaker and destination slips; preferences;
   the command, go-to, find and passage pickers, and the command picker over the hatch backdrop
   that the maintainer compares with the shipped dot screen; and the unsaved-close decision.
 - **Transitions**: welcome to examples, switching workspaces, running a command, closing with

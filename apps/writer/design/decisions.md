@@ -48,6 +48,35 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
 - **Margin marks.** One vocabulary in the galley margin, the scene list and on map cards: a solid
   teal bar for the current beat, a plum halftone bar for unsaved work, an error wedge for a
   problem. They differ in shape as well as ink; only the galley's wedge takes focus.
+- **In place, not forms.** A change happens on the object it changes. Rename beat (F2, the
+  command or the heading's pen) turns the selected beat's heading into a field; Enter reviews the
+  project rename and a slip under the heading says what it changes ("Renames a to b in 3
+  references across 2 files") with Rename, Review all changes and Cancel; Esc cancels and focus
+  returns to where it was. Rename stages one Undo step and the status line offers Undo; only a
+  refused rename opens the full page. Insertion affordances ("+ Line", "+ Reply", "+ Beat") sit
+  after the beat, never between rows, so choosing a passage never moves another; Line and Reply
+  insert after the passage being written when it is of their kind. A line's speaker and a
+  reply's destination are combobox slips that hang from the control that opened them.
+- **Filter as you type.** Search fields filter on every keystroke and have no Search button; a
+  list states its count under the field ("6 declarations", "1 of 6 declarations") and scrolls as
+  one virtual list of 32px rows with a plate selection. Paging survives only for prose too long
+  to mount at once.
+- **Sheet heads and banners.** A sheet head holds the sheet's own actions, one of them Primary,
+  and stacks them on a second row below 640px. Changes from outside Writer arrive as a banner at
+  the top of the affected sheet (Changed on disk · Compare · Keep mine · Use disk version), which
+  settles the open document in one checkout; the merge page opens only when needed.
+- **Commands with results.** Build is a command: its progress is the status sentence with Cancel
+  build beside it, and its result waits on a slip above the status line; the build page opens
+  only for a failure's report or to choose outputs. The status sentence is one line ending in an
+  ellipsis; assistive technology reads it whole.
+- **Master and detail.** A list of records sits in a 320px column beside the chosen record from
+  720px and stacks above it below. A record's fields read as a definition list: names in Plex
+  Mono ink, types or values in muted Sans.
+- **Toggles.** A state that is on or off is a named toggle holding the pressed sink (Reviewed,
+  Pin reference); a disclosure says expanded or collapsed (Translation details). A choice that
+  cannot apply is hidden rather than shown disabled when hiding changes neither Tab order nor
+  discoverability: while Preview uses the source language only, the language search is not
+  mounted.
 - **Motion.** Nothing animates differently from the platform; reduced motion is unchanged. Motion
   added later must answer a user action and honour the reduced-motion preference.
 - **Vocabulary.** Writer says scene, beat and reply; the docs glossary maps those to block and
