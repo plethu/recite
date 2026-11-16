@@ -30,11 +30,9 @@ fn mounted_merge_pages_preserve_drafts_through_rejected_import_and_save_the_revi
     mounted.state.compare_disk_changes();
     tools.finish(&mut mounted.state);
     mounted.settle();
+    // The whole field draft shows at once; nothing pages.
     assert!(mounted.contains_text("Pending start"));
-    mounted.activate("More field draft");
-    assert!(!mounted.contains_text("Pending start"));
-    mounted.activate("Previous field draft part");
-    assert!(mounted.contains_text("Pending start"));
+    assert!(mounted.contains_text("Pending end"));
     mounted.activate("Export merge draft");
     tools.finish(&mut mounted.state);
     mounted.settle();
@@ -72,8 +70,6 @@ fn mounted_merge_pages_preserve_drafts_through_rejected_import_and_save_the_revi
         "complete validation details must remain available: {}",
         mounted.state.status
     );
-    mounted.activate("More comparison report");
-    mounted.activate("Previous comparison report");
     let merged = SOURCE.replace("Original manuscript.", "Reviewed merged manuscript.");
     fs::write(&artifact, &merged).unwrap();
     mounted.activate("Import reviewed merge");
@@ -83,7 +79,7 @@ fn mounted_merge_pages_preserve_drafts_through_rejected_import_and_save_the_revi
     assert_eq!(fs::read_to_string(&path).unwrap(), external);
     assert!(mounted.state.recovery_copy.as_ref().unwrap().is_file());
     assert!(mounted.contains_text("Reviewed merge adopted"));
-    assert!(!mounted.contains_text("Keep Writer version"));
+    assert!(!mounted.contains_text("Keep mine"));
     assert!(!mounted.contains_text("Import reviewed merge"));
     mounted.activate("Return to writing");
     let (sender, mut saves) = mpsc::unbounded_channel();
@@ -128,8 +124,8 @@ fn completed_disk_decisions_replace_unresolved_choices_at_both_scales() {
             assert!(mounted.contains_text("Show recovery copy location"));
             for retired in [
                 "Compare disk changes",
-                "Keep Writer version",
-                "Use inspected disk version",
+                "Keep mine",
+                "Use disk version",
                 "Export merge draft",
             ] {
                 assert!(!mounted.contains_text(retired), "{retired}");
