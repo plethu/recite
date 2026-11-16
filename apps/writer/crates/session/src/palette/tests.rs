@@ -377,3 +377,16 @@ fn a_status_bar_action_keeps_its_text_and_shows_focus_on_the_overprint() {
         );
     }
 }
+
+#[test]
+fn a_scroll_bar_thumb_in_the_boundary_colour_holds_three_to_one_on_every_host() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        for host in hosts(&p) {
+            assert!(
+                contrast(p.boundary, host) >= 3.,
+                "thumb on {host:?}: dark={dark} monochrome={monochrome}"
+            );
+        }
+    }
+}

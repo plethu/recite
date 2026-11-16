@@ -8,7 +8,7 @@ publish.workspace = true
 
 [dependencies]
 accesskit_winit = { version = "=0.32.2", default-features = false }
-masonry_winit = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "93b449c9ee72b1ae2810391a9dd2730797625564" }
+masonry_winit = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "4b63c9c6e1473d56779255773254be9b46c6268d" }
 # Decodes the identity grain tile; already in the tree through Masonry's SVG renderer.
 png = "0.18"
 recite-core.workspace = true
@@ -22,7 +22,7 @@ rfd = "=0.17.2"
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 usvg = { version = "=0.47.0", default-features = false }
-xilem = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "93b449c9ee72b1ae2810391a9dd2730797625564", features = [
+xilem = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "4b63c9c6e1473d56779255773254be9b46c6268d", features = [
     "softbuffer_fallback",
     "vello_cpu_fallback",
     "vello_cpu_multithreading",
@@ -36,7 +36,7 @@ tempfile = "3"
 image = { version = "0.25", default-features = false, features = ["webp"] }
 webp = { version = "0.3", default-features = false }
 serde_json = "1"
-masonry = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "93b449c9ee72b1ae2810391a9dd2730797625564", features = [
+masonry = { version = "0.4.0", git = "https://github.com/plethu/xilem", rev = "4b63c9c6e1473d56779255773254be9b46c6268d", features = [
     "testing"
 ] }
 

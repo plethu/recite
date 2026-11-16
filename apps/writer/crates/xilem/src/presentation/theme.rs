@@ -12,9 +12,9 @@ use xilem::masonry::{
     properties::{
         Background, BorderColor, BorderWidth, BoxShadow, CaretColor, CheckmarkColor, CheckmarkSize,
         CheckmarkStrokeWidth, ContentColor, CornerRadius, Padding, PlaceholderColor,
-        PlaceholderTextSize, SelectionColor,
+        PlaceholderTextSize, ScrollThumbColor, SelectionColor,
     },
-    widgets::{Button, Checkbox, Label, Prose, RadioButton, TextArea, TextInput},
+    widgets::{Button, Checkbox, Label, Prose, RadioButton, ScrollBar, TextArea, TextInput},
 };
 
 pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
@@ -45,6 +45,11 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     properties.insert::<TextArea<false>, _>(SelectionColor { color: p.selection });
     properties.insert::<Prose, _>(SelectionColor { color: p.selection });
     properties.insert::<Prose, _>(CaretColor { color: p.ink });
+    // The thumb is a control boundary: 3:1 on the desk and every paper, never white on dark.
+    properties.insert::<ScrollBar, _>(ScrollThumbColor {
+        fill: p.boundary,
+        edge: p.boundary,
+    });
     properties
 }
 fn indicators<W: Widget>(properties: &mut DefaultProperties, scale: f32) {
