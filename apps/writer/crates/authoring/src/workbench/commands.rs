@@ -20,6 +20,11 @@ pub enum StructuralCommand {
     AddReply,
     /// A line after this line, or a reply after this reply.
     InsertAfter(String),
+    /// This line's speaker.
+    Speaker {
+        passage: String,
+        speaker: String,
+    },
     Destination {
         owner: RouteOwner,
         destination: String,
@@ -99,6 +104,13 @@ impl StructuralCommand {
             Self::AddLine => model.add_line(),
             Self::AddReply => model.add_choice(),
             Self::InsertAfter(passage) => model.insert_after(&passage),
+            Self::Speaker { passage, speaker } => {
+                model.select(View::Passage(passage.clone()))?;
+                model
+                    .document
+                    .set_speaker(model.document.revision(), &passage, &speaker)?;
+                model.refresh()
+            }
             Self::RenameBeat(name) => model.rename_beat(&name),
             Self::Destination {
                 owner: RouteOwner::Reply(id),

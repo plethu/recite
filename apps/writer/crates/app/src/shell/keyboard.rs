@@ -84,6 +84,11 @@ pub enum Action {
     StepBeat {
         forward: bool,
     },
+    /// The open picker hangs from the control that opened it, at this window point.
+    PlacePicker {
+        x: u32,
+        y: u32,
+    },
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -265,6 +270,11 @@ impl Shell {
                 }
             }
             Action::PaneHint(pending) => self.pane_hint = pending,
+            Action::PlacePicker { x, y } => {
+                if let Some(picker) = &mut self.picker {
+                    picker.placement = Some((x, y));
+                }
+            }
             Action::StepBeat { forward } => {
                 if let Some(writer) = &mut self.writer {
                     writer.step_beat(forward);

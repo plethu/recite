@@ -33,6 +33,7 @@ pub enum Mode {
     Passages,
     RulesChoices,
     Destinations,
+    Speakers,
     RenameBeat,
 }
 pub use super::Search;
@@ -50,6 +51,7 @@ impl Purpose {
             Self::Editor(request) => match request.as_ref() {
                 crate::choices::Request::Rules(_) => Mode::RulesChoices,
                 crate::choices::Request::Destination(_) => Mode::Destinations,
+                crate::choices::Request::Speaker(_) => Mode::Speakers,
                 crate::choices::Request::Rename(_) => Mode::RenameBeat,
             },
         }
@@ -66,6 +68,7 @@ pub enum Item {
     Lookup(targets::Target),
     Rule(selection::Choice),
     Destination(String),
+    Speaker(String),
     RenameBeat(String),
 }
 pub struct Entry {
@@ -88,6 +91,9 @@ pub struct Picker {
     visible: Range<usize>,
     /// The first result the list shows; it moves only to keep the active result in view.
     pub anchor: usize,
+    /// Where a combobox slip hangs from the label that opened it, in window pixels; a picker
+    /// opened any other way sits below the tab row.
+    pub placement: Option<(u32, u32)>,
 }
 impl Mode {
     pub fn title(self) -> &'static str {
@@ -98,6 +104,7 @@ impl Mode {
             Self::Passages => "Find in this beat",
             Self::RulesChoices => "Choose reply rule value",
             Self::Destinations => "Change destination",
+            Self::Speakers => "Change speaker",
             Self::RenameBeat => "Choose a beat to rename",
         }
     }
@@ -118,6 +125,7 @@ impl Picker {
             previews: Default::default(),
             visible: 0..0,
             anchor: 0,
+            placement: None,
         };
         picker.prepare_previews();
         picker
@@ -259,9 +267,12 @@ impl Shell {
                     }
                 }
             }
-            Some(item @ (Item::Rule(_) | Item::Destination(_) | Item::RenameBeat(_))) => {
-                self.activate_editor_choice(item)
-            }
+            Some(
+                item @ (Item::Rule(_)
+                | Item::Destination(_)
+                | Item::Speaker(_)
+                | Item::RenameBeat(_)),
+            ) => self.activate_editor_choice(item),
             _ => {}
         }
     }
@@ -326,7 +337,7 @@ impl Mode {
     pub fn keyboard_help(self) -> &'static str {
         match self {
             Mode::Commands => "Up/Down choose · Enter runs · Esc returns",
-            Mode::RulesChoices | Mode::Destinations | Mode::RenameBeat => {
+            Mode::RulesChoices | Mode::Destinations | Mode::Speakers | Mode::RenameBeat => {
                 "Up/Down choose · Enter picks · Esc returns"
             }
             _ => "Up/Down choose · Enter opens · Esc returns",

@@ -26,6 +26,19 @@ pub fn destinations(beats: Vec<String>) -> Vec<PickerOption> {
         .collect()
 }
 
+/// A line's possible speakers, each by its id.
+pub fn speakers(speakers: Vec<String>) -> Vec<PickerOption> {
+    speakers
+        .into_iter()
+        .map(|value| PickerOption {
+            title: value.clone(),
+            value,
+            detail: "Speaker".into(),
+            annotation: String::new(),
+        })
+        .collect()
+}
+
 pub fn display_name(identifier: &str) -> String {
     let name = identifier
         .strip_suffix(".recite")

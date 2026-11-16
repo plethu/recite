@@ -1,7 +1,7 @@
 //! Native focus moves through RenderRoot's safe API; mounted fields retain their identities.
 use super::*;
 use crate::app::keyboard::CommandGeneration;
-use crate::app::keyboard::DefaultFocus;
+use crate::app::keyboard::{Action, DefaultFocus, Invocation, PickerAnchor};
 use crate::app::picker;
 use crate::attention::{EditRequest, EditingTarget};
 use crate::localisation::{TranslationField, TranslationTarget};
@@ -135,6 +135,7 @@ impl Focus {
         if picker != self.picker {
             if picker {
                 self.return_to = root.focused_widget().or(self.last);
+                place_picker(root, context, root.focused_widget());
                 root.focus_on(find(root, Kind::Query));
             } else if !root.focus_on(self.return_to) || self.return_to.is_none() {
                 let admitted = context
@@ -263,6 +264,27 @@ fn default_focus(root: &RenderRoot) -> Option<WidgetId> {
         pending.extend(widget.children());
     }
     None
+}
+/// A picker opened from a combobox control hangs from that control's bottom-left corner.
+fn place_picker(root: &RenderRoot, context: &Context, opener: Option<WidgetId>) {
+    let Some(widget) = opener.and_then(|id| root.get_widget(id)) else {
+        return;
+    };
+    if !widget
+        .downcast::<Button>()
+        .is_some_and(|button| button.get_prop::<PickerAnchor>().0)
+    {
+        return;
+    }
+    let corner = widget.ctx().window_transform() * widget.ctx().border_box().origin();
+    let height = widget.ctx().border_box().height();
+    let _ = context.proxy.message(Invocation {
+        action: Action::PlacePicker {
+            x: corner.x.max(0.).round() as u32,
+            y: (corner.y + height).max(0.).round() as u32,
+        },
+        generation: context.generation,
+    });
 }
 /// The first focusable problem wedge in the window, in reading order.
 fn first_wedge(root: &RenderRoot) -> Option<WidgetId> {

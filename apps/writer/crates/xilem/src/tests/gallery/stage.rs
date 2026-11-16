@@ -236,6 +236,18 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Stage<S, V> {
         id
     }
 
+    /// The bottom-left corner of the control named `name`, in window pixels: where a combobox
+    /// slip opened from it hangs, as the native host reports it.
+    pub fn corner(&self, name: &str) -> Option<(u32, u32)> {
+        let widget = self.harness.get_widget_with_id(self.find(name)?);
+        let ctx = widget.ctx();
+        let corner = ctx.window_transform() * ctx.border_box().origin();
+        Some((
+            corner.x.max(0.).round() as u32,
+            (corner.y + ctx.border_box().height()).max(0.).round() as u32,
+        ))
+    }
+
     /// Activate a control the way assistive technology would.
     pub fn activate(&mut self, name: &str) -> bool {
         let Some(id) = self.require(name) else {

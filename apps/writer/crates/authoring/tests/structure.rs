@@ -290,3 +290,16 @@ fn insertions_after_a_passage_keep_its_neighbours_and_kind()
     );
     Ok(())
 }
+
+#[test]
+fn speakers_are_the_declared_ones_then_any_the_scene_uses() -> Result<(), Box<dyn std::error::Error>>
+{
+    use recite_core::DocumentKey;
+    use recite_writer_model::Document;
+    let document = Document::open(
+        DocumentKey::new("current.recite")?,
+        ":: start default\n> speaker=mara @a1\n  First.\n\n> speaker=ivo @a2\n  Second.\n\n> speaker=mara @a3\n  Third.\n-> END\n",
+    )?;
+    assert_eq!(document.speakers()?, ["mara", "ivo"]);
+    Ok(())
+}

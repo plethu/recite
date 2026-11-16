@@ -76,13 +76,25 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                                     // A stack bounds the picker by the layer, so it
                                     // scrolls its results rather than overflow at 200%.
                                     zstack((sized_box(picker::view::picker(app)).padding(
-                                        Padding::top(
-                                            // Below the tab row, a picker opens at a fixed
-                                            // height from the window's top edge.
-                                            ((size::PICKER_TOP - size::ROW) * scale).px(),
+                                        // A combobox slip hangs from its label; below the
+                                        // tab row, a picker opens at a fixed height from the
+                                        // window's top edge.
+                                        picker::view::placement(app).map_or(
+                                            Padding::top(
+                                                ((size::PICKER_TOP - size::ROW) * scale).px(),
+                                            ),
+                                            |(left, top)| Padding {
+                                                left: left.px(),
+                                                top: top.px(),
+                                                ..Padding::all(0.px())
+                                            },
                                         ),
                                     ),))
-                                    .alignment(UnitPoint::TOP)
+                                    .alignment(if picker::view::placement(app).is_some() {
+                                        UnitPoint::TOP_LEFT
+                                    } else {
+                                        UnitPoint::TOP
+                                    })
                                     .dims(Dim::Stretch),
                                 ))
                                 .padding(Padding {

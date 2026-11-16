@@ -4,6 +4,7 @@ pub use crate::{Writer, routes, rules};
 pub enum Request {
     Rules(rules::selection::Request),
     Destination(routes::Request),
+    Speaker(routes::SpeakerRequest),
     Rename(crate::workspaces::BeatChoice),
 }
 
@@ -12,6 +13,7 @@ impl Request {
         match self {
             Self::Rules(request) => request.is_current(writer),
             Self::Destination(request) => request.is_current(writer),
+            Self::Speaker(request) => request.is_current(writer),
             Self::Rename(request) => request.is_current(writer),
         }
     }

@@ -135,3 +135,24 @@ fn escape_cancels_a_beat_renamed_in_place() {
     assert!(shell.writer.as_ref().unwrap().inline_rename().is_none());
     assert_eq!(modal(&shell), None);
 }
+
+#[test]
+fn an_opened_picker_takes_the_place_of_the_label_that_opened_it() {
+    use keyboard::{Action, Generations, Invocation, Scope};
+    let directory = test_support::project(SOURCE).unwrap();
+    let mut shell = Shell::with_writer(test_support::open(&directory).unwrap());
+    let shortcuts = shell.preferences.config.writer.shortcuts.clone();
+    shell.open_picker(Search::GoTo);
+    assert_eq!(shell.picker.as_ref().unwrap().placement, None);
+    let captured = Scope::capture(&shell);
+    assert!(shell.invoke(
+        &captured,
+        &shortcuts,
+        Generations::default(),
+        Invocation {
+            action: Action::PlacePicker { x: 240, y: 320 },
+            generation: Generations::default().command,
+        },
+    ));
+    assert_eq!(shell.picker.as_ref().unwrap().placement, Some((240, 320)));
+}

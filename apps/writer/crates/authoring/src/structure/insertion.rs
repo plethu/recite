@@ -1,9 +1,27 @@
-//! Insertion beside an existing passage: a line after a line, a reply after a reply, each with a
-//! frozen stable ID and one undo step.
+//! Insertion beside an existing passage (a line after a line, a reply after a reply, each with a
+//! frozen stable ID and one undo step), and the speakers a line may take.
 use crate::{Document, DocumentVersion, EditError, PassageKind};
 use recite_core::StatementHeader;
 
 impl Document {
+    /// The speakers a line may take: the project's declared speakers, then any this scene uses
+    /// that are not declared, each once in order.
+    pub fn speakers(&self) -> Result<Vec<String>, EditError> {
+        let mut speakers: Vec<String> = self
+            .schema()
+            .map(|schema| schema.speakers.keys().cloned().collect())
+            .unwrap_or_default();
+        for passage in self.passage_snapshot()?.iter() {
+            if let PassageKind::Dialogue {
+                speaker: Some(speaker),
+            } = &passage.kind
+                && !speakers.contains(speaker)
+            {
+                speakers.push(speaker.clone());
+            }
+        }
+        Ok(speakers)
+    }
     /// Inserts a passage of the same kind directly after `passage` and returns its new ID: a
     /// line after a line, or a reply after a reply that continues to END until rewired.
     pub fn insert_after(

@@ -29,7 +29,7 @@ pub(super) fn result(
             .writer
             .as_ref()
             .is_some_and(|writer| !writer.navigation.busy() && !writer.work.busy()),
-        Item::Rule(_) | Item::Destination(_) | Item::RenameBeat(_) => app
+        Item::Rule(_) | Item::Destination(_) | Item::Speaker(_) | Item::RenameBeat(_) => app
             .picker
             .as_ref()
             .zip(app.writer.as_ref())

@@ -1,6 +1,7 @@
 use super::surface::Surface;
 use super::*;
 use crate::WriterLayout;
+use crate::app::keyboard::PickerAnchor;
 use crate::app::picker::Search;
 use crate::keyed::column;
 use crate::presentation::Icon;
@@ -199,6 +200,8 @@ fn continuation(
             state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
             move |state: &mut Writer| state.choose_destination(owner.clone()),
         )
+        // Its choice hangs from it as a slip.
+        .prop(PickerAnchor(true))
     });
     Either::B(
         flex_col((

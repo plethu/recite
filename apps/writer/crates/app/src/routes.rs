@@ -1,9 +1,12 @@
-//! Destination choices capture the owning reply or beat before the checked structural edit.
+//! Destination and speaker choices capture the owning reply, beat or line before the checked
+//! structural edit.
 pub use crate::{Phase, Writer};
 use recite_writer_model::{NavigationStamp, RouteOwner, StructuralCommand};
 use recite_writer_session::choices::{self, PickerOption};
+mod speakers;
 #[cfg(test)]
 mod tests;
+pub use speakers::SpeakerRequest;
 
 pub struct Request {
     window: crate::WindowKey,

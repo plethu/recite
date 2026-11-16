@@ -19,6 +19,7 @@ const EXTREMES: &[&str] = &[
     "script.disk-changed",
     "script.build-result",
     "script.rename",
+    "script.choices",
 ];
 
 /// Transitions whose meaning depends on contrast alone.

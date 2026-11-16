@@ -32,6 +32,15 @@ impl Shell {
                     item: Item::Destination(choice.value.clone()),
                 })
                 .collect(),
+            Request::Speaker(request) => request
+                .choices
+                .iter()
+                .map(|choice| Entry {
+                    title: choice.title.clone(),
+                    detail: choice.detail.clone(),
+                    item: Item::Speaker(choice.value.clone()),
+                })
+                .collect(),
             Request::Rename(request) => request
                 .choices
                 .iter()
@@ -62,6 +71,7 @@ impl Shell {
             (Request::Destination(request), Item::Destination(destination)) => {
                 request.apply(writer, destination);
             }
+            (Request::Speaker(request), Item::Speaker(speaker)) => request.apply(writer, speaker),
             (Request::Rename(request), Item::RenameBeat(beat)) => request.apply(writer, beat),
             _ => writer.status = "Reopen the editor choice to continue.".into(),
         }

@@ -149,9 +149,9 @@ impl Picker {
                                 _ => None,
                             })
                             .or_else(|| match &entry.item {
-                                Item::Destination(value) | Item::RenameBeat(value) => {
-                                    targets::rank(value, &self.query)
-                                }
+                                Item::Destination(value)
+                                | Item::Speaker(value)
+                                | Item::RenameBeat(value) => targets::rank(value, &self.query),
                                 _ => None,
                             }),
                     };

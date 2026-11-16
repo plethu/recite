@@ -48,25 +48,52 @@ impl Property for ActiveResult {
 }
 impl UsesProperty<ActiveResult> for Button {}
 
-/// The picker's content width at `scale` in a window `viewport` wide.
-fn width(viewport: f64, scale: f32) -> f64 {
-    (size::PICKER_WIDTH * f64::from(scale)).min(viewport - 2. * space::GROUPS - 2. * space::KINDS)
+/// The picker's content width at `scale` in a window `viewport` wide: a combobox slip hanging
+/// from its label is a form slip's width.
+fn width(viewport: f64, scale: f32, placed: bool) -> f64 {
+    let preferred = if placed {
+        size::SLIP_WIDTH
+    } else {
+        size::PICKER_WIDTH
+    };
+    (preferred * f64::from(scale)).min(viewport - 2. * space::GROUPS - 2. * space::KINDS)
+}
+
+/// Where a combobox slip's top-left sits: under its label, moved left to stay in the window.
+pub(in crate::app) fn placement(app: &App) -> Option<(f64, f64)> {
+    let (x, y) = app.picker.as_ref()?.placement?;
+    let scale = crate::presentation::scale(&app.preferences.config.writer);
+    let outer = width(app.viewport.width, scale, true) + 2. * space::KINDS;
+    let x = f64::from(x)
+        .min(app.viewport.width - outer - space::GROUPS)
+        .max(0.);
+    // It rises from a low label to keep half a picker's lines in the window.
+    let lowest = app.viewport.height
+        - reserve(scale, false)
+        - (size::PICKER_ROWS / 2) as f64 * size::ROW * f64::from(scale);
+    Some((x, f64::from(y).min(lowest).max(0.)))
 }
 
 /// How many result lines fit between the picker's top and the status bar in a window `height`
-/// tall: the slip's padding, query line, gaps and hint line (and scope line) come first.
-fn fitting_lines(height: f64, scale: f32, scoped: bool) -> usize {
-    let scale = f64::from(scale);
+/// tall.
+fn fitting_lines(height: f64, scale: f32, scoped: bool, top: Option<f64>) -> usize {
+    let scale_factor = f64::from(scale);
+    let room = height - top.unwrap_or(size::PICKER_TOP * scale_factor) - reserve(scale, scoped);
+    ((room / (size::ROW * scale_factor)).floor().max(1.) as usize).min(size::PICKER_ROWS)
+}
+
+/// What a picker needs besides its result lines: the slip's padding, query line, gaps and hint
+/// line (and scope line), then the status bar and as much desk below the slip as above the
+/// workspace.
+fn reserve(scale: f32, scoped: bool) -> f64 {
     let line = f64::from(Type::Meta.metrics().1);
     let chrome = 2. * space::KINDS
         + size::ROW
         + 2. * space::TEXT
         + line
         + if scoped { size::ROW + space::TEXT } else { 0. };
-    // The status bar, and as much desk below the slip as above the workspace.
     let below = 2. * space::UNIT + line + space::KINDS;
-    let room = height - (size::PICKER_TOP + chrome + below) * scale;
-    ((room / (size::ROW * scale)).floor().max(1.) as usize).min(size::PICKER_ROWS)
+    (chrome + below) * f64::from(scale)
 }
 
 /// The result line at `position`, or nothing once the matches have changed beneath the list.
@@ -85,7 +112,8 @@ fn line(app: &App, position: usize, width: f64) -> impl WidgetView<App> + use<> 
 
 pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let width = width(app.viewport.width, scale);
+    let placed = placement(app);
+    let width = width(app.viewport.width, scale, placed.is_some());
     let picker = app.picker.as_ref();
     let mode = picker.map_or(Mode::Commands, Picker::mode);
     let count = picker.map_or(0, |picker| picker.matches.len());
@@ -95,7 +123,12 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
     let scoped = picker.is_some_and(|picker| {
         matches!(picker.purpose, Purpose::Search(_)) && picker.mode() != Mode::Commands
     });
-    let lines = count.min(fitting_lines(app.viewport.height, scale, scoped)) as f64
+    let lines = count.min(fitting_lines(
+        app.viewport.height,
+        scale,
+        scoped,
+        placed.map(|(_, top)| top),
+    )) as f64
         * size::ROW
         * f64::from(scale);
     dialog(

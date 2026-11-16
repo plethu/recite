@@ -35,6 +35,18 @@ impl UsesProperty<DefaultFocus> for Button {}
 /// A field can be the default too, such as a beat heading renamed in place.
 impl UsesProperty<DefaultFocus> for TextInput {}
 
+/// Marks a control whose picker opens as a combobox slip hanging from it, such as a reply's
+/// destination or a line's speaker.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct PickerAnchor(pub bool);
+impl Property for PickerAnchor {
+    fn static_default() -> &'static Self {
+        static OTHER: PickerAnchor = PickerAnchor(false);
+        &OTHER
+    }
+}
+impl UsesProperty<PickerAnchor> for Button {}
+
 /// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it.
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct ModalSurface(pub bool);

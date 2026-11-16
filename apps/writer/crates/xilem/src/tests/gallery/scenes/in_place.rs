@@ -122,4 +122,53 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             stage.shot(record, "What the rename changes");
         },
     );
+    record.scene(
+        Meta {
+            id: "script.choices",
+            group: "Script",
+            title: "Speaker and destination slips",
+            intent: "The line being written names its speaker on a button whose choice hangs from the label; a reply's destination choice hangs below its row.",
+        },
+        |record| {
+            let directory = sample();
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "relay_hub.recite")),
+                variant,
+            );
+            let speaker = "Change speaker, mara…";
+            let corner = stage.corner(speaker);
+            stage.activate(speaker);
+            stage.act(|app| {
+                if let Some(picker) = &mut app.picker {
+                    picker.placement = corner;
+                }
+            });
+            stage.shot(record, "Speaker");
+            stage.act(|app| app.dismiss_picker());
+            stage.act(|app| {
+                let Some(writer) = &mut app.writer else {
+                    return;
+                };
+                let reply = writer.reading.rows.iter().find_map(|row| match &row.content {
+                    crate::reading::Content::Passage { passage, .. }
+                        if matches!(passage.kind, recite_writer_model::PassageKind::Choice { .. }) =>
+                    {
+                        Some(passage.id.clone())
+                    }
+                    _ => None,
+                });
+                if let Some(reply) = reply {
+                    writer.change(|model| model.select(recite_writer_model::View::Passage(reply)));
+                }
+            });
+            let corner = stage.corner("Change destination…");
+            stage.activate("Change destination…");
+            stage.act(|app| {
+                if let Some(picker) = &mut app.picker {
+                    picker.placement = corner;
+                }
+            });
+            stage.shot(record, "Destination");
+        },
+    );
 }
