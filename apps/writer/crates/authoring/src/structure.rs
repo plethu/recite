@@ -2,6 +2,7 @@
 use crate::DocumentVersion;
 use crate::{Document, EditError, projection::offset};
 use recite_core::{SourcePosition, StableIdGenerator, StatementHeader};
+mod insertion;
 
 impl Document {
     pub fn set_continuation(

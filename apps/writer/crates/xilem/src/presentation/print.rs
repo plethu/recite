@@ -250,6 +250,42 @@ pub(crate) fn text_toggle<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     )
 }
 
+/// How far an insertion affordance's words sit from its start: the plus and its gap, so the
+/// plus can hang before a column and the words line up with it.
+pub(crate) fn insert_hang(scale: f32) -> f64 {
+    (super::icons::FACE * f64::from(super::icons::SMALL) + super::space::UNIT) * f64::from(scale)
+}
+
+/// An insertion affordance: a quiet action led by a plus, such as "+ Line" after the last row,
+/// named in full for assistive technology ("Add line").
+pub(crate) fn insert_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+    scale: f32,
+    (name, text): (&'static str, &'static str),
+    palette: &Palette<Color>,
+    disabled: bool,
+    callback: F,
+) -> impl WidgetView<S, Widget = Button> + use<S, F> {
+    styled(
+        ControlStyle::Action,
+        view::button(
+            view::flex_row((
+                icon_face(
+                    scale * super::icons::SMALL,
+                    "",
+                    super::Icon::Plus,
+                    palette,
+                    disabled,
+                ),
+                Type::Control.label(scale, text),
+            ))
+            .gap((super::space::UNIT * f64::from(scale)).px()),
+            callback,
+        )
+        .accessible_label(name)
+        .disabled(disabled),
+    )
+}
+
 fn icon_face(
     scale: f32,
     name: &'static str,

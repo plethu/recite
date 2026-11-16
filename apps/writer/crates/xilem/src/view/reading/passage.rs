@@ -14,6 +14,7 @@ use recite_writer_model::{Passage, PassageKind};
 use xilem::masonry::kurbo::Axis;
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::{FlexSpacer, button};
+mod insertion;
 mod metadata;
 #[cfg(test)]
 mod tests;
@@ -185,6 +186,7 @@ pub(super) fn row(
             ))
             .padding(Padding::left(grid.text().px()))
         }),
+        active.then(|| insertion::insertion(state, passage, &grid)),
         active
             .then(|| super::refusal::panel(state, measure))
             .flatten()

@@ -18,6 +18,8 @@ pub enum StructuralCommand {
     AddBeat,
     AddLine,
     AddReply,
+    /// A line after this line, or a reply after this reply.
+    InsertAfter(String),
     Destination {
         owner: RouteOwner,
         destination: String,
@@ -96,6 +98,7 @@ impl StructuralCommand {
             Self::AddBeat => model.add_beat(),
             Self::AddLine => model.add_line(),
             Self::AddReply => model.add_choice(),
+            Self::InsertAfter(passage) => model.insert_after(&passage),
             Self::RenameBeat(name) => model.rename_beat(&name),
             Self::Destination {
                 owner: RouteOwner::Reply(id),

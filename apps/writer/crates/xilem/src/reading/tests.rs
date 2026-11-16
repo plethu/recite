@@ -286,3 +286,20 @@ fn preserved_source_selection_distinguishes_readable_script_and_repair() {
 }
 #[path = "inline/tests.rs"]
 mod inline;
+
+#[test]
+fn the_passage_being_written_offers_an_insertion_that_lands_in_the_new_line() {
+    let directory =
+        project(":: start default\n> @a1\n  First.\n\n> @a2\n  Second.\n-> END\n").unwrap();
+    let mut writer = open(&directory).unwrap();
+    click(&mut writer, &["Start · Start · end"]).unwrap();
+    writer.change(|model| model.select(View::Passage("a1".into())));
+    click(&mut writer, &["Insert line after"]).unwrap();
+    let source = writer.session.model().document().source().to_owned();
+    let View::Passage(added) = writer.session.model().view().clone() else {
+        panic!("the new line is selected");
+    };
+    assert!(!["a1", "a2"].contains(&added.as_str()));
+    let at = |needle: &str| source.find(needle).unwrap();
+    assert!(at("First.") < at(&format!("@{added}")) && at(&format!("@{added}")) < at("Second."));
+}

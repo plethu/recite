@@ -124,32 +124,36 @@ pub(super) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_row((
         add_button(
             state,
-            "Add beat",
-            StructuralCommand::AddBeat,
-            !closing && !repair,
-        ),
-        add_button(
-            state,
-            "Add line",
+            ("Add line", "Line"),
             StructuralCommand::AddLine,
             !closing && selected,
         ),
         add_button(
             state,
-            "Add reply",
+            ("Add reply", "Reply"),
             StructuralCommand::AddReply,
             !closing && selected,
+        ),
+        // A new beat joins the end of the scene.
+        add_button(
+            state,
+            ("Add beat", "Beat"),
+            StructuralCommand::AddBeat,
+            !closing && !repair,
         ),
     ))
     .direction(action_axis(state))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
-    // Quiet actions line their labels up with the manuscript's text column.
+    // The words line up with the manuscript's text column, the plus hanging before it.
     .padding(Padding::left(
         if state.reading.rows.is_empty() {
             0.
         } else {
-            (super::reading::text_column(state) - 12. * f64::from(state.ui_scale()) - 1.).max(0.)
+            (super::reading::text_column(state)
+                - crate::presentation::control_inset(state.ui_scale())
+                - print::insert_hang(state.ui_scale()))
+            .max(0.)
         }
         .px(),
     ))
@@ -161,15 +165,17 @@ fn action_axis(state: &Writer) -> kurbo::Axis {
         kurbo::Axis::Horizontal
     }
 }
+/// An insertion affordance after the last row: "+ Line" adds a line, named "Add line".
 fn add_button(
     state: &Writer,
-    title: &'static str,
+    title: (&'static str, &'static str),
     command: StructuralCommand,
     enabled: bool,
 ) -> impl WidgetView<Writer> + use<> {
-    print::action(
+    print::insert_action(
         state.ui_scale(),
         title,
+        &state.palette,
         !enabled,
         move |state: &mut Writer| {
             state.navigate(crate::navigation::Target::Structure(command.clone()))

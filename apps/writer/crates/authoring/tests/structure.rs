@@ -251,3 +251,42 @@ fn inserted_anchor_avoids_ids_in_other_documents() -> Result<(), Box<dyn std::er
     );
     Ok(())
 }
+
+#[test]
+fn insertions_after_a_passage_keep_its_neighbours_and_kind()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_core::DocumentKey;
+    use recite_writer_model::Document;
+    let source = ":: start default\n> @a1\n  First.\n\n> @a2\n  Second.\n? @c1\n  Ask.\n  -> END\n? @c2\n  Leave.\n  -> END\n";
+    let mut document = Document::open(DocumentKey::new("current.recite")?, source)?;
+    let line = document.insert_after(document.revision(), "a1")?;
+    let text = document.source().to_owned();
+    let at = |needle: &str| text.find(needle).unwrap();
+    assert!(at("First.") < at(&format!("@{line}")) && at(&format!("@{line}")) < at("Second."));
+    assert!(
+        text.contains(&format!("> @{line}\n  New dialogue.\n")),
+        "{text}"
+    );
+    let reply = document.insert_after(document.revision(), "c1")?;
+    let text = document.source().to_owned();
+    let at = |needle: &str| text.find(needle).unwrap();
+    assert!(at("Ask.") < at(&format!("@{reply}")) && at(&format!("@{reply}")) < at("Leave."));
+    assert!(
+        text.contains(&format!("? @{reply}\n  New choice.\n  -> END\n? @c2")),
+        "{text}"
+    );
+    assert!(
+        document.diagnostics().is_empty(),
+        "{:?}",
+        document.diagnostics()
+    );
+    document.undo()?;
+    document.undo()?;
+    assert_eq!(document.source(), source);
+    assert!(
+        document
+            .insert_after(document.revision(), "missing")
+            .is_err()
+    );
+    Ok(())
+}
