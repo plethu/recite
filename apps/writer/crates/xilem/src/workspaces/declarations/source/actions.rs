@@ -2,6 +2,21 @@ use super::*;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 
+/// The sheet's one primary while the declaration source is shown and valid: save it and generate.
+pub fn apply(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    let source = &writer.workspaces.declarations;
+    (source.mode == Mode::Source && !matches!(source.source.validation, Validation::Invalid(_)))
+        .then(|| {
+            print::primary_action(
+                writer.ui_scale(),
+                "Save and generate declarations",
+                &writer.palette,
+                writer.declaration_action_blocked(),
+                Writer::save_declarations,
+            )
+        })
+}
+
 pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let blocked = writer.declaration_action_blocked();
@@ -49,14 +64,6 @@ pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 scale,
                 "Reload declaration source (keep recovery copy)",
                 |writer: &mut Writer| writer.declaration_action(DeclarationAction::ReloadSource),
-            )
-            .disabled(blocked)
-        }),
-        (!invalid).then(|| {
-            text_button(
-                scale,
-                "Save and generate declarations",
-                Writer::save_declarations,
             )
             .disabled(blocked)
         }),

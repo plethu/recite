@@ -3,6 +3,7 @@ use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 pub(crate) use recite_writer_app::workspaces::declarations::source::*;
 mod actions;
+pub(super) use actions::apply;
 mod preview;
 mod repair;
 use super::*;

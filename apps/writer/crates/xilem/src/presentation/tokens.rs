@@ -55,6 +55,8 @@ pub(crate) mod size {
     pub const DECISION_WIDTH: f64 = 560.;
     /// An anchored form slip's width, such as Configure preview.
     pub const SLIP_WIDTH: f64 = 480.;
+    /// A master list's column beside its detail, such as the declarations.
+    pub const MASTER_COLUMN: f64 = 320.;
 }
 
 /// A text control's padding and 1px border before its words, at `scale`: where a heading or
@@ -83,6 +85,8 @@ pub(crate) mod breakpoint {
     pub const FIELD_ROW: f64 = 480.;
     /// A banner's or a sheet head's actions share its row from this width.
     pub const SHEET_ROW: f64 = 640.;
+    /// A master list and its detail sit side by side from this width.
+    pub const MASTER_DETAIL: f64 = 720.;
 }
 
 /// An interface type role.

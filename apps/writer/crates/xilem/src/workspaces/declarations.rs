@@ -1,10 +1,11 @@
 //! Frontend views and native glue over `recite_writer_app::workspaces::declarations`.
 use super::*;
-use crate::WriterLayout;
 use crate::presentation::row::{listed, row};
 use crate::presentation::segments::{segment, segments};
+use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset, search_field};
+use crate::presentation::tokens::{breakpoint, size};
+use crate::presentation::{Type, Typeset, control_inset, print, search_field};
 pub(crate) use recite_writer_app::workspaces::declarations::*;
 mod outcome;
 mod producer;
@@ -16,8 +17,8 @@ use crate::presentation::{label, paragraph, text_button};
 use recite_writer_session::declarations::SchemaOutputStatus;
 use xilem::{
     WidgetView,
-    masonry::layout::AsUnit,
     masonry::properties::TextAreaLabel,
+    masonry::{kurbo::Axis, layout::AsUnit},
     style::Style,
     view::{CrossAxisAlignment, flex_col, flex_row, text_input},
 };
@@ -25,7 +26,7 @@ use xilem::{
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
-        crate::view::tool_head(writer, "Declarations", ()),
+        crate::view::tool_head(writer, "Declarations", (source::apply(writer),)),
         segments(
             &writer.palette,
             (
@@ -71,7 +72,38 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .prop(Region(Some(Pane::Declarations)))
 }
 
+/// The declarations as master and detail on one sheet: the searchable list in a column, and the
+/// chosen declaration beside it; on a narrow sheet the detail follows the list.
 fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = f64::from(writer.ui_scale());
+    let width = writer.content_width();
+    let wide = width >= breakpoint::MASTER_DETAIL * scale;
+    let master = if wide {
+        size::MASTER_COLUMN * scale
+    } else {
+        width
+    };
+    let detail = if wide {
+        width - master - space::GROUPS
+    } else {
+        width
+    };
+    flex_row((
+        flex_col((list(writer, master),)).width(master.px()),
+        flex_col((declaration_detail(writer, detail),))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .width(detail.px()),
+    ))
+    .direction(if wide {
+        Axis::Horizontal
+    } else {
+        Axis::Vertical
+    })
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::GROUPS.px())
+}
+
+fn list(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations;
     flex_col((
@@ -82,7 +114,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 paragraph(
                     scale,
                     "Generated schema is damaged; showing the last valid declarations.",
-                    640.,
+                    width,
                 )
             }),
         label(scale, "Search declarations"),
@@ -98,7 +130,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             .typeset(Type::Body, scale)
             .prop(TextAreaLabel::new("Search declarations")),
         ),
-        label(
+        print::meta(
             scale,
             if panel.matches.is_empty() {
                 if panel.query.trim().is_empty() {
@@ -119,8 +151,9 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     },
                 )
             },
-        ),
-        declaration_rows(writer),
+        )
+        .color(writer.palette.muted),
+        declaration_rows(writer, width),
         (panel.matches.len() > PAGE).then(|| {
             flex_row((
                 text_button(scale, "Previous declarations", |writer: &mut Writer| {
@@ -133,15 +166,19 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 })
                 .disabled((panel.page + 1) * PAGE >= panel.matches.len()),
             ))
+            .gap(space::SIBLINGS.px())
         }),
-        declaration_detail(writer),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::TEXT.px())
+    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+    .gap(space::SIBLINGS.px())
 }
 
-fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+/// One row per declaration on this page, "name · kind" on one line from the row's start.
+fn declaration_rows(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
+    let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations;
+    // The row's padding and border either side, so the line fills the row.
+    let line = width - 2. * control_inset(scale);
     flex_col(
         panel
             .matches
@@ -152,13 +189,14 @@ fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 let Row { name, kind, .. } = &panel.rows[*index];
                 let (name, kind) = (name.clone(), kind.clone());
                 let selected = panel.selected == Some(*index);
+                let caption = format!("{name} · {kind}");
                 listed(
                     &writer.palette,
                     selected,
                     row(
                         selected,
-                        label(writer.ui_scale(), format!("{name} · {kind}"))
-                            .typeset(Type::Control, writer.ui_scale()),
+                        one_line(caption, Type::Control, scale, writer.palette.ink)
+                            .width(line.px()),
                         move |writer: &mut Writer| {
                             writer.workspaces.declarations.choose(&name, &kind)
                         },
@@ -169,41 +207,55 @@ fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     )
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(0.px())
-    .width(writer.script_width().px())
 }
 
-fn declaration_detail(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+fn declaration_detail(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.declarations;
-    let Row {
-        name, kind, detail, ..
-    } = panel.selected.and_then(|index| panel.rows.get(index))?;
     let scale = writer.ui_scale();
-    Some(
-        flex_col((
-            label(scale, format!("{name} · {kind}")).typeset(Type::Section, scale),
-            paragraph(
-                scale,
-                detail.get(panel.detail_page).cloned().unwrap_or_default(),
-                640.,
-            ),
-            (detail.len() > 1).then(|| {
-                flex_row((
-                    text_button(
+    let chosen = panel.selected.and_then(|index| panel.rows.get(index));
+    flex_col((
+        chosen.is_none().then(|| {
+            print::meta(scale, "Choose a declaration to see its fields.")
+                .color(writer.palette.muted)
+        }),
+        chosen.map(
+            |Row {
+                 name, kind, detail, ..
+             }| {
+                flex_col((
+                    label(scale, name.clone()).typeset(Type::Section, scale),
+                    print::meta(scale, kind.clone()).color(writer.palette.muted),
+                    paragraph(
                         scale,
-                        "Previous declaration detail",
-                        |writer: &mut Writer| {
-                            writer.workspaces.declarations.detail_page =
-                                writer.workspaces.declarations.detail_page.saturating_sub(1);
-                        },
-                    )
-                    .disabled(panel.detail_page == 0),
-                    text_button(scale, "More declaration detail", |writer: &mut Writer| {
-                        writer.workspaces.declarations.detail_page += 1
-                    })
-                    .disabled(detail.len() <= panel.detail_page + 1),
+                        detail.get(panel.detail_page).cloned().unwrap_or_default(),
+                        width,
+                    ),
+                    (detail.len() > 1).then(|| {
+                        flex_row((
+                            text_button(
+                                scale,
+                                "Previous declaration detail",
+                                |writer: &mut Writer| {
+                                    writer.workspaces.declarations.detail_page = writer
+                                        .workspaces
+                                        .declarations
+                                        .detail_page
+                                        .saturating_sub(1);
+                                },
+                            )
+                            .disabled(panel.detail_page == 0),
+                            text_button(scale, "More declaration detail", |writer: &mut Writer| {
+                                writer.workspaces.declarations.detail_page += 1
+                            })
+                            .disabled(detail.len() <= panel.detail_page + 1),
+                        ))
+                        .gap(space::SIBLINGS.px())
+                    }),
                 ))
-            }),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start),
-    )
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(space::SIBLINGS.px())
+            },
+        ),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
 }
