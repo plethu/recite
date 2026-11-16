@@ -1,4 +1,5 @@
 use super::*;
+use crate::native_host::keyboard::focus::slip_anchor;
 use crate::workspaces::tests::{ToolDriver, fixture};
 use crate::{
     keyed::keyed,
@@ -74,18 +75,20 @@ fn rename_beat_turns_the_heading_into_a_field_and_its_review_into_a_slip() {
     let mut tools = ToolDriver::new(&mut mounted.state);
     mounted.activate("Rename beat");
     let beat = mounted.state.inline_rename().unwrap().beat.clone();
-    mounted.replace_text("New beat name", "renamed");
+    // The field is captioned with what it edits: the beat's id.
+    assert!(mounted.contains_text("Beat id"));
+    mounted.replace_text("New beat id", "renamed");
     mounted.state.commit_inline_rename();
     tools.finish(&mut mounted.state);
     mounted.settle();
-    // The field gives way to the heading and a slip that says what the rename changes.
-    assert!(!mounted.contains_text("New beat name"));
-    assert!(mounted.contains_text(&format!("Renames {beat} to renamed in")));
-    for action in ["Rename", "Review all changes", "Cancel rename"] {
-        mounted.find(action);
-    }
-    mounted.activate("Cancel rename");
-    assert!(mounted.state.inline_rename().is_none());
+    // The field gives way to the heading, which the review's slip hangs from over the window
+    // (see `app::view` tests): nothing in the galley moves for it.
+    assert!(!mounted.contains_text("New beat id"));
+    assert!(slip_anchor(mounted.harness.render_root()).is_some());
     assert!(!mounted.contains_text("Review all changes"));
+    assert_eq!(mounted.state.inline_rename().unwrap().beat, beat);
+    mounted.state.cancel_inline_rename();
+    mounted.settle();
+    assert!(mounted.state.inline_rename().is_none());
     mounted.find("Rename beat");
 }

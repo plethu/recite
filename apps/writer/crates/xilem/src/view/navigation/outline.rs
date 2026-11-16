@@ -1,11 +1,10 @@
 //! The open scene's beats, nested under its row in the scene list: one row each, the current
 //! one selected, a problem repeated as the margin wedge.
 use super::*;
-use crate::app::keyboard::{RenamesBeat, ReturnFocus};
+use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::presentation::double_click::double_click;
 use crate::presentation::marks::{GLYPH, wedge_glyph};
-use crate::presentation::slip::OFFSET;
-use crate::workspaces::rename::inline::{self as rename, Actions, Place, Target};
+use crate::workspaces::rename::inline::{self as rename, Place, Target};
 use recite_compiler::authoring::BlockDefinitionSummary;
 
 /// What every beat row of the page shares.
@@ -142,7 +141,7 @@ fn beat_row(
 }
 
 /// The row renamed in place: its name as the field until the review is ready, then the row
-/// again, with the review's progress or consequence slip under it.
+/// again, which the review's progress or consequence slip hangs from.
 fn renamed_row(
     state: &Writer,
     rows: &Rows<'_>,
@@ -150,15 +149,14 @@ fn renamed_row(
 ) -> impl WidgetView<Writer> + use<> {
     let id = block.id().as_str();
     let name = match rename::editing(state, id, Place::Outline) {
-        Some(inline) => Either::A(rename::field(inline, Type::Control, state.ui_scale())),
+        Some(inline) => Either::A(rename::field(
+            state,
+            inline,
+            Type::Control,
+            state.ui_scale(),
+        )),
         None => Either::B(beat_row(state, rows, block)),
     };
-    // As wide as the row less the slip's stock, so its offset shows beside the scroll bar; the
-    // row keeps the slip at that width while the field stretches across the row.
-    let row = rows.width + sidebar::ROW - sidebar::COLUMN;
-    let slip = rename::consequence(state, Place::Outline, row - OFFSET, Actions::Stacked)
-        .map(|slip| flex_row((slip,)));
-    flex_col((name, slip))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .gap(space::UNIT.px())
+    // The review's slip floats over the window from under the row, so no row moves.
+    sized_box(name).prop(SlipAnchor(true))
 }

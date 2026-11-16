@@ -325,7 +325,7 @@ fn only_a_successful_primary_double_click_renames_the_clicked_card_in_place() {
         let mut pending = vec![tree.state().root()];
         let mut field = false;
         while let Some(node) = pending.pop() {
-            field |= node.label().as_deref() == Some("New beat name");
+            field |= node.label().as_deref() == Some("New beat id");
             pending.extend(node.children());
         }
         assert_eq!(field, renames, "the card's title becomes the field");

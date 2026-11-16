@@ -182,7 +182,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     let writer = mounted.state.writer.as_ref().unwrap();
     assert!(writer.workspaces.screen == Screen::Write);
     assert!(writer.inline_rename().is_some());
-    mounted.find("New beat name");
+    mounted.find("New beat id");
     mounted
         .state
         .writer

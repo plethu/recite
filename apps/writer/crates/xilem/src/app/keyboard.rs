@@ -48,6 +48,17 @@ impl Property for PickerAnchor {
 }
 impl UsesProperty<PickerAnchor> for Button {}
 
+/// Marks the heading or row an inline rename's slip hangs from, under its bottom-left corner.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct SlipAnchor(pub bool);
+impl Property for SlipAnchor {
+    fn static_default() -> &'static Self {
+        static OTHER: SlipAnchor = SlipAnchor(false);
+        &OTHER
+    }
+}
+impl UsesProperty<SlipAnchor> for SizedBox {}
+
 /// Marks a sidebar beat row or map card: F2 on it renames its beat in place there.
 #[derive(Clone, Default, PartialEq)]
 pub(crate) struct RenamesBeat(pub Option<Target>);

@@ -28,6 +28,10 @@ fn enter_reviews_the_rename_and_the_slip_stages_it_as_one_undo_step() {
     let inline = writer.inline_rename().unwrap();
     assert_eq!((inline.beat.as_str(), inline.name.as_str()), ("old", "old"));
     assert_eq!(inline.stage, Stage::Editing);
+    // The slip waits for the host to measure the heading it hangs from.
+    assert_eq!(inline.anchor, None);
+    writer.place_inline_rename(120, 240);
+    assert_eq!(writer.inline_rename().unwrap().anchor, Some((120, 240)));
     writer.edit_inline_rename("new".into());
     writer.commit_inline_rename();
     assert_eq!(writer.inline_rename().unwrap().stage, Stage::Reviewing);

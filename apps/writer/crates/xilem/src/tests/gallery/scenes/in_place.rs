@@ -214,4 +214,11 @@ fn rename_in<V: WidgetView<App, Widget = Passthrough>>(
             }
         }
     });
+    // The native host hangs the review's slip from the heading or row it measures.
+    let anchor = stage.slip_anchor();
+    stage.act(|app| {
+        if let (Some(writer), Some((x, y))) = (&mut app.writer, anchor) {
+            writer.place_inline_rename(x, y);
+        }
+    });
 }

@@ -121,6 +121,7 @@ fn escape_cancels_a_beat_renamed_in_place() {
         name: "begin".into(),
         stage: Stage::Editing,
         place: Place::Heading,
+        anchor: None,
     });
     assert_eq!(modal(&shell), Some(Modal::Rename));
     let captured = Scope::capture(&shell);

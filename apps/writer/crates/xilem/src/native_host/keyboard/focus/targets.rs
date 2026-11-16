@@ -1,8 +1,9 @@
 //! The widgets focus moves to: the picker's query or active result, a modal surface's default
 //! control, the first problem wedge, and the control an opened picker hangs from.
 use super::*;
-use crate::app::keyboard::{RenamesBeat, ReturnFocus};
+use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::workspaces::rename::inline::Target;
+use xilem::masonry::widgets::SizedBox;
 
 pub(super) fn find(root: &RenderRoot, kind: Kind) -> Option<WidgetId> {
     let mut pending = vec![root.get_layer_root(0)];
@@ -88,6 +89,29 @@ pub(super) fn place_picker(root: &RenderRoot, context: &Context, opener: Option<
         },
         generation: context.generation,
     });
+}
+/// The bottom-left corner, in window coordinates, of the mounted heading or row an inline
+/// rename's slip hangs from.
+pub(crate) fn slip_anchor(root: &RenderRoot) -> Option<(u32, u32)> {
+    let mut pending = vec![root.get_layer_root(0)];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() {
+            continue;
+        }
+        if widget
+            .downcast::<SizedBox>()
+            .is_some_and(|anchor| anchor.get_prop::<SlipAnchor>().0)
+        {
+            let corner = widget.ctx().window_transform() * widget.ctx().border_box().origin()
+                + (0., widget.ctx().border_box().height());
+            return Some((
+                corner.x.max(0.).round() as u32,
+                corner.y.max(0.).round() as u32,
+            ));
+        }
+        pending.extend(widget.children());
+    }
+    None
 }
 /// The first focusable problem wedge in the window, in reading order.
 pub(super) fn first_wedge(root: &RenderRoot) -> Option<WidgetId> {

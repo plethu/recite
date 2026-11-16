@@ -1,7 +1,7 @@
 //! A real Xilem view loop with live workers, the Writer's own theme and fonts, and a rendered frame.
 use super::record::Recorder;
 use crate::native_host::keyboard::galley::Galley;
-use crate::native_host::keyboard::tab::to_tab_stop;
+use crate::native_host::keyboard::{focus::slip_anchor, tab::to_tab_stop};
 use crate::tests::support::native_label;
 use masonry::testing::{TestHarness, TestHarnessParams};
 use std::sync::{Arc, mpsc};
@@ -238,6 +238,10 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Stage<S, V> {
 
     /// The bottom-left corner of the control named `name`, in window pixels: where a combobox
     /// slip opened from it hangs, as the native host reports it.
+    /// Where the native host would hang an inline rename's slip, as it measures it.
+    pub fn slip_anchor(&mut self) -> Option<(u32, u32)> {
+        slip_anchor(self.harness.render_root())
+    }
     pub fn corner(&self, name: &str) -> Option<(u32, u32)> {
         let widget = self.harness.get_widget_with_id(self.find(name)?);
         let ctx = widget.ctx();

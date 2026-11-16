@@ -68,6 +68,7 @@ impl Writer {
             beat: target.beat,
             stage: Stage::Editing,
             place: target.place,
+            anchor: None,
         });
         if target.place == Place::Heading {
             self.focus_pane(PaneMotion::To(Pane::Script));

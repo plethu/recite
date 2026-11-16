@@ -70,7 +70,7 @@ def run(api, bus, registry, binary, output):
                 # Rename beat edits the selected beat's heading in place; Enter reviews it and the
                 # consequence slip reaches the full page.
                 command(window, "Rename beat")
-                fill(window, "New beat name", "new")
+                fill(window, "New beat id", "new")
                 key("Return")
                 window.wait(
                     lambda: window.find("Review all changes") or window.find("Original beat name"),
@@ -180,7 +180,7 @@ def run(api, bus, registry, binary, output):
                 )
                 results["save_all_publishes_manuscript_references_and_manifest"] = True
                 command(window, "Rename beat")
-                fill(window, "New beat name", "newer")
+                fill(window, "New beat id", "newer")
                 key("Return")
                 window.wait(
                     lambda: window.find("Review all changes") or window.find("Original beat name"),

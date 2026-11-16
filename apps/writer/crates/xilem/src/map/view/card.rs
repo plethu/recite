@@ -74,6 +74,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     // the card, which keeps its name, state and focus beneath, and over its grip.
     let renaming = rename::editing(state, &block.id, Place::Card).map(|inline| {
         let field = rename::field(
+            state,
             inline,
             Type::Control,
             TITLE.max(TITLE_FLOOR / zoom) / Type::Control.metrics().0,

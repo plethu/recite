@@ -76,6 +76,11 @@ impl Shell {
                     picker.placement = Some((x, y));
                 }
             }
+            Action::PlaceRenameSlip { x, y } => {
+                if let Some(writer) = &mut self.writer {
+                    writer.place_inline_rename(x, y);
+                }
+            }
             Action::RenameBeat(target) => {
                 if let Some(writer) = &mut self.writer {
                     writer.rename_beat_in(target);

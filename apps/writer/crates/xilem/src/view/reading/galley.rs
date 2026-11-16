@@ -4,6 +4,7 @@
 //! beat never reflows the page. Each read-only beat's heading is a button that mounts it.
 use super::passage::{grid, margin, margin_label};
 use super::*;
+use crate::app::keyboard::SlipAnchor;
 use crate::presentation::control_inset;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER, Grid};
 use crate::presentation::marks::{Mark, marked, wedge};
@@ -11,7 +12,7 @@ use crate::presentation::row::named_row;
 use crate::presentation::sheet_text::sheet_text;
 use crate::presentation::tokens::size;
 use crate::presentation::{Icon, print};
-use crate::workspaces::rename::inline::{self as rename, Actions, Place};
+use crate::workspaces::rename::inline::{self as rename, Place};
 use recite_writer_app::reading::PAGE;
 use recite_writer_model::PassageKind;
 use xilem::masonry::{
@@ -70,19 +71,6 @@ pub(super) fn galley<V: WidgetView<Writer>>(
             flex_col((
                 (!first).then(|| rule(state, &grid)),
                 heading(state, &grid, index, total, &problems),
-                rename::consequence(
-                    state,
-                    Place::Heading,
-                    (grid.row() - grid.text()).min(rename::slip_width(state.ui_scale())),
-                    Actions::Row,
-                )
-                .map(|slip| {
-                    sized_box(slip).padding(Padding {
-                        left: grid.text().px(),
-                        top: space::TEXT.px(),
-                        ..Padding::all(0.px())
-                    })
-                }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(0.px())
@@ -159,7 +147,12 @@ fn heading(
     let renaming = rename::editing(state, &id, Place::Heading).filter(|_| selected);
     let renaming_here = renaming.is_some();
     let title = if let Some(inline) = renaming {
-        Either::A(Either::A(rename::field(inline, Type::Section, sheet)))
+        Either::A(Either::A(rename::field(
+            state,
+            inline,
+            Type::Section,
+            sheet,
+        )))
     } else if selected {
         // Padded like the read-only headings' buttons, so every heading starts on one line.
         Either::A(Either::B(
@@ -192,15 +185,18 @@ fn heading(
                 }),
             ))
             .width(grid.margin.px()),
-            // The heading hugs its words, so a focused heading's ring stays inside the measure.
-            flex_col((title,))
-                .cross_axis_alignment(if renaming_here {
-                    // The rename field takes the heading's measure.
-                    CrossAxisAlignment::Stretch
-                } else {
-                    CrossAxisAlignment::Start
-                })
-                .flex(1.),
+            // The heading hugs its words, so a focused heading's ring stays inside the measure. A
+            // rename's slip floats over the window from under it, so nothing below moves.
+            sized_box(flex_col((title,)).cross_axis_alignment(if renaming_here {
+                // The rename field takes the heading's measure.
+                CrossAxisAlignment::Stretch
+            } else {
+                CrossAxisAlignment::Start
+            }))
+            .prop(SlipAnchor(
+                selected && rename::hangs_from(state, &id, Place::Heading),
+            ))
+            .flex(1.),
             selected.then(|| actions(state, blocked)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)

@@ -1,5 +1,6 @@
 use super::*;
 use crate::app::keyboard::{RenamesBeat, ReturnFocus};
+use crate::native_host::keyboard::focus::slip_anchor;
 use crate::workspaces::rename::inline::{Place, Stage, Target};
 use crate::workspaces::tests::{ToolDriver, fixture};
 use crate::{
@@ -90,18 +91,18 @@ fn a_double_click_on_a_beat_row_renames_it_in_the_sidebar_and_returns_to_the_row
         ("start", Place::Outline, Stage::Editing)
     );
     // The row's name is the field; the heading stays a heading.
-    mounted.find("New beat name");
+    mounted.find("New beat id");
     mounted.find("Rename beat");
-    mounted.replace_text("New beat name", "opening");
+    mounted.replace_text("New beat id", "opening");
     mounted.state.commit_inline_rename();
     tools.finish(&mut mounted.state);
     mounted.settle();
-    // The slip hangs under the row, with the same actions as the heading's.
-    assert!(mounted.contains_text("Renames start to opening in"));
-    for action in ["Rename", "Review all changes", "Cancel rename"] {
-        mounted.find(action);
-    }
-    mounted.activate("Cancel rename");
+    // The review floats over the window from under the row (see `app::view` tests), so nothing
+    // in the sidebar moves for it.
+    assert!(slip_anchor(mounted.harness.render_root()).is_some());
+    assert!(!mounted.contains_text("Review all changes"));
+    mounted.state.cancel_inline_rename();
+    mounted.settle();
     assert!(mounted.state.inline_rename().is_none());
     // The row is back, marked as where focus returns.
     assert!(beat_row(&mounted, "start").1);

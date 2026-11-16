@@ -1,6 +1,6 @@
 mod bindings;
 mod document_menu;
-mod focus;
+pub(crate) mod focus;
 pub(crate) mod galley;
 mod held;
 mod history;

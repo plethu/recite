@@ -13,6 +13,7 @@ use xilem::masonry::widgets::{Button, TextInput};
 
 mod targets;
 pub(super) use targets::renames;
+pub(crate) use targets::slip_anchor;
 use targets::{default_focus, find, first_wedge, place_picker, return_focus};
 
 #[derive(Clone, Default, PartialEq)]
@@ -43,6 +44,8 @@ pub(super) struct Focus {
     revealed: Option<CommandGeneration>,
     editing: Option<EditingTarget>,
     edit_request: Option<EditRequest>,
+    /// Where an inline rename's slip was last told to hang.
+    slip: Option<(u32, u32)>,
 }
 impl Focus {
     pub fn synchronize_manuscript(
@@ -106,6 +109,29 @@ impl Focus {
         }
         self.modal = context.modal;
     }
+    /// Hang an inline rename's slip from the heading or row it renames, again whenever that moves.
+    fn synchronize_slip(&mut self, root: &RenderRoot, context: &Context) {
+        if context.modal != Some(Modal::Rename) {
+            self.slip = None;
+            return;
+        }
+        if root.needs_rewrite_passes() {
+            return;
+        }
+        let Some(corner) = slip_anchor(root) else {
+            return;
+        };
+        if self.slip != Some(corner) {
+            self.slip = Some(corner);
+            let _ = context.proxy.message(Invocation {
+                action: Action::PlaceRenameSlip {
+                    x: corner.0,
+                    y: corner.1,
+                },
+                generation: context.generation,
+            });
+        }
+    }
     fn enter_modal(&mut self, root: &mut RenderRoot) {
         let Some(target) = default_focus(root) else {
             return;
@@ -136,6 +162,7 @@ impl Focus {
     }
     pub fn synchronize(&mut self, root: &mut RenderRoot, context: &Context) {
         self.synchronize_modal(root, context);
+        self.synchronize_slip(root, context);
         self.synchronize_problem(root, context);
         let picker = context.picker_open;
         let generation = context.generation;

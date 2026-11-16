@@ -1,6 +1,7 @@
 //! Optional native child lifecycle; stale messages never need a fabricated Writer.
 use super::*;
 use crate::Writer;
+use crate::workspaces::rename::inline as rename;
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
@@ -23,6 +24,13 @@ pub(super) fn writer_slot(app: &mut App) -> WriterSlot<impl WidgetView<Writer> +
     WriterSlot {
         key: app.writer.as_ref().map(|writer| writer.window),
         child: app.writer.as_ref().map(crate::view::writer),
+    }
+}
+/// An inline rename's floating slip, keyed to the Writer whose beat it renames.
+pub(super) fn rename_slot(app: &App) -> WriterSlot<impl WidgetView<Writer> + use<>> {
+    WriterSlot {
+        key: app.writer.as_ref().map(|writer| writer.window),
+        child: app.writer.as_ref().and_then(rename::floating),
     }
 }
 impl<V> ViewMarker for WriterSlot<V> {}

@@ -1,7 +1,8 @@
 use super::*;
 use crate::app::keyboard::ModalSurface;
-use crate::native_host::keyboard::tab::to_tab_stop;
+use crate::native_host::keyboard::{focus::slip_anchor, tab::to_tab_stop};
 use crate::tests::support::{self, mounted::Mounted};
+use crate::workspaces::tests::ToolDriver;
 use xilem::masonry::{
     core::{Widget, WidgetId, WidgetRef},
     widgets::{Passthrough, SizedBox},
@@ -70,3 +71,43 @@ fn tab_and_shift_tab_never_reach_the_tab_row_behind_a_modal() {
     }
 }
 
+#[test]
+fn a_reviewed_rename_hangs_its_slip_under_the_heading_and_moves_nothing() {
+    let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+    let app = App::with_writer(support::open(&directory).unwrap());
+    let mut mounted = Mounted::new(app, page);
+    mounted.settle();
+    let writer = mounted.state.writer.as_mut().unwrap();
+    let mut tools = ToolDriver::new(writer);
+    writer.rename_beat();
+    writer.edit_inline_rename("renamed".into());
+    writer.commit_inline_rename();
+    tools.finish(writer);
+    mounted.settle();
+    // The native host measures the heading and hangs the slip from it.
+    let heading = slip_anchor(mounted.harness.render_root()).expect("the heading is the anchor");
+    let writer = mounted.state.writer.as_mut().unwrap();
+    writer.place_inline_rename(heading.0, heading.1);
+    mounted.settle();
+    assert_eq!(slip_anchor(mounted.harness.render_root()), Some(heading));
+    let rename = mounted.find("Rename");
+    let widget = mounted.harness.get_widget_with_id(rename);
+    let top = (widget.ctx().window_transform() * widget.ctx().border_box().origin()).y;
+    assert!(
+        top > f64::from(heading.1),
+        "the slip hangs below the heading"
+    );
+    for action in ["Review all changes", "Cancel rename"] {
+        mounted.find(action);
+    }
+    mounted.activate("Cancel rename");
+    assert!(
+        mounted
+            .state
+            .writer
+            .as_ref()
+            .unwrap()
+            .inline_rename()
+            .is_none()
+    );
+}

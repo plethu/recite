@@ -19,6 +19,9 @@ pub struct Inline {
     pub name: String,
     pub stage: Stage,
     pub place: Place,
+    /// The window point the review's slip hangs from: under the heading or row being renamed,
+    /// once the native host has measured it.
+    pub anchor: Option<(u32, u32)>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stage {
@@ -35,6 +38,12 @@ pub enum Stage {
 impl Writer {
     pub fn inline_rename(&self) -> Option<&Inline> {
         self.workspaces.rename.inline.as_ref()
+    }
+    /// Hang the review's slip from this window point.
+    pub fn place_inline_rename(&mut self, x: u32, y: u32) {
+        if let Some(inline) = &mut self.workspaces.rename.inline {
+            inline.anchor = Some((x, y));
+        }
     }
     pub fn edit_inline_rename(&mut self, name: String) {
         if let Some(inline) = &mut self.workspaces.rename.inline

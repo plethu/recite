@@ -93,6 +93,11 @@ pub enum Action {
         x: u32,
         y: u32,
     },
+    /// An inline rename's slip hangs from the heading or row being renamed, at this window point.
+    PlaceRenameSlip {
+        x: u32,
+        y: u32,
+    },
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

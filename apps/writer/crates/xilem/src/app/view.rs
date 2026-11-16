@@ -7,6 +7,7 @@ use crate::presentation::{
     space,
     tokens::size,
 };
+use crate::workspaces::rename::inline as rename;
 use chrome::app_bar;
 use xilem::{
     WidgetView,
@@ -96,9 +97,14 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                         .cross_axis_alignment(CrossAxisAlignment::Stretch)
                         .gap(0.px())
                         .dims(Dim::Stretch),
-                        // A picker's backdrop dims the whole window, the tab row and status bar
-                        // included; the layer is empty and takes no pointer events otherwise.
+                        // A picker's or rename slip's backdrop dims the whole window, the tab row
+                        // and status bar included; the layer is empty and takes no pointer events
+                        // otherwise.
                         modal_layer(app.picker.is_some(), picker_layer(app, scale, status_bar)),
+                        modal_layer(
+                            app.writer.as_ref().is_some_and(rename::floats),
+                            slot::rename_slot(app),
+                        ),
                     ))
                     .alignment(UnitPoint::CENTER)
                     .dims(Dim::Stretch),
