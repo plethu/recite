@@ -1,16 +1,13 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
+use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
-use crate::presentation::{Icon, print};
-use crate::presentation::{Type, Typeset};
+use crate::presentation::{Icon, Type, print};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::kurbo::Axis;
 use xilem::view::FlexSpacer;
-use xilem::{
-    masonry::properties::LineBreaking,
-    view::{GridExt, GridTrackSize, grid},
-};
+use xilem::view::{GridExt, GridTrackSize, grid};
 
 /// One row from about 600 logical pixels: history, workspace modes, then the scene's
 /// tools with Save as the only raised action. Narrower windows move the modes to a second row.
@@ -97,11 +94,16 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 Writer::copy_link,
             )
         }),
+        // One line ending in an ellipsis where the toolbar is short of room; the whole name is
+        // still read aloud.
         (state.visible_workspace() == crate::map::Workspace::Map).then(|| {
-            label(scale, display_name(key.rsplit('/').next().unwrap_or(key)))
-                .typeset(Type::Section, scale)
-                .prop(LineBreaking::WordWrap)
-                .flex(1.)
+            one_line(
+                display_name(key.rsplit('/').next().unwrap_or(key)),
+                Type::Section,
+                scale,
+                state.palette.ink,
+            )
+            .flex(1.)
         }),
         FlexSpacer::Flex(1.),
     ))
