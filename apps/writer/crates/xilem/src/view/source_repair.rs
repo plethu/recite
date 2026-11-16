@@ -1,17 +1,20 @@
 //! Source drafts are repaired in a real editor, then imported through checked Apply. The page is a
-//! banner that says what needs repair, with Reload and the import row it opens, under a head
-//! whose one Primary opens the source in the editor.
+//! banner that says what needs repair, with Reload and the import row it opens, over a head whose
+//! one Primary opens the source in the editor, or applies a staged draft.
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::banner::banner;
 use crate::presentation::print;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
+use recite_writer_model::EditOperation;
 use xilem::masonry::parley::style::FontWeight;
-use xilem::masonry::properties::TextAreaLabel;
+use xilem::masonry::properties::{LineBreaking, TextAreaLabel};
+use xilem::view::FlexSequence;
 
 /// The repair page: `importing` when a recovered draft waits for its repaired text, otherwise the
-/// accepted source has a syntax `error` to repair in the editor.
+/// accepted source has a syntax `error` to repair in the editor. One muted caption says what to
+/// do; a staged draft's Apply and Discard join the head, and Apply is then its one Primary.
 pub(super) fn panel(
     state: &Writer,
     importing: bool,
@@ -19,32 +22,70 @@ pub(super) fn panel(
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let width = state.script_width();
-    let explanation = if importing {
-        "Writer exports the recovered draft and a recovery backup, then opens the draft in your \
-         editor. Import validates the repaired text before accepting it; Save writes it."
-    } else {
-        "Repair the source in your editor, then Reload. Writer keeps a recovery copy and preserves \
-         your source bytes."
-    };
+    let caption = error.map_or_else(
+        || {
+            if importing {
+                "Export opens the recovered draft in your editor; Import checks the repaired \
+                 text, and Save writes it."
+            } else {
+                "Repair the source in your editor, then Reload. Writer keeps a recovery copy."
+            }
+            .to_owned()
+        },
+        str::to_owned,
+    );
+    let staged = state.session.model().has_draft();
     flex_col((
         repair_banner(state, importing),
         flex_row((
-            Type::Display.label(scale, "Repair source").flex(1.),
-            open(state, importing),
+            flex_col((
+                Type::Display
+                    .label(scale, "Repair source")
+                    .prop(LineBreaking::WordWrap),
+                print::meta(scale, caption)
+                    .color(state.palette.muted)
+                    .prop(LineBreaking::WordWrap),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::UNIT.px())
+            .flex(1.),
+            open(state, importing, !staged),
+            staged.then(|| draft(state)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(space::TEXT.px())
+        .gap(space::SIBLINGS.px())
         .width(width.px()),
-        paragraph(scale, explanation, width),
-        error.map(|error| paragraph(scale, error.to_owned(), width)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
+    .gap(space::TEXT.px())
 }
 
-/// The head's one Primary: export the recovered draft and open it, open the exported draft again,
-/// or open the accepted source.
-fn open(state: &Writer, importing: bool) -> impl WidgetView<Writer> + use<> {
+/// A staged draft's Discard, quiet, and Apply, the head's one Primary while the draft exists.
+fn draft(state: &Writer) -> impl FlexSequence<Writer> + use<> {
+    let scale = state.ui_scale();
+    let closing = state.phase() != Phase::Writing || state.session.read_only();
+    (
+        print::action(scale, "Discard draft", closing, |state: &mut Writer| {
+            state.change(|model| {
+                model.discard();
+                Ok(())
+            })
+        }),
+        print::primary_action(
+            scale,
+            "Apply draft",
+            &state.palette,
+            closing || state.navigation.busy(),
+            |state: &mut Writer| {
+                state.navigate(crate::navigation::Target::Edit(EditOperation::Apply))
+            },
+        ),
+    )
+}
+
+/// Open in editor: export the recovered draft and open it, open the exported draft again, or
+/// open the accepted source. It is the head's Primary unless a staged draft's Apply is.
+fn open(state: &Writer, importing: bool, primary: bool) -> impl WidgetView<Writer> + use<> {
     let busy = repair_busy(state);
     let project = state.session.project();
     let exported = state.repair.artifact.as_ref().is_some_and(|artifact| {
@@ -55,13 +96,23 @@ fn open(state: &Writer, importing: bool) -> impl WidgetView<Writer> + use<> {
         (true, true) => Writer::open_exported_source,
         (false, _) => Writer::open_editor,
     };
-    print::primary_action(
-        state.ui_scale(),
-        "Open in editor",
-        &state.palette,
-        busy || project.is_none() || state.external.busy(),
-        action,
-    )
+    let disabled = busy || project.is_none() || state.external.busy();
+    if primary {
+        Either::A(print::primary_action(
+            state.ui_scale(),
+            "Open in editor",
+            &state.palette,
+            disabled,
+            action,
+        ))
+    } else {
+        Either::B(print::action(
+            state.ui_scale(),
+            "Open in editor",
+            disabled,
+            action,
+        ))
+    }
 }
 
 fn repair_busy(state: &Writer) -> bool {

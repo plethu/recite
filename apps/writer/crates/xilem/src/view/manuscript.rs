@@ -15,24 +15,28 @@ use xilem::AnyWidgetView;
 use xilem::masonry::kurbo;
 
 pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetView<Writer> + use<> {
+    // A readable source with nothing staged needs no repair page.
+    let repair = match surface {
+        Surface::SourceRepair { error, import }
+            if error.is_some() || (*import && state.session.model().has_draft()) =>
+        {
+            Some((*import, *error))
+        }
+        _ => None,
+    };
     flex_col((
-        match surface {
-            // A readable source with nothing staged needs no repair page.
-            Surface::SourceRepair { error, import }
-                if error.is_some() || (*import && state.session.model().has_draft()) =>
-            {
-                Some(super::source_repair::panel(state, *import, *error))
-            }
-            _ => None,
-        },
+        repair.map(|(import, error)| super::source_repair::panel(state, import, error)),
         content(state, surface),
-        // The galley sets these with the selected beat; other surfaces keep them below.
-        (!galley(state, surface)).then(|| retained(actions(state), !state.attention.is_focused())),
+        // The galley sets these with the selected beat; other surfaces keep them below. A source
+        // under repair has nothing to insert into, and its head holds the draft's actions.
+        (!galley(state, surface) && repair.is_none())
+            .then(|| retained(actions(state), !state.attention.is_focused())),
         diagnostics(state),
-        (!matches!(
-            surface,
-            Surface::Reply(_) | Surface::Beat { .. } | Surface::Manuscript { .. }
-        ))
+        (repair.is_none()
+            && !matches!(
+                surface,
+                Surface::Reply(_) | Surface::Beat { .. } | Surface::Manuscript { .. }
+            ))
         .then(|| {
             draft_actions(
                 state,
