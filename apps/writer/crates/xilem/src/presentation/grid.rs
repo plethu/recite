@@ -21,7 +21,7 @@ const DESTINATION_MEASURE: f64 = 420.;
 const CHARACTERS: f64 = 68.;
 const CHARACTER: f64 = 0.55;
 /// The reading size the column widths below are set for; other sizes scale them.
-const REFERENCE_READING: f64 = 20.;
+const REFERENCE_READING: f64 = Sheet::REFERENCE as f64;
 /// The margin column on a sheet and on full-bleed paper.
 const MARGIN: f64 = 96.;
 const BLEED_MARGIN: f64 = 72.;

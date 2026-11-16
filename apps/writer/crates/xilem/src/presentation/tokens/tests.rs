@@ -48,6 +48,18 @@ fn sheet_roles_follow_the_reading_size_but_never_fall_below_their_floors() {
 }
 
 #[test]
+fn the_scene_title_beat_headings_and_folio_take_the_reading_size_not_the_ui_scale() {
+    for reading in [14., 20., 28.] {
+        let sheet = Sheet::scale(reading);
+        assert!((Type::Display.size(sheet) - 1.4 * reading).abs() < 1e-4);
+        assert!((Type::Section.size(sheet) - reading).abs() < 1e-4);
+        // The folio is 0.6R, held at 11px at small reading sizes.
+        let folio = Sheet::folio_scale(reading);
+        assert!((Type::Id.size(folio) - (0.6 * reading).max(11.)).abs() < 1e-4);
+    }
+}
+
+#[test]
 fn the_manuscript_line_box_is_taller_than_the_reference_at_every_reading_size() {
     // The comparison reference set lines and replies at R with a 1.2 line box.
     let leading = 1.45;

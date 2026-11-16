@@ -207,6 +207,19 @@ pub(crate) enum Sheet {
     Destination,
 }
 impl Sheet {
+    /// The reading size the sheet's interface roles are drawn for.
+    pub const REFERENCE: f32 = 20.;
+    /// The scale interface roles take on the sheet: the reading size over its reference, never
+    /// the UI scale. The scene title (Display) is 1.4R, a beat heading (Section) 1.0R and the
+    /// folio (Id) 0.6R, with their lines in proportion.
+    pub fn scale(reading: f32) -> f32 {
+        reading / Self::REFERENCE
+    }
+    /// The sheet scale for the running head and foot, whose Meta and Id text keep the 11px floor
+    /// of the sheet's smallest type.
+    pub fn folio_scale(reading: f32) -> f32 {
+        Self::scale(reading).max(11. / Type::Meta.metrics().0)
+    }
     /// The manuscript's leading, on editable fields and read-only text alike, so a beat sets the
     /// same lines whether or not its fields are mounted.
     pub const LEADING: LineHeight = LineHeight::FontSizeRelative(1.45);

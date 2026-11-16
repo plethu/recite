@@ -99,7 +99,7 @@ fn scene_title(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     let key = state.session.model().document().key().as_str();
     let scene = display_name(key.rsplit('/').next().unwrap_or(key));
     sized_box(
-        print::title(state.ui_scale(), scene)
+        print::title(Sheet::scale(state.reading_size()), scene)
             .prop(LineBreaking::WordWrap)
             .width((grid.row() - grid.text()).px()),
     )
@@ -145,8 +145,10 @@ fn heading(
         .find(|(beat, _)| beat == &id)
         .map(|(_, message)| message.clone());
     let inset = control_inset(scale);
+    // Set with the manuscript: a Section heading at the reading size, whatever the UI scale.
+    let sheet = Sheet::scale(state.reading_size());
     let text = Type::Section
-        .label(scale, name.clone())
+        .label(sheet, name.clone())
         .color(if selected {
             state.palette.ink
         } else {
@@ -157,7 +159,7 @@ fn heading(
     let renaming = rename::editing(state, &id, Place::Heading).filter(|_| selected);
     let renaming_here = renaming.is_some();
     let title = if let Some(inline) = renaming {
-        Either::A(Either::A(rename::field(inline, Type::Section, scale)))
+        Either::A(Either::A(rename::field(inline, Type::Section, sheet)))
     } else if selected {
         // Padded like the read-only headings' buttons, so every heading starts on one line.
         Either::A(Either::B(
