@@ -4,7 +4,6 @@ use super::icons::{Icon, face};
 use crate::presentation::{Type, space};
 use xilem::{
     WidgetView,
-    core::one_of::Either,
     masonry::layout::AsUnit,
     peniko::Color,
     style::Style,
@@ -35,7 +34,8 @@ pub(crate) fn disclosure<S: 'static, V: WidgetView<S>>(
 ///
 /// The destination is set in the manuscript's type, which does not grow with the UI scale; a
 /// strut a Control line tall at `ui_scale` keeps the toggle at least a text control's row tall,
-/// so its hit target grows with the interface like every other control's.
+/// so its hit target grows with the interface like every other control's. The strut comes
+/// after the face, so the toggle's first baseline is its words' and a row aligns it by them.
 pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
     (scale, ui_scale): (f32, f32),
     expanded: bool,
@@ -43,22 +43,18 @@ pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
     text_size: f32,
     text: V,
 ) -> impl WidgetView<S> + use<S, V> {
-    let face = if expanded {
-        Either::A(disclosure(scale, true, color, text))
-    } else {
-        Either::B(
-            flex_row((
-                super::label(1., "→").text_size(text_size).color(color),
-                text,
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap((space::UNIT * f64::from(scale)).px()),
-        )
-    };
+    // Options, not one Either, whose wrapper would hide the words' baseline from the row.
+    let face = flex_row((
+        expanded.then(|| face(scale * MARK, "", Icon::Expanded, color)),
+        (!expanded).then(|| super::label(1., "→").text_size(text_size).color(color)),
+        text,
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+    .gap((space::UNIT * f64::from(scale)).px());
     let line = f64::from(Type::Control.metrics().1 * ui_scale);
     flex_row((
-        sized_box(flex_row(())).width(0.px()).height(line.px()),
         face,
+        sized_box(flex_row(())).width(0.px()).height(line.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(0.px())

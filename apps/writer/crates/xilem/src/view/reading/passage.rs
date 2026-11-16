@@ -5,7 +5,7 @@ use crate::presentation::grid::Grid;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER};
 use crate::presentation::marks::{Mark, marked};
 use crate::presentation::space;
-use crate::presentation::{Sheet, disclosure_width, print, route_name, route_toggle};
+use crate::presentation::{Sheet, disclosure_width, overhang, print, route_name, route_toggle};
 use crate::presentation::{control_inset, label_inset};
 use crate::reading::PassageNumber;
 use crate::view::workspace::Layout;
@@ -25,6 +25,8 @@ use metadata::{CaptionPlacement, metadata, route};
 
 /// Space between a reply and its overhanging source label.
 const CAPTION_CLEARANCE: f64 = 4.;
+/// The spacing between reply rows: the caption's clearance and the text rhythm.
+const ROUTE_REACH: f64 = CAPTION_CLEARANCE + space::TEXT;
 
 /// The grid every manuscript row is set on.
 pub(in crate::view) fn grid(state: &Writer) -> Grid {
@@ -226,10 +228,15 @@ pub(super) fn row(
 }
 
 /// A route in the destination column: the button's own padding takes the rest of the gutter.
+/// Its target reaches into the spacing between reply rows, so a target taller than the reply's
+/// line sets the row no taller than the line; neighbouring targets meet but never overlap.
 fn hang_route<V: WidgetView<Writer>>(state: &Writer, route: V) -> impl WidgetView<Writer> + use<V> {
-    sized_box(route).padding(Padding::left(
-        (DESTINATION_GUTTER - GUTTER - control_inset(state.ui_scale()))
-            .max(0.)
-            .px(),
-    ))
+    overhang(
+        sized_box(route).padding(Padding::left(
+            (DESTINATION_GUTTER - GUTTER - control_inset(state.ui_scale()))
+                .max(0.)
+                .px(),
+        )),
+        ROUTE_REACH,
+    )
 }
