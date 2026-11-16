@@ -263,8 +263,8 @@ def run(api, bus, registry, binary, output):
                 source.write_text(malformed)
                 process, window, _ = launch(api, bus, registry, arguments, log, manuscript=False)
                 assert window.find("Manuscript") is None
-                window.reveal_end("Export draft and open editor")
-                assert window.enabled("Export draft and open editor")
+                window.reveal_end("Open in editor")
+                assert window.enabled("Open in editor")
                 assert source.read_text() == malformed
                 assert not window.enabled("Add beat")
                 window.document_action("Configure preview")

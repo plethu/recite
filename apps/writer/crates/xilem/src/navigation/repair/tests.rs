@@ -150,6 +150,8 @@ fn repair_controls_expose_the_recovered_source_route_at_personal_scales() {
             model.select(View::Source)?;
             model.stage_repaired_source("Recovered source draft.".to_owned().into())
         });
+        // The banner's import row opens from "Import repaired source…", or after Export.
+        writer.toggle_source_repair_import();
         let mut config = writer.config.clone();
         config.writer.presentation = config
             .writer
@@ -171,15 +173,15 @@ fn repair_controls_expose_the_recovered_source_route_at_personal_scales() {
         );
         let tree = harness.access_tree();
         let mut pending = vec![tree.state().root()];
-        let (mut export, mut input, mut choose) = (false, false, false);
+        let (mut export, mut input, mut choose, mut reload) = (false, false, false, false);
         while let Some(node) = pending.pop() {
-            export |= node.label().as_deref() == Some("Export draft and open editor")
-                && !node.is_disabled();
+            export |= node.label().as_deref() == Some("Open in editor") && !node.is_disabled();
             input |= node.label().as_deref() == Some("Repaired source file");
-            choose |= node.label().as_deref() == Some("Choose file…") && !node.is_disabled();
+            choose |= node.label().as_deref() == Some("Browse…") && !node.is_disabled();
+            reload |= node.label().as_deref() == Some("Reload (keep recovery copy)");
             pending.extend(node.children());
         }
-        assert!(export && input && choose);
+        assert!(export && input && choose && reload);
         if let Ok(prefix) = std::env::var("RECITE_CAPTURE_SOURCE_REPAIR") {
             harness
                 .render()

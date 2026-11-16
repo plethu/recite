@@ -49,13 +49,13 @@ def run(api, bus, registry, binary, output):
                 process = subprocess.Popen(arguments, stdout=log, stderr=subprocess.STDOUT)
                 window = attach(api, bus, registry, process)
                 window.wait(
-                    lambda: window.find("Export draft and open editor"), "recovered source repair"
+                    lambda: window.find("Open in editor"), "recovered source repair"
                 )
                 assert not window.enabled("Save")
                 assert not window.enabled("Save all")
                 assert source.read_text() == SOURCE
                 capture(output, "-recovered")
-                window.act("Export draft and open editor")
+                window.act("Open in editor")
                 window.wait(lambda: receipt.is_file(), "owned IDE launch")
                 exported = Path(json.loads(receipt.read_text())[0])
                 path = field(window, "Repaired source file")
@@ -86,8 +86,9 @@ def run(api, bus, registry, binary, output):
                 process = subprocess.Popen(arguments, stdout=log, stderr=subprocess.STDOUT)
                 window = attach(api, bus, registry, process)
                 window.wait(
-                    lambda: window.find("Export draft and open editor"), "restarted source repair"
+                    lambda: window.find("Open in editor"), "restarted source repair"
                 )
+                window.act("Import repaired source…")
                 repaired = SOURCE.replace("The last tram waits.", "The repaired tram waits.")
                 exported.write_text(repaired)
                 fill(window, "Repaired source file", str(exported))

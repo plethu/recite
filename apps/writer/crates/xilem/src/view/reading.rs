@@ -30,14 +30,6 @@ enum RowIdentity {
     Structural(AnalysisStamp, usize),
 }
 
-pub(super) fn repair(state: &Writer, error: &str) -> impl WidgetView<Writer> + use<> {
-    flex_col((
-        label(state.ui_scale(), "Source editing in your editor"),
-        paragraph(state.ui_scale(), "Choose Open in editor to repair the source, then Reload (keep recovery copy). Your source bytes are preserved.", state.script_width()),
-        paragraph(state.ui_scale(), error.to_owned(), state.script_width()),
-        state.session.project().map(|_| print::action(state.ui_scale(), "Open in editor", state.phase() != Phase::Writing || state.external.busy(), Writer::open_editor)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
-}
 pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         // Halftone marks what is not yet written; it sits beside the heading, never behind it.

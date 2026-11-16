@@ -267,11 +267,7 @@ fn preserved_source_selection_distinguishes_readable_script_and_repair() {
             .iter()
             .any(|name| name.starts_with("Choose a beat in the outline"))
     );
-    assert!(
-        !names
-            .iter()
-            .any(|name| name == "Source editing in your editor")
-    );
+    assert!(!names.iter().any(|name| name == "Source needs repair"));
     drop(writer);
     let directory = project(":: start default\n->\n").unwrap();
     let mut writer = open(&directory).unwrap();
@@ -281,7 +277,7 @@ fn preserved_source_selection_distinguishes_readable_script_and_repair() {
         labels(&mut writer)
             .unwrap()
             .iter()
-            .any(|name| name == "Source editing in your editor")
+            .any(|name| name == "Source needs repair")
     );
 }
 #[path = "inline/tests.rs"]

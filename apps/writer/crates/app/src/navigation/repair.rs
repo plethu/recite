@@ -10,6 +10,9 @@ pub struct Repair {
     pub(crate) path: String,
     pub(crate) native_path: Option<PathBuf>,
     pub artifact: Option<SourceRepairArtifact>,
+    /// Whether the repair banner shows its import row: the repaired file's path, Browse and
+    /// Import.
+    pub importing: bool,
 }
 #[derive(Clone)]
 pub enum Action {
@@ -107,6 +110,10 @@ impl Writer {
         self.repair.path = path;
         self.repair.native_path = None;
     }
+    /// Show or hide the repair banner's import row.
+    pub fn toggle_source_repair_import(&mut self) {
+        self.repair.importing = !self.repair.importing;
+    }
     pub fn export_source_repair(&mut self) {
         self.begin_source_repair(Action::Export);
     }
@@ -181,6 +188,8 @@ impl Writer {
             self.repair.native_path = Some(artifact.source.clone());
             self.recovery_copy = Some(artifact.recovery.clone());
             self.repair.artifact = Some(artifact.clone());
+            // The exported draft is the file to import once it is repaired.
+            self.repair.importing = true;
             if request.checkpoint().is_ok() && request.origin.is_current(self) {
                 self.open_exported_source();
             } else {

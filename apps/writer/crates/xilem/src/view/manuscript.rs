@@ -16,8 +16,15 @@ use xilem::masonry::kurbo;
 
 pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        matches!(surface, Surface::SourceRepair { import: true, .. })
-            .then(|| super::source_repair::panel(state)),
+        match surface {
+            // A readable source with nothing staged needs no repair page.
+            Surface::SourceRepair { error, import }
+                if error.is_some() || (*import && state.session.model().has_draft()) =>
+            {
+                Some(super::source_repair::panel(state, *import, *error))
+            }
+            _ => None,
+        },
         content(state, surface),
         // The galley sets these with the selected beat; other surfaces keep them below.
         (!galley(state, surface)).then(|| retained(actions(state), !state.attention.is_focused())),
@@ -49,13 +56,19 @@ fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> 
             } else {
                 prose_editor(state, passage, state.script_width()).boxed()
             }
-        },
+        }
         Surface::Reply(reply) => rules::view::panel(state, reply).boxed(),
         Surface::Beat { id, rows } => super::reading::block(state, id, rows).boxed(),
         Surface::Empty => super::reading::empty(state).boxed(),
-        Surface::SourceRepair { error: Some(error), .. } => super::reading::repair(state, error).boxed(),
-        Surface::SourceRepair { error: None, .. } =>
-            paragraph(state.ui_scale(), "Choose a beat in the outline to read or write it. Use your editor for source editing; source drafts remain recoverable.", state.script_width()).boxed(),
+        // The repair page above says what a broken source needs.
+        Surface::SourceRepair { error: Some(_), .. } => flex_col(()).boxed(),
+        Surface::SourceRepair { error: None, .. } => paragraph(
+            state.ui_scale(),
+            "Choose a beat in the outline to read or write it. Use your editor for source editing; \
+             source drafts remain recoverable.",
+            state.script_width(),
+        )
+        .boxed(),
     }
 }
 pub(super) fn draft_actions(
