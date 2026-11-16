@@ -1,11 +1,16 @@
 //! Accepted Script projection and bounded overlapping reading; field drafts reuse it.
 use recite_core::DocumentKey;
-use recite_writer_model::{Passage, PassageKind, ScriptBlock, ScriptEntry, View, Workbench};
+use recite_writer_model::{Passage, PassageKind, ScriptBlock, View, Workbench};
 use std::sync::Arc;
 
+mod anchor;
+pub use anchor::Anchor;
 pub mod galley;
 pub mod navigation;
+mod rows;
 pub mod surface;
+pub(crate) use rows::flatten;
+pub use rows::{Content, PassageNumber, Row};
 pub(crate) mod window;
 pub use window::CAPACITY as PAGE;
 pub use window::{Direction, ReadingWindow};
@@ -20,30 +25,6 @@ impl BeatPosition {
     pub fn total(&self) -> usize {
         self.total
     }
-}
-
-#[derive(Clone, Copy)]
-pub struct PassageNumber(usize);
-impl PassageNumber {
-    pub fn ordinal(self) -> usize {
-        self.0
-    }
-}
-
-pub enum Content {
-    Passage {
-        passage: Passage,
-        number: PassageNumber,
-    },
-    Heading(String),
-    Note(String),
-    Continuation(String),
-}
-
-pub struct Row {
-    pub content: Content,
-    pub groups: Arc<[String]>,
-    pub reply: Option<usize>,
 }
 
 pub struct Reading {
@@ -210,92 +191,8 @@ impl Reading {
     }
 }
 
-pub(crate) fn flatten(entries: &[ScriptEntry]) -> Arc<[Row]> {
-    let mut rows = Vec::new();
-    let mut replies = 0;
-    let mut passages = 0;
-    let mut pending = vec![(entries.iter(), Arc::<[String]>::from([]))];
-    while let Some((items, groups)) = pending.last_mut() {
-        let Some(entry) = items.next() else {
-            pending.pop();
-            continue;
-        };
-        let groups = groups.clone();
-        let content = match entry {
-            ScriptEntry::Passage(passage) => {
-                passages += 1;
-                Content::Passage {
-                    passage: passage.clone(),
-                    number: PassageNumber(passages),
-                }
-            }
-            ScriptEntry::Group { heading, entries } => {
-                let mut nested = groups.to_vec();
-                nested.push(heading.clone());
-                pending.push((entries.iter(), nested.into()));
-                Content::Heading(heading.clone())
-            }
-            ScriptEntry::Jump(target) => Content::Continuation(target.clone()),
-            ScriptEntry::Effect(text) => Content::Note(format!("Effect · {text}")),
-            ScriptEntry::Source(text) => {
-                Content::Note(format!("Source fragment (read only) · {text}"))
-            }
-        };
-        let reply = if matches!(&content, Content::Passage { passage, .. } if matches!(passage.kind, PassageKind::Choice { .. }))
-        {
-            replies += 1;
-            Some(replies)
-        } else {
-            None
-        };
-        rows.push(Row {
-            content,
-            groups,
-            reply,
-        });
-    }
-    rows.into()
-}
-
 impl Default for Reading {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[derive(Clone, PartialEq)]
-struct AnchorLocation {
-    document: DocumentKey,
-    beat: Option<String>,
-    window: ReadingWindow,
-}
-/// Where reading was anchored, so a frontend can keep its scroll position across window shifts
-/// and reset it for explicit jumps.
-#[derive(Clone, Default, PartialEq)]
-pub struct Anchor(Option<AnchorLocation>);
-impl Anchor {
-    /// No manuscript is anchored.
-    pub const NONE: Self = Self(None);
-    pub fn capture(writer: &crate::Writer) -> Self {
-        Self(Some(AnchorLocation {
-            document: writer.session.model().document().key().clone(),
-            beat: writer.reading.selected.clone(),
-            window: writer.reading.window,
-        }))
-    }
-    /// The same beat moved its reading window rather than jumping elsewhere.
-    pub fn shifted_from(&self, previous: &Self) -> bool {
-        match (&self.0, &previous.0) {
-            (Some(current), Some(previous)) => {
-                current.document == previous.document
-                    && current.beat == previous.beat
-                    && current.window.is_shift()
-                    && current.window.start() != previous.window.start()
-            }
-            _ => false,
-        }
-    }
-    pub fn is_manuscript(&self) -> bool {
-        self.0.is_some()
     }
 }

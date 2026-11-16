@@ -1,6 +1,8 @@
-//! How the window's width is shared: compact chrome below the minimum comfortable window, and
+//! A window's identity, and how its width is shared: compact chrome below the minimum comfortable window, and
 //! the scene list's width, narrowed and then hidden as the window shrinks.
 use super::Writer;
+use std::num::NonZeroU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Below this width, before the UI scale, chrome compacts and the scene list hides.
 pub const COMPACT_WINDOW: f64 = 900.;
@@ -42,5 +44,17 @@ impl Writer {
                 .presentation
                 .value(recite_config::WriterPresentationField::DrawerWidth),
         )
+    }
+}
+
+/// Identifies one Writer window so late asynchronous results can be matched to their origin.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct WindowKey(NonZeroU64);
+impl WindowKey {
+    /// Allocate a key that no other window in this process uses.
+    pub fn next() -> Self {
+        static COUNTER: AtomicU64 = AtomicU64::new(1);
+        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        Self(NonZeroU64::new(id).unwrap_or(NonZeroU64::MIN))
     }
 }

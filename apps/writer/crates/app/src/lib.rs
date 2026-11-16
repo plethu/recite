@@ -3,7 +3,11 @@
 //! The native frontend renders this state and forwards input to it. Nothing here depends on a
 //! GUI toolkit, so a frontend can change without moving authoring behaviour.
 pub mod attention;
+mod closing;
+mod host;
+pub use host::Host;
 mod choices;
+mod intents;
 pub use choices::Opener;
 pub mod editor_work;
 pub mod external_editor;
@@ -24,37 +28,9 @@ pub mod shell;
 pub mod test_support;
 pub mod trial;
 mod window;
-pub use window::{COMPACT_WINDOW, NARROW_SIDEBAR};
+pub use window::{COMPACT_WINDOW, NARROW_SIDEBAR, WindowKey};
 pub mod workspaces;
 use recite_writer_model::Workbench;
-use std::num::NonZeroU64;
-use std::sync::atomic::{AtomicU64, Ordering};
-
-/// Identifies one Writer window so late asynchronous results can be matched to their origin.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct WindowKey(NonZeroU64);
-impl WindowKey {
-    /// Allocate a key that no other window in this process uses.
-    pub fn next() -> Self {
-        static COUNTER: AtomicU64 = AtomicU64::new(1);
-        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        Self(NonZeroU64::new(id).unwrap_or(NonZeroU64::MIN))
-    }
-}
-
-/// Native services a frontend lends to authoring workflows.
-#[derive(Clone, Copy)]
-pub struct Host {
-    /// Ask the person for a repaired source file; runs on a worker thread.
-    pub choose_repaired_source: fn() -> Option<std::path::PathBuf>,
-}
-impl Default for Host {
-    fn default() -> Self {
-        Self {
-            choose_repaired_source: || None,
-        }
-    }
-}
 
 pub struct Writer {
     pub(crate) host: Host,
@@ -210,128 +186,5 @@ impl Writer {
     }
     pub fn reload(&mut self) {
         self.navigate(navigation::Target::Reload);
-    }
-    pub fn request_close(&mut self) {
-        if let Err(error) = self.require_finished_composition() {
-            self.status = error;
-            return;
-        }
-        if self.work.busy() || self.navigation.busy() || self.project_jobs_busy() {
-            self.status = "An editor action is still finishing. Your work remains open.".into();
-            return;
-        }
-        if self.session.dirty() || self.localisation.dirty() {
-            self.phase = Phase::ConfirmClose;
-        } else if self.config.writer.confirm_exit {
-            self.phase = Phase::ConfirmExit;
-        } else {
-            self.close_with_recovery();
-        }
-    }
-    pub fn close_with_recovery(&mut self) {
-        if self.work.busy() || self.navigation.busy() || self.project_jobs_busy() {
-            self.status = "Wait for the current editor action before closing.".into();
-            return;
-        }
-        if self.localisation.has_catalogue() {
-            self.phase = Phase::Closing;
-            self.flush_catalogue_before_close();
-            return;
-        }
-        self.close_sources_with_recovery();
-    }
-    pub(crate) fn close_sources_with_recovery(&mut self) {
-        let Some(project) = self.session.project_mut() else {
-            self.phase = Phase::Closed;
-            return;
-        };
-        match project.checkpoint() {
-            Ok(()) => self.phase = Phase::Closed,
-            Err(error) => {
-                self.status = feedback::file(&error);
-                self.phase = Phase::ConfirmClose;
-            }
-        }
-    }
-}
-
-impl Writer {
-    /// The open document and whether it has unsaved edits.
-    pub fn document_caption(&self) -> String {
-        format!(
-            "{}{}",
-            self.session.model().document().key(),
-            if self.session.current_dirty() {
-                " · Unsaved"
-            } else {
-                ""
-            }
-        )
-    }
-}
-
-/// Intents a frontend raises from controls; each keeps related state consistent.
-impl Writer {
-    /// Leave a close or exit prompt and continue working.
-    pub fn keep_editing(&mut self) {
-        self.phase = Phase::Writing;
-        self.work.keep_editing();
-        self.localisation.keep_editing();
-    }
-    /// Leave a close prompt to review translations that still have unsaved drafts.
-    pub fn open_unsaved_translations(&mut self) {
-        self.keep_editing();
-        self.enter_localisation();
-        self.localisation.query.filter = localisation::Filter::Unsaved;
-        self.search_catalogue();
-    }
-    /// Ask the shell to open a search.
-    pub fn request_search(&mut self, search: shell::Search) {
-        self.app_request = Some(shell::Request::Search(search));
-    }
-    /// Ask the shell to show the project welcome screen.
-    pub fn request_projects(&mut self) {
-        self.app_request = Some(shell::Request::Projects);
-    }
-    /// Ask the shell to open settings.
-    pub fn request_settings(&mut self) {
-        self.app_request = Some(shell::Request::Settings);
-    }
-    /// Close document actions after a chosen action.
-    pub fn close_document_menu(&mut self) {
-        self.document_menu = attention::DocumentMenu::Closed;
-    }
-    /// Open or close document actions from their toolbar control.
-    pub fn toggle_document_menu(&mut self) {
-        self.document_menu.toggle();
-    }
-    /// Dismiss document actions without choosing one.
-    pub fn dismiss_document_menu(&mut self) {
-        self.document_menu = attention::DocumentMenu::Dismissed;
-    }
-    /// Report that a copied link reached the system clipboard.
-    pub fn clipboard_written(&mut self) {
-        self.status = "Link sent to clipboard.".into();
-    }
-    /// Resume background work that a native message may have unblocked.
-    pub fn after_native_message(&mut self) {
-        self.refresh_map_if_needed();
-        self.resume_external_notices();
-        self.resume_linked_editor();
-    }
-}
-
-/// Read access to state whose changes go through named operations.
-impl Writer {
-    /// Whether the window is writing, confirming a close or exit, or closing.
-    pub fn phase(&self) -> Phase {
-        self.phase
-    }
-    pub fn document_menu(&self) -> attention::DocumentMenu {
-        self.document_menu
-    }
-    /// Whether the choice slip hanging from `opener` is open.
-    pub fn choosing(&self, opener: &Opener) -> bool {
-        self.choosing.as_ref() == Some(opener)
     }
 }
