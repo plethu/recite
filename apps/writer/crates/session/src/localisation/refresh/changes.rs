@@ -21,6 +21,8 @@ impl Kind {
 }
 pub struct Change {
     pub kind: Kind,
+    /// The record's context: what a refresh keeps the record by.
+    pub context: String,
     pub old: Option<String>,
     pub new: Option<String>,
     pub translation: String,
@@ -90,6 +92,7 @@ fn describe(
     let nearby = context.for_entry(entry);
     Change {
         kind,
+        context: entry.context().unwrap_or_default().to_owned(),
         old: old.map(source),
         new: new.map(source),
         translation: old.map_or_else(String::new, |e| {

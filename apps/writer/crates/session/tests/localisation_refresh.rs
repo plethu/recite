@@ -137,3 +137,18 @@ fn shared_extraction_uses_retained_accepted_edits_and_rejects_unresolved_fields(
     assert!(error.contains("a.recite"));
     Ok(())
 }
+
+#[test]
+fn a_kept_source_update_leaves_its_record_as_it_was() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = tempfile::tempdir()?;
+    let path = directory.path().join("fr.po");
+    fs::write(&path, PO)?;
+    let mut catalogue = Catalogue::open(&path)?;
+    let template = PO.replace("Hello.", "Welcome.").replace("Bonjour.", "");
+    let preview = RefreshPreview::prepare(&catalogue, template.clone())?;
+    assert_eq!(preview.changes[0].context, "ffee6p8");
+    let kept = std::iter::once("ffee6p8".to_owned()).collect();
+    preview.apply_keeping(&mut catalogue, &template, &kept)?;
+    assert_eq!(fs::read_to_string(&path)?, PO);
+    Ok(())
+}

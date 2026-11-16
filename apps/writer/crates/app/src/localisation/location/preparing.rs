@@ -96,11 +96,9 @@ impl Plan {
                 let template = extraction::template(model, Some(project.files()), control)?;
                 let mut refresh =
                     refresh::Refresh::new(RefreshPreview::prepare(catalogue, template)?);
-                refresh.page = refresh
-                    .pages
-                    .iter()
-                    .position(|value| value.change >= *page)
-                    .unwrap_or_else(|| refresh.pages.len().saturating_sub(1));
+                if let Some(row) = page.checked_sub(1).filter(|row| *row < refresh.rows.len()) {
+                    refresh.open.insert(row);
+                }
                 Ok(Projection::Updates(Some(refresh)))
             }
         }

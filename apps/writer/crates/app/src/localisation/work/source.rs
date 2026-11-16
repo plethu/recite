@@ -16,11 +16,13 @@ use recite_writer_session::{
     },
 };
 pub use slot::{Checkout, Owner};
+use std::collections::BTreeSet;
 
 pub enum Action {
     Create(TargetLocale),
     Review,
-    Apply(Arc<RefreshPreview>),
+    /// Apply the reviewed updates, keeping the records whose contexts are listed.
+    Apply(Arc<RefreshPreview>, BTreeSet<String>),
 }
 pub struct Work {
     project: ProjectCheckout,
@@ -145,10 +147,10 @@ pub fn perform(
                 RefreshPreview::prepare(&owner.catalogue, template)?,
             ))));
         }
-        Action::Apply(preview) => {
+        Action::Apply(preview, kept) => {
             let owner = checkout.owner.as_mut().ok_or("Open a catalogue first.")?;
             let before = owner.catalogue.document.clone();
-            let result = preview.apply(&mut owner.catalogue, &template);
+            let result = preview.apply_keeping(&mut owner.catalogue, &template, kept);
             if !Arc::ptr_eq(&before, &owner.catalogue.document) {
                 owner.renew_identity();
             }

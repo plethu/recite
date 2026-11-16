@@ -73,7 +73,7 @@ fn source_review_and_language_selection_render_at_personal_scales() {
 }
 
 #[test]
-fn source_refresh_review_cost_depends_on_visible_page_not_entries_or_source_length() {
+fn source_refresh_review_cost_depends_on_shown_rows_not_entries_or_source_length() {
     let mut measurements = Vec::new();
     for (count, length) in [(1_026, 10_000), (10_260, 200_000)] {
         let (_directory, mut writer, _driver) = fixture();
@@ -97,20 +97,13 @@ fn source_refresh_review_cost_depends_on_visible_page_not_entries_or_source_leng
         let preview = RefreshPreview::prepare(&owner.catalogue, after).unwrap();
         assert_eq!(preview.changes.len(), count);
         let refresh = refresh::Refresh::new(preview);
-        assert!(refresh.pages.iter().all(|page| {
-            page.source
-                .before
-                .as_ref()
-                .is_none_or(|value| value.chars().count() <= 1_000)
-                && page
-                    .source
-                    .after
+        assert!(refresh.rows.iter().all(|row| {
+            let bounded = |value: &Option<String>| {
+                value
                     .as_ref()
-                    .is_none_or(|value| value.chars().count() <= 1_000)
-                && page
-                    .detail
-                    .as_ref()
-                    .is_none_or(|value| value.chars().count() <= 1_000)
+                    .is_none_or(|value| value.chars().count() <= 1_001)
+            };
+            bounded(&row.source.before) && bounded(&row.source.after) && bounded(&row.detail)
         }));
         writer.localisation.refresh = Some(refresh);
         writer.localisation.destination = Destination::Refresh;
@@ -143,4 +136,48 @@ fn source_refresh_review_cost_depends_on_visible_page_not_entries_or_source_leng
         );
     }
     assert_eq!(measurements[0], measurements[1]);
+}
+
+#[test]
+fn source_updates_are_rows_that_accept_or_keep_and_open_their_diff() {
+    let (_directory, mut writer, _driver) = fixture();
+    let before = "msgctxt \"a\"\nmsgid \"One\"\nmsgstr \"Un\"\n\nmsgctxt \"b\"\nmsgid \"Two\"\nmsgstr \"Deux\"\n";
+    let after = "msgctxt \"a\"\nmsgid \"One!\"\nmsgstr \"\"\n\nmsgctxt \"b\"\nmsgid \"Two!\"\nmsgstr \"\"\n";
+    let owner = writer.localisation.slot.owner_mut().unwrap();
+    owner.catalogue.document = Arc::new(PoDocument::parse(before).unwrap());
+    let preview = RefreshPreview::prepare(&owner.catalogue, after.into()).unwrap();
+    writer.localisation.refresh = Some(refresh::Refresh::new(preview));
+    writer.localisation.destination = Destination::Refresh;
+    writer.keep_source_update(0, true);
+    writer.toggle_source_update(1);
+    let refresh = writer.localisation.refresh.as_ref().unwrap();
+    assert!(refresh.is_kept(0) && !refresh.is_kept(1));
+    assert!(refresh.kept.contains("a"));
+    assert!(refresh.open.contains(&1) && !refresh.open.contains(&0));
+    let mut context = ViewCtx::new(
+        Arc::new(support::NoProxy),
+        Arc::new(tokio::runtime::Runtime::new().unwrap()),
+    );
+    let view = crate::view::writer(&writer);
+    let (pod, _) = view.build(&mut context, &mut writer);
+    let harness = TestHarness::create_with_size(
+        Theme::new(&writer.config.writer).initial_properties(),
+        pod.new_widget,
+        (1280, 800),
+    );
+    let tree = harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let (mut keeps, mut accepts, mut diffs) = (0, 0, 0);
+    while let Some(node) = pending.pop() {
+        let label = node.label().or_else(|| node.value()).unwrap_or_default();
+        keeps += usize::from(label.starts_with("Keep · "));
+        accepts += usize::from(label.starts_with("Accept · "));
+        diffs += usize::from(node.role() == Role::Label && label == "Previous source");
+        pending.extend(node.children());
+    }
+    assert_eq!((keeps, accepts, diffs), (2, 2, 1));
+    writer.toggle_source_update(1);
+    writer.keep_source_update(0, false);
+    let refresh = writer.localisation.refresh.as_ref().unwrap();
+    assert!(refresh.open.is_empty() && refresh.kept.is_empty());
 }

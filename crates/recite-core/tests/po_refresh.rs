@@ -180,3 +180,35 @@ fn appended_entries_follow_one_blank_line_whether_or_not_the_catalogue_ends_in_a
         );
     }
 }
+
+#[test]
+fn refresh_keeping_leaves_kept_records_and_skips_kept_new_entries() {
+    let original = PoDocument::parse(concat!(
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
+        "msgctxt \"rthh7ab\"\nmsgid \"Gone\"\nmsgstr \"Parti\"\n"
+    ))
+    .unwrap();
+    let template = PoDocument::parse(concat!(
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"\"\n\n",
+        "msgctxt \"bqyvpqq\"\nmsgid \"New\"\nmsgstr \"\"\n"
+    ))
+    .unwrap();
+    let kept = ["ffee6p8", "rthh7ab", "bqyvpqq"]
+        .map(String::from)
+        .into_iter()
+        .collect();
+    let refreshed = original.refreshed_keeping(&template, &kept).unwrap();
+    assert_eq!(refreshed.source(), original.source());
+    let kept = std::iter::once("ffee6p8".to_owned()).collect();
+    let refreshed = original.refreshed_keeping(&template, &kept).unwrap();
+    let hello = refreshed.find("ffee6p8", "Hello").unwrap();
+    assert_eq!(hello.translation(), Some("Bonjour"));
+    assert!(hello.flags().is_empty());
+    assert!(refreshed.find("bqyvpqq", "New").is_some());
+    assert!(
+        refreshed
+            .entries()
+            .iter()
+            .any(|e| e.context() == Some("rthh7ab") && e.is_obsolete())
+    );
+}

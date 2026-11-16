@@ -22,6 +22,17 @@ impl PoDocument {
     /// Headers and existing obsolete entries are preserved. No files are written.
     /// Ambiguous contexts and singular/plural shape changes fail without mutation.
     pub fn refreshed(&self, template: &Self) -> Result<Self, PoRefreshError> {
+        self.refreshed_keeping(template, &BTreeSet::new())
+    }
+
+    /// Refresh as [`Self::refreshed`] does, except for the records whose context is in `kept`: a
+    /// kept record stays exactly as it is, and a kept new entry is not added. A later refresh
+    /// offers both again.
+    pub fn refreshed_keeping(
+        &self,
+        template: &Self,
+        kept: &BTreeSet<String>,
+    ) -> Result<Self, PoRefreshError> {
         let targets = contexts(template)?;
         contexts(self)?;
         let mut matched = BTreeSet::new();
@@ -32,6 +43,10 @@ impl PoDocument {
             .filter(|e| !e.is_header() && !e.is_obsolete())
         {
             let context = entry.context().unwrap_or_default();
+            if kept.contains(context) {
+                matched.insert(context);
+                continue;
+            }
             let target = targets.get(context).or_else(|| {
                 context
                     .split_once('&')
@@ -72,7 +87,8 @@ impl PoDocument {
             .iter()
             .filter(|e| !e.is_header() && !e.is_obsolete())
         {
-            if matched.contains(entry.context().unwrap_or_default()) {
+            let context = entry.context().unwrap_or_default();
+            if matched.contains(context) || kept.contains(context) {
                 continue;
             }
             // A variant does not satisfy the base entry: retain a default translation too.

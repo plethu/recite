@@ -87,13 +87,35 @@ pub(crate) fn segment<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync +
 
 /// A segment showing the short `face` ("Light") and read by its full `name` ("Light theme"), for
 /// a choice whose row label already says what is chosen.
-pub(crate) fn segment_named<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+pub(crate) fn segment_named<
+    S: 'static,
+    T: Into<ArcStr>,
+    N: Into<ArcStr>,
+    F: Fn(&mut S) + Send + Sync + 'static,
+>(
     scale: f32,
     palette: &Palette<Color>,
-    (face, name): (&'static str, &'static str),
+    title: (T, N),
     selected: bool,
     select: F,
-) -> impl WidgetView<S> + use<S, F> {
+) -> impl WidgetView<S> + use<S, T, N, F> {
+    segment_titled(scale, palette, title, selected, false, select)
+}
+
+/// [`segment_named`] that can be unavailable, such as a choice repeated on every row of a list.
+pub(crate) fn segment_titled<
+    S: 'static,
+    T: Into<ArcStr>,
+    N: Into<ArcStr>,
+    F: Fn(&mut S) + Send + Sync + 'static,
+>(
+    scale: f32,
+    palette: &Palette<Color>,
+    (face, name): (T, N),
+    selected: bool,
+    disabled: bool,
+    select: F,
+) -> impl WidgetView<S> + use<S, T, N, F> {
     chip(
         scale,
         palette,
@@ -102,7 +124,7 @@ pub(crate) fn segment_named<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
             name: Some(name.into()),
         },
         selected,
-        false,
+        disabled,
         select,
     )
 }
