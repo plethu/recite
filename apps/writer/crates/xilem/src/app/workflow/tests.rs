@@ -170,18 +170,26 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
         fs::read_to_string(directory.path().join("scene.recite")).unwrap(),
         structured.as_ref()
     );
-    for (command_id, screen) in [
-        (WriterCommand::Declarations, Screen::Declarations),
-        (WriterCommand::Rename, Screen::Rename),
-    ] {
-        command(&mut mounted, command_id);
-        support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation)
-            .unwrap();
-        mounted.settle();
-        assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == screen);
-        mounted.state.writer.as_mut().unwrap().return_to_writing();
-        mounted.settle();
-    }
+    command(&mut mounted, WriterCommand::Declarations);
+    support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
+    mounted.settle();
+    assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Declarations);
+    mounted.state.writer.as_mut().unwrap().return_to_writing();
+    mounted.settle();
+    // Rename beat edits the selected beat's heading in place; the writing view stays.
+    command(&mut mounted, WriterCommand::Rename);
+    mounted.settle();
+    let writer = mounted.state.writer.as_ref().unwrap();
+    assert!(writer.workspaces.screen == Screen::Write);
+    assert!(writer.inline_rename().is_some());
+    mounted.find("New beat name");
+    mounted
+        .state
+        .writer
+        .as_mut()
+        .unwrap()
+        .cancel_inline_rename();
+    mounted.settle();
     // Build is a command: it runs from the writing view, which stays, and reports on a slip.
     command(&mut mounted, WriterCommand::Build);
     let writer = mounted.state.writer.as_mut().unwrap();
