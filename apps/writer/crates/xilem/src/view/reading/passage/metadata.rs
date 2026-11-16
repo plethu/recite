@@ -25,9 +25,12 @@ pub(super) fn metadata(
     match placement {
         CaptionPlacement::BesideDestination { width } => {
             let caption_width = width * 0.25;
+            let route_width = (width - caption_width - 8.).max(80.);
             Either::A(
+                // Options, not one Either, so the route keeps its own baselines in the row.
                 flex_row((
-                    route(state, passage, (width - caption_width - 8.).max(80.)),
+                    route(state, passage, active, route_width),
+                    choice(state, passage, active, route_width),
                     print::id(scale, metadata)
                         .text_size(caption_size)
                         .prop(LineBreaking::Clip)
@@ -57,11 +60,16 @@ pub(super) fn metadata(
     }
 }
 
+/// A resting reply's route; the reply being written shows its [`choice`] instead.
 pub(super) fn route(
     state: &Writer,
     passage: &Passage,
+    active: bool,
     width: f64,
 ) -> Option<impl WidgetView<Writer> + use<>> {
+    if active {
+        return None;
+    }
     let PassageKind::Choice {
         destination: Some(destination),
     } = &passage.kind
@@ -72,6 +80,17 @@ pub(super) fn route(
         return None;
     }
     Some(route_to(state, destination, width))
+}
+
+/// The destination control of the reply being written.
+pub(super) fn choice(
+    state: &Writer,
+    passage: &Passage,
+    active: bool,
+    width: f64,
+) -> Option<impl WidgetView<Writer> + use<>> {
+    (active && matches!(passage.kind, PassageKind::Choice { .. }))
+        .then(|| super::choice::destination(state, passage, width))
 }
 
 /// A destination as a button in the manuscript's destination type: pressing it shows or hides

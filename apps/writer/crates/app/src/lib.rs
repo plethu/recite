@@ -4,6 +4,7 @@
 //! GUI toolkit, so a frontend can change without moving authoring behaviour.
 pub mod attention;
 mod choices;
+pub use choices::Opener;
 pub mod editor_work;
 pub mod external_editor;
 pub mod feedback;
@@ -77,6 +78,8 @@ pub struct Writer {
     location: recite_writer_session::location::Location,
     pub rules: Option<rules::ReplySession>,
     pending_choice: Option<choices::Request>,
+    /// The label whose choice slip is open.
+    pub(crate) choosing: Option<choices::Opener>,
     pub(crate) app_request: Option<shell::Request>,
     pub pending_clipboard: Option<String>,
     lookup: Option<lookup::Search>,
@@ -146,6 +149,7 @@ impl Writer {
             location: Default::default(),
             rules: None,
             pending_choice: None,
+            choosing: None,
             app_request: None,
             pending_clipboard: None,
             lookup: None,
@@ -325,5 +329,9 @@ impl Writer {
     }
     pub fn document_menu(&self) -> attention::DocumentMenu {
         self.document_menu
+    }
+    /// Whether the choice slip hanging from `opener` is open.
+    pub fn choosing(&self, opener: &Opener) -> bool {
+        self.choosing.as_ref() == Some(opener)
     }
 }

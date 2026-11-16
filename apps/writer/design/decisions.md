@@ -55,8 +55,13 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
   returns to where it was. Rename stages one Undo step and the status line offers Undo; only a
   refused rename opens the full page. Insertion affordances ("+ Line", "+ Reply", "+ Beat") sit
   after the beat, never between rows, so choosing a passage never moves another; Line and Reply
-  insert after the passage being written when it is of their kind. A line's speaker and a
-  reply's destination are combobox slips that hang from the control that opened them.
+  insert after the passage being written when it is of their kind. The passage being written
+  offers its choice on the label itself: its margin speaker label and its destination are the
+  controls (Label style: borderless, a focus ring inside the edge, the words where the resting
+  label's are, at least 24px tall), `expanded` while their combobox slip hangs from them. A slip
+  opens on the current value, says "Find speaker" or "Find destination" before anything is
+  typed, and drops the kind column when every result is of one kind. A resting reply's
+  destination stays the toggle that shows the destination's opening.
 - **Filter as you type.** Search fields filter on every keystroke and have no Search button; a
   list states its count under the field ("6 declarations", "1 of 6 declarations") and scrolls as
   one virtual list of 32px rows with a plate selection. Paging survives only for prose too long

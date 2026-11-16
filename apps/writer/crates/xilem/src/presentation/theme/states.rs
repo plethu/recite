@@ -109,6 +109,17 @@ impl Look {
             (Some(ControlStyle::ToggleOn), held(text)),
             (Some(ControlStyle::Tab), quiet(text)),
             (Some(ControlStyle::Row), quiet(text)),
+            // No border or vertical padding: the label's own baseline is the control's, and its
+            // height comes from the control. Focus is a ring inside the edge.
+            (
+                Some(ControlStyle::Label),
+                Self {
+                    focus: None,
+                    border: 0.,
+                    sinks: false,
+                    ..quiet((0., size::LABEL_PAD))
+                },
+            ),
             (
                 Some(ControlStyle::Status),
                 Self {

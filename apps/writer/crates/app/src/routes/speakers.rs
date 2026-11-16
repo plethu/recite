@@ -4,7 +4,9 @@ use super::*;
 pub struct SpeakerRequest {
     window: crate::WindowKey,
     origin: NavigationStamp,
-    passage: String,
+    pub(crate) passage: String,
+    /// The speaker the line has now.
+    pub(crate) current: Option<String>,
     pub(crate) choices: Vec<PickerOption>,
 }
 impl SpeakerRequest {
@@ -41,10 +43,18 @@ impl Writer {
                 return;
             }
         };
+        let current = self
+            .reading
+            .passage(&passage)
+            .and_then(|line| match &line.kind {
+                recite_writer_model::PassageKind::Dialogue { speaker } => speaker.clone(),
+                recite_writer_model::PassageKind::Choice { .. } => None,
+            });
         self.pending_choice = Some(crate::choices::Request::Speaker(SpeakerRequest {
             window: self.window,
             origin: self.session.model().navigation_stamp(),
             passage,
+            current,
             choices: choices::speakers(speakers),
         }));
     }

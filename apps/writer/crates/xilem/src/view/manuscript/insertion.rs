@@ -1,14 +1,10 @@
 //! The insertion affordances after the beat's last row. "+ Line" and "+ Reply" add after the
 //! passage being written when it is of their kind, so a passage can be inserted between rows, or
-//! else at the beat's end; the caret lands in the new passage. Beside them, the passage being
-//! written offers its speaker or destination choice as a slip hanging from the control. The row
-//! sits after the beat, so choosing a passage never moves another.
+//! else at the beat's end; the caret lands in the new passage. The row sits after the beat, so
+//! choosing a passage never moves another.
 use super::*;
-use crate::app::keyboard::PickerAnchor;
-use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::{Type, control_inset};
-use recite_writer_model::{PassageKind, RouteOwner, View};
-use xilem::view::button;
+use crate::presentation::control_inset;
+use recite_writer_model::{PassageKind, View};
 
 pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase() != Phase::Writing
@@ -44,7 +40,6 @@ pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<
             StructuralCommand::AddBeat,
             !closing && !repair,
         ),
-        active.map(|(id, kind)| choice(state, id, &kind, closing)),
     ))
     .direction(action_axis(state))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -78,43 +73,6 @@ fn active(state: &Writer) -> Option<(String, PassageKind)> {
             }
             _ => None,
         })
-}
-
-/// The passage's own choice: a line's speaker, or a reply's destination.
-fn choice(
-    state: &Writer,
-    id: String,
-    kind: &PassageKind,
-    closing: bool,
-) -> impl WidgetView<Writer> + use<> {
-    let (owner, text, name) = match kind {
-        PassageKind::Dialogue { speaker } => (
-            None,
-            "Speaker…",
-            speaker.as_deref().map_or_else(
-                || "Choose a speaker…".to_owned(),
-                |speaker| format!("Change speaker, {speaker}…"),
-            ),
-        ),
-        PassageKind::Choice { .. } => (
-            Some(RouteOwner::Reply(id.clone())),
-            "Destination…",
-            "Change destination…".to_owned(),
-        ),
-    };
-    styled(
-        ControlStyle::Action,
-        button(
-            Type::Control.label(state.ui_scale(), text),
-            move |state: &mut Writer| match &owner {
-                Some(owner) => state.choose_destination(owner.clone()),
-                None => state.choose_speaker(id.clone()),
-            },
-        )
-        .accessible_label(name)
-        .disabled(closing)
-        .prop(PickerAnchor(true)),
-    )
 }
 
 /// An insertion affordance: "+ Line" adds a line, named "Add line".

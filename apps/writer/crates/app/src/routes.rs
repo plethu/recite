@@ -11,7 +11,9 @@ pub use speakers::SpeakerRequest;
 pub struct Request {
     window: crate::WindowKey,
     origin: NavigationStamp,
-    owner: RouteOwner,
+    pub(crate) owner: RouteOwner,
+    /// The destination the route has now.
+    pub(crate) current: Option<String>,
     pub(crate) choices: Vec<PickerOption>,
 }
 impl Request {
@@ -46,10 +48,12 @@ impl Writer {
             return;
         }
         let choices = choices::destinations(self.session.model().document().sections());
+        let current = self.reading.destination(&owner).map(str::to_owned);
         self.pending_choice = Some(crate::choices::Request::Destination(Request {
             window: self.window,
             origin: self.session.model().navigation_stamp(),
             owner,
+            current,
             choices,
         }));
     }

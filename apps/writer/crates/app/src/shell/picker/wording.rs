@@ -16,6 +16,19 @@ impl Mode {
     }
 }
 impl Mode {
+    /// What the query field says before anything is typed.
+    pub fn placeholder(self) -> &'static str {
+        match self {
+            Self::Commands => "Find a command",
+            Self::GoTo => "Find scene or beat",
+            Self::ProjectText => "Search saved project words",
+            Self::Passages => "Find in this beat",
+            Self::RulesChoices => "Find a value",
+            Self::Destinations => "Find destination",
+            Self::Speakers => "Find speaker",
+            Self::RenameBeat => "Find beat",
+        }
+    }
     /// The keys this search answers to.
     pub fn keyboard_help(self) -> &'static str {
         match self {

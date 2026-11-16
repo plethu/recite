@@ -54,6 +54,7 @@ pub(super) fn query(
             picker.map_or_else(String::new, |picker| picker.query.clone()),
             |app: &mut App, value: String| app.filter_picker(value),
         )
+        .placeholder(picker.map_or(Mode::Commands, Picker::mode).placeholder())
         .typeset(Type::Body, scale)
         .on_enter(|app: &mut App, _| app.submit_picker())
         .on_cancel(|app: &mut App, _| app.dismiss_picker())

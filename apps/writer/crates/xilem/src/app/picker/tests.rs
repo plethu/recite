@@ -4,7 +4,7 @@ use crate::Phase;
 use crate::Writer;
 use crate::app::picker;
 use crate::session::Session;
-use crate::tests::support::{self, NoProxy};
+use crate::tests::support::{self, NoProxy, mounted::Mounted};
 use recite_config::WriterCommand;
 use recite_writer_session::startup::{LaunchOptions, Startup};
 use std::path::PathBuf;
@@ -16,6 +16,7 @@ use xilem::{
     core::View as _,
     masonry::{core::NewWidget, testing::TestHarness, widgets::SizedBox},
 };
+use xilem::{WidgetView, masonry::widgets::Passthrough};
 #[path = "passages/tests.rs"]
 mod passages;
 #[path = "rename/tests.rs"]
@@ -251,4 +252,56 @@ fn native_picker_renders_bounded_results_at_personal_scales() {
             }
         }
     }
+}
+
+fn page(app: &mut App) -> impl WidgetView<App, Widget = Passthrough> + use<> {
+    crate::keyed::keyed((), super::super::view::app(app))
+}
+
+#[test]
+fn a_choice_slip_opens_on_the_current_value_and_marks_its_label_expanded() {
+    let mut writer = Writer::from_session(Session::examples().unwrap(), None);
+    writer
+        .follow_location(&recite_writer_session::location::Location {
+            document: "relay_hub.recite".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    writer.change(|model| model.select(recite_writer_model::View::Passage("desk_greeting".into())));
+    let mut mounted = Mounted::new(App::with_writer(writer), page);
+    let open = |mounted: &mut Mounted<App, _>, name: &str| {
+        assert!(mounted.is_expanded(name, false), "{name}");
+        mounted.activate(name);
+        mounted.state.open_editor_choices();
+        mounted.settle();
+        assert!(mounted.is_expanded(name, true), "{name}");
+        let picker = mounted.state.picker.as_ref().unwrap();
+        (
+            picker.entries[picker.matches[picker.active]].title.clone(),
+            picker.one_kind(),
+        )
+    };
+    let speaker = "Change speaker, mara…";
+    // Every speaker is a speaker, so the slip does not say so on each line.
+    assert_eq!(open(&mut mounted, speaker), ("mara".into(), true));
+    assert_eq!(Mode::Speakers.placeholder(), "Find speaker");
+    mounted.state.dismiss_picker();
+    mounted.settle();
+    assert!(mounted.is_expanded(speaker, false));
+    mounted
+        .state
+        .writer
+        .as_mut()
+        .unwrap()
+        .change(|model| model.select(recite_writer_model::View::Passage("ask_station".into())));
+    mounted.settle();
+    // The end of the conversation is not a beat, so destinations keep their kinds.
+    assert_eq!(
+        open(&mut mounted, "Change destination, Station History…"),
+        ("Station History".into(), false)
+    );
+    let index = mounted.state.picker.as_ref().unwrap().active;
+    mounted.state.activate_picker(index);
+    mounted.settle();
+    assert!(mounted.is_expanded("Change destination, Station History…", false));
 }

@@ -42,6 +42,10 @@ pub(crate) enum ControlStyle {
     ToggleOn,
     /// A checkbox row whose box sits on its row's leading edge, in line with labelled rows.
     Flush,
+    /// A label that opens its choice, such as a line's speaker in the margin: quiet and borderless,
+    /// with only its focus ring's room either side of its words, so it keeps the label's face and
+    /// place.
+    Label,
     /// An action on the status bar: quiet on the overprint, with a mint focus border.
     Status,
 }
@@ -66,6 +70,7 @@ impl ControlStyle {
             Self::Row => "writer-row",
             Self::RowSelected => "writer-row-selected",
             Self::Flush => "writer-flush",
+            Self::Label => "writer-label",
             Self::Status => "writer-status",
         }
     }

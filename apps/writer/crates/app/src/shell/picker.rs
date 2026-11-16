@@ -122,6 +122,14 @@ impl Picker {
     pub fn mode(&self) -> Mode {
         self.purpose.mode()
     }
+    /// Whether every result of a choice slip is of one kind, which then goes unsaid on each line.
+    pub fn one_kind(&self) -> bool {
+        matches!(self.purpose, Purpose::Editor(_))
+            && self
+                .entries
+                .windows(2)
+                .all(|pair| pair[0].detail == pair[1].detail)
+    }
     fn step(&mut self, forward: bool) {
         let count = self.matches.len();
         if count != 0 {
@@ -172,11 +180,15 @@ impl Shell {
             return;
         }
         match index::entries(self, search) {
-            Ok(entries) => self.picker = Some(Picker::new(Purpose::Search(search), entries)),
+            Ok(entries) => {
+                self.forget_choice();
+                self.picker = Some(Picker::new(Purpose::Search(search), entries));
+            }
             Err(error) => self.status = error,
         }
     }
     pub fn dismiss_picker(&mut self) {
+        self.forget_choice();
         self.picker = None;
     }
     pub fn step_picker(&mut self, forward: bool) {

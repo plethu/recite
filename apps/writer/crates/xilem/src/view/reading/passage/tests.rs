@@ -4,7 +4,10 @@ use crate::{
     tests::support::{mounted::Mounted, open, project},
 };
 use recite_config::WriterPresentationField;
-use xilem::masonry::{kurbo::Rect, widgets::Passthrough};
+use xilem::masonry::{
+    kurbo::Rect,
+    widgets::{Label, Passthrough},
+};
 
 fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
     keyed((), crate::view::writer(writer))
@@ -151,4 +154,75 @@ fn bounds_of<V: WidgetView<Writer, Widget = Passthrough>>(
         .ctx()
         .window_transform()
         .transform_rect_bbox(widget.ctx().border_box())
+}
+
+/// The bounds of each label reading `text`, top to bottom.
+fn text_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
+    mounted: &Mounted<Writer, V>,
+    text: &str,
+) -> Vec<Rect> {
+    let mut found = Vec::new();
+    let mut pending = vec![mounted.harness.root_widget().as_dyn()];
+    while let Some(widget) = pending.pop() {
+        if !widget.ctx().is_stashed()
+            && widget
+                .downcast::<Label>()
+                .is_some_and(|label| label.inner().text().as_ref() == text)
+        {
+            found.push(
+                widget
+                    .ctx()
+                    .window_transform()
+                    .transform_rect_bbox(widget.ctx().border_box()),
+            );
+        }
+        pending.extend(widget.children());
+    }
+    found.sort_by(|a, b| a.y0.total_cmp(&b.y0));
+    found
+}
+
+#[test]
+fn the_speaker_label_and_destination_are_the_controls_in_their_own_places() {
+    let mut writer = Writer::from_session(crate::session::Session::examples().unwrap(), None);
+    writer
+        .follow_location(&recite_writer_session::location::Location {
+            document: "relay_hub.recite".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    writer.viewport.width = 1200.;
+    let properties = crate::presentation::Theme::new(&writer.config.writer).properties;
+    let mut mounted = Mounted::new(writer, surface);
+    mounted.harness.set_default_properties(properties);
+    let select = |mounted: &mut Mounted<Writer, _>, passage: &str, line: &str| {
+        mounted
+            .state
+            .change(|model| model.select(View::Passage(passage.into())));
+        mounted.settle();
+        (
+            text_bounds(mounted, "MARA")[0],
+            text_bounds(mounted, "Missing Courier")[0],
+            bounds_of(mounted, line),
+        )
+    };
+    let resting = select(&mut mounted, "ask_station", "Edit passage 1");
+    let speaking = select(&mut mounted, "desk_greeting", "Manuscript");
+    // The label's words and the line keep their places, to the pixel.
+    assert_eq!((speaking.0.x1, speaking.0.y0), (resting.0.x1, resting.0.y0));
+    assert_eq!(speaking.2, resting.2);
+    let control = bounds_of(&mounted, "Change speaker, mara…");
+    assert!(control.contains(speaking.0.center()), "{control:?}");
+    assert!(
+        control.width() >= 24. && control.height() >= 24.,
+        "{control:?}"
+    );
+    // No separate speaker control waits after the beat.
+    assert!(!mounted.contains_text("Speaker…"));
+    let replying = select(&mut mounted, "ask_work", "Manuscript");
+    assert_eq!(replying.1, resting.1);
+    let control = bounds_of(&mounted, "Change destination, Missing Courier…");
+    assert!(control.contains(replying.1.center()), "{control:?}");
+    assert!(control.height() >= 24., "{control:?}");
+    assert!(!mounted.contains_text("Destination…"));
 }

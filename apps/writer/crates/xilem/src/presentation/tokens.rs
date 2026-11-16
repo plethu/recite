@@ -38,8 +38,13 @@ pub(crate) mod size {
     /// A text control on a page or sheet, and a list row. The agreed 32 rounded up past the
     /// comparison reference's 32.2, so no hit target shrinks.
     pub const ROW: f64 = 33.;
+    /// The least hit target, after WCAG 2.2 AA §2.5.8, at every scale.
+    pub const TARGET: f64 = 24.;
     /// A text control's padding either side of its words.
     pub const CONTROL_PAD: f64 = 12.;
+    /// A label control's padding either side of its words: room for its 2px focus ring inside
+    /// the edge, at every scale. It has no border.
+    pub const LABEL_PAD: f64 = 4.;
     /// A field's padding and border before its text, at every scale.
     pub const FIELD_INSET: f64 = 2.;
     /// A search field's least width.
@@ -72,6 +77,12 @@ pub(crate) mod size {
 /// label beside such a control starts its text so the two line up.
 pub(crate) fn control_inset(scale: f32) -> f64 {
     size::CONTROL_PAD * f64::from(scale) + 1.
+}
+
+/// A label control's padding before its words, at every scale: how far it hangs past its column
+/// so the words keep the label's place.
+pub(crate) fn label_inset() -> f64 {
+    size::LABEL_PAD
 }
 
 /// The scene list's insets, before the UI scale.

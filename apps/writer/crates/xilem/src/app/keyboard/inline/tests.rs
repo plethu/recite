@@ -102,6 +102,9 @@ fn the_original_first_click_places_the_caret_and_routes_clean_focus_before_typin
 fn admitting_a_field_does_not_move_it_during_the_original_drag_selection() {
     let directory = support::project(SOURCE).unwrap();
     let mut mounted = Mounted::new(App::with_writer(support::open(&directory).unwrap()), page);
+    // Measured as the window lays it out: the speaker control's face comes from the theme.
+    let properties = mounted.state.theme.properties.clone();
+    mounted.harness.set_default_properties(properties);
     mounted.settle();
     let second = mounted.find("Edit passage 2");
     let start = start_point(&mounted, second);

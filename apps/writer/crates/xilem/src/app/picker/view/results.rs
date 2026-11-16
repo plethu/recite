@@ -38,7 +38,12 @@ pub(super) fn result(
                 Purpose::Search(_) => false,
             }),
     };
-    let detail = if enabled {
+    let detail = if !enabled {
+        "Unavailable in this context".into()
+    } else if app.picker.as_ref().is_some_and(Picker::one_kind) {
+        // Every result is of one kind, which the slip's title already says.
+        String::new()
+    } else {
         match &entry.item {
             Item::Passage { .. } => app
                 .picker
@@ -48,8 +53,6 @@ pub(super) fn result(
                 .to_owned(),
             _ => entry.detail.clone(),
         }
-    } else {
-        "Unavailable in this context".into()
     };
     let name = if matches!(entry.item, Item::Passage { .. }) && !detail.is_empty() {
         format!("{} {detail}", entry.title)

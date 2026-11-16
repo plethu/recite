@@ -127,7 +127,7 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             id: "script.choices",
             group: "Script",
             title: "Insertion, speaker and destination slips",
-            intent: "After the beat, + Line and + Reply insert after the passage being written; beside them its speaker or destination choice opens as a slip hanging from the control.",
+            intent: "After the beat, + Line and + Reply insert after the passage being written; its speaker label or destination is the control whose choice opens as a slip hanging from it, on the current value.",
         },
         |record| {
             let directory = sample();
@@ -161,8 +161,9 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
                     writer.change(|model| model.select(recite_writer_model::View::Passage(reply)));
                 }
             });
-            let corner = stage.corner("Change destination…");
-            stage.activate("Change destination…");
+            let destination = "Change destination, Missing Courier…";
+            let corner = stage.corner(destination);
+            stage.activate(destination);
             stage.act(|app| {
                 if let Some(picker) = &mut app.picker {
                     picker.placement = corner;

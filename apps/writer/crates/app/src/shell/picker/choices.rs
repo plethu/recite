@@ -51,9 +51,28 @@ impl Shell {
                 })
                 .collect(),
         };
-        self.picker = Some(Picker::new(Purpose::Editor(Box::new(request)), entries));
+        let current = request.current().map(str::to_owned);
+        writer.choosing = request.opener();
+        let mut picker = Picker::new(Purpose::Editor(Box::new(request)), entries);
+        // The slip opens on the value the label holds now.
+        if let Some(index) = current.and_then(|current| {
+            picker.entries.iter().position(|entry| match &entry.item {
+                Item::Destination(value) | Item::Speaker(value) => value == &current,
+                _ => false,
+            })
+        }) {
+            picker.select(index);
+        }
+        self.picker = Some(picker);
+    }
+    /// The choice slip closed, so its label is no longer expanded.
+    pub(super) fn forget_choice(&mut self) {
+        if let Some(writer) = &mut self.writer {
+            writer.choosing = None;
+        }
     }
     pub(super) fn activate_editor_choice(&mut self, item: Item) {
+        self.forget_choice();
         let Some(picker) = self.picker.take() else {
             return;
         };

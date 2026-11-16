@@ -71,6 +71,29 @@ impl Reading {
             _ => None,
         }
     }
+    /// The passage `id` among the selected beat's rows.
+    pub fn passage(&self, id: &str) -> Option<&Passage> {
+        self.rows.iter().find_map(|row| match &row.content {
+            Content::Passage { passage, .. } if passage.id == id => Some(passage),
+            _ => None,
+        })
+    }
+    /// Where `owner` leads now: a reply's destination, or the selected beat's continuation.
+    pub fn destination(&self, owner: &recite_writer_model::RouteOwner) -> Option<&str> {
+        match owner {
+            recite_writer_model::RouteOwner::Reply(id) => match &self.passage(id)?.kind {
+                PassageKind::Choice { destination } => destination.as_deref(),
+                PassageKind::Dialogue { .. } => None,
+            },
+            recite_writer_model::RouteOwner::Beat(id) if self.selected.as_ref() == Some(id) => {
+                self.rows.iter().find_map(|row| match &row.content {
+                    Content::Continuation(target) if row.groups.is_empty() => Some(target.as_str()),
+                    _ => None,
+                })
+            }
+            _ => None,
+        }
+    }
     pub fn new() -> Self {
         Self {
             key: None,

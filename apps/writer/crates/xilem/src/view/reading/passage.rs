@@ -1,12 +1,12 @@
 //! A passage occupies the same manuscript row while its single draft is edited.
 use super::*;
-use crate::presentation::control_inset;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::grid::Grid;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER};
 use crate::presentation::marks::{Mark, marked};
 use crate::presentation::space;
 use crate::presentation::{Sheet, disclosure_width, print, route_name, route_toggle};
+use crate::presentation::{control_inset, label_inset};
 use crate::reading::PassageNumber;
 use crate::view::workspace::Layout;
 use recite_core::STABLE_ID_FIELD_PREFIX;
@@ -14,9 +14,12 @@ use recite_writer_model::{Passage, PassageKind};
 use xilem::masonry::kurbo::Axis;
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::{FlexSpacer, button};
+mod choice;
+mod continuation;
 mod metadata;
 #[cfg(test)]
 mod tests;
+pub(super) use continuation::{RouteFace, continuation_row};
 pub(super) use metadata::route_to;
 use metadata::{CaptionPlacement, metadata, route};
 
@@ -67,8 +70,11 @@ pub(in crate::view) fn margin<S: 'static>(
     } else {
         grid.measure
     };
+    // An empty margin still sets a baseline, at its top, so it never lowers a speakerless line.
+    let empty = label.is_empty() && number.is_none();
     flex_row((
         FlexSpacer::Flex(if grid.margin > 0. { 1. } else { 0. }),
+        empty.then(|| sized_box(flex_col(())).dims((0.px(), 0.px()))),
         (!label.is_empty()).then(|| {
             Sheet::Label
                 .label(reading, label)
@@ -125,28 +131,34 @@ pub(super) fn row(
     let (label, numbered) = margin_label(passage, reply);
     let size = Sheet::text(reply).size(reading);
     let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
+    let speaking = active && matches!(passage.kind, PassageKind::Dialogue { .. });
+    // A written reply always shows its destination control; a resting one only a route.
     let stacked_reply = !column
-        && matches!(&passage.kind, PassageKind::Choice { destination: Some(target) } if target != "END");
+        && match &passage.kind {
+            PassageKind::Choice { destination } => {
+                active || destination.as_deref().is_some_and(|target| target != "END")
+            }
+            PassageKind::Dialogue { .. } => false,
+        };
     flex_col((
         flex_col((
             marked(
                 &state.palette,
                 passage_mark(state, active),
                 flex_row((
-                    (wide || !label.is_empty() || numbered.is_some())
+                    // Options, not one Either, so each keeps its own baselines in the row.
+                    speaking.then(|| choice::speaker(state, &grid, passage)),
+                    (!speaking && (wide || !label.is_empty() || numbered.is_some()))
                         .then(|| margin(state, &grid, label, numbered)),
                     super::super::manuscript::passage_editor(state, passage, number, measure, size),
                     column
-                        .then(|| route(state, passage, destination))
+                        .then(|| route(state, passage, active, destination))
                         .flatten()
-                        .map(|route| {
-                            // The route button's own padding takes the rest of the gutter.
-                            sized_box(route).padding(Padding::left(
-                                (DESTINATION_GUTTER - GUTTER - control_inset(state.ui_scale()))
-                                    .max(0.)
-                                    .px(),
-                            ))
-                        }),
+                        .map(|route| hang_route(state, route)),
+                    column
+                        .then(|| metadata::choice(state, passage, active, destination))
+                        .flatten()
+                        .map(|choice| hang_route(state, choice)),
                 ))
                 .direction(if wide {
                     Axis::Horizontal
@@ -158,7 +170,16 @@ pub(super) fn row(
                 } else {
                     CrossAxisAlignment::Start
                 })
-                .gap(if wide { GUTTER } else { space::UNIT }.px()),
+                .gap(
+                    if wide && speaking {
+                        GUTTER - label_inset()
+                    } else if wide {
+                        GUTTER
+                    } else {
+                        space::UNIT
+                    }
+                    .px(),
+                ),
             ),
             // The source label paints into the gap below its passage without taking space, so
             // selecting or typing never moves a row and resting rows keep their rhythm.
@@ -204,44 +225,11 @@ pub(super) fn row(
     ))
 }
 
-/// How a destination is set: as a route button, whose own padding brings its words in, or as a
-/// read-only label padded by the same inset so both read at one place.
-#[derive(Clone, Copy, PartialEq)]
-pub(super) enum RouteFace {
-    Button,
-    Label,
-}
-impl RouteFace {
-    fn inset(self, scale: f32) -> f64 {
-        match self {
-            Self::Button => 0.,
-            Self::Label => control_inset(scale),
-        }
-    }
-}
-
-/// A beat's continuation on the grid: `margin` in the margin column, and `route` in the
-/// destination column where there is one, or under the text column where destinations wrap.
-pub(super) fn continuation_row<M: WidgetView<Writer>, R: WidgetView<Writer>>(
-    state: &Writer,
-    grid: &Grid,
-    margin: Option<M>,
-    route: R,
-    face: RouteFace,
-) -> impl WidgetView<Writer> + use<M, R> {
-    let scale = state.ui_scale();
-    let column = grid.destination > 0.;
-    let pad = if column {
-        // Like a reply's route: the button's padding takes the rest of the gutter.
-        (DESTINATION_GUTTER - GUTTER - control_inset(scale)).max(0.) + face.inset(scale)
-    } else {
-        face.inset(scale)
-    };
-    flex_row((
-        flex_row((FlexSpacer::Flex(1.), margin)).width(grid.margin.px()),
-        column.then(|| flex_col(()).width(grid.measure.px())),
-        sized_box(route).padding(Padding::left(pad.px())),
+/// A route in the destination column: the button's own padding takes the rest of the gutter.
+fn hang_route<V: WidgetView<Writer>>(state: &Writer, route: V) -> impl WidgetView<Writer> + use<V> {
+    sized_box(route).padding(Padding::left(
+        (DESTINATION_GUTTER - GUTTER - control_inset(state.ui_scale()))
+            .max(0.)
+            .px(),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Center)
-    .gap(grid.gutter().px())
 }
