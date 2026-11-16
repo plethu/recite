@@ -94,7 +94,7 @@ def run(api, bus, registry, binary, output):
                 command(window, "Build scenes")
                 window.wait(lambda: window.find("Build options"), "build result slip")
                 window.act("Build options")
-                window.wait(lambda: window.find("Build saved"), "build workspace")
+                window.wait(lambda: window.find("Build saved"), "build options slip")
                 window.wait(
                     lambda: window.find_text(
                         "recite.project.toml · 1 source file · 1 output target"
@@ -103,7 +103,6 @@ def run(api, bus, registry, binary, output):
                 )
                 capture(output, "-build")
                 window.act("Build saved")
-                window.act("Return to writing")
                 asset = project / "build/scene.recitec"
                 window.wait(lambda: asset.is_file(), "saved-input output", timeout=30)
                 window.wait(

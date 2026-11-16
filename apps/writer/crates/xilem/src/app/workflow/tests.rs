@@ -196,11 +196,17 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     assert!(writer.workspaces.screen == Screen::Write);
     finish_build(writer);
     mounted.settle();
+    // The build options open on the result slip; the writing view stays.
     mounted.activate("Build options");
-    support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
     mounted.settle();
-    assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Build);
-    mounted.state.writer.as_mut().unwrap().return_to_writing();
+    assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Write);
+    mounted.find("Build saved");
+    mounted
+        .state
+        .writer
+        .as_mut()
+        .unwrap()
+        .dismiss_build_result();
     mounted.settle();
     mounted.activate("Workspace");
     mounted.activate("Projects");

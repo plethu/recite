@@ -54,7 +54,7 @@ def run(api, bus, registry, binary, output):
                 first.unlink()
                 second.unlink()
                 window.act("Build options")
-                window.wait(lambda: window.find("Build saved"), "build workspace")
+                window.wait(lambda: window.find("Build saved"), "build options slip")
                 target = window.find_action("opening")
                 assert window.call(target, "Accessible", "GetRole")[0] == int(
                     api.Atspi.Role.RADIO_BUTTON
@@ -73,7 +73,6 @@ def run(api, bus, registry, binary, output):
                 before = first.read_bytes()
                 capture_settled(window, output, "-selected")
                 results["selected_target_limits_outputs_and_build_saved_keeps_pending_prose"] = True
-                window.act("Return to writing")
                 assert manuscript(window) == node
                 window.focus(node)
                 key("z", control=True)

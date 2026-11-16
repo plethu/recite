@@ -11,25 +11,24 @@ fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough>
 }
 
 #[test]
-fn mounted_build_selection_pages_keep_saved_inputs_separate_from_save_all_and_build() {
+fn build_options_on_the_slip_keep_saved_inputs_separate_from_save_all_and_build() {
     let directory = fixture().unwrap();
     let manifest = "format_version=1\n[project]\ncontent_set='trial'\nversion='1'\nschema='schema.json'\n".to_owned() + &(0..6).map(|index| format!("[[scenes]]\nid='scene{index}'\nasset='build/scene{index}.recitec'\nblock='start'\nparticipants=['mara']\n")).collect::<String>();
     fs::write(directory.path().join("recite.project.toml"), manifest).unwrap();
     let original = fs::read_to_string(directory.path().join("scene.recite")).unwrap();
     let mut writer = support::open(&directory).unwrap();
-    let mut prepared = opening::Work::capture(&writer, Open::Build)
-        .unwrap()
-        .execute()
-        .unwrap();
-    writer.accept_project_workspace(&mut prepared).unwrap();
+    // The options open on a finished build's result slip; that first build's outputs go.
+    writer.build_scenes();
+    finish_build(&mut writer);
+    fs::remove_dir_all(directory.path().join("build")).unwrap();
+    writer.toggle_build_options();
     writer.change(|model| {
         model.set_draft("Pending build manuscript.".into());
         Ok(())
     });
     let mut mounted = Mounted::new(writer, surface);
-    mounted.activate("Next outputs");
+    // Every output is a radio on the slip; nothing pages.
     mounted.activate("scene5");
-    mounted.activate("Previous outputs");
     assert_eq!(
         mounted
             .state
@@ -59,6 +58,7 @@ fn mounted_build_selection_pages_keep_saved_inputs_separate_from_save_all_and_bu
         mounted.state.session.model().draft(),
         "Pending build manuscript."
     );
+    mounted.state.toggle_build_options();
     mounted.settle();
     mounted.activate("All outputs");
     let (sender, mut saves) = mpsc::unbounded_channel();

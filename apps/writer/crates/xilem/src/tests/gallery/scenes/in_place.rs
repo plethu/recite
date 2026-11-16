@@ -72,9 +72,9 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             let directory = sample();
             let manifest = directory.path().join("recite.project.toml");
             let sample_manifest = std::fs::read_to_string(&manifest).unwrap();
-            let declared = sample_manifest.clone()
+            let declared: String = sample_manifest.clone()
                 + "[[scenes]]\nid = \"relay_desk\"\nasset = \"build/relay_desk.recitec\"\nblock = \"relay_desk\"\nparticipants = [\"mara\"]\n";
-            std::fs::write(&manifest, declared).unwrap();
+            std::fs::write(&manifest, &declared).unwrap();
             let mut stage = stage(
                 App::with_writer(open(directory.path(), "relay_hub.recite")),
                 variant,
@@ -88,9 +88,18 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             stage.act(build);
             stage.shot(record, "Built");
             // A manifest without scenes fails the same way on every machine.
-            std::fs::write(&manifest, sample_manifest).unwrap();
+            std::fs::write(&manifest, &sample_manifest).unwrap();
             stage.act(build);
             stage.shot(record, "Build did not complete");
+            // The options open on the slip itself: the outputs and the build actions.
+            std::fs::write(&manifest, &declared).unwrap();
+            stage.act(build);
+            stage.act(|app: &mut App| {
+                if let Some(writer) = &mut app.writer {
+                    writer.toggle_build_options();
+                }
+            });
+            stage.shot(record, "Build options");
         },
     );
     record.scene(

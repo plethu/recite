@@ -17,8 +17,24 @@ fn the_build_command_builds_at_once_and_its_result_waits_on_a_slip_away_from_the
     assert_eq!(result.headline, "Built build/start.recitec");
     assert!(result.detail.is_none());
     assert_eq!(writer.status, result.headline);
+    // The build options open on the slip and close with it.
+    writer.toggle_build_options();
+    assert!(writer.workspaces.build_options);
+    // Opening the options reads the outputs the manifest declares.
+    assert_eq!(
+        writer
+            .session
+            .project()
+            .unwrap()
+            .files()
+            .builds
+            .targets
+            .len(),
+        1
+    );
     writer.dismiss_build_result();
     assert!(writer.build_result().is_none());
+    assert!(!writer.workspaces.build_options);
 
     // A failure offers its report; opening the page takes the slip away.
     fs::write(directory.path().join("schema.json"), "not json").unwrap();

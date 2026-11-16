@@ -9,10 +9,7 @@ use xilem::{
     masonry::layout::{AsUnit, UnitPoint},
     peniko::Color,
     style::{Padding, Style},
-    view::{
-        CrossAxisAlignment, FlexExt, ZStackExt, flex_col, flex_row, indexed_stack, sized_box,
-        zstack,
-    },
+    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, zstack},
 };
 
 pub(super) fn frame<V: WidgetView<Writer>>(
@@ -58,6 +55,16 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .gap(0.px())
                 .flex(1.),
+                // A build's result is seated on the status line that reports it: the work above
+                // gives it room rather than lying under it.
+                crate::workspaces::build_result(state).map(|result| {
+                    flex_row((fit_content(result),)).padding(Padding {
+                        left: space::KINDS.px(),
+                        top: space::SIBLINGS.px(),
+                        bottom: space::SIBLINGS.px(),
+                        ..Padding::ZERO
+                    })
+                }),
                 status_line::status_line(state),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -67,16 +74,6 @@ pub(super) fn frame<V: WidgetView<Writer>>(
             .document_menu()
             .is_open()
             .then(|| document_actions::panel(state)),
-        // A build's result waits on a slip just above the status line that reports it.
-        crate::workspaces::build_result(state).map(|result| {
-            sized_box(fit_content(result))
-                .padding(Padding {
-                    left: space::KINDS.px(),
-                    bottom: (status_line::status_height(state.ui_scale()) + space::SIBLINGS).px(),
-                    ..Padding::ZERO
-                })
-                .alignment(UnitPoint::BOTTOM_LEFT)
-        }),
         // Closing with unsaved work is decided on a slip over the dimmed document.
         document_actions::close_decision(state),
     ))

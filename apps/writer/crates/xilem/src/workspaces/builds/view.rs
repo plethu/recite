@@ -5,6 +5,7 @@ use crate::presentation::{Type, Typeset};
 use crate::presentation::{group::named, label, paragraph, print, radio_button, text_button};
 use xilem::{
     WidgetView,
+    core::one_of::Either,
     masonry::{layout::AsUnit, properties::LineBreaking},
     style::{Padding, Style},
     view::{CrossAxisAlignment, flex_col, flex_row, radio_group, sized_box},
@@ -21,24 +22,15 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     flex_col((
         crate::view::tool_head(
             writer,
-            "Build scenes",
+            "Build report",
             build_actions(writer, busy, builds.is_none_or(|builds| builds.targets.is_empty())),
         )
         .prop(PaneEntry(true)),
-        writer.session.project().map(|project| {
-            let sources = project.documents().len();
-            let targets = builds.map_or(0, |builds| builds.targets.len());
-            paragraph(scale, format!(
-                "recite.project.toml · {sources} {} · {targets} {}",
-                if sources == 1 { "source file" } else { "source files" },
-                if targets == 1 { "output target" } else { "output targets" },
-            ), width)
-        }),
-        paragraph(scale, "Every build validates the whole saved project. The selected target limits emitted assets. Save all and build includes your current edits.", width),
+        inputs(writer).map(|inputs| paragraph(scale, inputs, width)),
         feedback(writer),
-        label(scale,"Build target").typeset(Type::Section, scale),
-        target_options(writer),
-        pagination(writer),
+        writer.workspaces.build_feedback.is_empty().then(|| {
+            paragraph(scale, "No build report yet. Build from Commands; the result waits on a slip above the status line.", width)
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
@@ -50,7 +42,30 @@ fn column_width(writer: &Writer) -> f64 {
         .content_width()
         .min(800. * f64::from(writer.ui_scale()))
 }
-fn build_actions(writer: &Writer, busy: bool, empty: bool) -> impl WidgetView<Writer> + use<> {
+/// What a build reads: the manifest, its source files and its output targets.
+pub(super) fn inputs(writer: &Writer) -> Option<String> {
+    let project = writer.session.project()?;
+    let sources = project.documents().len();
+    let targets = project.files().builds.targets.len();
+    Some(format!(
+        "recite.project.toml · {sources} {} · {targets} {}",
+        if sources == 1 {
+            "source file"
+        } else {
+            "source files"
+        },
+        if targets == 1 {
+            "output target"
+        } else {
+            "output targets"
+        },
+    ))
+}
+pub(super) fn build_actions(
+    writer: &Writer,
+    busy: bool,
+    empty: bool,
+) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.declaration_action_blocked()
         || busy
         || empty
@@ -75,31 +90,8 @@ fn build_actions(writer: &Writer, busy: bool, empty: bool) -> impl WidgetView<Wr
     ))
     .gap(space::SIBLINGS.px())
 }
-fn pagination(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    let count = writer.session.project()?.files().builds.targets.len();
-    if count <= 5 {
-        return None;
-    }
-    let last = writer.session.project().is_none_or(|project| {
-        (writer.workspaces.build_page + 1) * 5 >= project.files().builds.targets.len()
-    });
-    Some(flex_row((
-        text_button(
-            writer.ui_scale(),
-            "Previous outputs",
-            |writer: &mut Writer| {
-                writer.workspaces.build_page = writer.workspaces.build_page.saturating_sub(1);
-            },
-        )
-        .disabled(writer.workspaces.build_page == 0),
-        text_button(writer.ui_scale(), "Next outputs", |writer: &mut Writer| {
-            writer.workspaces.build_page += 1
-        })
-        .disabled(last),
-    )))
-}
-
-fn target_options(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+/// The outputs to build: one target as words, several as a radio group with All outputs first.
+pub(super) fn target_options(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let builds = writer
         .session
@@ -109,22 +101,32 @@ fn target_options(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let choices = builds
         .into_iter()
         .flat_map(|builds| {
-            builds
-                .targets
-                .iter()
-                .skip(writer.workspaces.build_page * 5)
-                .take(5)
-                .map(move |(asset, scenes)| {
-                    target_choice(
-                        writer,
-                        asset,
-                        scenes,
-                        builds.selected.as_ref() == Some(asset),
-                        busy,
-                    )
-                })
+            builds.targets.iter().map(move |(asset, scenes)| {
+                target_choice(
+                    writer,
+                    width,
+                    asset,
+                    scenes,
+                    builds.selected.as_ref() == Some(asset),
+                    busy,
+                )
+            })
         })
         .collect::<Vec<_>>();
+    if choices.len() <= 1 {
+        // One output (or none) is not a choice: say what a build writes.
+        let words = builds
+            .and_then(|builds| builds.targets.first())
+            .map_or_else(
+                || "Builds every output".to_owned(),
+                |(asset, scenes)| format!("Builds {} · {asset}", scenes.join(", ")),
+            );
+        return Either::A(
+            label(scale, words)
+                .prop(LineBreaking::WordWrap)
+                .width(width.px()),
+        );
+    }
     let all = radio_button(
         scale,
         "All outputs",
@@ -136,18 +138,19 @@ fn target_options(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         },
     )
     .disabled(busy);
-    named(
+    Either::B(named(
         "Build target",
         radio_group(
             flex_col((all, choices))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::TEXT.px()),
         ),
-    )
+    ))
 }
 
 fn target_choice(
     writer: &Writer,
+    width: f64,
     asset: &str,
     scenes: &[String],
     selected: bool,
@@ -172,7 +175,7 @@ fn target_choice(
             print::id(scale, asset.to_owned())
                 .color(writer.palette.muted)
                 .prop(LineBreaking::WordWrap)
-                .width((column_width(writer) - 44. * f64::from(scale)).px()),
+                .width((width - 44. * f64::from(scale)).px()),
         )
         .padding(Padding::from_vh(0.px(), (22. * f64::from(scale)).px())),
     ))
@@ -180,47 +183,24 @@ fn target_choice(
     .gap(space::UNIT.px())
 }
 
+/// The latest build's report, every part of it, on inset paper.
 fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    let report = writer
-        .workspaces
-        .build_feedback
-        .get(writer.workspaces.feedback_page)?;
-    Some(
+    let parts = &writer.workspaces.build_feedback;
+    (!parts.is_empty()).then(|| {
+        let scale = writer.ui_scale();
+        let width = column_width(writer) - 2. * space::KINDS;
         sized_box(
             flex_col((
-                label(writer.ui_scale(), "Latest build").typeset(Type::Section, writer.ui_scale()),
-                paragraph(
-                    writer.ui_scale(),
-                    report.clone(),
-                    column_width(writer) - 32.,
-                ),
-                (writer.workspaces.build_feedback.len() > 1).then(|| {
-                    flex_row((
-                        text_button(
-                            writer.ui_scale(),
-                            "Previous build report",
-                            |writer: &mut Writer| {
-                                writer.workspaces.feedback_page =
-                                    writer.workspaces.feedback_page.saturating_sub(1);
-                            },
-                        )
-                        .disabled(writer.workspaces.feedback_page == 0),
-                        text_button(
-                            writer.ui_scale(),
-                            "More build report",
-                            |writer: &mut Writer| writer.workspaces.feedback_page += 1,
-                        )
-                        .disabled(
-                            writer.workspaces.feedback_page + 1
-                                >= writer.workspaces.build_feedback.len(),
-                        ),
-                    ))
-                }),
+                label(scale, "Latest build").typeset(Type::Section, scale),
+                parts
+                    .iter()
+                    .map(|part| paragraph(scale, part.clone(), width))
+                    .collect::<Vec<_>>(),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::SIBLINGS.px()),
         )
         .padding(space::KINDS.px())
-        .background_color(writer.palette.inset),
-    )
+        .background_color(writer.palette.inset)
+    })
 }

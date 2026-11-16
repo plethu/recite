@@ -44,8 +44,8 @@ impl Writer {
         match job::Job::start(files.root().to_owned(), asset) {
             Ok(job) => {
                 self.workspaces.build_result = false;
+                self.workspaces.build_options = false;
                 self.workspaces.build_feedback.clear();
-                self.workspaces.feedback_page = 0;
                 files.builds.job = Some(job);
                 files.builds.result = None;
                 self.status = "Building saved project inputs… You can keep writing.".into();
@@ -69,7 +69,6 @@ impl Writer {
             let message = result.message();
             self.status = summary(&message);
             self.workspaces.build_feedback = super::text::pages(&message);
-            self.workspaces.feedback_page = 0;
             // On the build page its report shows in place; elsewhere a slip carries it.
             self.workspaces.build_result = self.workspaces.screen != Screen::Build;
             files.builds.job = None;
@@ -103,8 +102,38 @@ impl Writer {
     }
     pub fn dismiss_build_result(&mut self) {
         self.workspaces.build_result = false;
+        self.workspaces.build_options = false;
     }
-    /// The build page from the result slip: a failure's full report, or the outputs to build.
+    /// Open or close the build options on the result slip.
+    pub fn toggle_build_options(&mut self) {
+        self.workspaces.build_options = !self.workspaces.build_options;
+        if self.workspaces.build_options {
+            self.read_build_targets();
+        }
+    }
+    /// Read the outputs the manifest declares now, keeping the chosen one while it remains.
+    fn read_build_targets(&mut self) {
+        let Some(project) = self.session.project_mut() else {
+            return;
+        };
+        let (files, _) = project.parts_mut();
+        match recite_writer_session::builds::targets(files.root()) {
+            Ok(targets) => {
+                files.builds.targets = targets;
+                if files.builds.selected.as_ref().is_some_and(|selected| {
+                    !files
+                        .builds
+                        .targets
+                        .iter()
+                        .any(|(asset, _)| asset == selected)
+                }) {
+                    files.builds.selected = None;
+                }
+            }
+            Err(error) => self.status = error,
+        }
+    }
+    /// The build page from a failed build's result slip: the full report.
     pub fn open_build_page(&mut self) {
         self.open_project_workspace(Open::Build);
     }

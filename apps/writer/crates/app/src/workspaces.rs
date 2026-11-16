@@ -50,11 +50,12 @@ pub struct Workspaces {
     pub settings: settings::Panel,
     pub rename: rename::Panel,
     pub external: external::Panel,
-    pub build_page: usize,
+    /// The latest build's report, in parts the build page shows one after another.
     pub build_feedback: Vec<String>,
-    pub feedback_page: usize,
     /// A build finished away from the build page, so its result waits on a slip.
     pub build_result: bool,
+    /// The build options are open on the result slip: the outputs to build and the build actions.
+    pub build_options: bool,
     pub tools: tools::Tools,
     pub context_refresh: Option<ContextUpdate>,
     pub schema_feedback: Vec<String>,
@@ -108,6 +109,7 @@ impl Writer {
         });
         if matches!(action, Open::Build) {
             self.workspaces.build_result = false;
+            self.workspaces.build_options = false;
         }
         if retained && self.phase == Phase::Writing && !self.navigation.busy() && !self.work.busy()
         {
