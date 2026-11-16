@@ -17,9 +17,11 @@ pub(crate) const DESTINATION_GUTTER: f64 = 24.;
 /// The least measure a sheet keeps, and the least beside a destination column.
 const SHEET_MEASURE: f64 = 480.;
 const DESTINATION_MEASURE: f64 = 420.;
-/// The longest measure: about 68 characters of the reading face.
+/// The longest measure: 68 average characters of the reading face, whose average advance in
+/// running prose is about 0.46em (77 characters set in 710px at 20px). At the reference size
+/// that is about 626px, a little inside the 640px `size::MEASURE` that sets interface prose.
 const CHARACTERS: f64 = 68.;
-const CHARACTER: f64 = 0.55;
+const CHARACTER: f64 = 0.46;
 /// The reading size the column widths below are set for; other sizes scale them.
 const REFERENCE_READING: f64 = Sheet::REFERENCE as f64;
 /// The margin column on a sheet and on full-bleed paper.
@@ -66,10 +68,10 @@ impl Grid {
             let columns = MARGIN * unit + GUTTER + measure + DESTINATION_GUTTER + destination;
             return Self {
                 sheet: true,
-                width,
-                // Paper the measure cap leaves over is shared either side, so the text stays
-                // centred on the sheet.
-                pad: (width - columns) / 2.,
+                // The sheet is no wider than its capped columns and their pad, so a wide pane
+                // shows the desk either side of a centred sheet.
+                width: width.min(columns + 2. * SHEET_PAD),
+                pad: SHEET_PAD,
                 margin: MARGIN * unit,
                 measure,
                 destination,

@@ -25,11 +25,16 @@ fn at_900_by_650_the_paper_goes_full_bleed_and_destinations_wrap_under_a_short_m
 }
 
 #[test]
-fn the_measure_never_exceeds_68_characters_and_the_paper_left_over_is_shared() {
+fn the_measure_never_exceeds_68_characters_and_the_desk_shows_either_side_of_the_sheet() {
     let grid = Grid::resolve(2400., (20., 1.), true);
     assert!(grid.sheet);
-    assert!((grid.measure - 68. * 0.55 * 20.).abs() < 1e-9);
+    assert!((grid.measure - 68. * 0.46 * 20.).abs() < 1e-9);
+    // About 32em, inside the 640px measure interface prose keeps.
+    assert!(grid.measure <= size::MEASURE);
+    // The sheet holds its columns and pad; the rest of the pane is desk, centred around it.
+    assert_eq!(grid.pad, 32.);
     assert!((grid.pad * 2. + grid.row() - grid.width).abs() < 1e-9);
+    assert!(grid.width < 2400. - 2. * DESK_SIDE);
     // The destination column keeps room for its button's padding at 200%.
     let doubled = Grid::resolve(2400., (20., 2.), true);
     assert_eq!(
