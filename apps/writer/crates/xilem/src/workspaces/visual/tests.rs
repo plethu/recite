@@ -25,7 +25,7 @@ fn capture_detail<W: Widget>(
 }
 
 #[test]
-fn thousand_declarations_mount_only_one_page_and_project_screens_render_at_personal_scales()
+fn thousand_declarations_mount_only_the_rows_in_view_and_project_screens_render_at_personal_scales()
 -> Result<(), Box<dyn std::error::Error>> {
     for scale in [100, 200] {
         for action in [Open::Declarations, Open::Build] {
@@ -95,8 +95,9 @@ fn thousand_declarations_mount_only_one_page_and_project_screens_render_at_perso
                 }
                 pending.extend(node.children());
             }
+            // One scrolling list mounts at most the rows in view.
             if matches!(action, Open::Declarations) {
-                assert_eq!(rows, 5);
+                assert!(rows <= 16, "{rows} rows");
             }
             assert!(
                 nodes <= 128,

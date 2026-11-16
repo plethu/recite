@@ -59,6 +59,11 @@ impl SheetText {
         self.weight = weight;
         self
     }
+    /// Set in `families` instead of the role's own, such as an id in Plex Mono at Body size.
+    pub fn families(mut self, families: &'static [&'static str]) -> Self {
+        self.families = families;
+        self
+    }
 }
 impl ViewMarker for SheetText {}
 impl<S: 'static> View<S, (), ViewCtx> for SheetText {

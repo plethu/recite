@@ -57,6 +57,11 @@ pub(crate) mod size {
     pub const SLIP_WIDTH: f64 = 480.;
     /// A master list's column beside its detail, such as the declarations.
     pub const MASTER_COLUMN: f64 = 320.;
+    /// What a master column leaves to the window's chrome and its own search and count, when it
+    /// fits its rows to the window's height.
+    pub const MASTER_CHROME: f64 = 320.;
+    /// A definition list's term column, such as a declaration's parameter names.
+    pub const TERM_COLUMN: f64 = 160.;
 }
 
 /// A text control's padding and 1px border before its words, at `scale`: where a heading or

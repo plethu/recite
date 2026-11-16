@@ -62,7 +62,7 @@ def run(api, bus, registry, binary, output):
                 )
                 type_text("speaker_0555")
                 window.wait(
-                    lambda: window.find_text("Showing 1–1 of 1 declaration"),
+                    lambda: window.find_text("1 of 1027 declarations"),
                     "filtered declaration",
                 )
                 window.wait(
@@ -74,7 +74,7 @@ def run(api, bus, registry, binary, output):
                 assert not window.find("Previous declaration detail") and not window.find(
                     "More declaration detail"
                 )
-                results["single_page_declaration_has_no_inactive_pagers"] = True
+                results["declaration_list_has_no_pagers"] = True
                 capture(output, "-declarations")
                 results["declaration_query_focus_and_selected_detail"] = True
                 window.act("Return to writing")

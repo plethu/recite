@@ -15,12 +15,13 @@ mod tests;
 use crate::attention::{Pane, Region};
 use crate::presentation::{label, paragraph, text_button};
 use recite_writer_session::declarations::SchemaOutputStatus;
+use xilem::core::one_of::Either;
 use xilem::{
     WidgetView,
     masonry::properties::TextAreaLabel,
-    masonry::{kurbo::Axis, layout::AsUnit},
+    masonry::{kurbo::Axis, layout::AsUnit, properties::Dimensions},
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, text_input},
+    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, text_input, virtual_scroll},
 };
 
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -89,7 +90,7 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         width
     };
     flex_row((
-        flex_col((list(writer, master),)).width(master.px()),
+        flex_col((list(writer, master, wide),)).width(master.px()),
         flex_col((declaration_detail(writer, detail),))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .width(detail.px()),
@@ -103,9 +104,25 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .gap(space::GROUPS.px())
 }
 
-fn list(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
+fn list(writer: &Writer, width: f64, wide: bool) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations;
+    let count = panel.matches.len();
+    let total = panel.rows.len();
+    let noun = if total == 1 {
+        "declaration"
+    } else {
+        "declarations"
+    };
+    // Only the rows in view are mounted; a wide sheet gives the column the sheet's height and a
+    // stacked one keeps room for the detail below.
+    let fitting = if wide {
+        ((writer.viewport.height / f64::from(scale) - size::MASTER_CHROME) / size::ROW).floor()
+            as usize
+    } else {
+        size::PICKER_ROWS
+    };
+    let lines = count.min(fitting.max(1)) as f64 * size::ROW * f64::from(scale);
     flex_col((
         writer
             .declaration_session()
@@ -117,7 +134,7 @@ fn list(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
                     width,
                 )
             }),
-        label(scale, "Search declarations"),
+        // The icon and placeholder say what the field is; its accessible name says it in full.
         search_field(
             scale,
             writer.palette.muted,
@@ -126,87 +143,77 @@ fn list(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
             text_input(panel.query.clone(), |writer: &mut Writer, query| {
                 writer.workspaces.declarations.filter(query)
             })
-            .placeholder("Name or kind")
+            .placeholder("Search by name or kind")
             .typeset(Type::Body, scale)
             .prop(TextAreaLabel::new("Search declarations")),
         ),
         print::meta(
             scale,
-            if panel.matches.is_empty() {
-                if panel.query.trim().is_empty() {
-                    "No declarations in this project.".into()
-                } else {
-                    "No declarations match this search.".into()
-                }
+            if total == 0 {
+                "No declarations in this project.".into()
+            } else if count == 0 {
+                "No declarations match this search.".into()
+            } else if panel.query.trim().is_empty() {
+                format!("{total} {noun}")
             } else {
-                format!(
-                    "Showing {}–{} of {} {}",
-                    panel.page * PAGE + 1,
-                    ((panel.page + 1) * PAGE).min(panel.matches.len()),
-                    panel.matches.len(),
-                    if panel.matches.len() == 1 {
-                        "declaration"
-                    } else {
-                        "declarations"
-                    },
-                )
+                format!("{count} of {total} {noun}")
             },
         )
         .color(writer.palette.muted),
-        declaration_rows(writer, width),
-        (panel.matches.len() > PAGE).then(|| {
-            flex_row((
-                text_button(scale, "Previous declarations", |writer: &mut Writer| {
-                    writer.workspaces.declarations.page =
-                        writer.workspaces.declarations.page.saturating_sub(1);
-                })
-                .disabled(panel.page == 0),
-                text_button(scale, "Next declarations", |writer: &mut Writer| {
-                    writer.workspaces.declarations.page += 1
-                })
-                .disabled((panel.page + 1) * PAGE >= panel.matches.len()),
-            ))
-            .gap(space::SIBLINGS.px())
+        (count > 0).then(|| {
+            virtual_scroll(count, move |writer: &mut Writer, position| {
+                declaration_row(writer, position, width)
+            })
+            // Each row is a Tab stop; the list itself is not.
+            .accessible_label("Declarations")
+            .focusable(false)
+            .jump_to(Some(panel.chosen_position()))
+            .dims((width.px(), lines.px()))
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(space::SIBLINGS.px())
+    .gap(space::TEXT.px())
 }
 
-/// One row per declaration on this page, "name · kind" on one line from the row's start.
-fn declaration_rows(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
+/// The match at `position` as one 32px row, the name from the row's start and the kind set
+/// against its end, read as "name · kind"; nothing once the matches change beneath the list.
+fn declaration_row(
+    writer: &Writer,
+    position: usize,
+    width: f64,
+) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations;
+    let Some(index) = panel.matches.get(position).copied() else {
+        return Either::B(flex_col(()));
+    };
+    let Row { name, kind, .. } = &panel.rows[index];
+    let (name, kind) = (name.clone(), kind.clone());
+    let selected = panel.selected == Some(index);
     // The row's padding and border either side, so the line fills the row.
     let line = width - 2. * control_inset(scale);
-    flex_col(
-        panel
-            .matches
-            .iter()
-            .skip(panel.page * PAGE)
-            .take(PAGE)
-            .map(|index| {
-                let Row { name, kind, .. } = &panel.rows[*index];
-                let (name, kind) = (name.clone(), kind.clone());
-                let selected = panel.selected == Some(*index);
-                let caption = format!("{name} · {kind}");
-                listed(
-                    &writer.palette,
-                    selected,
-                    row(
-                        selected,
-                        one_line(caption, Type::Control, scale, writer.palette.ink)
-                            .width(line.px()),
-                        move |writer: &mut Writer| {
-                            writer.workspaces.declarations.choose(&name, &kind)
-                        },
-                    ),
-                )
-            })
-            .collect::<Vec<_>>(),
-    )
-    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(0.px())
+    let height = f64::from(Type::Control.metrics().1 * scale);
+    let caption = format!("{name} · {kind}");
+    Either::A(listed(
+        &writer.palette,
+        selected,
+        row(
+            selected,
+            flex_row((
+                one_line(name.clone(), Type::Control, scale, writer.palette.ink).flex(1.),
+                one_line(kind.clone(), Type::Meta, scale, writer.palette.muted),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .gap(space::TEXT.px())
+            .dims(
+                Dimensions::AUTO
+                    .with_width(line.px())
+                    .with_height(height.px()),
+            ),
+            move |writer: &mut Writer| writer.workspaces.declarations.choose(&name, &kind),
+        )
+        .accessible_label(caption),
+    ))
 }
 
 fn declaration_detail(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
@@ -218,44 +225,91 @@ fn declaration_detail(writer: &Writer, width: f64) -> impl WidgetView<Writer> + 
             print::meta(scale, "Choose a declaration to see its fields.")
                 .color(writer.palette.muted)
         }),
-        chosen.map(
-            |Row {
-                 name, kind, detail, ..
-             }| {
-                flex_col((
-                    label(scale, name.clone()).typeset(Type::Section, scale),
-                    print::meta(scale, kind.clone()).color(writer.palette.muted),
-                    paragraph(
-                        scale,
-                        detail.get(panel.detail_page).cloned().unwrap_or_default(),
-                        width,
-                    ),
-                    (detail.len() > 1).then(|| {
-                        flex_row((
-                            text_button(
-                                scale,
-                                "Previous declaration detail",
-                                |writer: &mut Writer| {
-                                    writer.workspaces.declarations.detail_page = writer
-                                        .workspaces
-                                        .declarations
-                                        .detail_page
-                                        .saturating_sub(1);
-                                },
-                            )
-                            .disabled(panel.detail_page == 0),
-                            text_button(scale, "More declaration detail", |writer: &mut Writer| {
-                                writer.workspaces.declarations.detail_page += 1
-                            })
-                            .disabled(detail.len() <= panel.detail_page + 1),
-                        ))
-                        .gap(space::SIBLINGS.px())
-                    }),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(space::SIBLINGS.px())
-            },
-        ),
+        chosen.map(|chosen| {
+            flex_col((
+                label(scale, chosen.name.clone()).typeset(Type::Section, scale),
+                print::meta(scale, chosen.kind.clone()).color(writer.palette.muted),
+                match &chosen.detail {
+                    Detail::Parameters(list) => Either::A(parameters(writer, list, width)),
+                    Detail::Pages(pages) => Either::B(prose(writer, pages, width)),
+                },
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::SIBLINGS.px())
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
+}
+
+/// A condition's or effect's parameters as a definition list: each name in Plex Mono ink, its
+/// type in muted Sans beside it, one row each, read name then type.
+fn parameters(
+    writer: &Writer,
+    list: &[(String, String)],
+    width: f64,
+) -> impl WidgetView<Writer> + use<> {
+    let scale = writer.ui_scale();
+    let palette = &writer.palette;
+    let term = (size::TERM_COLUMN * f64::from(scale)).min(width / 2.);
+    let height = size::ROW * f64::from(scale);
+    flex_col((
+        print::caps(scale, "Parameters").color(palette.muted),
+        list.is_empty()
+            .then(|| print::meta(scale, "None").color(palette.muted)),
+        flex_col(
+            list.iter()
+                .map(|(name, kind)| {
+                    flex_row((
+                        one_line(name.clone(), Type::Body, scale, palette.ink)
+                            .families(Type::Id.families())
+                            .width(term.px()),
+                        one_line(kind.clone(), Type::Body, scale, palette.muted).flex(1.),
+                    ))
+                    .cross_axis_alignment(CrossAxisAlignment::Center)
+                    .dims(
+                        Dimensions::AUTO
+                            .with_width(width.px())
+                            .with_height(height.px()),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
+        .gap(0.px()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::TEXT.px())
+}
+
+/// A speaker's display name, a registry's values or a pointer to the source, a page at a time
+/// when it is enormous.
+fn prose(writer: &Writer, pages: &[String], width: f64) -> impl WidgetView<Writer> + use<> {
+    let panel = &writer.workspaces.declarations;
+    let scale = writer.ui_scale();
+    flex_col((
+        paragraph(
+            scale,
+            pages.get(panel.detail_page).cloned().unwrap_or_default(),
+            width,
+        ),
+        (pages.len() > 1).then(|| {
+            flex_row((
+                text_button(
+                    scale,
+                    "Previous declaration detail",
+                    |writer: &mut Writer| {
+                        let panel = &mut writer.workspaces.declarations;
+                        panel.detail_page = panel.detail_page.saturating_sub(1);
+                    },
+                )
+                .disabled(panel.detail_page == 0),
+                text_button(scale, "More declaration detail", |writer: &mut Writer| {
+                    writer.workspaces.declarations.detail_page += 1
+                })
+                .disabled(pages.len() <= panel.detail_page + 1),
+            ))
+            .gap(space::SIBLINGS.px())
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
 }
