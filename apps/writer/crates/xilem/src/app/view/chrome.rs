@@ -2,7 +2,7 @@
 use crate::presentation::material::{Bar, Edge, bar};
 use crate::presentation::segments::{tab, tabs};
 use crate::presentation::sheet_text::one_line;
-use crate::presentation::tokens::size;
+use crate::presentation::tokens::{breakpoint, size};
 use crate::presentation::{Type, space};
 use crate::presentation::{identity, paragraph, print};
 use crate::{
@@ -11,7 +11,12 @@ use crate::{
 };
 use xilem::{
     WidgetView,
-    masonry::{kurbo::Axis, layout::AsUnit, parley::style::FontWeight},
+    masonry::{
+        kurbo::Axis,
+        layout::AsUnit,
+        parley::style::FontWeight,
+        widgets::{FlexBasis, FlexParams},
+    },
     style::Style,
     view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, sized_box},
 };
@@ -50,25 +55,30 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
     // Writing, focus mode and the tool screens share the toolbar's Workspace menu, so their tab
     // row keeps only the file, the modes and Commands; Settings is a sheet over it.
     let writing = !app.show_welcome() && app.writer.is_some();
+    // A compact row with the scene list hidden gives the wordmark's column to the file tab, so
+    // the tab keeps its 96px and the row its commands; the window title still names Recite.
+    let compact = app.viewport.width < breakpoint::TOOLBAR * f64::from(scale);
+    let column = app.writer.as_ref().map_or(220., |writer| {
+        writer
+            .navigation_width()
+            .max(size::TAB_MIN * f64::from(scale))
+    });
+    let listed = app
+        .writer
+        .as_ref()
+        .is_none_or(|writer| writer.navigation_width() > 0.);
     flex_row((
-        sized_box(flex_row((
-            // The welcome hero carries the wordmark while it shows.
-            (!app.show_welcome()).then(|| identity::wordmark(&app.theme, scale)),
-            xilem::view::FlexSpacer::Flex(1.),
-        )))
-        // The wordmark heads the scene list, or keeps a minimal column while the list is hidden.
-        .width(
-            app.writer
-                .as_ref()
-                .map_or(220., |writer| {
-                    writer
-                        .navigation_width()
-                        .max(size::TAB_MIN * f64::from(scale))
-                })
-                .px(),
-        ),
-        // The file tab takes the row's spare width and ends in an ellipsis when that is short of
-        // its name; assistive technology reads the whole name.
+        (!compact || listed || app.show_welcome()).then(|| {
+            sized_box(flex_row((
+                // The welcome hero carries the wordmark while it shows.
+                (!app.show_welcome()).then(|| identity::wordmark(&app.theme, scale)),
+                xilem::view::FlexSpacer::Flex(1.),
+            )))
+            // The wordmark heads the scene list, or keeps a minimal column while it is hidden.
+            .width(column.px())
+        }),
+        // The file tab takes the row's spare width from a 96px minimum and ends in an ellipsis
+        // when that is short of its name; assistive technology reads the whole name.
         app.writer.as_ref().map(|writer| {
             flex_col((bar(
                 Some(Bar::solid(app.theme.palette.teal, Edge::Bottom, 0., 0.)),
@@ -87,7 +97,12 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
                 )),
             ),))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .flex(1.)
+            // The tab keeps 96px before the row shares its spare width.
+            .flex(FlexParams::new(
+                1.,
+                FlexBasis::Length((size::TAB_MIN * f64::from(scale)).px()),
+                None,
+            ))
         }),
         if app.writer.is_some() {
             xilem::view::FlexSpacer::Fixed(0.px())
