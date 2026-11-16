@@ -39,85 +39,69 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                 |app: &mut App, size| app.viewport = size,
                 desk(
                     app.theme.grain.clone(),
-                    flex_col((
-                        app_bar(app),
-                        zstack((
-                            named(
-                                "Writer workspace",
-                                indexed_stack((welcome::panel(app), slot))
-                                    .active(usize::from(!app.show_welcome())),
-                            )
-                            .disabled(app.picker.is_some()),
-                            // Settings is a side sheet over the live workspace, clear of the
-                            // status bar. A stack keeps the layer in place while it is closed, so
-                            // the layers above it keep theirs.
-                            indexed_stack((
-                                flex_row((FlexSpacer::Flex(1.), settings::settings(app)))
-                                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                                    .padding(Padding {
-                                        bottom: status_bar.px(),
-                                        ..Padding::all(0.px())
+                    zstack((
+                        flex_col((
+                            // The close decision dims the document within the writer; the tab
+                            // row above it dims with it.
+                            zstack((
+                                app_bar(app),
+                                app.writer
+                                    .as_ref()
+                                    .is_some_and(|writer| {
+                                        matches!(
+                                            writer.phase(),
+                                            crate::Phase::ConfirmClose
+                                                | crate::Phase::ConfirmExit
+                                                | crate::Phase::Closing
+                                        )
                                     })
-                                    .dims(Dim::Stretch),
-                                sized_box(flex_col(())).dims((0.px(), 0.px())),
-                            ))
-                            .active(usize::from(!app.settings_open()))
-                            .dims(if app.settings_open() {
-                                Dim::Stretch
-                            } else {
-                                Dim::Auto
-                            }),
-                            indexed_stack((
-                                // Pickers stay above the status bar at every interface scale, and
-                                // their backdrop leaves the status bar readable.
-                                sized_box(backdrop(
-                                    app.theme.palette.backdrop,
-                                    app.theme.screen.clone(),
-                                    // A stack bounds the picker by the layer, so it
-                                    // scrolls its results rather than overflow at 200%.
-                                    zstack((sized_box(picker::view::picker(app)).padding(
-                                        // A combobox slip hangs from its label; below the
-                                        // tab row, a picker opens at a fixed height from the
-                                        // window's top edge.
-                                        picker::view::placement(app).map_or(
-                                            Padding::top(
-                                                ((size::PICKER_TOP - size::ROW) * scale).px(),
-                                            ),
-                                            |(left, top)| Padding {
-                                                left: left.px(),
-                                                top: top.px(),
-                                                ..Padding::all(0.px())
-                                            },
-                                        ),
-                                    ),))
-                                    .alignment(if picker::view::placement(app).is_some() {
-                                        UnitPoint::TOP_LEFT
-                                    } else {
-                                        UnitPoint::TOP
-                                    })
-                                    .dims(Dim::Stretch),
+                                    .then(|| {
+                                        backdrop(
+                                            app.theme.palette.backdrop,
+                                            app.theme.screen.clone(),
+                                            sized_box(flex_col(())).dims(Dim::Stretch),
+                                        )
+                                    }),
+                            )),
+                            zstack((
+                                named(
+                                    "Writer workspace",
+                                    indexed_stack((welcome::panel(app), slot))
+                                        .active(usize::from(!app.show_welcome())),
+                                )
+                                .disabled(app.picker.is_some()),
+                                // Settings is a side sheet over the live workspace, clear of the
+                                // status bar. A stack keeps the layer in place while it is
+                                // closed, so the layers above it keep theirs.
+                                indexed_stack((
+                                    flex_row((FlexSpacer::Flex(1.), settings::settings(app)))
+                                        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                                        .padding(Padding {
+                                            bottom: status_bar.px(),
+                                            ..Padding::all(0.px())
+                                        })
+                                        .dims(Dim::Stretch),
+                                    sized_box(flex_col(())).dims((0.px(), 0.px())),
                                 ))
-                                .padding(Padding {
-                                    bottom: status_bar.px(),
-                                    ..Padding::all(0.px())
-                                })
-                                .dims(Dim::Stretch),
-                                sized_box(flex_col(())).dims((0.px(), 0.px())),
+                                .active(usize::from(!app.settings_open()))
+                                .dims(if app.settings_open() {
+                                    Dim::Stretch
+                                } else {
+                                    Dim::Auto
+                                }),
                             ))
-                            .active(usize::from(app.picker.is_none()))
-                            // Only an open picker's backdrop covers the workspace; otherwise the
-                            // empty layer must not sit over it and take its pointer events.
-                            .dims(if app.picker.is_some() {
-                                Dim::Stretch
-                            } else {
-                                Dim::Auto
-                            }),
+                            .alignment(UnitPoint::CENTER)
+                            .flex(1.),
                         ))
-                        .alignment(UnitPoint::CENTER)
-                        .flex(1.),
+                        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                        .gap(0.px())
+                        .dims(Dim::Stretch),
+                        // A picker's backdrop dims the whole window, the tab row and status bar
+                        // included; the layer is empty and takes no pointer events otherwise.
+                        modal_layer(app.picker.is_some(), picker_layer(app, scale, status_bar)),
                     ))
-                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                    .gap(0.px()),
+                    .alignment(UnitPoint::CENTER)
+                    .dims(Dim::Stretch),
                 )
                 .background_color(app.theme.palette.canvas),
             ),
@@ -125,3 +109,49 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
         ),
     )
 }
+
+/// A layer over the whole window that fills it while `open` and is an empty corner otherwise, so
+/// it never takes the pointer events of the window beneath.
+fn modal_layer<V: WidgetView<App>>(open: bool, layer: V) -> impl WidgetView<App> + use<V> {
+    indexed_stack((
+        sized_box(layer).dims(Dim::Stretch),
+        sized_box(flex_col(())).dims((0.px(), 0.px())),
+    ))
+    .active(usize::from(!open))
+    .dims(if open { Dim::Stretch } else { Dim::Auto })
+}
+
+/// An open picker over the backdrop: below the tab row at a fixed height from the window's top
+/// edge, or hanging from the combobox that opened it, and always above the status bar.
+fn picker_layer(app: &App, scale: f64, status_bar: f64) -> impl WidgetView<App> + use<> {
+    let placement = picker::view::placement(app);
+    backdrop(
+        app.theme.palette.backdrop,
+        app.theme.screen.clone(),
+        // A stack bounds the picker by the layer, so it scrolls its results rather than overflow
+        // at 200%.
+        zstack((
+            sized_box(picker::view::picker(app)).padding(placement.map_or(
+                Padding::top((size::PICKER_TOP * scale).px()),
+                |(left, top)| Padding {
+                    left: left.px(),
+                    top: top.px(),
+                    ..Padding::all(0.px())
+                },
+            )),
+        ))
+        .alignment(if placement.is_some() {
+            UnitPoint::TOP_LEFT
+        } else {
+            UnitPoint::TOP
+        })
+        .padding(Padding {
+            bottom: status_bar.px(),
+            ..Padding::all(0.px())
+        })
+        .dims(Dim::Stretch),
+    )
+}
+
+#[cfg(test)]
+mod tests;

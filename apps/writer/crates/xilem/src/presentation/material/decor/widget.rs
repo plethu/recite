@@ -7,7 +7,7 @@ use xilem::masonry::{
         PropertiesMut, PropertiesRef, RegisterCtx, Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
     },
     imaging::Painter,
-    kurbo::{Axis, BezPath, Circle, Point, Shape, Size, Stroke},
+    kurbo::{Affine, Axis, BezPath, Circle, Point, Shape, Size, Stroke},
     layout::{LenReq, Length},
 };
 
@@ -86,7 +86,13 @@ impl Widget for Decor {
         }
         if let Decoration::Backdrop(dim, screen) = &self.decoration {
             painter.fill(ctx.content_box(), *dim).draw();
-            painter.fill(ctx.content_box(), screen).draw();
+            // The screen repeats from the window's origin, so backdrops that meet, such as the
+            // tab row's over the close decision's, print one unbroken screen.
+            let origin = ctx.to_local(Point::ORIGIN).to_vec2();
+            painter
+                .fill(ctx.content_box(), screen)
+                .brush_transform(Some(Affine::translate(origin)))
+                .draw();
         }
     }
     fn post_paint(
