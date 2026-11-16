@@ -3,7 +3,7 @@ use crate::WriterLayout;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::row::named_row;
 use crate::presentation::sheet_text::sheet_text;
-use crate::presentation::{Sheet, space};
+use crate::presentation::{Sheet, print, revealed, space};
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
 use xilem::masonry::properties;
 
@@ -60,13 +60,18 @@ pub(super) fn playback(
         && !page.ended
         && page.condition.is_none()
         && page.waiting_effect.is_none();
+    let shown = state.session.model().preview_transcript().len();
     flex_col((
         transcript(state),
+        // The current page in full ink, brought into view as each turn joins the transcript.
         (!page.ended && !page.text.is_empty()).then(|| {
-            flex_row((
-                sized_box(manuscript_text(state.reading_size(), page.text.clone()))
-                    .width(state.script_width().px()),
-            ))
+            revealed(
+                shown,
+                flex_row((
+                    sized_box(manuscript_text(state.reading_size(), page.text.clone()))
+                        .width(state.script_width().px()),
+                )),
+            )
         }),
         page.condition.as_ref().map(|request| {
             flex_col((
@@ -141,10 +146,12 @@ pub(super) fn playback(
     .gap(space::TEXT.px())
 }
 
-/// What the preview has already shown, oldest first: each page's lines in the manuscript face and
-/// the reply chosen after them, quieter, so the conversation reads as it went.
+/// What the preview has already shown, oldest first and muted: each page's lines, and the reply
+/// chosen after them as a reply row, with a hairline closing each turn before the next.
 fn transcript(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = state.script_width();
+    let reading = state.reading_size();
+    let muted = state.palette.muted;
     let turns = state
         .session
         .model()
@@ -153,19 +160,14 @@ fn transcript(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .map(|turn| {
             flex_col((
                 (!turn.text.is_empty()).then(|| {
-                    flex_row((
-                        sized_box(manuscript_text(state.reading_size(), turn.text.clone()))
-                            .width(width.px()),
-                    ))
+                    sheet_text(turn.text.clone(), Sheet::Dialogue.size(reading), muted)
+                        .width(width.px())
                 }),
                 turn.reply.as_ref().map(|reply| {
-                    sheet_text(
-                        format!("→ {reply}"),
-                        Sheet::Reply.size(state.reading_size()),
-                        state.palette.muted,
-                    )
-                    .width(width.px())
+                    sheet_text(format!("→ {reply}"), Sheet::Reply.size(reading), muted)
+                        .width(width.px())
                 }),
+                sized_box(print::hairline(&state.palette)).width(width.px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::SIBLINGS.px())

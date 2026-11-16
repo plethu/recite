@@ -52,7 +52,13 @@ pub struct PreviewPage {
     pub effects: Vec<recite_runtime::DialogueEffectRequest>,
     pub condition: Option<PreviewConditionRequest>,
     pub waiting_effect: Option<recite_core::EffectId>,
+    /// The text is Writer's own reply prompt, standing in for a prompt with no line, not a line
+    /// of the script.
+    pub prompt: bool,
 }
+
+/// What a page offering replies says when its prompt has no line of its own.
+pub const REPLY_PROMPT: &str = "Choose a reply";
 
 /// A page a preview has moved past: the lines it showed and the reply chosen after them.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -188,9 +194,10 @@ impl Preview {
             match event {
                 PreviewEvent::Line(line) => page.text = line.text.clone(),
                 PreviewEvent::Prompt(prompt) => {
+                    page.prompt = prompt.line().is_none();
                     page.text = prompt
                         .line()
-                        .map_or_else(|| "Choose a reply".to_owned(), |line| line.text.clone());
+                        .map_or_else(|| REPLY_PROMPT.to_owned(), |line| line.text.clone());
                     page.choices = prompt.choices().to_vec();
                 }
                 PreviewEvent::End { deferred_effects } => {

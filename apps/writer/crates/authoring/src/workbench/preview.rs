@@ -102,8 +102,13 @@ impl Workbench {
             if self.transcript.len() == TRANSCRIPT {
                 self.transcript.remove(0);
             }
+            // A stand-in prompt was a heading, not a line: only the reply chosen under it stays.
             self.transcript.push(PreviewTurn {
-                text: previous.text,
+                text: if previous.prompt {
+                    String::new()
+                } else {
+                    previous.text
+                },
                 reply,
             });
         }

@@ -6,6 +6,8 @@ pub(crate) use excerpt::excerpt;
 pub(crate) use fit_content::fit_content;
 mod overhang;
 pub(crate) use overhang::overhang;
+mod reveal;
+pub(crate) use reveal::revealed;
 pub(crate) mod banner;
 mod controls;
 mod disclosure;

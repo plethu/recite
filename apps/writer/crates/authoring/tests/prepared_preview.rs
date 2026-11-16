@@ -103,8 +103,13 @@ fn a_preview_keeps_a_transcript_of_shown_lines_and_chosen_replies()
     }
     let page = model.preview_page().ok_or("page")?;
     let reply = page.choices.first().ok_or("a reply")?.text.clone();
+    // A prompt without a line of its own leaves no heading in the transcript, only the reply.
     expected.push(PreviewTurn {
-        text: page.text.clone(),
+        text: if page.prompt {
+            String::new()
+        } else {
+            page.text.clone()
+        },
         reply: Some(reply),
     });
     model.advance_preview(Some(0))?;
