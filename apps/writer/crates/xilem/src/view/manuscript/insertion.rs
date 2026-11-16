@@ -1,0 +1,136 @@
+//! The insertion affordances after the beat's last row. "+ Line" and "+ Reply" add after the
+//! passage being written when it is of their kind, so a passage can be inserted between rows, or
+//! else at the beat's end; the caret lands in the new passage. Beside them, the passage being
+//! written offers its speaker or destination choice as a slip hanging from the control. The row
+//! sits after the beat, so choosing a passage never moves another.
+use super::*;
+use crate::app::keyboard::PickerAnchor;
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::{Type, control_inset};
+use recite_writer_model::{PassageKind, RouteOwner, View};
+use xilem::view::button;
+
+pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let closing = state.phase() != Phase::Writing
+        || state.session.read_only()
+        || state.navigation.busy()
+        || state.work.busy();
+    let repair = state.reading.script().is_err();
+    let selected = state.reading.selected.is_some() && state.reading.error.is_none() && !repair;
+    let active = active(state);
+    let after = |reply: bool| {
+        active
+            .as_ref()
+            .filter(|(_, kind)| matches!(kind, PassageKind::Choice { .. }) == reply)
+            .map(|(id, _)| StructuralCommand::InsertAfter(id.clone()))
+    };
+    flex_row((
+        add_button(
+            state,
+            ("Add line", "Line"),
+            after(false).unwrap_or(StructuralCommand::AddLine),
+            !closing && selected,
+        ),
+        add_button(
+            state,
+            ("Add reply", "Reply"),
+            after(true).unwrap_or(StructuralCommand::AddReply),
+            !closing && selected,
+        ),
+        // A new beat joins the end of the scene.
+        add_button(
+            state,
+            ("Add beat", "Beat"),
+            StructuralCommand::AddBeat,
+            !closing && !repair,
+        ),
+        active.map(|(id, kind)| choice(state, id, &kind, closing)),
+    ))
+    .direction(action_axis(state))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
+    // The words line up with the manuscript's text column, the plus hanging before it.
+    .padding(Padding::left(
+        if state.reading.rows.is_empty() {
+            0.
+        } else {
+            (super::super::reading::text_column(state)
+                - control_inset(state.ui_scale())
+                - print::insert_hang(state.ui_scale()))
+            .max(0.)
+        }
+        .px(),
+    ))
+}
+
+/// The passage being written in the selected beat, with its kind.
+fn active(state: &Writer) -> Option<(String, PassageKind)> {
+    let View::Passage(id) = state.session.model().view() else {
+        return None;
+    };
+    state
+        .reading
+        .rows
+        .iter()
+        .find_map(|row| match &row.content {
+            crate::reading::Content::Passage { passage, .. } if &passage.id == id => {
+                Some((passage.id.clone(), passage.kind.clone()))
+            }
+            _ => None,
+        })
+}
+
+/// The passage's own choice: a line's speaker, or a reply's destination.
+fn choice(
+    state: &Writer,
+    id: String,
+    kind: &PassageKind,
+    closing: bool,
+) -> impl WidgetView<Writer> + use<> {
+    let (owner, text, name) = match kind {
+        PassageKind::Dialogue { speaker } => (
+            None,
+            "Speaker…",
+            speaker.as_deref().map_or_else(
+                || "Choose a speaker…".to_owned(),
+                |speaker| format!("Change speaker, {speaker}…"),
+            ),
+        ),
+        PassageKind::Choice { .. } => (
+            Some(RouteOwner::Reply(id.clone())),
+            "Destination…",
+            "Change destination…".to_owned(),
+        ),
+    };
+    styled(
+        ControlStyle::Action,
+        button(
+            Type::Control.label(state.ui_scale(), text),
+            move |state: &mut Writer| match &owner {
+                Some(owner) => state.choose_destination(owner.clone()),
+                None => state.choose_speaker(id.clone()),
+            },
+        )
+        .accessible_label(name)
+        .disabled(closing)
+        .prop(PickerAnchor(true)),
+    )
+}
+
+/// An insertion affordance: "+ Line" adds a line, named "Add line".
+fn add_button(
+    state: &Writer,
+    title: (&'static str, &'static str),
+    command: StructuralCommand,
+    enabled: bool,
+) -> impl WidgetView<Writer> + use<> {
+    print::insert_action(
+        state.ui_scale(),
+        title,
+        &state.palette,
+        !enabled,
+        move |state: &mut Writer| {
+            state.navigate(crate::navigation::Target::Structure(command.clone()))
+        },
+    )
+}
