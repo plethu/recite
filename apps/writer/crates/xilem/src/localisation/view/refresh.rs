@@ -5,7 +5,7 @@ use crate::presentation::segments::{segment_titled, segments};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, Typeset, disclosure, print};
+use crate::presentation::{Type, disclosure, print};
 use recite_writer_app::localisation::refresh::Update;
 use xilem::view::{FlexExt, button};
 
@@ -14,51 +14,43 @@ pub(super) fn refresh(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
     let refresh = state.refresh.as_ref()?;
     let scale = writer.ui_scale();
     let blocked = writer.project_action_blocked() || state.slot.read_only();
-    let width = writer.content_width();
     let current = state
         .slot
         .owner()
         .is_some_and(|owner| refresh.preview.is_current(&owner.catalogue));
     Some(
         flex_col((
-            label(scale, "Source updates").typeset(Type::Section, scale),
-            paragraph(scale, refresh.preview.summary.clone(), width),
-            flex_row((
-                text_button(
-                    scale,
-                    "Recheck source updates",
-                    Writer::review_catalogue_sources,
-                )
-                .disabled(blocked || state.dirty()),
-                print::primary_action(
-                    scale,
-                    "Apply source updates to PO",
-                    &writer.palette,
-                    blocked || !current,
-                    Writer::apply_catalogue_sources,
+            crate::view::captioned_head(
+                writer,
+                (
+                    "Source updates",
+                    Some(refresh.preview.summary.clone().into()),
+                    (
+                        styled(
+                            ControlStyle::Action,
+                            button(
+                                Type::Control.label(scale, "Recheck"),
+                                Writer::review_catalogue_sources,
+                            )
+                            .accessible_label("Recheck source updates")
+                            .disabled(blocked || state.dirty()),
+                        ),
+                        print::primary_action(
+                            scale,
+                            "Apply source updates to PO",
+                            &writer.palette,
+                            blocked || !current,
+                            Writer::apply_catalogue_sources,
+                        ),
+                    ),
                 ),
-                text_button(
-                    scale,
+                // Closing the review returns to the queue it was opened from.
+                (
                     "Return to translation queue",
                     Writer::return_to_translation_queue,
-                )
-                .disabled(blocked),
-            ))
-            .direction(if width >= 580. * f64::from(scale) {
-                Axis::Horizontal
-            } else {
-                Axis::Vertical
-            })
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(space::SIBLINGS.px())
+                ),
+            )
             .prop(PaneEntry(true)),
-            paragraph(
-                scale,
-                "Compares accepted project sources, including unsaved edits. \
-                 Apply rechecks the review, preserves translations and notes, \
-                 and writes only the PO file.",
-                width,
-            ),
             (!refresh.rows.is_empty()).then(|| updates(writer, blocked)),
             refresh.rows.is_empty().then(|| {
                 paragraph(

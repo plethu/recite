@@ -188,6 +188,23 @@ pub(crate) fn tool_head<
     title: T,
     actions: A,
 ) -> impl WidgetView<Writer, Widget = widgets::Flex> + use<T, A> {
+    captioned_head(
+        state,
+        (title, None, actions),
+        ("Return to writing", Writer::return_to_writing),
+    )
+}
+
+/// A sheet head with a muted `caption` under its title and a close icon named for where its
+/// `close` action returns.
+pub(crate) fn captioned_head<
+    T: Into<core::ArcStr>,
+    A: xilem::view::FlexSequence<Writer> + Send + Sync,
+>(
+    state: &Writer,
+    (title, caption, actions): (T, Option<core::ArcStr>, A),
+    (name, close): (&'static str, fn(&mut Writer)),
+) -> impl WidgetView<Writer, Widget = widgets::Flex> + use<T, A> {
     let scale = state.ui_scale();
     sheet_head(
         Layout {
@@ -196,10 +213,11 @@ pub(crate) fn tool_head<
             stacked: state.content_width() < breakpoint::SHEET_ROW * f64::from(scale),
         },
         &state.palette,
-        (title, actions),
+        (title, caption, actions),
         Close {
+            name,
             disabled: state.phase() != Phase::Writing,
-            action: Writer::return_to_writing,
+            action: close,
         },
     )
 }

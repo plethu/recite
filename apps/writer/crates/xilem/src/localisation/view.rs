@@ -35,12 +35,15 @@ use xilem::{
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let compact_entry =
         writer.compact_chrome() && matches!(writer.localisation.destination, Destination::Entry);
+    // A beat being translated and the source updates review carry their own heads.
+    let own_head = matches!(
+        writer.localisation.destination,
+        Destination::Passage | Destination::Refresh
+    );
     flex_col((
-        (!compact_entry && !matches!(writer.localisation.destination, Destination::Passage))
-            .then(|| heading(writer)),
+        (!compact_entry && !own_head).then(|| heading(writer)),
         empty(writer).then(|| empty_state(writer)),
-        (!compact_entry && !matches!(writer.localisation.destination, Destination::Passage))
-            .then(|| files(writer)),
+        (!compact_entry && !own_head).then(|| files(writer)),
         report(writer),
         destinations(writer),
     ))

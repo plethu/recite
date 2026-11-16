@@ -1,5 +1,5 @@
-//! The head of a tool or Localise sheet: the page's title in Display, the sheet's own actions,
-//! and a named close icon that returns to writing. On a narrow sheet the actions take a second
+//! The head of a tool or Localise sheet: the page's title in Display with an optional muted
+//! caption, the sheet's own actions, and a named close icon that returns to where it opened from. On a narrow sheet the actions take a second
 //! row under the title, so neither squeezes the other.
 use super::{Icon, Type, print, space};
 use recite_writer_session::palette::Palette;
@@ -13,6 +13,8 @@ use xilem::{
 
 /// What closes a sheet: the action, and whether it is unavailable now.
 pub(crate) struct Close<F> {
+    /// Where the icon returns to, as its accessible name, such as "Return to writing".
+    pub name: &'static str,
     pub disabled: bool,
     pub action: F,
 }
@@ -33,16 +35,26 @@ pub(crate) fn sheet_head<
 >(
     Layout { scale, stacked }: Layout,
     palette: &Palette<Color>,
-    (title, actions): (T, A),
+    (title, caption, actions): (T, Option<ArcStr>, A),
     close: Close<F>,
 ) -> impl WidgetView<S, Widget = Flex> + use<S, T, A, F> {
-    let title = Type::Display
-        .label(scale, title)
-        .prop(LineBreaking::WordWrap)
-        .flex(1.);
+    // The caption is one muted line under the title: what the sheet holds, never instructions.
+    let title = flex_col((
+        Type::Display
+            .label(scale, title)
+            .prop(LineBreaking::WordWrap),
+        caption.map(|caption| {
+            print::meta(scale, caption)
+                .color(palette.muted)
+                .prop(LineBreaking::WordWrap)
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::UNIT.px())
+    .flex(1.);
     let close = print::icon_action(
         scale,
-        "Return to writing",
+        close.name,
         Icon::Close,
         palette,
         close.disabled,
