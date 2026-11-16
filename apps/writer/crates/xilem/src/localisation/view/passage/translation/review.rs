@@ -1,6 +1,9 @@
 //! A translation row's margin: its Reviewed toggle, and its details disclosed in place under it.
 use super::*;
-use crate::presentation::{disclosure, disclosure_width};
+use crate::presentation::{
+    control_style::{ControlStyle, styled},
+    disclosure, disclosure_width,
+};
 use xilem::style::Padding;
 
 /// The longest plural rule the disclosure sets before it ends in an ellipsis.
@@ -19,16 +22,20 @@ pub(super) fn margin(
     let anchor = row.source.id.clone();
     let on = draft.reviewed;
     flex_row((
-        button(
-            disclosure(
-                scale,
-                row.details,
-                writer.palette.ink,
-                label(scale, "Translation details"),
-            ),
-            move |writer: &mut Writer| writer.toggle_translation_details(&anchor),
-        )
-        .expanded(row.details),
+        // Quiet, so the Reviewed toggle is the row's one filled control.
+        styled(
+            ControlStyle::Action,
+            button(
+                disclosure(
+                    scale,
+                    row.details,
+                    writer.palette.ink,
+                    label(scale, "Translation details"),
+                ),
+                move |writer: &mut Writer| writer.toggle_translation_details(&anchor),
+            )
+            .expanded(row.details),
+        ),
         xilem::view::FlexSpacer::Flex(1.),
         draft
             .forms

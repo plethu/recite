@@ -23,11 +23,23 @@ pub(super) fn translation(
                 .map(|draft| (translation, draft))
         });
     flex_col((
-        current.as_ref().map(|(translation, draft)| fields(writer, row, translation, draft, width)),
-        current.is_none().then(|| paragraph(writer.ui_scale(), if writer.localisation.has_catalogue() {
-            "No matching entry for this source wording; the banner above reviews source updates."
-        } else { "No catalogue selected." }, width)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::SIBLINGS.px())
+        current
+            .as_ref()
+            .map(|(translation, draft)| fields(writer, row, translation, draft, width)),
+        current.is_none().then(|| {
+            print::meta(
+                writer.ui_scale(),
+                if writer.localisation.has_catalogue() {
+                    "No catalogue entry yet"
+                } else {
+                    "No catalogue selected"
+                },
+            )
+            .color(writer.palette.muted)
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
 }
 fn fields(
     writer: &Writer,
@@ -38,10 +50,20 @@ fn fields(
 ) -> impl WidgetView<Writer> + use<> {
     let key = &translation.key;
     let blocked = writer.localisation.slot.read_only() || writer.phase() != Phase::Writing;
-    let status = writer.localisation.slot.owner().map_or_else(
-        || "Catalogue action in progress".into(),
-        |owner| TranslationStatus::entry_label(&owner.catalogue, key.id),
-    );
+    // The language heads the field as the speaker heads the source; the margin toggle carries
+    // the review state, so only what it cannot say joins the caption.
+    let note = match writer.localisation.slot.owner() {
+        None => Some("Catalogue action in progress".to_owned()),
+        Some(owner) => match TranslationStatus::for_entry(&owner.catalogue, key.id) {
+            status @ TranslationStatus::SourceChanged => Some(status.label()),
+            _ => None,
+        },
+    };
+    let caption = [writer.localisation.language_name(), note]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" · ");
     let forms = draft
         .forms
         .iter()
@@ -88,7 +110,12 @@ fn fields(
         .owner()
         .is_some_and(|owner| owner.catalogue.changed(key.id));
     flex_col((
-        paragraph(writer.ui_scale(), status, width),
+        (!caption.is_empty()).then(|| {
+            print::caps(writer.ui_scale(), caption)
+                .color(writer.palette.muted)
+                .prop(LineBreaking::WordWrap)
+                .width(width.px())
+        }),
         column(forms),
         form_pages(writer, row, draft, blocked),
         review::margin(writer, row, (translation, draft), blocked, width),

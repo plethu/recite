@@ -58,27 +58,11 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
         .collect();
     Some(
         flex_col((
-            crate::view::tool_head(writer, display_name(&beat.name), ()),
-            print::id(
-                writer.ui_scale(),
-                format!(
-                    "{} :: {}",
-                    writer.session.model().document().key(),
-                    beat.name
-                ),
-            )
-            .color(writer.palette.muted),
+            crate::view::tool_head(writer, display_name(&beat.name), actions(writer))
+                .prop(PaneEntry(true)),
+            running_head(writer),
             updates::updates(writer, beat, width),
-            actions(writer),
             incoming::incoming(writer, beat),
-            paragraph(
-                writer.ui_scale(),
-                format!(
-                    "Source, read only · Translation: {}",
-                    writer.localisation.catalogue_caption()
-                ),
-                width,
-            ),
             (!writer.localisation.has_catalogue()).then(|| {
                 paragraph(
                     writer.ui_scale(),
@@ -100,31 +84,41 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
         .gap(space::SIBLINGS.px()),
     )
 }
+/// The sheet's own actions: back to the source, the queue, and Save all drafts, which is the
+/// sheet's one primary while drafts wait and stays in place, unavailable, when none do.
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = writer.ui_scale();
     let blocked = writer.project_action_blocked() || writer.localisation.slot.read_only();
+    let drafts = writer.localisation.needs_save();
     flex_row((
-        text_button(writer.ui_scale(), "Edit source", Writer::return_to_writing).disabled(blocked),
-        text_button(
-            writer.ui_scale(),
-            "Open translation queue",
-            |writer: &mut Writer| writer.catalogue_action(work::Action::Query),
-        )
+        text_button(scale, "Edit source", Writer::return_to_writing).disabled(blocked),
+        text_button(scale, "Open translation queue", |writer: &mut Writer| {
+            writer.catalogue_action(work::Action::Query)
+        })
         .disabled(blocked),
-        text_button(
-            writer.ui_scale(),
+        print::emphasised_action(
+            scale,
             "Save all translation drafts",
+            &writer.palette,
+            drafts,
+            blocked || !drafts,
             Writer::save_translation_drafts,
-        )
-        .disabled(blocked || !writer.localisation.needs_save()),
+        ),
     ))
-    .direction(if width(writer) < 580. * f64::from(writer.ui_scale()) {
-        Axis::Vertical
-    } else {
-        Axis::Horizontal
-    })
-    .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
-    .prop(PaneEntry(true))
+}
+/// The running head under the title: the source file, then the catalogue's language and file.
+fn running_head(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let source = writer.session.model().document().key().to_string();
+    print::meta(
+        writer.ui_scale(),
+        if writer.localisation.has_catalogue() {
+            format!("{source} · {}", writer.localisation.catalogue_caption())
+        } else {
+            source
+        },
+    )
+    .color(writer.palette.muted)
 }
 fn pages(writer: &Writer, beat: &beat::Beat) -> Option<impl WidgetView<Writer> + use<>> {
     (beat.total > beat::PAGE).then(|| {

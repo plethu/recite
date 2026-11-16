@@ -1,7 +1,8 @@
 use super::{Phase, Writer, keyed::keyed};
 use crate::WriterLayout;
-use crate::presentation::sheet_head::{Close, sheet_head};
+use crate::presentation::sheet_head::{Close, Layout, sheet_head};
 use crate::presentation::space;
+use crate::presentation::tokens::breakpoint;
 use crate::presentation::{label, paragraph, prose, text_button};
 use recite_writer_model::View;
 use xilem::core::one_of::Either;
@@ -191,11 +192,15 @@ pub(crate) fn tool_head<
     title: T,
     actions: A,
 ) -> impl WidgetView<Writer, Widget = widgets::Flex> + use<T, A> {
+    let scale = state.ui_scale();
     sheet_head(
-        state.ui_scale(),
+        Layout {
+            scale,
+            // Narrower than this, the sheet's actions take a row under its title.
+            stacked: state.content_width() < breakpoint::SHEET_ROW * f64::from(scale),
+        },
         &state.palette,
-        title,
-        actions,
+        (title, actions),
         Close {
             disabled: state.phase() != Phase::Writing,
             action: Writer::return_to_writing,

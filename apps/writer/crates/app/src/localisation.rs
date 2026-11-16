@@ -1,5 +1,6 @@
 //! Translation edits use the shared file-backed catalogue, with one native presentation owner.
 pub mod beat;
+mod caption;
 mod closing;
 mod creation;
 mod editing;
@@ -251,33 +252,6 @@ impl Writer {
                 decision,
                 inspection: Box::new(comparison.inspection.clone()),
             });
-        }
-    }
-}
-
-impl Localisation {
-    /// The catalogue language and file name, bounded for display.
-    pub fn catalogue_caption(&self) -> String {
-        let catalogue = self;
-        let filename = catalogue
-            .catalogue_path()
-            .and_then(|path| path.file_name())
-            .map(|name| name.to_string_lossy())
-            .unwrap_or_else(|| "PO catalogue".into());
-        let language = catalogue.slot.document().and_then(|document| {
-            document
-                .headers()
-                .iter()
-                .find(|header| header.key().eq_ignore_ascii_case("Language"))
-                .map(|header| header.value())
-        });
-        match language.filter(|language| !language.is_empty()) {
-            Some(language) => format!(
-                "{} · {}",
-                language.chars().take(80).collect::<String>(),
-                filename.chars().take(80).collect::<String>()
-            ),
-            None => filename.chars().take(80).collect(),
         }
     }
 }

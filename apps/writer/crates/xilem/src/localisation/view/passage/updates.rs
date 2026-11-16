@@ -3,6 +3,7 @@
 use super::*;
 use crate::presentation::Type;
 use crate::presentation::banner::banner;
+use crate::presentation::tokens::breakpoint;
 use xilem::masonry::{parley::style::FontWeight, properties::LineBreaking};
 
 /// The banner, while the open catalogue lacks an entry for some passage on this page.
@@ -41,7 +42,7 @@ pub(super) fn updates(
                     writer.project_action_blocked() || state.slot.read_only() || state.dirty(),
                 ),
             ),
-            width < 640. * f64::from(scale),
+            width < breakpoint::SHEET_ROW * f64::from(scale),
             width,
         )
     })

@@ -52,3 +52,10 @@ fn results_are_complete_unique_and_exact_tags_take_priority() {
             .any(|choice| &choice.value == "fr")
     );
 }
+
+#[test]
+fn names_are_the_english_language_name_and_unknown_tags_have_none() {
+    assert_eq!(name("fr").as_deref(), Some("French"));
+    assert_eq!(name("pt-BR").as_deref(), Some("Portuguese (Brazil)"));
+    assert!(name("en-x-pirate").is_none());
+}

@@ -81,6 +81,8 @@ pub(crate) mod breakpoint {
     pub const SEGMENTS: f64 = 360.;
     /// A field and its button share a row from this width.
     pub const FIELD_ROW: f64 = 480.;
+    /// A banner's or a sheet head's actions share its row from this width.
+    pub const SHEET_ROW: f64 = 640.;
 }
 
 /// An interface type role.
