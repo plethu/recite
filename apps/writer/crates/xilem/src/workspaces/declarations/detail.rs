@@ -1,9 +1,11 @@
 //! The chosen declaration: its name and kind, then a condition's or effect's parameters as a
-//! definition list, or a speaker's or registry's prose.
+//! definition list, or a speaker's or registry's prose, wrapped and scrolling when it is long.
 use super::*;
+use crate::presentation::pane;
 
 /// The chosen declaration, or a prompt to choose one.
-pub(super) fn detail(writer: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
+/// `height` is the column's: the prose area takes what the name and kind leave of it.
+pub(super) fn detail(writer: &Writer, width: f64, height: f64) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.declarations;
     let scale = writer.ui_scale();
     let chosen = panel.selected.and_then(|index| panel.rows.get(index));
@@ -17,9 +19,10 @@ pub(super) fn detail(writer: &Writer, width: f64) -> impl WidgetView<Writer> + u
                 label(scale, chosen.name.clone()).typeset(Type::Section, scale),
                 print::meta(scale, chosen.kind.clone()).color(writer.palette.muted),
                 match &chosen.detail {
-                    Detail::Parameters(list) => Either::A(parameters(writer, list, width)),
-                    Detail::Pages(pages) => Either::B(prose(writer, pages, width)),
+                    Detail::Parameters(list) => Some(parameters(writer, list, width)),
+                    Detail::Prose(_) => None,
                 },
+                prose(writer, &chosen.detail, width, height),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::SIBLINGS.px())
@@ -67,36 +70,37 @@ fn parameters(
     .gap(space::TEXT.px())
 }
 
-/// A speaker's display name, a registry's values or a pointer to the source, a page at a time
-/// when it is enormous.
-fn prose(writer: &Writer, pages: &[String], width: f64) -> impl WidgetView<Writer> + use<> {
-    let panel = &writer.workspaces.declarations;
+/// A speaker's display name, a registry's values or a pointer to the source: wrapped in a
+/// scrolling detail area that takes the column's remaining height. A single unbroken token cannot
+/// wrap, so it sits on one line ending in an ellipsis, its full text still its accessible name.
+fn prose(
+    writer: &Writer,
+    detail: &Detail,
+    width: f64,
+    height: f64,
+) -> (
+    Option<impl WidgetView<Writer> + use<>>,
+    Option<impl WidgetView<Writer> + use<>>,
+) {
     let scale = writer.ui_scale();
-    flex_col((
-        paragraph(
-            scale,
-            pages.get(panel.detail_page).cloned().unwrap_or_default(),
-            width,
-        ),
-        (pages.len() > 1).then(|| {
-            flex_row((
-                text_button(
-                    scale,
-                    "Previous declaration detail",
-                    |writer: &mut Writer| {
-                        let panel = &mut writer.workspaces.declarations;
-                        panel.detail_page = panel.detail_page.saturating_sub(1);
-                    },
-                )
-                .disabled(panel.detail_page == 0),
-                text_button(scale, "More declaration detail", |writer: &mut Writer| {
-                    writer.workspaces.declarations.detail_page += 1
-                })
-                .disabled(pages.len() <= panel.detail_page + 1),
-            ))
-            .gap(space::SIBLINGS.px())
+    let Detail::Prose(text) = detail else {
+        return (None, None);
+    };
+    let unbroken = !text.is_empty() && !text.contains(char::is_whitespace);
+    // Below the name in Section and the kind in Meta, each a sibling gap apart.
+    let heading = (Type::Section.metrics().1 + Type::Meta.metrics().1) * scale;
+    let area = height - f64::from(heading) - 2. * space::SIBLINGS;
+    (
+        (!unbroken).then(|| {
+            pane("Declaration detail", paragraph(scale, text.clone(), width))
+                .constrain_horizontal(true)
+                .dims((
+                    width.px(),
+                    area.max(f64::from(Type::Body.metrics().1 * scale)).px(),
+                ))
         }),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
+        unbroken.then(|| {
+            one_line(text.clone(), Type::Body, scale, writer.palette.ink).width(width.px())
+        }),
+    )
 }

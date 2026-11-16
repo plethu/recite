@@ -10,9 +10,8 @@ fn capture_detail<W: Widget>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut pending = vec![harness.root_widget().as_dyn()];
     let target = loop {
-        let widget = pending.pop().ok_or("declaration detail pager")?;
-        if support::native_label(harness, widget.id()).as_deref() == Some("More declaration detail")
-        {
+        let widget = pending.pop().ok_or("declaration detail")?;
+        if support::native_label(harness, widget.id()).as_deref() == Some("Declaration detail") {
             break widget.id();
         }
         pending.extend(widget.children());

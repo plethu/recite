@@ -22,8 +22,8 @@ impl Writer {
 pub enum Detail {
     /// Parameter names and their author-facing types, in declaration order.
     Parameters(Vec<(String, String)>),
-    /// Prose, bounded into pages so an enormous display name never mounts at once.
-    Pages(Vec<String>),
+    /// Prose, such as a speaker's display name or a registry's values, shown whole.
+    Prose(String),
 }
 pub struct Row {
     pub name: String,
@@ -40,15 +40,8 @@ impl Row {
             folded,
             detail: match detail {
                 entries::Detail::Parameters(parameters) => Detail::Parameters(parameters),
-                entries::Detail::Text(text) => Detail::Pages(super::text::pages(&text)),
+                entries::Detail::Text(text) => Detail::Prose(text),
             },
-        }
-    }
-    /// The prose pages, or none for a parameter list.
-    pub fn pages(&self) -> &[String] {
-        match &self.detail {
-            Detail::Parameters(_) => &[],
-            Detail::Pages(pages) => pages,
         }
     }
 }
@@ -61,7 +54,6 @@ pub struct Panel {
     pub query: String,
     pub matches: Vec<usize>,
     pub selected: Option<usize>,
-    pub detail_page: usize,
 }
 impl Panel {
     pub(crate) fn describe_producer(&mut self, pages: Vec<String>) {
@@ -81,14 +73,12 @@ impl Panel {
             .collect();
         self.query = query;
         self.selected = self.matches.first().copied();
-        self.detail_page = 0;
     }
     pub fn choose(&mut self, name: &str, kind: &str) {
         self.selected = self
             .rows
             .iter()
             .position(|row| row.name == name && row.kind == kind);
-        self.detail_page = 0;
     }
     /// Where the chosen declaration sits among the matches, so the list can scroll to it.
     pub fn chosen_position(&self) -> usize {

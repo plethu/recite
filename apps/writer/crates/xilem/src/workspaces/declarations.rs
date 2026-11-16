@@ -90,9 +90,16 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     } else {
         width
     };
+    // The detail takes the list's height beside it, or a picker's below it.
+    let rows = size::PICKER_ROWS as f64 * size::ROW * scale;
+    let room = if wide {
+        (writer.viewport.height - size::MASTER_CHROME * scale).max(rows)
+    } else {
+        rows
+    };
     flex_row((
         flex_col((list(writer, master, wide),)).width(master.px()),
-        flex_col((detail::detail(writer, detail),))
+        flex_col((detail::detail(writer, detail, room),))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .width(detail.px()),
     ))

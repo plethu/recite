@@ -67,8 +67,10 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
   destination stays the toggle that shows the destination's opening.
 - **Filter as you type.** Search fields filter on every keystroke and have no Search button; a
   list states its count under the field ("6 declarations", "1 of 6 declarations") and scrolls as
-  one virtual list of 32px rows with a plate selection. Paging survives only for prose too long
-  to mount at once.
+  one virtual list of 32px rows with a plate selection. A declaration's prose wraps in a named,
+  non-focusable detail area that scrolls beside the list rather than paging; a single unbroken
+  token ends in an ellipsis and keeps its full text as its accessible name. Paging survives only
+  for reports too long to mount at once.
 - **Sheet heads and banners.** A sheet head holds the sheet's own actions, one of them Primary,
   and stacks them on a second row below 640px. Changes from outside Writer arrive as a banner at
   the top of the affected sheet (Changed on disk · Compare · Keep mine · Use disk version), which
