@@ -92,23 +92,26 @@ fn empty_state(writer: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let queue = matches!(writer.localisation.destination, Destination::Queue);
-    crate::view::tool_head(
+    let catalogue = queue && writer.localisation.has_catalogue();
+    crate::view::captioned_head(
         writer,
-        if empty(writer) {
-            "No translations yet"
-        } else if queue {
-            "Translation queue"
-        } else {
-            "Translations"
-        },
         (
-            (queue && writer.localisation.has_catalogue()).then(|| {
-                print::meta(writer.ui_scale(), writer.localisation.catalogue_caption())
-                    .color(writer.palette.muted)
-            }),
-            empty(writer).then(|| halftone(writer)),
+            if empty(writer) {
+                "No translations yet"
+            } else if queue {
+                "Translation queue"
+            } else {
+                "Translations"
+            },
+            catalogue.then(|| writer.localisation.catalogue_caption().into()),
+            (
+                catalogue.then(|| files::head_actions(writer)),
+                empty(writer).then(|| halftone(writer)),
+            ),
         ),
+        ("Return to writing", Writer::return_to_writing),
     )
+    .prop(crate::attention::PaneEntry(catalogue))
 }
 /// A square of the plum halftone screen beside an empty heading.
 fn halftone(writer: &Writer) -> impl WidgetView<Writer> + use<> {

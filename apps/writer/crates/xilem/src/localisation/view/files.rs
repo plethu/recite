@@ -1,9 +1,44 @@
 use super::*;
-use crate::attention::PaneEntry;
 use crate::presentation::space;
-use crate::presentation::tokens::{breakpoint, size};
+use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
-use xilem::masonry::kurbo::Axis;
+use xilem::view::FlexSequence;
+/// The queue head's actions: the catalogue files disclosure and Translate current beat, both
+/// quiet, and Save all translation drafts as the one Primary while there are drafts to save.
+pub(super) fn head_actions(writer: &Writer) -> impl FlexSequence<Writer> + use<> {
+    let scale = writer.ui_scale();
+    let state = &writer.localisation;
+    let blocked = writer.project_action_blocked();
+    let held = blocked || state.slot.read_only();
+    (
+        print::action(
+            scale,
+            if state.files_open {
+                "Hide catalogue files"
+            } else {
+                "Catalogue files"
+            },
+            false,
+            |writer: &mut Writer| writer.localisation.files_open = !writer.localisation.files_open,
+        ),
+        print::action(
+            scale,
+            "Translate current beat",
+            blocked,
+            |writer: &mut Writer| writer.open_translation_beat(0),
+        ),
+        state.needs_save().then(|| {
+            print::primary_action(
+                scale,
+                "Save all translation drafts",
+                &writer.palette,
+                held,
+                Writer::save_translation_drafts,
+            )
+        }),
+    )
+}
+
 pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let state = &writer.localisation;
@@ -11,8 +46,6 @@ pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
     let held = blocked || state.slot.read_only();
     let catalogue = state.has_catalogue();
-    let narrow = writer.viewport.width - writer.navigation_width()
-        < breakpoint::TWO_COLUMNS * f64::from(scale);
     flex_col((
         state.slot.path().filter(|_| !queue).map(|_| {
             paragraph(
@@ -20,39 +53,6 @@ pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 writer.localisation.catalogue_caption(),
                 writer.content_width(),
             )
-        }),
-        (queue && catalogue).then(|| {
-            flex_row((
-                text_button(
-                    scale,
-                    if state.files_open {
-                        "Hide catalogue files"
-                    } else {
-                        "Catalogue files"
-                    },
-                    |writer: &mut Writer| {
-                        writer.localisation.files_open = !writer.localisation.files_open
-                    },
-                ),
-                text_button(scale, "Translate current beat", |writer: &mut Writer| {
-                    writer.open_translation_beat(0)
-                })
-                .disabled(blocked),
-                text_button(
-                    scale,
-                    "Save all translation drafts",
-                    Writer::save_translation_drafts,
-                )
-                .disabled(held || !state.needs_save()),
-            ))
-            .direction(if narrow {
-                Axis::Vertical
-            } else {
-                Axis::Horizontal
-            })
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(space::SIBLINGS.px())
-            .prop(PaneEntry(true))
         }),
         (queue && state.files_open).then(|| {
             flex_col((
