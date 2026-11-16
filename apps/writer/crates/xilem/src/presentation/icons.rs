@@ -35,6 +35,8 @@ pub(crate) enum Icon {
     Rename,
     /// Two crossed strokes: close this slip or sheet.
     Close,
+    /// A tick: this item is marked done, such as a reviewed translation.
+    Check,
 }
 impl Icon {
     fn filled(self) -> bool {
@@ -130,6 +132,11 @@ impl Icon {
                 path.line_to((17., 17.));
                 path.move_to((17., 7.));
                 path.line_to((7., 17.));
+            }
+            Self::Check => {
+                path.move_to((5., 12.5));
+                path.line_to((10., 17.5));
+                path.line_to((19., 7.));
             }
             Self::Search => {
                 path.extend(Circle::new((10.5, 10.5), 5.5).path_elements(0.1));

@@ -79,6 +79,7 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     mounted.activate("More source passage");
     mounted.activate("Previous source part");
     mounted.activate("Translation details");
+    mounted.activate("Open translation entry");
     driver.finish(&mut mounted.state);
     mounted.settle();
     assert_eq!(

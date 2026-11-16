@@ -154,6 +154,9 @@ def edit(window, value):
     if not window.find("Translation form 1"):
         reveal(window, "Translation details")
         window.act("Translation details")
+        window.wait(lambda: window.expanded("Translation details"), "details disclosed")
+        reveal(window, "Open translation entry")
+        window.act("Open translation entry")
     reveal(window, "Translation form 1")
     fill(window, "Translation form 1", value)
 
@@ -187,7 +190,14 @@ def run(api, bus, registry, binary, output):
                 open_entry(window)
                 edit(window, "Le dernier tram part.")
                 window.reveal_end("Reviewed translation")
+                assert not window.has_state(
+                    window.find_action("Reviewed translation"), "PRESSED"
+                ), "reviewed toggle starts released"
                 window.act("Reviewed translation")
+                window.wait(
+                    lambda: window.has_state(window.find_action("Reviewed translation"), "PRESSED"),
+                    "reviewed toggle reports PRESSED",
+                )
                 window.act("Save translation")
                 window.wait(
                     lambda: "Le dernier tram part." in po.read_text(), "explicit translation save"

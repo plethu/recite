@@ -29,10 +29,7 @@ use xilem::{
         properties::{LineBreaking, TextAreaLabel},
     },
     style::Style,
-    view::{
-        CrossAxisAlignment, button, checkbox, flex_col, flex_row, indexed_stack, sized_box,
-        text_input,
-    },
+    view::{CrossAxisAlignment, button, flex_col, flex_row, indexed_stack, sized_box, text_input},
 };
 
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {

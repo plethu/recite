@@ -72,6 +72,12 @@ impl Look {
             rule: None,
             lead: 0.,
         };
+        // A toggle that is on keeps the pressed sink and its ink edge at rest.
+        let held = |padding| Self {
+            rest: Some((p.pressed, p.ink)),
+            hover: (p.pressed.lerp_rect(p.ink, INK_HOVER), p.ink),
+            ..quiet(padding)
+        };
         // Secondary actions on sheets, panels and dialogs: a tint of ink over the host, no border.
         let tonal = || Self {
             rest: Some((p.ink.with_alpha(TONAL), Color::TRANSPARENT)),
@@ -98,12 +104,9 @@ impl Look {
             ),
             (
                 Some(ControlStyle::IconOn),
-                Self {
-                    rest: Some((p.pressed, p.ink)),
-                    hover: (p.pressed.lerp_rect(p.ink, INK_HOVER), p.ink),
-                    ..quiet((space::UNIT * scale, space::UNIT * scale))
-                },
+                held((space::UNIT * scale, space::UNIT * scale)),
             ),
+            (Some(ControlStyle::ToggleOn), held(text)),
             (Some(ControlStyle::Tab), quiet(text)),
             (Some(ControlStyle::Row), quiet(text)),
             (

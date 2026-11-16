@@ -17,6 +17,8 @@ pub struct PassageRow {
     pub pages: Vec<String>,
     pub source_page: usize,
     pub form_page: usize,
+    /// Whether the translation's details are disclosed under the row.
+    pub details: bool,
     pub translation: Option<Translation>,
 }
 pub struct Translation {
@@ -47,6 +49,7 @@ impl Row {
                 pages: text::reading_pages(&passage.text),
                 source_page: 0,
                 form_page: 0,
+                details: false,
                 translation: owner.and_then(|owner| {
                     let id = owner.catalogue.entry_for(&passage.id, &passage.text)?;
                     Some(Translation {

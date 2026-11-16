@@ -1,4 +1,4 @@
-//! Native text, radio and checkbox controls retain their ordinary keyboard behavior.
+//! Native text, radio and toggle controls retain their ordinary keyboard behavior.
 use super::*;
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::space;
@@ -64,12 +64,13 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             .prop(TextAreaLabel::new("Specimen manuscript")),
         )
         .dims((640.px(), 180.px())),
-        checkbox(
-            "Reviewed translation",
-            state.reviewed,
-            |state: &mut Specimen, checked| state.reviewed = checked,
-        )
-        .text_size(Type::Body.size(scale)),
+        print::text_toggle(
+            scale,
+            ("Reviewed translation", "Reviewed"),
+            palette,
+            (state.reviewed, false),
+            |state: &mut Specimen| state.reviewed = !state.reviewed,
+        ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())

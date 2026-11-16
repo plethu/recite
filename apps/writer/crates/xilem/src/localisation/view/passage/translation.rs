@@ -1,8 +1,8 @@
 //! Every field targets one catalogue lifetime, PO entry and plural arm.
 use super::*;
-use crate::presentation::Type;
 use crate::presentation::space;
 use recite_writer_session::localisation::catalogue::Draft;
+mod review;
 
 pub(super) fn translation(
     writer: &Writer,
@@ -80,10 +80,8 @@ fn fields(
             )
         })
         .collect();
-    let reviewed = key.clone();
     let save = key.clone();
     let discard = key.clone();
-    let inspect = key.clone();
     let changed = writer
         .localisation
         .slot
@@ -93,36 +91,8 @@ fn fields(
         paragraph(writer.ui_scale(), status, width),
         column(forms),
         form_pages(writer, row, draft, blocked),
-        flex_row((
-            draft
-                .forms
-                .iter()
-                .any(|form| !form.trim().is_empty())
-                .then(|| {
-                    checkbox(
-                        "Reviewed translation",
-                        draft.reviewed,
-                        move |writer: &mut Writer, value| {
-                            writer.review_translation(&reviewed, value)
-                        },
-                    )
-                    .text_size(Type::Body.size(writer.ui_scale()))
-                    .disabled(blocked)
-                }),
-            text_button(
-                writer.ui_scale(),
-                "Translation details",
-                move |writer: &mut Writer| writer.inspect_translation(&inspect),
-            )
-            .disabled(blocked || writer.project_action_blocked()),
-        ))
-        .direction(if width < 360. * f64::from(writer.ui_scale()) {
-            Axis::Vertical
-        } else {
-            Axis::Horizontal
-        })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::SIBLINGS.px()),
+        review::margin(writer, row, (translation, draft), blocked, width),
+        review::details(writer, row, translation, blocked, width),
         changed.then(|| {
             flex_row((
                 text_button(

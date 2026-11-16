@@ -38,6 +38,8 @@ pub(crate) enum ControlStyle {
     /// An icon toggle that is on: the pressed sink held, with its ink edge, so the state shows by
     /// shape as well as fill.
     IconOn,
+    /// A text toggle that is on: the icon toggle's pressed sink and ink edge with text padding.
+    ToggleOn,
     /// A checkbox row whose box sits on its row's leading edge, in line with labelled rows.
     Flush,
     /// An action on the status bar: quiet on the overprint, with a mint focus border.
@@ -59,6 +61,7 @@ impl ControlStyle {
             Self::SearchField => "writer-search-field",
             Self::Icon => "writer-icon",
             Self::IconOn => "writer-icon-on",
+            Self::ToggleOn => "writer-toggle-on",
             Self::Entry => "writer-entry",
             Self::Row => "writer-row",
             Self::RowSelected => "writer-row-selected",

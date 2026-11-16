@@ -10,6 +10,7 @@ use xilem::{
     WidgetView,
     masonry::{
         core::ArcStr,
+        layout::AsUnit,
         parley::{FontFamily, FontFamilyName, GenericFamily, style::FontWeight},
         widgets::Button,
     },
@@ -209,6 +210,43 @@ pub(crate) fn icon_toggle<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
         view::button(icon_face(scale, name, icon, palette, disabled), callback)
             .toggled(pressed)
             .disabled(disabled),
+    )
+}
+
+/// A margin toggle with words, such as "Reviewed": named in full, reporting `pressed`, and while on
+/// held in the pressed sink with a tick before its words, so the state shows by shape as well.
+pub(crate) fn text_toggle<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+    scale: f32,
+    (name, text): (&'static str, &'static str),
+    palette: &Palette<Color>,
+    (pressed, disabled): (bool, bool),
+    callback: F,
+) -> impl WidgetView<S, Widget = Button> + use<S, F> {
+    styled(
+        if pressed {
+            ControlStyle::ToggleOn
+        } else {
+            ControlStyle::Tonal
+        },
+        view::button(
+            view::flex_row((
+                pressed.then(|| {
+                    icon_face(
+                        scale * super::icons::SMALL,
+                        "",
+                        super::Icon::Check,
+                        palette,
+                        disabled,
+                    )
+                }),
+                Type::Control.label(scale, text),
+            ))
+            .gap((super::space::UNIT * f64::from(scale)).px()),
+            callback,
+        )
+        .accessible_label(name)
+        .toggled(pressed)
+        .disabled(disabled),
     )
 }
 

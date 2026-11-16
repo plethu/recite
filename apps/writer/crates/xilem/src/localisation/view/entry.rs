@@ -2,7 +2,7 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::navigation::Target;
-use crate::presentation::Type;
+use crate::presentation::print;
 use crate::presentation::space;
 use recite_writer_session::localisation::catalogue::Draft;
 use recite_writer_session::location::Screen as LinkedScreen;
@@ -57,6 +57,7 @@ fn editor(
     let state = &writer.localisation;
     let scale = writer.ui_scale();
     let reviewed_key = entry.key.clone();
+    let reviewed = draft.reviewed;
     let discard_key = entry.key.clone();
     let changed = state
         .slot
@@ -67,15 +68,13 @@ fn editor(
         plural::guide(writer, entry, blocked),
         forms::forms(writer, entry, draft, blocked),
         flex_row((
-            checkbox(
-                "Reviewed translation",
-                draft.reviewed,
-                move |writer: &mut Writer, reviewed| {
-                    writer.review_translation(&reviewed_key, reviewed)
-                },
-            )
-            .text_size(Type::Body.size(scale))
-            .disabled(blocked),
+            print::text_toggle(
+                scale,
+                ("Reviewed translation", "Reviewed"),
+                &writer.palette,
+                (draft.reviewed, blocked),
+                move |writer: &mut Writer| writer.review_translation(&reviewed_key, !reviewed),
+            ),
             text_button(scale, "Save translation", Writer::save_translation_entry).disabled(
                 blocked || writer.project_jobs_busy() || !changed || !entry.details.plural.valid(),
             ),
