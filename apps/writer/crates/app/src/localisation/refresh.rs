@@ -18,6 +18,13 @@ pub struct Refresh {
 }
 /// One changed entry: what changed, where, and what a translator keeps with it.
 pub struct Update {
+    /// The source file the entry comes from: rows from one file share its heading.
+    pub file: String,
+    /// The entry's source line, as one line, and what happened to it ("New", "Changed").
+    pub excerpt: String,
+    pub kind: &'static str,
+    /// The entry's beat and speaker.
+    pub beat: String,
     pub source: ComparisonRow,
     pub detail: Option<String>,
     pub context: String,
@@ -65,7 +72,20 @@ fn update(change: &Change) -> Update {
     if !change.nearby.is_empty() {
         details.push(format!("Nearby source\n{}", change.nearby.join("\n")));
     }
+    let excerpt = change
+        .new
+        .as_deref()
+        .or(change.old.as_deref())
+        .and_then(|text| text.lines().find(|line| !line.trim().is_empty()))
+        .unwrap_or_default()
+        .chars()
+        .take(160)
+        .collect();
     Update {
+        file: change.file.clone(),
+        excerpt,
+        kind,
+        beat: change.beat.clone(),
         source: ComparisonRow {
             caption: format!("{kind} · {caption}"),
             before: change.old.as_deref().map(bounded),

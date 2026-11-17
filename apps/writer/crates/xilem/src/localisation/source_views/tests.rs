@@ -168,14 +168,26 @@ fn source_updates_are_rows_that_accept_or_keep_and_open_their_diff() {
     let tree = harness.access_tree();
     let mut pending = vec![tree.state().root()];
     let (mut keeps, mut accepts, mut diffs) = (0, 0, 0);
+    let mut names = std::collections::BTreeSet::new();
     while let Some(node) = pending.pop() {
         let label = node.label().or_else(|| node.value()).unwrap_or_default();
         keeps += usize::from(label.starts_with("Keep · "));
         accepts += usize::from(label.starts_with("Accept · "));
         diffs += usize::from(node.role() == Role::Label && label == "Previous source");
+        if node.role() == Role::Button || label.contains(" · ") {
+            names.insert(label.to_string());
+        }
         pending.extend(node.children());
     }
     assert_eq!((keeps, accepts, diffs), (2, 2, 1));
+    // Each row leads with its source line, and its name and its choices name the line apart.
+    for name in [
+        "Changed · Two! · b",
+        "Accept · Changed · One! · a",
+        "Keep · Changed · Two! · b",
+    ] {
+        assert!(names.contains(name), "{name} in {names:?}");
+    }
     writer.toggle_source_update(1);
     writer.keep_source_update(0, false);
     let refresh = writer.localisation.refresh.as_ref().unwrap();
