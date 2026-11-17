@@ -7,12 +7,14 @@ use crate::{
     keyed::keyed,
     tests::support::{self, mounted::Mounted},
 };
+use tokio::sync::mpsc::unbounded_channel;
 use xilem::masonry::{
     core::{
         PointerButtonEvent, PointerEvent, PointerId, PointerInfo, PointerState, PointerType,
         WidgetId,
     },
     dpi::PhysicalPosition,
+    kurbo::Rect,
     widgets::{Button, Passthrough},
 };
 use xilem::view::PointerButton;
@@ -40,6 +42,39 @@ fn beat_row(
         pending.extend(widget.children());
     }
     panic!("no sidebar row renames {beat}");
+}
+
+/// The sidebar beat rows mounted now, by beat.
+fn mounted_rows(
+    mounted: &Mounted<Writer, impl WidgetView<Writer, Widget = Passthrough>>,
+) -> Vec<String> {
+    let mut rows = Vec::new();
+    let mut pending = vec![mounted.harness.root_widget().as_dyn()];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() {
+            continue;
+        }
+        if let Some(button) = widget.downcast::<Button>()
+            && let Some(target) = button.get_prop::<RenamesBeat>().0.as_ref()
+            && target.place == Place::Outline
+        {
+            rows.push(target.beat.clone());
+        }
+        pending.extend(widget.children());
+    }
+    rows
+}
+
+/// Where `id` sits in the window.
+fn window_bounds(
+    mounted: &Mounted<Writer, impl WidgetView<Writer, Widget = Passthrough>>,
+    id: WidgetId,
+) -> Rect {
+    let widget = mounted.harness.get_widget_with_id(id);
+    widget
+        .ctx()
+        .window_transform()
+        .transform_rect_bbox(widget.ctx().border_box())
 }
 
 fn double_click(
@@ -106,4 +141,95 @@ fn a_double_click_on_a_beat_row_renames_it_in_the_sidebar_and_returns_to_the_row
     assert!(mounted.state.inline_rename().is_none());
     // The row is back, marked as where focus returns.
     assert!(beat_row(&mounted, "start").1);
+}
+
+/// A scene of `count` beats, each leading to the next.
+fn long_scene(count: usize) -> String {
+    (0..count)
+        .map(|index| {
+            format!(
+                ":: beat_{index}{}\n> @line_{index}\n  Line {index}.\n-> {}\n",
+                if index == 0 { " default" } else { "" },
+                if index + 1 == count {
+                    "END".to_string()
+                } else {
+                    format!("beat_{}", index + 1)
+                }
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn a_long_scene_scrolls_its_beats_in_a_list_that_keeps_the_selected_beat_in_view() {
+    let directory = support::project(&long_scene(40)).unwrap();
+    let mut writer = support::open(&directory).unwrap();
+    writer.viewport.width = 1200.;
+    let mut mounted = Mounted::new(writer, surface);
+    mounted.settle();
+    // Navigation runs here, in place of the worker the view starts.
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let (sender, mut jobs) = unbounded_channel();
+    mounted.state.navigation.sender = Some(sender);
+    mounted.state.navigation.runtime = Some(runtime.handle().clone());
+    // The beats scroll in one named list that is no Tab stop itself; no count stands in for them.
+    let list = mounted.find(super::outline::BEATS);
+    assert!(
+        !mounted
+            .harness
+            .get_widget_with_id(list)
+            .ctx()
+            .accepts_focus()
+    );
+    assert!(!mounted.contains_text("more beats"));
+    let view = window_bounds(&mounted, list);
+    // Only the rows in view and one past it mount.
+    let rows = mounted_rows(&mounted);
+    assert!((7..=9).contains(&rows.len()), "{rows:?}");
+    assert!(rows.contains(&"beat_0".to_string()));
+    assert!(!rows.contains(&"beat_12".to_string()), "{rows:?}");
+
+    // A beat chosen elsewhere, as by Ctrl+Down or Find, scrolls into view, selected and a Tab stop.
+    let select = |mounted: &mut Mounted<Writer, _>, jobs: &mut _, beat: &str| {
+        mounted.state.inspect(beat.into());
+        support::finish_navigation(&mut mounted.state, jobs).unwrap();
+        mounted.settle();
+    };
+    select(&mut mounted, &mut jobs, "beat_30");
+    let (row, _) = beat_row(&mounted, "beat_30");
+    let bounds = window_bounds(&mounted, row);
+    assert!(
+        view.y0 - 0.5 <= bounds.y0 && bounds.y1 <= view.y1 + 0.5,
+        "{bounds:?} outside {view:?}"
+    );
+    assert!(
+        mounted
+            .harness
+            .get_widget_with_id(row)
+            .ctx()
+            .accepts_focus()
+    );
+    assert!(
+        mounted.is_selected("Beat 30"),
+        "{:?}",
+        mounted_rows(&mounted)
+    );
+    assert!((7..=10).contains(&mounted_rows(&mounted).len()));
+
+    // The row past the view is built, so Tab goes on to the next beat rather than leaving the list.
+    mounted.harness.focus_on(Some(row));
+    mounted.harness.press_tab_key(false);
+    assert_eq!(
+        mounted.harness.focused_widget_id(),
+        Some(beat_row(&mounted, "beat_31").0)
+    );
+    mounted.harness.focus_on(None);
+
+    // Choosing a beat already in view leaves the list where it is.
+    select(&mut mounted, &mut jobs, "beat_28");
+    assert_eq!(
+        window_bounds(&mounted, beat_row(&mounted, "beat_30").0),
+        bounds
+    );
+    assert!(mounted.is_selected("Beat 28"));
 }

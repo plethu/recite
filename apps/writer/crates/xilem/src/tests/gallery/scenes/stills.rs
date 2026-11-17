@@ -144,6 +144,40 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
     );
     record.scene(
         Meta {
+            id: "script.long-scene",
+            group: "Script",
+            title: "Script, a long scene's beat list",
+            intent: "A scene of forty beats lists them in a scrolling list under its row, a half row showing there are more, kept on the selected later beat; then a beat row focused.",
+        },
+        |record| {
+            let directory = sample();
+            let watches = (1..=40)
+                .map(|watch| {
+                    let next = if watch == 40 {
+                        "END".to_string()
+                    } else {
+                        format!("watch_{}", watch + 1)
+                    };
+                    format!(":: watch_{watch}\n> @watch{watch:03}\n  Watch {watch} on the pier.\n-> {next}\n")
+                })
+                .collect::<String>();
+            fs::write(directory.path().join("harbour.recite"), watches).expect("long scene");
+            let mut stage = stage(
+                App::with_writer(open(directory.path(), "harbour.recite")),
+                variant,
+            );
+            stage.act(|app| {
+                if let Some(writer) = app.writer.as_mut() {
+                    writer.edit_beat(23);
+                }
+            });
+            stage.shot(record, "Watch 24 kept in view");
+            stage.focus("Watch 22");
+            stage.shot(record, "A beat row focused");
+        },
+    );
+    record.scene(
+        Meta {
             id: "script.marks",
             group: "Script",
             title: "Script, margin marks",
