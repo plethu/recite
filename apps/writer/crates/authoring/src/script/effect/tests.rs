@@ -39,6 +39,9 @@ fn the_verb_takes_the_third_person() {
         ("go", "Goes"),
         ("reach", "Reaches"),
     ] {
-        assert_eq!(third_person(verb), read);
+        // Appending after earlier words reads the verb alone.
+        let mut out = String::from("x ");
+        third_person(verb, &mut out);
+        assert_eq!(&out[2..], read);
     }
 }
