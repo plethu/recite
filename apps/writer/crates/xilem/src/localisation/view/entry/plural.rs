@@ -1,7 +1,7 @@
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::source_text;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
 use recite_writer_session::messages::{MsgId, text as wording};
 
 pub(super) fn guide(
@@ -39,7 +39,7 @@ pub(super) fn guide(
                 )
                 .disabled(blocked)
             }),
-            (!guide.valid()).then(|| label(scale, "Plural rule").typeset(Type::Section, scale)),
+            (!guide.valid()).then(|| section_heading(scale, "Plural rule")),
             (entry.rule.expanded || !guide.valid()).then(|| rule(writer, entry, blocked)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)

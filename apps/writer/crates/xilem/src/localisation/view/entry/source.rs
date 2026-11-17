@@ -1,7 +1,7 @@
 //! Source prose and navigation are one composed section of a translation entry.
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
 use crate::{localisation::source_navigation::SourceAction, presentation::manuscript_text};
 
 pub(super) fn source(
@@ -17,7 +17,7 @@ pub(super) fn source(
         || writer.localisation.saving()
         || entry.source_location.is_none();
     flex_col((
-        label(scale, "Source passage").typeset(Type::Section, scale),
+        section_heading(scale, "Source passage"),
         entry.source_location.as_ref().map(|caption| {
             paragraph(
                 scale,

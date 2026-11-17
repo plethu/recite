@@ -13,6 +13,8 @@ pub(crate) struct Group {
     /// What the group says beyond its name, such as a message shown abbreviated inside it.
     description: ArcStr,
     role: Role,
+    /// A heading's level: 1 for a page or scene, 2 and 3 for its sections.
+    level: Option<usize>,
     child: WidgetPod<dyn Widget>,
 }
 impl Group {
@@ -21,8 +23,13 @@ impl Group {
             name,
             description: ArcStr::from(""),
             role,
+            level: None,
             child: child.erased().to_pod(),
         }
+    }
+    pub fn with_level(mut self, level: Option<usize>) -> Self {
+        self.level = level;
+        self
     }
     pub fn with_description(mut self, description: ArcStr) -> Self {
         self.description = description;
@@ -41,6 +48,10 @@ impl Group {
     }
     pub fn set_role(this: &mut WidgetMut<'_, Self>, role: Role) {
         this.widget.role = role;
+        this.ctx.request_accessibility_update();
+    }
+    pub fn set_level(this: &mut WidgetMut<'_, Self>, level: Option<usize>) {
+        this.widget.level = level;
         this.ctx.request_accessibility_update();
     }
 }
@@ -75,6 +86,9 @@ impl Widget for Group {
         }
         if self.role == Role::Dialog {
             node.set_modal();
+        }
+        if let Some(level) = self.level {
+            node.set_level(level);
         }
         node.set_live(if self.role == Role::Status {
             Live::Polite

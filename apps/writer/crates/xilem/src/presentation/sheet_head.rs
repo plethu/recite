@@ -42,10 +42,15 @@ pub(crate) fn sheet_head<
     close: Close<F>,
 ) -> impl WidgetView<S, Widget = Flex> + use<S, T, A, F> {
     // The caption is one muted line under the title: what the sheet holds, never instructions.
+    let title: ArcStr = title.into();
     let title = flex_col((
-        Type::Display
-            .label(scale, title)
-            .prop(LineBreaking::WordWrap),
+        super::group::heading(
+            1,
+            title.clone(),
+            Type::Display
+                .label(scale, title)
+                .prop(LineBreaking::WordWrap),
+        ),
         caption.map(|caption| {
             print::caption(scale, caption)
                 .color(palette.muted)

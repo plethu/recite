@@ -9,7 +9,7 @@ use crate::presentation::grid::Grid;
 use crate::presentation::material;
 use crate::presentation::print;
 use crate::presentation::space;
-use crate::presentation::{Page, Sheet, Type, Typeset};
+use crate::presentation::{Page, Sheet, Type};
 use crate::reading::{Content, Row};
 use recite_core::DocumentKey;
 use recite_writer_model::{AnalysisStamp, RouteOwner};
@@ -33,7 +33,7 @@ pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         // Halftone marks what is not yet written; it sits beside the heading, never behind it.
         flex_row((
-            label(state.ui_scale(), "No beats yet").typeset(Type::Section, state.ui_scale()),
+            print::section_heading(state.ui_scale(), "No beats yet"),
             material::halftone(
                 96. * f64::from(state.ui_scale()),
                 20. * f64::from(state.ui_scale()),

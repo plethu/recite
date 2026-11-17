@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::print::section_heading;
 use crate::presentation::segments::{segment_named, segments_on_paper};
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset, print, space};
@@ -160,7 +161,7 @@ fn group<V: WidgetView<App>>(
     title: &'static str,
     rows: V,
 ) -> impl WidgetView<App> + use<V> {
-    flex_col((Type::Section.label(scale, title), rows))
+    flex_col((section_heading(scale, title), rows))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(space::TEXT.px())
 }

@@ -1,9 +1,9 @@
 //! Reply components consume one resolved editing session.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
-use crate::presentation::{Type, Typeset};
 use crate::presentation::{label, paragraph, text_button};
 use xilem::masonry::kurbo;
 use xilem::{
@@ -48,7 +48,7 @@ fn heading(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<
     let scale = state.ui_scale();
     let width = state.script_width();
     flex_col((
-        label(scale, "Reply rules").typeset(Type::Section, scale),
+        section_heading(scale, "Reply rules"),
         paragraph(
             scale,
             format!(

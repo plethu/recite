@@ -7,6 +7,7 @@ use super::*;
 use crate::app::keyboard::SlipAnchor;
 use crate::presentation::control_inset;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER, Grid};
+use crate::presentation::group::heading as heading_role;
 use crate::presentation::marks::{Mark, marked, wedge};
 use crate::presentation::row::named_row;
 use crate::presentation::sheet_text::sheet_text;
@@ -93,11 +94,13 @@ const TITLE_FIELD_ROOM: f64 = 2.;
 fn scene_title(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     let key = state.session.model().document().key().as_str();
     let scene = display_name(key.rsplit('/').next().unwrap_or(key));
-    sized_box(
+    sized_box(heading_role(
+        1,
+        scene.clone(),
         print::title(Page::of(state).title(), scene)
             .prop(LineBreaking::WordWrap)
             .width((grid.row() - grid.text()).px()),
-    )
+    ))
     .padding(Padding {
         left: grid.text().px(),
         bottom: space::GROUPS.px(),
@@ -199,7 +202,7 @@ fn heading(
         // rename's slip floats over the window from under it, so nothing below moves.
         // Centred in the row, so the heading's line and its tools share one centre line.
         sized_box(
-            flex_col((title,))
+            flex_col((heading_role(2, name.clone(), title),))
                 .main_axis_alignment(MainAxisAlignment::Center)
                 .cross_axis_alignment(if renaming_here {
                     // The rename field takes the heading's measure.

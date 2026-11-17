@@ -1,7 +1,6 @@
 use super::*;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, Typeset};
 
 /// The sheet's one primary while the declaration source is shown and valid: save it and generate.
 pub fn apply(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -84,7 +83,7 @@ pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .declaration_session()
         .is_some_and(|session| session.dirty());
     flex_col((
-        label(scale, "Draft recovery").typeset(Type::Section, scale),
+        print::section_heading(scale, "Draft recovery"),
         matches!(
             writer.workspaces.declarations.source.validation,
             Validation::Invalid(_)

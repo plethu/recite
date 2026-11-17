@@ -4,6 +4,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::banner::banner;
+use crate::presentation::group::heading;
 use crate::presentation::print;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
@@ -47,16 +48,20 @@ pub(super) fn panel(
         repair_banner(state, importing),
         flex_row((
             flex_col((
-                Type::Display
-                    .label(
-                        scale,
-                        if importing && error.is_none() {
-                            "Recovered draft"
-                        } else {
-                            "Syntax problems"
-                        },
+                {
+                    let title = if importing && error.is_none() {
+                        "Recovered draft"
+                    } else {
+                        "Syntax problems"
+                    };
+                    heading(
+                        1,
+                        title,
+                        Type::Display
+                            .label(scale, title)
+                            .prop(LineBreaking::WordWrap),
                     )
-                    .prop(LineBreaking::WordWrap),
+                },
                 print::caption(scale, caption)
                     .color(state.palette.muted)
                     .prop(LineBreaking::WordWrap),

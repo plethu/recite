@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
@@ -18,7 +19,7 @@ pub(super) fn creation(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
         .map(|(root, locale)| create::suggested_path(root, &locale.to_string()));
     Some(
         flex_col((
-            label(scale, "Add a language").typeset(Type::Section, scale),
+            section_heading(scale, "Add a language"),
             paragraph(
                 scale,
                 "Creates a new PO catalogue from this project's current \

@@ -16,7 +16,7 @@ pub(super) fn detail(writer: &Writer, width: f64, height: f64) -> impl WidgetVie
         }),
         chosen.map(|chosen| {
             flex_col((
-                label(scale, chosen.name.clone()).typeset(Type::Section, scale),
+                print::section_heading(scale, chosen.name.clone()),
                 print::meta(scale, chosen.kind.clone()).color(writer.palette.muted),
                 match &chosen.detail {
                     Detail::Parameters(list) => Some(parameters(writer, list, width)),

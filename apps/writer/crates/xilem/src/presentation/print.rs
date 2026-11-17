@@ -1,6 +1,7 @@
 //! Print hierarchy and native action styles for Recite's writing surfaces.
 use super::Type;
 use super::control_style::{ControlStyle, styled};
+use super::group::{Named, heading};
 use crate::app::keyboard::ReturnFocus;
 use recite_writer_session::palette::Palette;
 use xilem::peniko::Color;
@@ -39,6 +40,18 @@ pub(crate) fn font(families: &'static [&'static str]) -> FontFamily<'static> {
 /// A page or scene title: Display.
 pub(crate) fn title(scale: f32, text: impl Into<ArcStr>) -> Label {
     Type::Display.label(scale, text)
+}
+
+/// A page's or scene's title in the Heading role at level 1.
+pub(crate) fn page_heading(scale: f32, text: impl Into<ArcStr>) -> Named<Label> {
+    let text = text.into();
+    heading(1, text.clone(), title(scale, text))
+}
+
+/// A section's head in Section type and the Heading role at level 2.
+pub(crate) fn section_heading(scale: f32, text: impl Into<ArcStr>) -> Named<Label> {
+    let text = text.into();
+    heading(2, text.clone(), Type::Section.label(scale, text))
 }
 
 /// A sheet's or dialog's caption and guidance under a field or list: Body, in Plex Sans, so a

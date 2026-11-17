@@ -2,7 +2,6 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::{Pane, PaneEntry, Region};
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
 use crate::presentation::{group::named, label, paragraph, print, radio_button, text_button};
 use xilem::{
     WidgetView,
@@ -208,7 +207,7 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
         let width = column_width(writer) - 2. * space::KINDS;
         sized_box(
             flex_col((
-                label(scale, "Latest build").typeset(Type::Section, scale),
+                print::section_heading(scale, "Latest build"),
                 parts
                     .iter()
                     .map(|part| paragraph(scale, part.clone(), width))

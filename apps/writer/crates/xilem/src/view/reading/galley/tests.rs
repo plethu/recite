@@ -5,6 +5,7 @@ use crate::{
     keyed::keyed,
     tests::support::{self, mounted::Mounted},
 };
+use xilem::masonry::accesskit::Role;
 use xilem::masonry::widgets::{Passthrough, TextInput};
 
 fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
@@ -108,4 +109,25 @@ fn rename_beat_turns_the_heading_into_a_field_and_its_review_into_a_slip() {
     mounted.settle();
     assert!(mounted.state.inline_rename().is_none());
     mounted.find("Rename beat");
+}
+
+#[test]
+fn the_scene_title_and_beat_headings_are_headings_at_levels_one_and_two() {
+    let mounted = Mounted::new(relay_hub(), surface);
+    let tree = mounted.harness.access_tree();
+    let mut headings = Vec::new();
+    let mut pending = vec![tree.state().root()];
+    while let Some(node) = pending.pop() {
+        if node.role() == Role::Heading {
+            headings.push((node.label().unwrap_or_default(), node.data().level()));
+        }
+        pending.extend(node.children());
+    }
+    // Screen-reader users move between them: the scene at 1, the selected and read-only beats at 2.
+    for expected in [("Relay Hub", 1), ("Relay Desk", 2), ("Missing Courier", 2)] {
+        assert!(
+            headings.contains(&(expected.0.to_owned(), Some(expected.1))),
+            "{expected:?} in {headings:?}"
+        );
+    }
 }

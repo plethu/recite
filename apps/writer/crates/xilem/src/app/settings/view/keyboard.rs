@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::row::{listed, row};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset, search_field};
@@ -45,7 +46,7 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         })
         .collect::<Vec<_>>();
     flex_col((
-        label(scale, "Find a command").typeset(Type::Section, scale),
+        section_heading(scale, "Find a command"),
         search_field(
             scale,
             app.theme.palette.muted,
@@ -80,7 +81,7 @@ fn editor(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let changed = app.shortcut_draft() != stored;
     let selected = command_label(app.settings.command);
     flex_col((
-        label(scale, format!("Shortcut for {selected}")).typeset(Type::Section, scale),
+        section_heading(scale, format!("Shortcut for {selected}")),
         label(scale, format!("Saved binding: {}", if stored.is_empty() { "Disabled" } else { stored })),
         sized_box(keyed(app.settings.command, text_input(app.shortcut_draft().to_owned(), |app: &mut App, value: String| app.edit_shortcut(value))
             .typeset(Type::Body, scale).prop(TextAreaLabel::new("Shortcut binding")))).width(width.px()),

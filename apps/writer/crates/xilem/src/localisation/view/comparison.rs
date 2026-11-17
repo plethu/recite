@@ -1,7 +1,7 @@
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, Typeset};
 
 pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let state = &writer.localisation;
@@ -15,7 +15,7 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
     let blocked = writer.project_action_blocked() || state.slot.read_only();
     Some(
         flex_col((
-            label(scale, "Catalogue disk comparison").typeset(Type::Section, scale),
+            section_heading(scale, "Catalogue disk comparison"),
             text_button(
                 scale,
                 "Return to translation queue",

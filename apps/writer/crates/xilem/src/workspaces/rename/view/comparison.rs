@@ -3,6 +3,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::diff::{Side, Text, side_by_side};
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use xilem::masonry::parley::style::FontWeight;
 
@@ -44,7 +45,7 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
         .collect::<Vec<_>>();
     Some(
         flex_col((
-            label(
+            section_heading(
                 scale,
                 format!(
                     "{} {}",
@@ -55,8 +56,7 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
                         "changed references"
                     }
                 ),
-            )
-            .typeset(Type::Section, scale),
+            ),
             flex_col(rows)
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::KINDS.px()),

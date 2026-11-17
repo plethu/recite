@@ -2,6 +2,7 @@
 use super::{App, ProjectField};
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::pane;
+use crate::presentation::print::page_heading;
 use crate::presentation::segments::{tab, tabs};
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
@@ -122,7 +123,7 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     let Layout { scale, width, .. } = layout;
     flex_col((
         identity::hero(&app.theme, width.min(HERO * f64::from(scale))),
-        label(scale, "Projects").typeset(Type::Display, scale),
+        page_heading(scale, "Projects"),
         paragraph(
             scale,
             "Open a project or create one to start writing.",

@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
@@ -12,7 +13,7 @@ pub fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     Some(
         xilem::view::sized_box(
             flex_col((
-                label(scale, "Declaration draft repair").typeset(Type::Section, scale),
+                section_heading(scale, "Declaration draft repair"),
                 paragraph(
                     scale,
                     "Export a separate TOML file for your editor, then import the \

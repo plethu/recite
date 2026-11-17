@@ -5,10 +5,11 @@ use super::*;
 use crate::app::keyboard::{DefaultFocus, ModalSurface};
 use crate::presentation::group::dialog;
 use crate::presentation::pane;
+use crate::presentation::print::page_heading;
 use crate::presentation::segments::{segment, segments_on_paper};
 use crate::presentation::slip::slip;
 use crate::presentation::tokens::size;
-use crate::presentation::{Icon, Type, label, print, prose, space, text_button};
+use crate::presentation::{Icon, label, print, prose, space, text_button};
 use recite_writer_app::COMPACT_WINDOW;
 use xilem::{
     WidgetView,
@@ -40,7 +41,7 @@ pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {
                     "Settings",
                     flex_col((
                         flex_row((
-                            Type::Display.label(scale, "Settings"),
+                            page_heading(scale, "Settings"),
                             FlexSpacer::Flex(1.),
                             print::icon_action(
                                 scale,

@@ -1,5 +1,6 @@
 use super::*;
 use crate::attention::{EntryContext, PaneEntry};
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 use crate::trial::VALUE_PAGE;
@@ -32,8 +33,7 @@ pub(super) fn values(
         })
         .collect::<Vec<_>>();
     flex_col((
-        (!bindings.is_empty())
-            .then(|| label(scale, "Interpolation values").typeset(Type::Section, scale)),
+        (!bindings.is_empty()).then(|| section_heading(scale, "Interpolation values")),
         flex_col(fields)
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::TEXT.px()),

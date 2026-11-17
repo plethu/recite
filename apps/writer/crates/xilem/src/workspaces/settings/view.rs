@@ -1,4 +1,5 @@
 use crate::WriterLayout;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
@@ -142,7 +143,7 @@ fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
     let session = writer.project_settings();
     flex_col((
-        label(scale, "Saved manifest and recovery").typeset(Type::Section, scale),
+        section_heading(scale, "Saved manifest and recovery"),
         flex_row((
             text_button(
                 scale,

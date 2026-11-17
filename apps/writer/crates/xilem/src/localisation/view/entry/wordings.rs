@@ -1,6 +1,6 @@
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
 
 pub(super) fn wordings(
     writer: &Writer,
@@ -44,7 +44,7 @@ pub(super) fn wordings(
         .collect::<Vec<_>>();
     Some(
         flex_col((
-            label(scale, "Wording").typeset(Type::Section, scale),
+            section_heading(scale, "Wording"),
             flex_col(choices)
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::SIBLINGS.px()),

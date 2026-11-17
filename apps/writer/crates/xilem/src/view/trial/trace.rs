@@ -2,7 +2,6 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
 use recite_runtime::preview::PreviewTrace;
 use recite_writer_session::preview::trace::{
     FIELDS, FieldPreview, ListPage, Place, Projection, RECORDS, RecordPage, Section, ValuePage,
@@ -47,7 +46,7 @@ fn contents(
         Projection::Value(page) => value::value(writer, page, disabled).boxed(),
     };
     flex_col((
-        label(writer.ui_scale(), "Runtime trace").typeset(Type::Section, writer.ui_scale()),
+        print::section_heading(writer.ui_scale(), "Runtime trace"),
         paragraph(writer.ui_scale(), "These records belong to the running preview. Events retain capture order; translation and plural lookups have their own ordered lists.", writer.script_width()),
         sections(writer, disabled),
         body,

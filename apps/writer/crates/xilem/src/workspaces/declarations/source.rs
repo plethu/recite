@@ -1,4 +1,5 @@
 //! Frontend views over `recite_writer_app::workspaces::declarations::source`.
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
@@ -42,7 +43,7 @@ fn binding(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let blocked = writer.declaration_action_blocked();
     Some(
         flex_col((
-            label(scale, "Standalone declaration source (TOML)").typeset(Type::Section, scale),
+            section_heading(scale, "Standalone declaration source (TOML)"),
             paragraph(
                 scale,
                 "Bind your standalone TOML to edit it in your preferred \
@@ -78,15 +79,14 @@ fn bound_source(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     Some(
         flex_col((
-            label(
+            section_heading(
                 scale,
                 if session.dirty() {
                     "Standalone TOML · draft or recovery needs saving"
                 } else {
                     "Standalone TOML · source saved"
                 },
-            )
-            .typeset(Type::Section, scale),
+            ),
             paragraph(scale, panel.status_message(), size::MEASURE),
             actions::primary(writer),
             paragraph(

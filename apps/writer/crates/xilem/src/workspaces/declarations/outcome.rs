@@ -1,7 +1,7 @@
 //! Bounded declaration action feedback is shared by source and producer screens.
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, Typeset};
 pub fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let page = writer
         .workspaces
@@ -10,7 +10,7 @@ pub fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     Some(
         flex_col((
-            label(scale, "Declaration action result").typeset(Type::Section, scale),
+            section_heading(scale, "Declaration action result"),
             paragraph(scale, page.clone(), size::MEASURE),
             flex_row((
                 text_button(scale, "Previous schema result", |writer: &mut Writer| {

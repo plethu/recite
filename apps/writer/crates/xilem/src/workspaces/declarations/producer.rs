@@ -1,7 +1,7 @@
 //! Frontend views over `recite_writer_app::workspaces::declarations::producer`.
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, Typeset};
 use recite_writer_session::declarations::DeclarationAction;
 
 pub(crate) fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -10,7 +10,7 @@ pub(crate) fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let registration = session.and_then(|session| session.registration.as_ref().ok()?.as_ref());
     let panel = &writer.workspaces.declarations.producer;
     flex_col((
-        label(scale, "Schema producer").typeset(Type::Section, scale),
+        section_heading(scale, "Schema producer"),
         flex_row((
             text_button(
                 scale,

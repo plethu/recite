@@ -13,6 +13,7 @@ pub(crate) struct Named<V> {
     name: ArcStr,
     description: ArcStr,
     role: Role,
+    level: Option<usize>,
     disabled: bool,
     child: V,
 }
@@ -20,6 +21,7 @@ pub(crate) fn named<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),
         description: ArcStr::from(""),
+        level: None,
         role: Role::Group,
         disabled: false,
         child,
@@ -31,6 +33,7 @@ pub(crate) fn inert<V>(disabled: bool, child: V) -> Named<V> {
     Named {
         name: ArcStr::from(""),
         description: ArcStr::from(""),
+        level: None,
         role: Role::GenericContainer,
         disabled,
         child,
@@ -40,6 +43,7 @@ pub(crate) fn list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),
         description: ArcStr::from(""),
+        level: None,
         role: Role::List,
         disabled: false,
         child,
@@ -51,6 +55,7 @@ pub(crate) fn tab_list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),
         description: ArcStr::from(""),
+        level: None,
         role: Role::TabList,
         disabled: false,
         child,
@@ -60,6 +65,7 @@ pub(crate) fn status<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),
         description: ArcStr::from(""),
+        level: None,
         role: Role::Status,
         disabled: false,
         child,
@@ -78,7 +84,21 @@ pub(crate) fn dialog<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),
         description: ArcStr::from(""),
+        level: None,
         role: Role::Dialog,
+        disabled: false,
+        child,
+    }
+}
+/// `child`, the words of a heading, in the Heading role at `level`, named by those words, so
+/// assistive tech can move between headings: 1 for a page or scene title, 2 for a beat or a
+/// section, 3 for a section within one.
+pub(crate) fn heading<V>(level: usize, name: impl Into<ArcStr>, child: V) -> Named<V> {
+    Named {
+        name: name.into(),
+        description: ArcStr::from(""),
+        role: Role::Heading,
+        level: Some(level),
         disabled: false,
         child,
     }
@@ -102,7 +122,8 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Named<V> {
         let (child, local) = ctx.with_id(ViewId::new(0), |ctx| self.child.build(ctx, state));
         let mut pod = Pod::new_with_props(
             Group::new(self.name.clone(), self.role, child.new_widget)
-                .with_description(self.description.clone()),
+                .with_description(self.description.clone())
+                .with_level(self.level),
             Dimensions::MAX,
         );
         pod.new_widget.options.disabled = self.disabled;
@@ -127,6 +148,9 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Named<V> {
         }
         if self.role != previous.role {
             Group::set_role(&mut pod, self.role);
+        }
+        if self.level != previous.level {
+            Group::set_level(&mut pod, self.level);
         }
         ctx.with_id(ViewId::new(0), |ctx| {
             self.child.rebuild(

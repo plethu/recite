@@ -1,7 +1,7 @@
 use super::*;
+use crate::presentation::print::section_heading;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, Typeset};
 pub fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     flex_col((
@@ -31,15 +31,14 @@ fn content(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     Some(
         xilem::view::sized_box(
             flex_col((
-                label(
+                section_heading(
                     scale,
                     format!(
                         "Read-only TOML preview · part {} of {}",
                         panel.page + 1,
                         panel.preview.len()
                     ),
-                )
-                .typeset(Type::Section, scale),
+                ),
                 flex_row((
                     text_button(scale, "Previous source preview", |writer: &mut Writer| {
                         writer.workspaces.declarations.source.page =
