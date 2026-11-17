@@ -67,7 +67,7 @@ pub(crate) enum Sheet {
     Dialogue,
     /// Literata 400, 0.9R / 1.45: replies.
     Reply,
-    /// Plex Mono at 0.6R: a reply's hanging number.
+    /// Plex Mono at 0.6R: a reply's hanging number and a line's id. At least 11px.
     Number,
     /// Plex Sans 600, 0.6R caps, +0.06em: speaker labels and "REPLIES" only. At least 11px.
     Label,
@@ -95,8 +95,7 @@ impl Sheet {
             * match self {
                 Self::Dialogue => reading,
                 Self::Reply => 0.9 * reading,
-                Self::Number => 0.6 * reading,
-                Self::Label => (0.6 * reading).max(11.),
+                Self::Number | Self::Label => (0.6 * reading).max(11.),
                 Self::Destination => (0.72 * reading).max(13.),
             }
     }

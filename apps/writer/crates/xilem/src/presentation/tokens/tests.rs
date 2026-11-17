@@ -36,9 +36,15 @@ fn sheet_roles_follow_the_reading_size_but_never_fall_below_their_floors() {
     assert_eq!(Sheet::Dialogue.size(page(20.)), 20.);
     assert_eq!(Sheet::Label.size(page(20.)), 12.);
     assert!((Sheet::Destination.size(page(20.)) - 14.4).abs() < 1e-4);
-    // At the smallest reading sizes labels and destinations keep 11 and 13 pixels.
+    // At the smallest reading sizes labels, reply numbers and line ids keep 11 pixels and
+    // destinations 13.
     for reading in [10., 12., 14., 16.] {
         assert!(Sheet::Label.size(page(reading)) >= 11.);
+        assert!(Sheet::Number.size(page(reading)) >= 11.);
+        assert!(
+            Sheet::Number.size(Page::new(reading, 2.)) >= 22.,
+            "the floor zooms"
+        );
         assert!(Sheet::Destination.size(page(reading)) >= 13.);
     }
     assert!((Sheet::Reply.size(page(20.)) - 18.).abs() < 1e-4);
