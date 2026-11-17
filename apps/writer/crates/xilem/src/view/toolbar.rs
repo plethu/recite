@@ -84,11 +84,16 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
             |state: &mut Writer| state.history_step(true),
         ),
         // The galley's beat heading and every sheet's head carry the link; the map's title and
-        // any writing view without a heading leave it to the toolbar.
+        // any writing view without a heading leave it to the toolbar. A source under repair has
+        // no beat to link to.
         (state.visible_workspace() == crate::map::Workspace::Map
             || (!state.trial.visible
                 && state.workspaces.screen == crate::workspaces::Screen::Write
-                && !super::manuscript::galley(state, &surface::Surface::resolve(state))))
+                && {
+                    let surface = surface::Surface::resolve(state);
+                    !super::manuscript::galley(state, &surface)
+                        && !matches!(surface, surface::Surface::SourceRepair { .. })
+                }))
         .then(|| {
             print::icon_action(
                 scale,
