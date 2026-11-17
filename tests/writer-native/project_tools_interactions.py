@@ -96,9 +96,7 @@ def run(api, bus, registry, binary, output):
                 window.act("Build options")
                 window.wait(lambda: window.find("Build saved files"), "build options slip")
                 window.wait(
-                    lambda: window.find_text(
-                        "recite.project.toml · 1 source file · 1 output target"
-                    ),
+                    lambda: window.find_text("1 source file · 1 output"),
                     "singular saved build input and target summary",
                 )
                 capture(output, "-build")

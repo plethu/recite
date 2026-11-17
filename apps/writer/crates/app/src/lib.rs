@@ -96,7 +96,7 @@ impl Writer {
         } else if session.project().is_none() {
             "Temporary examples. Edits stay in this window and are discarded when it closes."
         } else if reading.script().is_err() || reading.error.is_some() {
-            "Source needs attention. Open it in your editor, then reload."
+            "Open the source in your editor, then Reload."
         } else {
             "Ready"
         }

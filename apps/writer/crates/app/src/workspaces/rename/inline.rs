@@ -139,7 +139,12 @@ impl Writer {
         match (inline.stage, succeeded) {
             (Stage::Reviewing, true) => {
                 inline.stage = Stage::Reviewed;
-                self.status = "Rename reviewed".into();
+                // Nothing is renamed yet: the slip waits for the writer's decision.
+                self.status = format!(
+                    "Rename {} to {}? Confirm on the slip.",
+                    inline.beat,
+                    inline.name.trim()
+                );
                 if inline.place == Place::Heading {
                     self.focus_pane(PaneMotion::To(Pane::Script));
                 }

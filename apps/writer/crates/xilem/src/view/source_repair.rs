@@ -22,6 +22,9 @@ pub(super) fn panel(
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let width = state.script_width();
+    // The banner says the source needs repair; the head names what the page holds and the
+    // caption counts it, so neither says so again.
+    let problems = state.session.model().document().diagnostic_snapshot().len();
     let caption = error.map_or_else(
         || {
             if importing {
@@ -32,7 +35,12 @@ pub(super) fn panel(
             }
             .to_owned()
         },
-        str::to_owned,
+        |_| {
+            format!(
+                "{problems} syntax {} · fix them in your editor, then Reload",
+                if problems == 1 { "problem" } else { "problems" }
+            )
+        },
     );
     let staged = state.session.model().has_draft();
     flex_col((
@@ -40,7 +48,14 @@ pub(super) fn panel(
         flex_row((
             flex_col((
                 Type::Display
-                    .label(scale, "Repair source")
+                    .label(
+                        scale,
+                        if importing && error.is_none() {
+                            "Recovered draft"
+                        } else {
+                            "Syntax problems"
+                        },
+                    )
                     .prop(LineBreaking::WordWrap),
                 print::meta(scale, caption)
                     .color(state.palette.muted)

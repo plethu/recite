@@ -250,3 +250,15 @@ fn a_beat_s_continuation_is_the_route_on_its_last_line_s_row() {
     );
     assert!(route.height() >= 24., "{route:?}");
 }
+
+#[test]
+fn only_a_beat_that_ends_the_conversation_shows_the_end_rule() {
+    // Start's only reply leads on, so it never ends there; next has no jump and ends.
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n? @rthh7ab\n  Go on.\n  -> next\n:: next\n> @z0g6c80\n  Goodbye.\n";
+    let directory = project(source).unwrap();
+    let mut writer = open(&directory).unwrap();
+    writer.viewport.width = 1200.;
+    let mut mounted = Mounted::new(writer, surface);
+    mounted.settle();
+    assert_eq!(text_bounds(&mounted, "END").len(), 1);
+}

@@ -60,6 +60,9 @@ impl Writer {
             || self.inline_rename().is_some()
             || !self.shows_rename_place(&target)
         {
+            if target.place == Place::Outline && self.navigation_width() <= 0. {
+                self.status = "Show the scene list (Ctrl+Shift+B) to rename a beat there.".into();
+            }
             return;
         }
         self.workspaces.rename.returning = None;

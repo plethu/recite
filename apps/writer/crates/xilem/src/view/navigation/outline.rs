@@ -214,7 +214,17 @@ fn beat_row(state: &Writer, rows: &Rows<'_>, beat: &Beat) -> impl WidgetView<Wri
     };
     let returning = state.rename_return() == Some(&target);
     let double = target.clone();
-    let words = one_line(text.clone(), Type::Control, scale, state.palette.ink);
+    // A problem is said in a word beside its wedge, and in the name.
+    let words = one_line(
+        if problem {
+            format!("{text} · error")
+        } else {
+            text.clone()
+        },
+        Type::Control,
+        scale,
+        state.palette.ink,
+    );
     // The current beat is the list's selected row: the plate, the ink bar and the state.
     // A beat with a problem repeats the margin wedge, and its name says so.
     double_click(

@@ -4,7 +4,7 @@
 //! labels' faces and places, so choosing a passage moves nothing.
 use super::*;
 use crate::app::keyboard::PickerAnchor;
-use crate::presentation::{Type, label_inset, material};
+use crate::presentation::{Type, chooser, label_inset, material};
 use recite_writer_app::Opener;
 use recite_writer_model::RouteOwner;
 use xilem::masonry::layout::Dim;
@@ -48,13 +48,17 @@ pub(super) fn speaker(
         || "Choose a speaker…".to_owned(),
         |speaker| format!("Change speaker, {speaker}…"),
     );
-    let label = label
-        .color(if speaker.is_some() {
-            state.palette.accent
-        } else {
-            state.palette.muted
-        })
-        .prop(LineBreaking::Clip);
+    let color = if speaker.is_some() {
+        state.palette.accent
+    } else {
+        state.palette.muted
+    };
+    // The chevron no taller than the label's line, so the label keeps its place in the row.
+    let label = chooser(
+        0.75 * Sheet::Label.size(Page::of(state)) / Type::Control.metrics().0,
+        color,
+        label.color(color).prop(LineBreaking::Clip),
+    );
     // The label centred in the least target, and across the column with its words set against
     // the gutter like a resting label's. The row aligns the control by the label's baseline.
     let face = flex_col((label,))

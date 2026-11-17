@@ -66,3 +66,26 @@ pub(in crate::view::reading) fn joined(rows: &[Row], index: usize) -> Option<&st
 pub(in crate::view::reading) fn absorbed(rows: &[Row], index: usize) -> bool {
     index > 0 && joined(rows, index - 1).is_some_and(|target| target != "END")
 }
+
+/// Whether the beat ends the conversation where its rows run out: it has no jump of its own, and
+/// its last replies do not all lead somewhere else.
+pub(in crate::view::reading) fn ends(rows: &[Row]) -> bool {
+    if matches!(
+        rows.last().map(|row| &row.content),
+        Some(Content::Continuation(_))
+    ) {
+        return false;
+    }
+    let mut replies = rows
+        .iter()
+        .rev()
+        .map_while(|row| match &row.content {
+            Content::Passage { passage, .. } if row.groups.is_empty() => match &passage.kind {
+                PassageKind::Choice { destination } => Some(destination.is_some()),
+                PassageKind::Dialogue { .. } => None,
+            },
+            _ => None,
+        })
+        .peekable();
+    replies.peek().is_none() || !replies.all(|routed| routed)
+}

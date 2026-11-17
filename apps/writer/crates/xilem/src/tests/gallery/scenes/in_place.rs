@@ -226,6 +226,9 @@ fn rename_in<V: WidgetView<App, Widget = Passthrough>>(
             writer.rename_beat_in(Target { beat, place });
         }
     });
+    // The native host measures the name the slip will hang from while it is a field, and keeps
+    // that point if the name stops being measurable, as a card's does once reviewed.
+    let editing = stage.slip_anchor();
     // The field takes focus as it opens; typing and Enter come after, as they would by hand.
     stage.act(|app| {
         if let Some(writer) = &mut app.writer {
@@ -238,7 +241,7 @@ fn rename_in<V: WidgetView<App, Widget = Passthrough>>(
         }
     });
     // The native host hangs the review's slip from the heading or row it measures.
-    let anchor = stage.slip_anchor();
+    let anchor = stage.slip_anchor().or(editing);
     stage.act(|app| {
         if let (Some(writer), Some((x, y))) = (&mut app.writer, anchor) {
             writer.place_inline_rename(x, y);

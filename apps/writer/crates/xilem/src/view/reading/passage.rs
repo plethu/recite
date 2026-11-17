@@ -22,7 +22,7 @@ mod metadata;
 #[cfg(test)]
 mod tests;
 pub(super) use choice::route_choice;
-pub(super) use continuation::{RouteFace, absorbed, continuation_row, joined};
+pub(super) use continuation::{RouteFace, absorbed, continuation_row, ends, joined};
 pub(super) use metadata::route_to;
 use metadata::{CaptionPlacement, metadata, route};
 

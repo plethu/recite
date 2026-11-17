@@ -1,7 +1,7 @@
 //! Beats whose fields are not mounted: their rows as read-only text in reading order, on the same
 //! grid and at the same sizes as the editable beat, so choosing a beat never reflows the page.
 use super::*;
-use crate::view::reading::passage::{RouteFace, absorbed, continuation_row, joined};
+use crate::view::reading::passage::{RouteFace, absorbed, continuation_row, ends, joined};
 use xilem::masonry::properties::Dimensions;
 use xilem::view::{Label, MainAxisAlignment};
 
@@ -17,10 +17,7 @@ pub(super) fn read_only(
     let rows = state.reading.beat_rows(index).cloned().unwrap_or_default();
     let shown = rows.len().min(PAGE);
     let more = rows.len() - shown;
-    let ends = !matches!(
-        rows.last().map(|row| &row.content),
-        Some(Content::Continuation(_))
-    );
+    let ends = ends(&rows);
     let lines = (0..shown)
         // A continuation set on its line's row takes no row of its own.
         .filter(|&index| !absorbed(&rows, index))

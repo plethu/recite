@@ -1,6 +1,6 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
-use crate::app::keyboard::{RenamesBeat, ReturnFocus};
+use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::presentation::marks::{GLYPH, Mark, THICKNESS, marked, wedge_glyph};
 use crate::presentation::space;
 use crate::presentation::{Icon, SMALL, Type, excerpt, mark, print};
@@ -89,7 +89,10 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
                     ..Padding::all(space::TEXT.px())
                 })
                 .dims(((width - THICKNESS).px(), HEIGHT.px()))
-                .background_color(face),
+                .background_color(face)
+                // The review's slip floats over the window from under the card, as it does
+                // from a heading, over the same backdrop.
+                .prop(SlipAnchor(true)),
         )
     });
     let returning = state.rename_return() == Some(&target);

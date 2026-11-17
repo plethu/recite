@@ -7,7 +7,7 @@ use xilem::{
     masonry::layout::AsUnit,
     peniko::Color,
     style::Style,
-    view::{CrossAxisAlignment, flex_row, sized_box},
+    view::{CrossAxisAlignment, MainAxisAlignment, flex_row, sized_box},
 };
 
 /// The chevron's size relative to 20px icon faces, to sit with 14px interface text.
@@ -58,6 +58,21 @@ pub(crate) fn route_toggle<S: 'static, V: WidgetView<S>>(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(0.px())
+}
+
+/// A label that opens a choice, such as the speaker of the line being written: a down chevron
+/// before its words says it is a control. The chevron leads, so right-aligned words keep their
+/// place. It is decoration; the control names itself.
+pub(crate) fn chooser<S: 'static, V: WidgetView<S>>(
+    scale: f32,
+    color: Color,
+    text: V,
+) -> impl WidgetView<S> + use<S, V> {
+    flex_row((face(scale * MARK, "", Icon::Expanded, color), text))
+        .main_axis_alignment(MainAxisAlignment::End)
+        // The words' baseline is the row's, so the control still aligns by the label's.
+        .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+        .gap((space::UNIT * f64::from(scale)).px())
 }
 
 /// A destination toggle's name in both states: the arrow and the destination's display name.

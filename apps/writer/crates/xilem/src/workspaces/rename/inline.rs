@@ -156,9 +156,9 @@ pub(crate) fn consequence(
 
 /// Whether a rename's review shows over the window, hanging from a measured heading or row.
 pub(crate) fn floats(state: &Writer) -> bool {
-    state.inline_rename().is_some_and(|inline| {
-        inline.anchor.is_some() && inline.place != Place::Card && inline.stage != Stage::Editing
-    })
+    state
+        .inline_rename()
+        .is_some_and(|inline| inline.anchor.is_some() && inline.stage != Stage::Editing)
 }
 
 /// The review's progress or consequence slip of a rename at a heading or sidebar row, floating

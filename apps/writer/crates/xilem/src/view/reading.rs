@@ -86,12 +86,9 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
             ))
             .padding(Padding::left(passage::grid(state).text().px()))
         }),
-        (at_end
-            && !matches!(
-                rows.last().map(|row| &row.content),
-                Some(Content::Continuation(_))
-            ))
-        .then(|| print::end_rule(scale, &state.palette, state.script_width())),
+        // Only a beat that really ends the conversation shows the end rule.
+        (at_end && passage::ends(rows))
+            .then(|| print::end_rule(scale, &state.palette, state.script_width())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::KINDS.px())

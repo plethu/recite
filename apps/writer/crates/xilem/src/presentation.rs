@@ -11,7 +11,7 @@ pub(crate) use reveal::revealed;
 pub(crate) mod banner;
 mod controls;
 mod disclosure;
-pub(crate) use disclosure::{disclosure, disclosure_width, route_name, route_toggle};
+pub(crate) use disclosure::{chooser, disclosure, disclosure_width, route_name, route_toggle};
 mod styled_text;
 pub(crate) use emphasized_text::search_label;
 pub(crate) use styled_text::{manuscript_text, source_text};

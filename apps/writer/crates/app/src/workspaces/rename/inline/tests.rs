@@ -39,6 +39,8 @@ fn enter_reviews_the_rename_and_the_slip_stages_it_as_one_undo_step() {
     writer.edit_inline_rename("other".into());
     tools.finish(&mut writer);
     assert_eq!(writer.inline_rename().unwrap().stage, Stage::Reviewed);
+    // Nothing is renamed until the slip is confirmed, and the status line says so.
+    assert_eq!(writer.status, "Rename old to new? Confirm on the slip.");
     let consequence = writer.rename_consequence().unwrap();
     assert_eq!(
         consequence,
@@ -220,4 +222,19 @@ fn a_double_click_on_a_card_and_rename_beat_in_map_rename_on_the_card() {
     writer.rename_beat();
     let inline = writer.inline_rename().expect("renaming the selected card");
     assert_eq!((inline.beat.as_str(), inline.place), ("later", Place::Card));
+}
+
+#[test]
+fn a_sidebar_rename_while_the_scene_list_is_hidden_says_why() {
+    let (_directory, mut writer, _runtime) = selected_old();
+    writer.toggle_sidebar();
+    writer.rename_beat_in(Target {
+        beat: "old".into(),
+        place: Place::Outline,
+    });
+    assert!(writer.inline_rename().is_none());
+    assert_eq!(
+        writer.status,
+        "Show the scene list (Ctrl+Shift+B) to rename a beat there."
+    );
 }

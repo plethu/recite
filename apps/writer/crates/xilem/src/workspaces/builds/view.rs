@@ -23,13 +23,26 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         crate::view::tool_head(
             writer,
             "Build report",
-            build_actions(writer, busy, builds.is_none_or(|builds| builds.targets.is_empty())),
+            build_actions(
+                writer,
+                busy,
+                builds.is_none_or(|builds| builds.targets.is_empty()),
+            ),
         )
         .prop(PaneEntry(true)),
         inputs(writer).map(|inputs| paragraph(scale, inputs, width)),
         feedback(writer),
         writer.workspaces.build_feedback.is_empty().then(|| {
-            paragraph(scale, "No build report yet. Build from Commands; the result waits on a slip above the status line.", width)
+            paragraph(
+                scale,
+                if builds.is_none_or(|builds| builds.targets.is_empty()) {
+                    "This project has no outputs set up yet, so there is nothing to build."
+                } else {
+                    "No builds yet. Build saved files writes your outputs; the result appears \
+                     above the status line."
+                },
+                width,
+            )
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -42,22 +55,22 @@ fn column_width(writer: &Writer) -> f64 {
         .content_width()
         .min(800. * f64::from(writer.ui_scale()))
 }
-/// What a build reads: the manifest, its source files and its output targets.
+/// What a build reads and writes, in the writer's words: the scene files and the outputs.
 pub(super) fn inputs(writer: &Writer) -> Option<String> {
     let project = writer.session.project()?;
     let sources = project.documents().len();
     let targets = project.files().builds.targets.len();
     Some(format!(
-        "recite.project.toml · {sources} {} · {targets} {}",
+        "{sources} {} · {}",
         if sources == 1 {
             "source file"
         } else {
             "source files"
         },
-        if targets == 1 {
-            "output target"
-        } else {
-            "output targets"
+        match targets {
+            0 => "no outputs set up".to_owned(),
+            1 => "1 output".to_owned(),
+            _ => format!("{targets} outputs"),
         },
     ))
 }

@@ -23,6 +23,9 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
         "Temporary example"
     } else if dirty {
         "Unsaved changes"
+    } else if !state.notices.found.is_empty() {
+        // Under the disk-change banner the saved copy is no longer what is on disk.
+        "Changed on disk"
     } else {
         "Saved to disk"
     };
