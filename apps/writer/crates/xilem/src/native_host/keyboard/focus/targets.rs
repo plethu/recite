@@ -1,7 +1,7 @@
 //! The widgets focus moves to: the picker's query or active result, a modal surface's default
 //! control, the first problem wedge, and the control an opened picker hangs from.
 use super::*;
-use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
+use crate::app::keyboard::{ModalSurface, RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::workspaces::rename::inline::Target;
 use xilem::masonry::widgets::SizedBox;
 
@@ -143,7 +143,7 @@ pub(super) fn outside_modal(root: &RenderRoot, focused: WidgetId) -> bool {
         let modal = modal
             || widget
                 .downcast::<SizedBox>()
-                .is_some_and(|surface| surface.get_prop::<crate::app::keyboard::ModalSurface>().0);
+                .is_some_and(|surface| surface.get_prop::<ModalSurface>().0);
         mounted |= modal;
         if widget.id() == focused {
             inside = Some(modal);
