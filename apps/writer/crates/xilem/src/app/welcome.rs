@@ -16,6 +16,8 @@ pub(super) struct Measurements {
     actions: Option<Size>,
     available: Option<Size>,
 }
+/// Room the form's pane keeps beyond its measured content.
+const SLACK: f64 = 2.;
 impl Measurements {
     fn flex(&self) -> (f64, f64) {
         let (Some(content), Some(actions), Some(available)) =
@@ -27,10 +29,10 @@ impl Measurements {
         if content.height <= 0. || remaining <= 0. {
             return (1., 0.);
         }
-        (
-            content.height.min(remaining),
-            (remaining - content.height).max(0.),
-        )
+        // Whole pixels and a little slack, so rounding on the way through the scroll pane never
+        // leaves content that fits behind a scrollbar.
+        let content = content.height.ceil() + SLACK;
+        (content.min(remaining), (remaining - content).max(0.))
     }
 }
 

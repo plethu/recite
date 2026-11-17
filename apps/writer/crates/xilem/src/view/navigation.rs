@@ -41,16 +41,27 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .gap(space::SIBLINGS.px()),
         )
     };
+    // The search entry stays put above the scrolled list, so the list's thumb never crosses it.
     sized_box(named(
         "Scene navigation",
-        pane(
-            "Scenes",
-            flex_col((search_entry(state), documents))
+        flex_col((
+            flex_col((search_entry(state),))
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(space::KINDS.px())
-                .padding(space::KINDS.px()),
-        )
-        .constrain_horizontal(true),
+                .padding(Padding {
+                    bottom: 0.px(),
+                    ..Padding::all(space::KINDS.px())
+                }),
+            pane(
+                "Scenes",
+                flex_col((documents,))
+                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                    .padding(space::KINDS.px()),
+            )
+            .constrain_horizontal(true)
+            .flex(1.),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .gap(0.px()),
     ))
     .width(sidebar_width(state).px())
     .prop(Region(Some(Pane::Navigation)))

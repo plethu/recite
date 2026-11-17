@@ -74,7 +74,10 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
             }
         },
         sized_box(
+            // The page sits in the middle of the window while it fits: what is left over goes
+            // half above and half below.
             flex_col((
+                FlexSpacer::Flex(surplus / 2.),
                 pane(
                     "Welcome",
                     resize_observer(
@@ -99,7 +102,7 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
                     },
                     column(layout, submission(app, layout)),
                 ),
-                FlexSpacer::Flex(surplus),
+                FlexSpacer::Flex(surplus / 2.),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .gap(0.px()),
@@ -186,7 +189,14 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 .prop(ProjectField(true))
                 .width(field_width.px()),
             ),
-            text_button(scale, "Browse folders", |app: &mut App| app.browse()).disabled(busy),
+            // Beside the field it fills the column, so the form's right edge is the column's.
+            text_button(scale, "Browse folders", |app: &mut App| app.browse())
+                .disabled(busy)
+                .width(if direction == Axis::Horizontal {
+                    Dim::Fixed((BROWSE * f64::from(scale)).px())
+                } else {
+                    Dim::Auto
+                }),
         ))
         .direction(direction)
         .cross_axis_alignment(CrossAxisAlignment::Start)

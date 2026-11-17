@@ -11,6 +11,16 @@ fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough>
     keyed((), crate::view::writer(writer))
 }
 
+/// The window y of the top of the control named `name`.
+fn top<V: WidgetView<Writer, Widget = Passthrough>>(
+    mounted: &Mounted<Writer, V>,
+    name: &str,
+) -> f64 {
+    let widget = mounted.harness.get_widget_with_id(mounted.find(name));
+    let ctx = widget.ctx();
+    (ctx.window_transform() * ctx.border_box().origin()).y
+}
+
 fn relay_hub() -> Writer {
     let mut writer = Writer::from_session(crate::session::Session::examples().unwrap(), None);
     writer
@@ -73,10 +83,17 @@ fn rename_beat_turns_the_heading_into_a_field_and_its_review_into_a_slip() {
     let writer = support::open(&directory).unwrap();
     let mut mounted = Mounted::new(writer, surface);
     let mut tools = ToolDriver::new(&mut mounted.state);
+    // Measured as the window lays it out: the field's face comes from the theme.
+    let properties = crate::presentation::Theme::new(&mounted.state.config.writer).properties;
+    mounted.harness.set_default_properties(properties);
+    mounted.settle();
+    let row = top(&mounted, "Copy link");
     mounted.activate("Rename beat");
     let beat = mounted.state.inline_rename().unwrap().beat.clone();
     // The field is captioned with what it edits: the beat's id.
     assert!(mounted.contains_text("Beat id"));
+    // It takes the heading's line, so the heading row keeps its height and nothing moves.
+    assert_eq!(top(&mounted, "Copy link"), row);
     mounted.replace_text("New beat id", "renamed");
     mounted.state.commit_inline_rename();
     tools.finish(&mut mounted.state);

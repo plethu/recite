@@ -130,3 +130,25 @@ pub(super) fn first_wedge(root: &RenderRoot) -> Option<WidgetId> {
     }
     None
 }
+/// Whether `focused` lies outside every mounted modal surface while one is mounted, as a field
+/// behind a rename's slip can be left holding focus.
+pub(super) fn outside_modal(root: &RenderRoot, focused: WidgetId) -> bool {
+    let mut inside = None;
+    let mut mounted = false;
+    let mut pending = vec![(root.get_layer_root(0), false)];
+    while let Some((widget, modal)) = pending.pop() {
+        if widget.ctx().is_stashed() {
+            continue;
+        }
+        let modal = modal
+            || widget
+                .downcast::<SizedBox>()
+                .is_some_and(|surface| surface.get_prop::<crate::app::keyboard::ModalSurface>().0);
+        mounted |= modal;
+        if widget.id() == focused {
+            inside = Some(modal);
+        }
+        pending.extend(widget.children().into_iter().map(|child| (child, modal)));
+    }
+    mounted && inside == Some(false)
+}

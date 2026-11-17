@@ -5,7 +5,8 @@ use crate::presentation::tokens::space;
 
 /// Text inputs: a tonal well closed by a bottom rule, a 2px accent ring around the whole well on
 /// focus, and no sinking. Wells on the grained desk take the desk's rule, and search fields leave
-/// room for their leading icon. Manuscript fields have no frame at rest and a hairline of padding
+/// room for their leading icon. Title fields keep only the focus border's room above and below
+/// the text. Manuscript fields have no frame at rest and a hairline of padding
 /// for the 2px focus border.
 pub(in super::super) fn field<W: Widget>(
     properties: &mut DefaultProperties,
@@ -30,6 +31,12 @@ pub(in super::super) fn field<W: Widget>(
     ] {
         well(rule, lead).push(&mut stack, &selector, STRONG);
     }
+    // A title's field: one pixel of padding gives the 2px focus border its room.
+    Look::well(p, (1., size::CONTROL_PAD * scale), p.well_rule).push(
+        &mut stack,
+        &Selector::classes(&[ControlStyle::TitleField.class()]),
+        STRONG,
+    );
     Look {
         rest: Some((Color::TRANSPARENT, Color::TRANSPARENT)),
         hover: (p.hover, Color::TRANSPARENT),

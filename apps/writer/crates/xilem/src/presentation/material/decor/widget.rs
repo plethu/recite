@@ -84,6 +84,21 @@ impl Widget for Decor {
             // The tile repeats from the desk's origin, so it never moves under the pointer.
             painter.fill(ctx.content_box(), grain).draw();
         }
+        if let Decoration::Stock(color, offset) = self.decoration {
+            // Two plain fills, no clip and no blur: the stock is a printed edge, not a shadow.
+            let size = ctx.border_box();
+            for edge in [
+                Rect::new(size.x1 - offset, size.y0 + offset, size.x1, size.y1),
+                Rect::new(
+                    size.x0 + offset,
+                    size.y1 - offset,
+                    size.x1 - offset,
+                    size.y1,
+                ),
+            ] {
+                painter.fill(edge, color).draw();
+            }
+        }
         if let Decoration::Backdrop(dim, screen) = &self.decoration {
             painter.fill(ctx.content_box(), *dim).draw();
             // The screen repeats from the window's origin, so backdrops that meet, such as the

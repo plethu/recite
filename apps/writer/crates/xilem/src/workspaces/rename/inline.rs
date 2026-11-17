@@ -40,9 +40,9 @@ pub(crate) fn hangs_from(state: &Writer, beat: &str, place: Place) -> bool {
         .is_some_and(|inline| inline.place == place && inline.beat == beat)
 }
 
-/// The field holding the new id, set in `role` at `scale` under a "Beat id" caption: a heading
-/// shows the id as a title, so the caption says the field edits the id itself. Enter reviews the
-/// rename and Esc cancels it.
+/// The field holding the new id, set in `role` at `scale` under its caption: a heading shows the
+/// id as a title, so the caption says the field edits the id itself. Enter reviews the rename and
+/// Esc cancels it.
 pub(crate) fn field(
     state: &Writer,
     inline: &Inline,
@@ -50,18 +50,32 @@ pub(crate) fn field(
     scale: f32,
 ) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        print::meta(state.ui_scale(), "Beat id").color(state.palette.muted),
-        styled(
-            ControlStyle::Field,
-            text_input(inline.name.clone(), Writer::edit_inline_rename)
-                .on_enter(|state: &mut Writer, _| state.commit_inline_rename())
-                .typeset(role, scale)
-                .prop(TextAreaLabel::new("New beat id"))
-                .prop(DefaultFocus(inline.stage == Stage::Editing)),
-        ),
+        caption(state),
+        input(inline, (role, scale), ControlStyle::Field),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(space::UNIT.px())
+}
+
+/// What the rename field edits, for a caption beside or above it.
+pub(crate) fn caption(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    print::meta(state.ui_scale(), "Beat id").color(state.palette.muted)
+}
+
+/// The rename's text field alone, set in `role` at `scale` in `style`.
+pub(crate) fn input(
+    inline: &Inline,
+    (role, scale): (Type, f32),
+    style: ControlStyle,
+) -> impl WidgetView<Writer> + use<> {
+    styled(
+        style,
+        text_input(inline.name.clone(), Writer::edit_inline_rename)
+            .on_enter(|state: &mut Writer, _| state.commit_inline_rename())
+            .typeset(role, scale)
+            .prop(TextAreaLabel::new("New beat id"))
+            .prop(DefaultFocus(inline.stage == Stage::Editing)),
+    )
 }
 
 /// Under the field at `place`: the review's progress, then its consequence slip, `width` wide.

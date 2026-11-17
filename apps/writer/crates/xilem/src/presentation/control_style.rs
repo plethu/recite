@@ -27,6 +27,10 @@ pub(crate) enum ControlStyle {
     DeskField,
     /// A search field, padded for its leading icon.
     SearchField,
+    /// A field set in a title's place, such as a beat's heading while it is renamed: the paper
+    /// well and its rule with only the focus border's room above and below the text, so it keeps
+    /// the title's line.
+    TitleField,
     /// A button shaped like a search field on the desk: it opens a search.
     Entry,
     /// A list row at rest.
@@ -63,6 +67,7 @@ impl ControlStyle {
             Self::Field => "writer-field",
             Self::DeskField => "writer-desk-field",
             Self::SearchField => "writer-search-field",
+            Self::TitleField => "writer-title-field",
             Self::Icon => "writer-icon",
             Self::IconOn => "writer-icon-on",
             Self::ToggleOn => "writer-toggle-on",

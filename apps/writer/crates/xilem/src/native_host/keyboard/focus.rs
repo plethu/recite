@@ -14,7 +14,7 @@ use xilem::masonry::widgets::{Button, TextInput};
 mod targets;
 pub(super) use targets::renames;
 pub(crate) use targets::slip_anchor;
-use targets::{default_focus, find, first_wedge, place_picker, return_focus};
+use targets::{default_focus, find, first_wedge, outside_modal, place_picker, return_focus};
 
 #[derive(Clone, Default, PartialEq)]
 pub(super) enum Kind {
@@ -108,6 +108,20 @@ impl Focus {
             _ => self.enter_modal(root),
         }
         self.modal = context.modal;
+    }
+    /// Keep focus on a mounted modal surface: whatever moved it behind the surface this pass, as
+    /// a manuscript field restored under a rename's slip, focus goes to the surface's default.
+    pub fn hold_modal(&mut self, root: &mut RenderRoot, context: &Context) {
+        if context.modal.is_none() {
+            return;
+        }
+        if root
+            .focused_widget()
+            .is_some_and(|focused| outside_modal(root, focused))
+            && let Some(target) = default_focus(root)
+        {
+            root.focus_on(Some(target));
+        }
     }
     /// Hang an inline rename's slip from the heading or row it renames, again whenever that moves.
     fn synchronize_slip(&mut self, root: &RenderRoot, context: &Context) {

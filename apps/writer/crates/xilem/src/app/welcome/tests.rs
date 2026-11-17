@@ -196,3 +196,18 @@ fn creating_a_project_shows_its_name_field_above_the_actions() {
         "the name field must not sit under the actions: {field:?} {action:?}"
     );
 }
+
+#[test]
+fn a_form_that_fits_gets_whole_pixels_and_the_rest_of_the_page() {
+    let size = |height| Some(Size::new(600., height));
+    let measured = Measurements {
+        content: size(400.4),
+        actions: size(60.),
+        available: size(800.),
+    };
+    let (form, surplus) = measured.flex();
+    // Whole pixels and its slack beyond the content, so no scrollbar shows while it fits; what
+    // is left over centres the page.
+    assert_eq!(form, 401. + SLACK);
+    assert_eq!(form + surplus, 740.);
+}

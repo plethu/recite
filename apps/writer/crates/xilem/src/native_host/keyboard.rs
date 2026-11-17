@@ -253,6 +253,7 @@ impl Keyboard {
             self.document_menu.synchronize(root, &context);
             self.reading.capture(root);
             self.galley.synchronize(root);
+            self.focus.hold_modal(root, &context);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {

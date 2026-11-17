@@ -150,12 +150,13 @@ fn heading(
     // The field gives way to the heading once the review is ready, so focus moves to its slip.
     let renaming = rename::editing(state, &id, Place::Heading).filter(|_| selected);
     let renaming_here = renaming.is_some();
+    // The field takes the heading's place at the heading's own line, its caption in the margin,
+    // so nothing below moves.
     let title = if let Some(inline) = renaming {
-        Either::A(Either::A(rename::field(
-            state,
+        Either::A(Either::A(rename::input(
             inline,
-            Type::Section,
-            sheet,
+            (Type::Section, sheet),
+            ControlStyle::TitleField,
         )))
     } else if selected {
         // Padded like the read-only headings' buttons, so every heading starts on one line.
@@ -177,6 +178,7 @@ fn heading(
     flex_row((
         flex_row((
             FlexSpacer::Flex(1.),
+            renaming_here.then(|| rename::caption(state)),
             problem.map(|message| {
                 wedge(
                     format!("Problem in {name}"),

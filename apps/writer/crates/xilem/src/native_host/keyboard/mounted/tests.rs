@@ -343,3 +343,37 @@ fn a_closing_modal_returns_focus_to_the_successor_of_a_control_it_replaced() {
     keyboard.synchronize(&mut root);
     assert_eq!(root.focused_widget(), Some(result));
 }
+
+#[test]
+fn focus_left_behind_a_mounted_modal_surface_returns_to_its_default_control() {
+    use crate::app::keyboard::{DefaultFocus, ModalSurface};
+    let (mut root, _signals) = mounted();
+    let mut keyboard = Keyboard::default();
+    let card = root.get_widget_with_tag(MAP).unwrap().id();
+    // The card's box stands in for a slip: a modal surface whose default control is the card.
+    let mut pending = vec![root.get_layer_root(0)];
+    let mut surface = None;
+    while let Some(widget) = pending.pop() {
+        if widget.downcast::<SizedBox>().is_some()
+            && widget.children().iter().any(|child| child.id() == card)
+        {
+            surface = Some(widget.id());
+        }
+        pending.extend(widget.children());
+    }
+    root.edit_widget(surface.unwrap(), |mut widget| {
+        widget.insert_prop(ModalSurface(true));
+    });
+    root.edit_widget(card, |mut widget| {
+        widget.insert_prop(DefaultFocus(true));
+    });
+    let (mut renaming, _) = context();
+    renaming.modal = Some(Modal::Rename);
+    input::scope(&mut root, renaming);
+    keyboard.synchronize(&mut root);
+    assert_eq!(root.focused_widget(), Some(card));
+    // Focus falls behind the surface, onto the manuscript a rename's slip hangs over.
+    root.focus_on(Some(field(&root, SCRIPT)));
+    keyboard.synchronize(&mut root);
+    assert_eq!(root.focused_widget(), Some(card));
+}

@@ -23,6 +23,9 @@ pub(crate) enum Decoration {
     Bar(Option<Bar>),
     /// The modal backdrop over the whole child: a dim, then a print texture, beneath the child.
     Backdrop(Color, ImageBrush),
+    /// A slip's stock: the hard offset edge of the paper beneath it, filling the child's last
+    /// `offset` pixels on the right and at the foot, less the corners the slip's face leaves bare.
+    Stock(Color, f64),
 }
 
 /// Where a [`Decoration::Bar`] sits inside its child.

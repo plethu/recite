@@ -42,12 +42,14 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::UNIT.px()),
+                // The translation sits level with its source line; its status follows it as
+                // the source's action follows the source.
                 flex_col((
-                    paragraph(scale, row.status.clone(), measure),
                     (!row.translation.is_empty()).then(|| {
                         manuscript_text(prose_size(writer), row.translation.clone())
                             .width(measure.px())
                     }),
+                    paragraph(scale, row.status.clone(), measure),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::SIBLINGS.px()),
@@ -68,8 +70,10 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             scale,
             writer.palette.muted,
             false,
-            Some(writer.script_width().max(size::FIELD_MIN)),
+            // It runs to the page's right edge, over the rows it filters.
+            Some(width.max(size::FIELD_MIN)),
             text_input(state.query.text.clone(), Writer::set_catalogue_query)
+                .placeholder("Search translations")
                 .typeset(Type::Body, scale)
                 .disabled(!state.has_catalogue())
                 .prop(TextAreaLabel::new("Search translations")),
