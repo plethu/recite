@@ -86,7 +86,7 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let selected = blocks
         .iter()
         .position(|block| Some(block.id().as_str()) == rows.selected);
-    let height = LIST_ROWS * size::ROW * f64::from(state.ui_scale());
+    let height = LIST_ROWS * pitch(f64::from(state.ui_scale()));
     Either::B(
         zstack((
             virtual_scroll(count, |state: &mut Writer, position| {
@@ -116,6 +116,15 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
             ..inset
         }),
     )
+}
+
+/// A beat row's height as laid out at `scale`: its Control line, its padding to a row's height
+/// rounded up to whole pixels each side, and its 1px border, so the list's edges fall where they
+/// cut a row through its words.
+fn pitch(scale: f64) -> f64 {
+    let line = f64::from(Type::Control.metrics().1) * scale;
+    let padding = ((size::ROW * scale - line - 2.) / 2.).ceil();
+    line + 2. * padding + 2.
 }
 
 /// The scrolling beat list's thumb, drawn as every other scroll region's: where the beats in
