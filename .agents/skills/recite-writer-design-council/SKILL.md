@@ -149,8 +149,8 @@ When the maintainer explicitly signs off:
 ### 7. Regression review
 
 1. Spawn one fresh agent: `subagent_type: general-purpose`, `model: opus`, `effort: high`, with
-   [regression-brief.md](regression-brief.md). Give it the previous baseline commit, the new
-   commit, both galleries, the comparison report and the code diff.
+   [regression-brief.md](regression-brief.md). Give it the previous baseline commit, the new commit,
+   both galleries, the comparison report and the code diff.
 2. Discuss each finding with it through SendMessage. Argue from evidence; aim for compromises that
    keep the signed-off design's intent while restoring lost function. Accessibility findings are
    fixed, not negotiated.
