@@ -2,7 +2,7 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::segments::{segment_titled, segments};
+use crate::presentation::segments::{segment_titled, segments_quiet};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
@@ -162,27 +162,24 @@ fn row(
     } else {
         format!("{} · {}", update.beat, update.kind)
     };
-    let choice = segments(
-        palette,
-        (
-            segment_titled(
-                scale,
-                palette,
-                ("Accept", format!("Accept · {name}")),
-                !kept,
-                blocked,
-                move |writer: &mut Writer| writer.keep_source_update(index, false),
-            ),
-            segment_titled(
-                scale,
-                palette,
-                ("Keep", format!("Keep · {name}")),
-                kept,
-                blocked,
-                move |writer: &mut Writer| writer.keep_source_update(index, true),
-            ),
+    let choice = segments_quiet((
+        segment_titled(
+            scale,
+            palette,
+            ("Accept", format!("Accept · {name}")),
+            !kept,
+            blocked,
+            move |writer: &mut Writer| writer.keep_source_update(index, false),
         ),
-    );
+        segment_titled(
+            scale,
+            palette,
+            ("Keep", format!("Keep · {name}")),
+            kept,
+            blocked,
+            move |writer: &mut Writer| writer.keep_source_update(index, true),
+        ),
+    ));
     flex_col((
         flex_row((
             styled(
