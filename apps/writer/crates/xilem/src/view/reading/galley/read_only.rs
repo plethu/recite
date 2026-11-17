@@ -144,6 +144,13 @@ fn read_only_row(
         )
         .padding(Padding::left(grid.text().px()))
         .boxed(),
+        Content::Effect { reading, source } => sized_box(super::super::effect::effect(
+            state,
+            (reading, source),
+            grid.measure,
+        ))
+        .padding(Padding::left(grid.text().px()))
+        .boxed(),
         Content::Continuation(target) if target == "END" => {
             sized_box(print::end_mark(state.ui_scale(), &state.palette))
                 .padding(Padding::left(grid.text().px()))

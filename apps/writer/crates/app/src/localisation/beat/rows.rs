@@ -62,6 +62,9 @@ impl Row {
                 }),
             }),
             Content::Heading(text) | Content::Note(text) => Self::context(row, index, text),
+            Content::Effect { reading, .. } => {
+                Self::context(row, index, &format!("Effect · {reading}"))
+            }
             Content::Continuation(target) => {
                 let mut context = Self::context(row, index, &format!("Continue → {target}"));
                 if let Self::Context(context) = &mut context {

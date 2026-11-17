@@ -15,6 +15,7 @@ use recite_core::DocumentKey;
 use recite_writer_model::{AnalysisStamp, RouteOwner};
 use recite_writer_session::choices::display_name;
 mod controls;
+mod effect;
 mod galley;
 pub(crate) use galley::SelectedBeat;
 mod passage;
@@ -152,6 +153,9 @@ fn content(
         .width(width.px())
         .boxed(),
         Content::Note(text) => paragraph(state.ui_scale(), text.clone(), width).boxed(),
+        Content::Effect { reading, source } => {
+            effect::effect(state, (reading, source), width).boxed()
+        }
         Content::Continuation(target) => {
             continuation(state, target, row.groups.is_empty().then_some(beat), width).boxed()
         }

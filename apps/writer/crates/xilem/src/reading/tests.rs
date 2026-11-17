@@ -92,7 +92,17 @@ fn empty_and_effect_only_beats_have_distinct_reading_states() {
     let mut writer = open(&directory).unwrap();
     click(&mut writer, &["Start · Start · end"]).unwrap();
     let labels = labels(&mut writer).unwrap();
-    assert!(labels.iter().any(|label| label.starts_with("Effect ·")));
+    // An effect reads as its call, its source line beside it as a source label.
+    assert!(
+        labels
+            .iter()
+            .any(|label| label == "Overlays (work) now, then waits for the game")
+    );
+    assert!(
+        labels
+            .iter()
+            .any(|label| label == "!blocking overlay(work)")
+    );
     // The end-mark's colon devices are images named with the glyph they replace.
     assert!(labels.iter().any(|label| label == "END"));
     assert_eq!(labels.iter().filter(|label| *label == "◆").count(), 2);

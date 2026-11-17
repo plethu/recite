@@ -53,7 +53,10 @@ fn mixed_beat_keeps_conditions_effects_plural_fragments_and_continuations_in_sou
     assert_eq!(records[0], ":if ready()");
     assert_eq!(records[1], "Source 0.");
     assert_eq!(records[9], "Source 8.");
-    assert_eq!(records[10], "Effect · !blocking overlay(work)");
+    assert_eq!(
+        records[10],
+        "Effect · Overlays (work) now, then waits for the game"
+    );
     assert_eq!(records[11], "Leave now?");
     assert_eq!(records[12], "Otherwise");
     assert!(

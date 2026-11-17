@@ -212,7 +212,9 @@ fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetV
         }
         ScriptEntry::Group { heading, .. } => label(scale, heading.clone()).boxed(),
         ScriptEntry::Jump(target) => label(scale, format!("→ {}", display_name(target))).boxed(),
-        ScriptEntry::Effect(text) => paragraph(scale, format!("Effect · {text}"), width).boxed(),
+        ScriptEntry::Effect(effect) => {
+            paragraph(scale, format!("Effect · {}", effect.reading), width).boxed()
+        }
         ScriptEntry::Source(text) => {
             paragraph(scale, format!("Source fragment · {text}"), width).boxed()
         }

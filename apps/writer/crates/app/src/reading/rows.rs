@@ -18,6 +18,11 @@ pub enum Content {
     },
     Heading(String),
     Note(String),
+    /// An effect as a writer reads it, with the source line it was written as.
+    Effect {
+        reading: String,
+        source: String,
+    },
     Continuation(String),
 }
 
@@ -53,7 +58,10 @@ pub(crate) fn flatten(entries: &[ScriptEntry]) -> Arc<[Row]> {
                 Content::Heading(heading.clone())
             }
             ScriptEntry::Jump(target) => Content::Continuation(target.clone()),
-            ScriptEntry::Effect(text) => Content::Note(format!("Effect · {text}")),
+            ScriptEntry::Effect(effect) => Content::Effect {
+                reading: effect.reading.clone(),
+                source: effect.source.clone(),
+            },
             ScriptEntry::Source(text) => {
                 Content::Note(format!("Source fragment (read only) · {text}"))
             }

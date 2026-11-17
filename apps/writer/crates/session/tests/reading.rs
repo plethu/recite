@@ -1,4 +1,4 @@
-use recite_writer_model::{ScriptEntry, View, WRITER_EXAMPLES, WorkbenchError};
+use recite_writer_model::{EffectEntry, ScriptEntry, View, WRITER_EXAMPLES, WorkbenchError};
 use recite_writer_session::reading::{Excerpt, ReferenceSnapshot};
 
 #[test]
@@ -36,7 +36,10 @@ fn excerpts_follow_source_order_through_groups_and_have_one_shared_work_budget()
         ScriptEntry::Group {
             heading: "condition".into(),
             entries: vec![
-                ScriptEntry::Effect("effect".into()),
+                ScriptEntry::Effect(EffectEntry {
+                    source: "effect".into(),
+                    reading: "Effects now".into(),
+                }),
                 ScriptEntry::Group {
                     heading: "nested".into(),
                     entries: vec![ScriptEntry::Jump("inside".into())],
@@ -97,7 +100,8 @@ fn excerpts_follow_source_order_through_groups_and_have_one_shared_work_budget()
 fn caption(entry: &ScriptEntry) -> &str {
     match entry {
         ScriptEntry::Group { heading, .. } => heading,
-        ScriptEntry::Jump(text) | ScriptEntry::Effect(text) | ScriptEntry::Source(text) => text,
+        ScriptEntry::Jump(text) | ScriptEntry::Source(text) => text,
+        ScriptEntry::Effect(effect) => &effect.reading,
         ScriptEntry::Passage(passage) => &passage.text,
     }
 }

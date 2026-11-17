@@ -28,7 +28,7 @@ pub use preview::{
 };
 pub use projection::{Passage, PassageContent, PassageKind};
 pub use recovery::RecoveredDraft;
-pub use script::{ScriptBlock, ScriptEntry};
+pub use script::{EffectEntry, ScriptBlock, ScriptEntry};
 pub use workbench::{
     ContextRefreshRequest, EditRequest, FrozenWorkbench, NavigationRequest, NavigationStamp,
     PreparedContextRefresh, PreparedEdit, PreparedNavigation, PreparedSourceRepair,
