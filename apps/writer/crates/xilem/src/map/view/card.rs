@@ -230,9 +230,9 @@ fn contents<T: WidgetView<Writer>>(
     flex_col((
         title,
         if renaming {
-            group::decorative(lines)
+            Either::A(group::decorative(lines))
         } else {
-            group::inert(false, lines)
+            Either::B(lines)
         },
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
