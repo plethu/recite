@@ -5,7 +5,7 @@ use crate::tests::support::{self, mounted::Mounted};
 use crate::workspaces::tests::ToolDriver;
 use xilem::masonry::{
     accesskit::Role,
-    core::{Widget, WidgetId, WidgetRef},
+    core::{Widget, WidgetId, WidgetRef, WindowEvent},
     widgets::{Passthrough, SizedBox},
 };
 
@@ -33,10 +33,64 @@ fn modal_controls(widget: WidgetRef<'_, dyn Widget>, modal: bool, found: &mut Ve
     }
 }
 
+/// The dialog over the window and the enabled controls outside it, by name.
+fn live_behind_dialog<V: WidgetView<App, Widget = Passthrough>>(
+    mounted: &Mounted<App, V>,
+) -> (Option<String>, Vec<String>) {
+    let tree = mounted.harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let (mut dialog, mut live) = (None, Vec::new());
+    while let Some(node) = pending.pop() {
+        if node.role() == Role::Dialog {
+            dialog = node.label();
+            continue;
+        }
+        if matches!(
+            node.role(),
+            Role::Button | Role::Tab | Role::TextInput | Role::CheckBox | Role::SpinButton
+        ) && !node.is_disabled()
+        {
+            live.push(node.label().unwrap_or_default());
+        }
+        pending.extend(node.children());
+    }
+    (dialog, live)
+}
+
+#[test]
+fn settings_is_a_modal_sheet_over_an_inert_window() {
+    for scale in [100, 200] {
+        let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+        let mut writer = support::open(&directory).unwrap();
+        let mut config = writer.config.clone();
+        config.writer.presentation = config
+            .writer
+            .presentation
+            .with_value(recite_config::WriterPresentationField::UiScale, scale)
+            .unwrap();
+        writer.configure(config.clone());
+        let mut app = App::with_writer(writer);
+        app.preferences.config = config;
+        app.settings_from_menu();
+        let mut mounted = Mounted::new(app, page);
+        mounted
+            .harness
+            .process_window_event(WindowEvent::Resize((1200, 800).into()));
+        mounted.settle();
+        let (dialog, live_behind) = live_behind_dialog(&mounted);
+        assert_eq!(dialog.as_deref(), Some("Settings"));
+        assert!(
+            live_behind.iter().all(|name| name.contains("problem")),
+            "at {scale}% Tab reaches nothing the sheet hides: {live_behind:?}"
+        );
+    }
+}
+
 #[test]
 fn tab_and_shift_tab_never_reach_the_tab_row_behind_a_modal() {
-    let open: [(&str, Open); 2] = [
+    let open: [(&str, Open); 3] = [
         ("command picker", |app| app.open_picker(Search::Commands)),
+        ("settings", |app| app.settings_from_menu()),
         ("close decision", |app| {
             if let Some(writer) = app.writer.as_mut() {
                 writer.change(|model| {
@@ -174,20 +228,9 @@ fn a_reviewed_rename_is_a_named_dialog_over_an_inert_window_that_tab_never_leave
     let writer = mounted.state.writer.as_mut().unwrap();
     writer.place_inline_rename(heading.0, heading.1);
     mounted.settle();
-    // The slip is a dialog named for the beat, and the window's controls behind it are inert.
-    let tree = mounted.harness.access_tree();
-    let mut pending = vec![tree.state().root()];
-    let (mut dialog, mut live_behind) = (None, Vec::new());
-    while let Some(node) = pending.pop() {
-        if node.role() == Role::Dialog {
-            dialog = node.label();
-            continue;
-        }
-        if node.role() == Role::Button && !node.is_disabled() && node.label().is_some() {
-            live_behind.push(node.label().unwrap_or_default());
-        }
-        pending.extend(node.children());
-    }
+    // The slip is a dialog named for the beat, and the window's controls behind it, the mode
+    // tabs among them, are inert.
+    let (dialog, live_behind) = live_behind_dialog(&mounted);
     assert_eq!(dialog.as_deref(), Some(format!("Rename {beat}").as_str()));
     assert!(
         live_behind.iter().all(|name| name.contains("problem")),

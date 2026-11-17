@@ -46,23 +46,22 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                             // row above it dims with it.
                             zstack((
                                 app_bar(app),
-                                app.writer
-                                    .as_ref()
-                                    .is_some_and(|writer| {
+                                (app.settings_open()
+                                    || app.writer.as_ref().is_some_and(|writer| {
                                         matches!(
                                             writer.phase(),
                                             crate::Phase::ConfirmClose
                                                 | crate::Phase::ConfirmExit
                                                 | crate::Phase::Closing
                                         )
-                                    })
-                                    .then(|| {
-                                        backdrop(
-                                            app.theme.palette.backdrop,
-                                            app.theme.screen.clone(),
-                                            sized_box(flex_col(())).dims(Dim::Stretch),
-                                        )
-                                    }),
+                                    }))
+                                .then(|| {
+                                    backdrop(
+                                        app.theme.palette.backdrop,
+                                        app.theme.screen.clone(),
+                                        sized_box(flex_col(())).dims(Dim::Stretch),
+                                    )
+                                }),
                             )),
                             zstack((
                                 named(
@@ -70,28 +69,39 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                                     indexed_stack((welcome::panel(app), slot))
                                         .active(usize::from(!app.show_welcome())),
                                 )
-                                // Behind a picker or a rename's decision the workspace is inert.
+                                // Behind a picker, Settings or a rename's decision the
+                                // workspace is inert.
                                 .disabled(
                                     app.picker.is_some()
+                                        || app.settings_open()
                                         || app.writer.as_ref().is_some_and(rename::modal),
                                 ),
-                                // Settings is a side sheet over the live workspace, clear of the
-                                // status bar. A stack keeps the layer in place while it is
-                                // closed, so the layers above it keep theirs.
+                                // Settings is a modal side sheet over the dimmed workspace, which
+                                // still shows each change; the status bar stays clear. A stack
+                                // keeps the layer in place while it is closed, so the layers above
+                                // it keep theirs.
                                 indexed_stack((
-                                    flex_row((FlexSpacer::Flex(1.), settings::settings(app)))
-                                        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                                        // Below the toolbar too, so it covers none of it.
-                                        .padding(Padding {
-                                            top: ((size::PICKER_TOP - size::ROW)
-                                                * f64::from(crate::presentation::scale(
-                                                    &app.preferences.config.writer,
-                                                )))
-                                            .px(),
-                                            bottom: status_bar.px(),
-                                            ..Padding::all(0.px())
-                                        })
-                                        .dims(Dim::Stretch),
+                                    sized_box(backdrop(
+                                        app.theme.palette.backdrop,
+                                        app.theme.screen.clone(),
+                                        flex_row((FlexSpacer::Flex(1.), settings::settings(app)))
+                                            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                                            // Below the toolbar too, so the sheet covers none of
+                                            // it; the dim covers it with the rest.
+                                            .padding(Padding::top(
+                                                ((size::PICKER_TOP - size::ROW)
+                                                    * f64::from(crate::presentation::scale(
+                                                        &app.preferences.config.writer,
+                                                    )))
+                                                .px(),
+                                            ))
+                                            .dims(Dim::Stretch),
+                                    ))
+                                    .dims(Dim::Stretch)
+                                    .padding(Padding {
+                                        bottom: status_bar.px(),
+                                        ..Padding::all(0.px())
+                                    }),
                                     sized_box(flex_col(())).dims((0.px(), 0.px())),
                                 ))
                                 .active(usize::from(!app.settings_open()))

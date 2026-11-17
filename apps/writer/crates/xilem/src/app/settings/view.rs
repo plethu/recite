@@ -1,4 +1,4 @@
-//! Settings: a side sheet over the live workspace, so the manuscript beside it is the preview.
+//! Settings: a modal side sheet over the dimmed, inert workspace, which still shows each change.
 //! Preferences sit in groups under Section heads with their controls on the right; changes apply
 //! at once. The sheet takes focus when it opens, gives it back when it closes, and Esc closes it.
 use super::*;

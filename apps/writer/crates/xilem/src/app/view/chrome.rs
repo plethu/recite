@@ -23,8 +23,10 @@ use xilem::{
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    // A picker or a rename's decision holds the window: the tab row behind it is inert.
-    let searching = app.picker.is_some() || app.writer.as_ref().is_some_and(rename_modal);
+    // A picker, Settings or a rename's decision holds the window: the tab row behind it is inert.
+    let searching = app.picker.is_some()
+        || app.settings_open()
+        || app.writer.as_ref().is_some_and(rename_modal);
     let blocked = searching
         || app
             .writer
@@ -133,7 +135,7 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             .filter(|_| !app.show_welcome())
             .map(|writer| {
                 (
-                    authoring_modes(writer, app.picker.is_some()),
+                    authoring_modes(writer, blocked),
                     print::action(scale, "Commands", blocked, |app: &mut App| {
                         app.open_picker(picker::Search::Commands)
                     }),
