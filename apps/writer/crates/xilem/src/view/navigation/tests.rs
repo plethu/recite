@@ -119,11 +119,30 @@ fn a_double_click_on_a_beat_row_renames_it_in_the_sidebar_and_returns_to_the_row
     let mut mounted = Mounted::new(writer, surface);
     let mut tools = ToolDriver::new(&mut mounted.state);
     let (row, _) = beat_row(&mounted, "start");
+    // The rows under the renamed one, where they rest.
+    let start = window_bounds(&mounted, row);
+    let below = mounted_rows(&mounted)
+        .into_iter()
+        .map(|beat| window_bounds(&mounted, beat_row(&mounted, &beat).0))
+        .filter(|bounds| bounds.y0 > start.y0)
+        .collect::<Vec<_>>();
+    assert!(!below.is_empty(), "a row under the start beat's");
     double_click(&mut mounted, row);
     let inline = mounted.state.inline_rename().expect("renaming in the row");
     assert_eq!(
         (inline.beat.as_str(), inline.place, inline.stage),
         ("start", Place::Outline, Stage::Editing)
+    );
+    // The field and its caption keep to the row's height: no row below it moves.
+    let still = mounted_rows(&mounted)
+        .into_iter()
+        .filter(|beat| beat != "start")
+        .map(|beat| window_bounds(&mounted, beat_row(&mounted, &beat).0))
+        .filter(|bounds| bounds.y0 > start.y0)
+        .collect::<Vec<_>>();
+    assert!(
+        below.iter().all(|bounds| still.contains(bounds)),
+        "{below:?} moved to {still:?}"
     );
     // The row's name is the field; the heading stays a heading.
     mounted.find("New beat id");

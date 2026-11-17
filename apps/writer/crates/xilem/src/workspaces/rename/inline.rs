@@ -15,7 +15,7 @@ use xilem::masonry::layout::{AsUnit, Dim};
 use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::{LineBreaking, TextAreaLabel};
 use xilem::style::{Padding, Style};
-use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, sized_box, text_input};
+use xilem::view::{CrossAxisAlignment, FlexExt, button, flex_col, flex_row, sized_box, text_input};
 
 /// How the slip sets its actions: in one row under a heading or card, stacked in the narrow
 /// sidebar.
@@ -41,21 +41,19 @@ pub(crate) fn hangs_from(state: &Writer, beat: &str, place: Place) -> bool {
         .is_some_and(|inline| inline.place == place && inline.beat == beat)
 }
 
-/// The field holding the new id, set in `role` at `scale` under its caption: a heading shows the
-/// id as a title, so the caption says the field edits the id itself. Enter reviews the rename and
-/// Esc cancels it.
-pub(crate) fn field(
-    state: &Writer,
-    inline: &Inline,
-    role: Type,
-    scale: f32,
-) -> impl WidgetView<Writer> + use<> {
-    flex_col((
-        caption(state),
-        input(inline, (role, scale), ControlStyle::Field),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(space::UNIT.px())
+/// The field in a sidebar row, its caption set beside it so the row keeps its own height and the
+/// rows below it never move.
+pub(crate) fn row_field(state: &Writer, inline: &Inline) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    sized_box(
+        flex_row((
+            caption(state),
+            input(inline, (Type::Control, scale), ControlStyle::Field).flex(1.),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(space::SIBLINGS.px()),
+    )
+    .height((size::ROW * f64::from(scale)).px())
 }
 
 /// The field on a map card, in the card's own units at `scale`: the card zooms with the map, so

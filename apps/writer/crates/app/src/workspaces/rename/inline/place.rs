@@ -66,6 +66,8 @@ impl Writer {
             return;
         }
         self.workspaces.rename.returning = None;
+        // A new rename makes the last one's outcome stale, such as a discarded review.
+        self.status.clear();
         self.workspaces.rename.inline = Some(Inline {
             name: target.beat.clone(),
             beat: target.beat,

@@ -379,3 +379,37 @@ fn focus_left_behind_a_mounted_modal_surface_returns_to_its_default_control() {
     keyboard.synchronize(&mut root);
     assert_eq!(root.focused_widget(), Some(card));
 }
+
+#[test]
+fn a_rename_that_starts_again_elsewhere_in_one_pass_focuses_its_new_field() {
+    use crate::app::keyboard::DefaultFocus;
+    let (mut root, _signals) = mounted();
+    let mut keyboard = Keyboard::default();
+    let (card, result) = (
+        root.get_widget_with_tag(MAP).unwrap().id(),
+        root.get_widget_with_tag(RESULT).unwrap().id(),
+    );
+    root.edit_widget(card, |mut widget| {
+        widget.insert_prop(DefaultFocus(true));
+    });
+    let (mut renaming, _) = context();
+    renaming.modal = Some(Modal::Rename);
+    input::scope(&mut root, renaming);
+    keyboard.synchronize(&mut root);
+    assert_eq!(root.focused_widget(), Some(card));
+    // The heading's rename ends, focus goes back to the manuscript, and a sidebar row's rename
+    // starts before the next pass: its field is the default now.
+    root.edit_widget(card, |mut widget| {
+        widget.insert_prop(DefaultFocus(false));
+    });
+    root.edit_widget(result, |mut widget| {
+        widget.insert_prop(DefaultFocus(true));
+    });
+    root.focus_on(Some(field(&root, SCRIPT)));
+    keyboard.synchronize(&mut root);
+    assert_eq!(root.focused_widget(), Some(result));
+    // Focus the writer moves within the rename stays where they put it.
+    root.focus_on(Some(card));
+    keyboard.synchronize(&mut root);
+    assert_eq!(root.focused_widget(), Some(card));
+}

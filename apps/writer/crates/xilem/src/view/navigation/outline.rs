@@ -263,12 +263,7 @@ fn beat_row(state: &Writer, rows: &Rows<'_>, beat: &Beat) -> impl WidgetView<Wri
 /// again, which the review's progress or consequence slip hangs from.
 fn renamed_row(state: &Writer, rows: &Rows<'_>, beat: &Beat) -> impl WidgetView<Writer> + use<> {
     let name = match rename::editing(state, &beat.id, Place::Outline) {
-        Some(inline) => Either::A(rename::field(
-            state,
-            inline,
-            Type::Control,
-            state.ui_scale(),
-        )),
+        Some(inline) => Either::A(rename::row_field(state, inline)),
         None => Either::B(beat_row(state, rows, beat)),
     };
     // The review's slip floats over the window from under the row, so no row moves.

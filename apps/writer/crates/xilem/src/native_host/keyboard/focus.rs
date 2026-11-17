@@ -37,6 +37,8 @@ pub(super) struct Focus {
     /// to when it closes.
     modal: Option<Modal>,
     modal_return: Option<Option<WidgetId>>,
+    /// The modal's default control that focus last went to.
+    modal_default: Option<WidgetId>,
     /// The last request to focus the first problem, and whether it waits for its wedge to mount.
     problem: u64,
     problem_pending: bool,
@@ -90,11 +92,16 @@ impl Focus {
             // A modal mounted after its context: focus it once it has its default control.
             if self.modal.is_some() && self.modal_return.is_none() {
                 self.enter_modal(root);
-            } else if self.modal.is_some() && root.focused_widget().is_none() {
+            } else if self.modal.is_some() {
                 // Its focused control went away, as a renamed heading's field gives way to its
-                // slip: focus the new default, keeping where focus returns on close.
-                if let Some(target) = default_focus(root) {
-                    root.focus_on(Some(target));
+                // slip, or its default moved, as a rename that ends and starts again in another
+                // place within one pass: focus the new default, keeping where focus returns.
+                let target = default_focus(root);
+                if target.is_some()
+                    && (root.focused_widget().is_none() || target != self.modal_default)
+                {
+                    root.focus_on(target);
+                    self.modal_default = target;
                 }
             }
             return;
@@ -176,6 +183,7 @@ impl Focus {
             return;
         };
         self.modal_return = Some(root.focused_widget().filter(|focused| *focused != target));
+        self.modal_default = Some(target);
         root.focus_on(Some(target));
     }
     /// Move focus to the first problem's wedge when the writer asks, once it has mounted.

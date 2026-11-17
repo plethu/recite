@@ -120,6 +120,10 @@ fn cancel_and_an_unchanged_name_leave_the_project_untouched() {
             .source()
             .contains(":: old")
     );
+    // The next rename starts without the discarded review's sentence.
+    assert!(writer.status.contains("discarded"), "{}", writer.status);
+    writer.rename_beat();
+    assert!(writer.status.is_empty(), "{}", writer.status);
 }
 
 #[test]
