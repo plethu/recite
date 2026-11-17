@@ -67,13 +67,17 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == prose + "x", "native draft")
                 key("z", control=True)
                 window.wait(lambda: window.text(node) == prose, "native undo")
-                # Rename beat edits the selected beat's heading in place; Enter reviews it and the
-                # consequence slip reaches the full page.
+                # Rename beat in Commands asks which beat, then edits its heading in place; Enter
+                # reviews it and the consequence slip reaches the full page.
                 command(window, "Rename beat")
+                fill(window, "Search query", "old")
+                capture_settled(window, output, "-beat-choice")
+                key("Return")
+                window.wait(lambda: not window.find("Search query"), "chosen beat")
                 fill(window, "New beat id", "new")
                 key("Return")
                 window.wait(
-                    lambda: window.find("Review all changes") or window.find("Original beat name"),
+                    lambda: window.find("Review all changes") or window.find("New beat name"),
                     "rename consequence slip or refused rename page",
                 )
                 if window.find("Review all changes"):
@@ -81,28 +85,13 @@ def run(api, bus, registry, binary, output):
                     window.act("Review all changes")
                     window.wait(lambda: window.find("Cancel rename"), "reviewed rename page")
                     window.act("Cancel rename")
-                window.wait(lambda: window.find("Original beat name"), "rename proposal")
+                window.wait(lambda: window.find("New beat name"), "rename proposal")
                 results["inline_rename_reaches_the_rename_page"] = True
-                fill(window, "New beat name", "new")
-                proposal = field(window, "New beat name")
-                window.act("Choose existing beat")
-                fill(window, "Search query", "old")
-                capture_settled(window, output, "-beat-choice")
-                key("Escape")
-                window.wait(lambda: not window.find("Search query"), "cancelled beat choice")
-                assert field(window, "New beat name") == proposal
-                assert window.text(proposal) == "new"
-                window.act("Choose existing beat")
-                fill(window, "Search query", "old")
-                key("Return")
-                window.wait(lambda: not window.find("Search query"), "chosen beat proposal")
-                assert window.text(field(window, "Original beat name")) == "old"
-                assert field(window, "New beat name") == proposal
-                assert window.text(proposal) == "new"
+                # The page's proposal keeps the beat as text and the new id already typed.
+                assert window.find_text("old")
+                assert window.text(field(window, "New beat name")) == "new"
                 assert source.read_text() == before
-                results["beat_choice_changes_only_the_proposal_and_cancel_keeps_native_field"] = (
-                    True
-                )
+                results["rename_page_keeps_the_chosen_beat_and_the_typed_id"] = True
                 window.act("Review project rename")
                 window.wait(
                     lambda: window.find_text("Rename reviewed.", prefix=True), "reviewed rename"
@@ -164,10 +153,13 @@ def run(api, bus, registry, binary, output):
                 )
                 results["save_all_publishes_manuscript_references_and_manifest"] = True
                 command(window, "Rename beat")
+                fill(window, "Search query", "new")
+                key("Return")
+                window.wait(lambda: not window.find("Search query"), "chosen renamed beat")
                 fill(window, "New beat id", "newer")
                 key("Return")
                 window.wait(
-                    lambda: window.find("Review all changes") or window.find("Original beat name"),
+                    lambda: window.find("Review all changes") or window.find("New beat name"),
                     "rename consequence slip or refused rename page",
                 )
                 if window.find("Review all changes"):

@@ -176,8 +176,20 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Declarations);
     mounted.state.writer.as_mut().unwrap().return_to_writing();
     mounted.settle();
-    // Rename beat edits the selected beat's heading in place; the writing view stays.
-    command(&mut mounted, WriterCommand::Rename);
+    // Rename beat in Commands asks which beat, then edits its heading in place; the writing
+    // view stays.
+    let caption = commands::label(WriterCommand::Rename, false);
+    mounted.activate("Commands");
+    mounted.replace_text("Search query", &caption);
+    mounted.activate_selected(&caption);
+    assert_eq!(
+        mounted.state.picker.as_ref().map(|picker| picker.mode()),
+        Some(picker::Mode::RenameBeat)
+    );
+    // The scene's one beat, `start`, is the picker's first.
+    mounted.state.activate_picker(0);
+    // Script selects the chosen beat first where it was not selected.
+    support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
     mounted.settle();
     let writer = mounted.state.writer.as_ref().unwrap();
     assert!(writer.workspaces.screen == Screen::Write);

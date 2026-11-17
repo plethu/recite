@@ -26,13 +26,13 @@ impl Writer {
     pub fn rename_return(&self) -> Option<&Target> {
         self.workspaces.rename.returning.as_ref()
     }
-    /// Rename beat, from F2, the command or the heading's action: in place on the map card of the
-    /// selected beat in Map, on the selected beat's heading in Script and Split, and otherwise on
-    /// the rename page.
+    /// Rename beat, from F2 or the heading's action: in place on the map card of the selected
+    /// beat in Map and on the selected beat's heading in Script and Split; with no beat to rename
+    /// there, a picker chooses one first, as the Commands entry always does.
     pub fn rename_beat(&mut self) {
         match self.default_rename_target() {
             Some(target) => self.rename_beat_in(target),
-            None => self.open_project_workspace(Open::Rename),
+            None => self.choose_beat_to_rename(),
         }
     }
     fn default_rename_target(&self) -> Option<Target> {

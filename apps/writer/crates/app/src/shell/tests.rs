@@ -158,3 +158,29 @@ fn an_opened_picker_takes_the_place_of_the_label_that_opened_it() {
     ));
     assert_eq!(shell.picker.as_ref().unwrap().placement, Some((240, 320)));
 }
+
+#[test]
+fn rename_beat_from_commands_asks_which_beat_while_its_shortcut_renames_the_selected_one() {
+    let directory = test_support::project(SOURCE).unwrap();
+    let writer = test_support::open(&directory).unwrap();
+    let mut shell = Shell::with_writer(writer);
+    shell.open_picker(Search::Commands);
+    shell.filter_picker("Rename beat".into());
+    let index = shell
+        .picker
+        .as_ref()
+        .unwrap()
+        .matches
+        .iter()
+        .position(|&entry| {
+            matches!(
+                shell.picker.as_ref().unwrap().entries[entry].item,
+                picker::Item::Command(recite_config::WriterCommand::Rename)
+            )
+        })
+        .expect("Rename beat in Commands");
+    shell.activate_picker(index);
+    let picker = shell.picker.as_ref().expect("the beat picker");
+    assert_eq!(picker.mode(), picker::Mode::RenameBeat);
+    assert!(shell.writer.as_ref().unwrap().inline_rename().is_none());
+}

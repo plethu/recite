@@ -19,6 +19,8 @@ pub struct Panel {
     pub returning: Option<inline::Target>,
     /// The status sentence of the last inline rename, while the status line can still undo it.
     pub undo_offer: Option<String>,
+    /// The beat chosen from Commands to rename, renamed in place once Script has selected it.
+    pub chosen: Option<String>,
 }
 pub enum Report {
     Information(Vec<String>),

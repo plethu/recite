@@ -107,7 +107,7 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             id: "script.rename",
             group: "Script",
             title: "Inline rename",
-            intent: "Rename beat turns the selected beat's heading, or F2 or a double-click its sidebar row, into a field; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
+            intent: "F2 turns the selected beat's heading, or a double-click its sidebar row, into a field, and Rename beat in Commands asks which beat first; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
         },
         |record| {
             let directory = sample();
@@ -123,6 +123,15 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
             stage.shot(record, "Renaming in the sidebar");
             rename_in(&mut stage, Place::Outline, true);
             stage.shot(record, "What the rename changes, from the sidebar");
+            // Rename beat from Commands asks which beat first, then renames it in place.
+            stage.act(|app| {
+                if let Some(writer) = &mut app.writer {
+                    writer.cancel_inline_rename();
+                    writer.choose_beat_to_rename();
+                }
+                app.open_editor_choices();
+            });
+            stage.shot(record, "Rename beat from Commands: which beat");
         },
     );
     record.scene(

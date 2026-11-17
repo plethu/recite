@@ -89,6 +89,17 @@ impl Shell {
             })
             .map(|entry| entry.item.clone());
         match item {
+            // Rename beat from Commands chooses the beat first; F2 renames the selected one.
+            Some(Item::Command(WriterCommand::Rename))
+                if self.command_enabled(WriterCommand::Rename) =>
+            {
+                self.dismiss_picker();
+                if let Some(writer) = &mut self.writer {
+                    writer.document_menu = crate::attention::DocumentMenu::Closed;
+                    writer.choose_beat_to_rename();
+                }
+                self.open_editor_choices();
+            }
             Some(Item::Command(command)) if self.command_enabled(command) => {
                 self.dismiss_picker();
                 self.run_command(command);

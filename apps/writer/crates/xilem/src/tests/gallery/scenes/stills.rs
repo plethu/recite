@@ -1,5 +1,6 @@
 //! One frame per state: empty and representative data on every surface.
 use super::*;
+use crate::workspaces::tests::ToolDriver;
 
 pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant) {
     record.scene(
@@ -301,7 +302,7 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
         (
             "tools.rename",
             "Rename",
-            "Stable-ID-preserving rename with comparison.",
+            "The fallback after a refused rename: the beat is fixed text, its new id prefilled, and the report says why.",
             Screen::Rename,
             "relay_hub.recite",
         ),
@@ -354,6 +355,9 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
                     std::fs::write(&path, changed).expect("changed sample source");
                 }
                 visit(&mut stage, location);
+                if matches!(screen, Screen::Rename) {
+                    refuse_rename(&mut stage);
+                }
                 stage.shot(record, title);
             },
         );
@@ -450,4 +454,16 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
             stage.shot(record, "Close decision");
         },
     );
+}
+
+/// The rename page as a refused rename leaves it: the beat's new id taken by another beat.
+fn refuse_rename<V: WidgetView<App, Widget = Passthrough>>(stage: &mut Stage<App, V>) {
+    stage.act(|app| {
+        if let Some(writer) = &mut app.writer {
+            let mut tools = ToolDriver::new(writer);
+            writer.change_rename_name("goodbye".into());
+            writer.review_project_rename();
+            tools.finish(writer);
+        }
+    });
 }

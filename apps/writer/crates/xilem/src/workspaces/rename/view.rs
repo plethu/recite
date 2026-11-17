@@ -40,6 +40,8 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Rename)))
 }
+/// The fallback after a refused rename, or a rename opened from a link: the beat is fixed text,
+/// and its new id is a field holding the name already typed.
 fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
     let blocked = writer.project_action_blocked();
@@ -50,40 +52,51 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     } else {
         writer.content_width()
     };
-    flex_col((
-        text_button(scale, "Choose existing beat", Writer::choose_rename_beat).disabled(blocked),
-        flex_row((
-            flex_col((
-                label(scale, "Original beat name"),
-                text_input(panel.block.clone(), Writer::change_rename_block)
-                    .typeset(Type::Body, scale)
-                    .disabled(blocked)
-                    .prop(TextAreaLabel::new("Original beat name")),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(space::UNIT.px())
-            .width(field_width.px()),
-            flex_col((
-                label(scale, "New beat name"),
-                text_input(panel.name.clone(), Writer::change_rename_name)
-                    .typeset(Type::Body, scale)
-                    .disabled(blocked)
-                    .prop(TextAreaLabel::new("New beat name")),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(space::UNIT.px())
-            .width(field_width.px()),
+    flex_row((
+        flex_col((
+            print::meta(scale, "Beat").color(writer.palette.muted),
+            print::id(
+                scale,
+                if panel.block.is_empty() {
+                    "None chosen".to_owned()
+                } else {
+                    panel.block.clone()
+                },
+            ),
         ))
-        .direction(if wide {
-            Axis::Horizontal
-        } else {
-            Axis::Vertical
-        })
-        .gap(space::KINDS.px()),
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::UNIT.px())
+        .width(field_width.px()),
+        flex_col((
+            label(scale, "New beat name"),
+            text_input(panel.name.clone(), Writer::change_rename_name)
+                .typeset(Type::Body, scale)
+                .disabled(blocked || panel.block.is_empty())
+                .prop(TextAreaLabel::new("New beat name")),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .gap(space::UNIT.px())
+        .width(field_width.px()),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
+    .direction(if wide {
+        Axis::Horizontal
+    } else {
+        Axis::Vertical
+    })
+    .gap(space::KINDS.px())
     .prop(PaneEntry(true))
+}
+/// What a proposal still lacks before it can be reviewed, said beside its disabled Primary.
+fn missing(block: &str, name: &str) -> Option<&'static str> {
+    if block.trim().is_empty() {
+        Some("Choose Rename beat in Commands to pick a beat")
+    } else if name.trim().is_empty() {
+        Some("Enter a new beat id")
+    } else if block.trim() == name.trim() {
+        Some("Enter an id different from the beat's own")
+    } else {
+        None
+    }
 }
 /// While reviewing, the proposal reads as one line: the beat and its new id.
 fn summary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -101,10 +114,11 @@ fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + u
         .session
         .project()
         .is_some_and(|project| project.files().rename_review.is_some());
-    let incomplete = panel.block.trim().is_empty()
-        || panel.name.trim().is_empty()
-        || panel.block.trim() == panel.name.trim();
+    let missing = (!reviewing)
+        .then(|| missing(&panel.block, &panel.name))
+        .flatten();
     flex_row((
+        missing.map(|reason| print::meta(scale, reason).color(writer.palette.muted)),
         reviewing.then(|| {
             text_button(scale, "Cancel", Writer::discard_rename_review)
                 .accessible_label("Cancel rename")
@@ -118,7 +132,12 @@ fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + u
                 "Review project rename"
             },
             &writer.palette,
-            blocked || if reviewing { !review } else { incomplete },
+            blocked
+                || if reviewing {
+                    !review
+                } else {
+                    missing.is_some()
+                },
             move |writer: &mut Writer| {
                 if reviewing {
                     writer.apply_project_rename();
@@ -128,6 +147,7 @@ fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + u
             },
         ),
     ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(space::SIBLINGS.px())
 }
 fn history(writer: &Writer) -> impl WidgetView<Writer> + use<> {
