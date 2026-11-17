@@ -2,6 +2,7 @@
 //! right, and the active result marked by the row's `selected` state.
 use super::*;
 use crate::presentation::Type;
+use crate::presentation::marks::underscored;
 use crate::presentation::row::{listed, row};
 use crate::presentation::sheet_text::one_line;
 use xilem::masonry::properties::Dimensions;
@@ -64,14 +65,18 @@ pub(super) fn result(
     let line = width - 2. * crate::presentation::control_inset(scale);
     let height = f64::from(Type::Control.metrics().1 * scale);
     listed(
-        palette,
         selected,
         row(
             selected,
             flex_row((
-                search_label(Type::Control.size(scale), entry.title.clone(), query)
-                    .single_line()
-                    .flex(TITLE_SHARE),
+                underscored(
+                    palette,
+                    selected,
+                    f64::from(scale),
+                    search_label(Type::Control.size(scale), entry.title.clone(), query)
+                        .single_line(),
+                )
+                .flex(TITLE_SHARE),
                 // Descriptions give way to the title, set against the row's right edge.
                 (!detail.is_empty()).then(|| {
                     flex_col((one_line(detail, Type::Meta, scale, palette.muted),))

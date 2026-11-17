@@ -4,7 +4,7 @@
 use super::*;
 use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::presentation::double_click::double_click;
-use crate::presentation::marks::{GLYPH, wedge_glyph};
+use crate::presentation::marks::{GLYPH, underscored, wedge_glyph};
 use crate::presentation::tokens::size;
 use crate::workspaces::rename::inline::{self as rename, Place, Target};
 use recite_compiler::authoring::BlockDefinitionSummary;
@@ -241,17 +241,16 @@ fn beat_row(state: &Writer, rows: &Rows<'_>, beat: &Beat) -> impl WidgetView<Wri
         scale,
         state.palette.ink,
     );
-    // The current beat is the list's selected row: the plate, the ink bar and the state.
+    // The current beat is the list's selected row: the plate, the ink underscore and the state.
     // A beat with a problem shows the error sign, and its name starts by saying so.
     double_click(
         listed(
-            &state.palette,
             current,
             row(
                 current,
                 // One flex either way, so a problem's wedge mounts no wrapper of its own.
                 flex_row((
-                    words.flex(1.),
+                    underscored(&state.palette, current, f64::from(scale), words).flex(1.),
                     problem.then(|| wedge_glyph(GLYPH, state.palette.error)),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Center)

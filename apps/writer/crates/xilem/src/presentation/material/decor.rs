@@ -22,8 +22,7 @@ pub(crate) enum Decoration {
     /// A 2px outline `offset` pixels outside the child's edge while focus is within it, for text
     /// whose own border would crowd its glyphs and caret. It takes no layout room.
     Outline(Option<Color>, f64),
-    /// A 2px bar along one edge: a chosen tab's underline, a chosen segment's mark or a selected
-    /// row's leading bar.
+    /// A 2px bar along the bottom: a chosen tab's underline or a chosen segment's mark.
     Bar(Option<Bar>),
     /// The modal backdrop over the whole child: a dim, then a print texture, beneath the child.
     Backdrop(Color, ImageBrush),
@@ -38,42 +37,22 @@ pub(crate) enum Decoration {
     Stock(Color, f64),
 }
 
-/// Where a [`Decoration::Bar`] sits inside its child.
+/// Where a [`Decoration::Bar`] sits along the bottom of its child. A bar runs along the bottom
+/// only: a leading-edge bar was the old mark for the current beat, unsaved work, selected rows and
+/// banners, and the printer's marks (`presentation::marks`) replace it.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Bar {
     pub color: Color,
-    /// Which edge the bar runs along.
-    pub edge: Edge,
-    /// Distance in from both ends of that edge.
+    /// Distance in from both ends of the bottom edge.
     pub inset: f64,
-    /// Distance in from that edge to the bar.
+    /// Distance up from the bottom edge to the bar.
     pub lift: f64,
-    /// A halftone bar, the mark of what is not yet fixed, instead of a solid one.
-    pub screen: bool,
-    /// The bar's thickness.
-    pub thickness: f64,
 }
 impl Bar {
-    /// A solid 2px bar in `color` along `edge`.
-    pub fn solid(color: Color, edge: Edge, inset: f64, lift: f64) -> Self {
-        Self {
-            color,
-            edge,
-            inset,
-            lift,
-            screen: false,
-            thickness: 2.,
-        }
+    /// A solid 2px bar in `color` under the child.
+    pub fn under(color: Color, inset: f64, lift: f64) -> Self {
+        Self { color, inset, lift }
     }
-}
-
-/// The edge a [`Bar`] runs along.
-#[derive(Clone, Copy, PartialEq)]
-pub(crate) enum Edge {
-    /// Under a tab or a segment's label.
-    Bottom,
-    /// Down the leading side of a selected row.
-    Leading,
 }
 
 pub(crate) struct Decorated<V> {

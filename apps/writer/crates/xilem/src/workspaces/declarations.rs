@@ -1,6 +1,7 @@
 //! Frontend views and native glue over `recite_writer_app::workspaces::declarations`.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::marks::underscored;
 use crate::presentation::row::{listed, row};
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::sheet_text::one_line;
@@ -204,12 +205,17 @@ fn declaration_row(
     let height = f64::from(Type::Control.metrics().1 * scale);
     let caption = format!("{name} · {kind}");
     Either::A(listed(
-        &writer.palette,
         selected,
         row(
             selected,
             flex_row((
-                one_line(name.clone(), Type::Control, scale, writer.palette.ink).flex(1.),
+                underscored(
+                    &writer.palette,
+                    selected,
+                    f64::from(scale),
+                    one_line(name.clone(), Type::Control, scale, writer.palette.ink),
+                )
+                .flex(1.),
                 one_line(kind.clone(), Type::Meta, scale, writer.palette.muted),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)

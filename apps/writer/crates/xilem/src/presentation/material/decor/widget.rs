@@ -1,4 +1,4 @@
-use super::{Bar, Decoration, Edge};
+use super::{Bar, Decoration, Marks};
 use xilem::masonry::kurbo::Rect;
 use xilem::masonry::{
     accesskit::{Node, Role},
@@ -7,31 +7,15 @@ use xilem::masonry::{
         PropertiesMut, PropertiesRef, RegisterCtx, Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
     },
     imaging::Painter,
-    kurbo::{Affine, Axis, BezPath, Circle, Point, Shape, Size, Stroke},
-    layout::{LenReq, Length},
+    kurbo::{Affine, Axis, Point, Size, Stroke},
+    layout::{LenDef, LenReq, Length},
 };
 use xilem::peniko::{Color, ImageBrush};
 
 /// The ring's width and its distance inside the child's edge, in logical pixels.
 pub(super) const RING: f64 = 2.;
-/// A halftone bar's dot pitch, in logical pixels.
-const PITCH: f64 = 3.;
-
-/// A column of dots filling `bar`, one per pitch, as wide as the bar.
-fn halftone(bar: Rect) -> BezPath {
-    let mut dots = BezPath::new();
-    let radius = (bar.width().min(bar.height()) / 2.).min(PITCH / 2.) * 0.8;
-    let mut y = bar.y0 + PITCH / 2.;
-    while y < bar.y1 {
-        let mut x = bar.x0 + PITCH / 2.;
-        while x < bar.x1 + 0.5 {
-            dots.extend(Circle::new((x.min(bar.x1 - radius), y), radius).path_elements(0.1));
-            x += PITCH;
-        }
-        y += PITCH;
-    }
-    dots
-}
+/// A bar's thickness, in logical pixels.
+const BAR: f64 = 2.;
 
 /// The modal backdrop's dim and print screen over the whole child.
 fn backdrop(ctx: &PaintCtx<'_>, painter: &mut Painter<'_>, dim: Color, screen: &ImageBrush) {
@@ -48,12 +32,16 @@ fn backdrop(ctx: &PaintCtx<'_>, painter: &mut Painter<'_>, dim: Color, screen: &
 pub(crate) struct Decor {
     decoration: Decoration,
     child: WidgetPod<dyn Widget>,
+    /// How wide the child's words run, for an underscore under them: its natural width, at most
+    /// its box.
+    words: f64,
 }
 impl Decor {
     pub fn new(decoration: Decoration, child: NewWidget<impl Widget + ?Sized>) -> Self {
         Self {
             decoration,
             child: child.erased().to_pod(),
+            words: 0.,
         }
     }
     pub fn child_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, dyn Widget> {
@@ -61,6 +49,8 @@ impl Decor {
     }
     pub fn set_decoration(this: &mut WidgetMut<'_, Self>, decoration: Decoration) {
         this.widget.decoration = decoration;
+        // An underscore needs its words' width, which layout measures.
+        this.ctx.request_layout();
         this.ctx.request_paint_only();
         this.ctx.request_post_paint();
     }
@@ -94,6 +84,25 @@ impl Widget for Decor {
         ctx.run_layout(&mut self.child, size);
         ctx.place_child(&mut self.child, Point::ORIGIN);
         ctx.derive_baselines(&self.child);
+        self.words = if matches!(
+            self.decoration,
+            Decoration::Marks(Marks {
+                underscore: Some(_),
+                ..
+            })
+        ) {
+            ctx.compute_length(
+                &mut self.child,
+                LenDef::MaxContent,
+                size.into(),
+                Axis::Horizontal,
+                Some(Length::px(size.height)),
+            )
+            .get()
+            .min(size.width)
+        } else {
+            size.width
+        };
     }
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         if let Decoration::Grain(Some(grain)) = &self.decoration {
@@ -125,38 +134,22 @@ impl Widget for Decor {
         _: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        if let Decoration::Bar(Some(Bar {
-            color,
-            edge,
-            inset,
-            lift,
-            screen,
-            thickness,
-        })) = self.decoration
-        {
+        if let Decoration::Bar(Some(Bar { color, inset, lift })) = self.decoration {
             let border = ctx.border_box();
-            let bar = match edge {
-                Edge::Bottom => Rect::new(
-                    border.x0 + inset,
-                    border.y1 - lift - thickness,
-                    border.x1 - inset,
-                    border.y1 - lift,
-                ),
-                Edge::Leading => Rect::new(
-                    border.x0 + lift,
-                    border.y0 + inset,
-                    border.x0 + lift + thickness,
-                    border.y1 - inset,
-                ),
-            };
-            if screen {
-                painter.fill(halftone(bar), color).draw();
-            } else {
-                painter.fill(bar, color).draw();
-            }
+            let bar = Rect::new(
+                border.x0 + inset,
+                border.y1 - lift - BAR,
+                border.x1 - inset,
+                border.y1 - lift,
+            );
+            painter.fill(bar, color).draw();
         }
         if let Decoration::Marks(marks) = &self.decoration {
-            marks.paint(painter, ctx.border_box(), ctx.first_baseline());
+            marks.paint(
+                painter,
+                ctx.border_box(),
+                (ctx.first_baseline(), self.words),
+            );
         }
         if let Decoration::Ring(Some(color)) = self.decoration
             && ctx.has_focus_target()

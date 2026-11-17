@@ -1,5 +1,5 @@
 //! Window identity and workspace commands live outside the manuscript's reading measure.
-use crate::presentation::material::{Bar, Edge, bar};
+use crate::presentation::material::{Bar, bar};
 use crate::presentation::segments::{tab, tabs};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::tokens::{breakpoint, size};
@@ -90,7 +90,7 @@ fn identity_bar(
         // when that is short of its name; assistive technology reads the whole name.
         app.writer.as_ref().map(|writer| {
             flex_col((bar(
-                Some(Bar::solid(app.theme.palette.teal, Edge::Bottom, 0., 0.)),
+                Some(Bar::under(app.theme.palette.teal, 0., 0.)),
                 sized_box(
                     one_line(
                         writer.session.model().document().key().to_string(),

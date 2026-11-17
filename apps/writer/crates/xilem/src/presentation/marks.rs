@@ -27,6 +27,8 @@ pub(crate) const GLYPH: f64 = 16.;
 pub(crate) const DOT: f64 = 8.;
 /// How far out from a beat's leading edge the galley's unsaved dot is centred, at 100%.
 const DOT_REACH: f64 = 12.;
+/// A selected row's underscore at 100%.
+const UNDERSCORE: f64 = 2.;
 /// Clear paper every mark leaves between itself and the edge of the room it sits in.
 const CLEAR: f64 = 4.;
 
@@ -166,13 +168,16 @@ impl Dot {
 pub(crate) struct Marks {
     pub ticks: Option<(Color, Ticks)>,
     pub dot: Option<(Color, Dot)>,
+    /// A rule this thick under the child's words, as wide as they are: a selected row's
+    /// underscore, the same mark as a chosen segment's or tab's.
+    pub underscore: Option<(Color, f64)>,
 }
 impl Marks {
     /// The current beat's crop marks in the palette's crop ink, while `current`.
     pub fn crop(palette: &Palette<Color>, current: bool, ticks: Ticks) -> Self {
         Self {
             ticks: current.then_some((palette.crop, ticks)),
-            dot: None,
+            ..Self::default()
         }
     }
     /// These marks and the unsaved dot, while `unsaved`.
@@ -182,8 +187,9 @@ impl Marks {
             ..self
         }
     }
-    /// Paint the marks around `bounds`, whose first baseline lies `baseline` below its top.
-    pub fn paint(&self, painter: &mut Painter<'_>, bounds: Rect, baseline: f64) {
+    /// Paint the marks around `bounds`, whose first baseline lies `baseline` below its top and
+    /// whose words run `words` wide.
+    pub fn paint(&self, painter: &mut Painter<'_>, bounds: Rect, (baseline, words): (f64, f64)) {
         if let Some((color, ticks)) = self.ticks {
             for tick in ticks.rects(bounds) {
                 painter.fill(tick, color).draw();
@@ -192,12 +198,34 @@ impl Marks {
         if let Some((color, dot)) = self.dot {
             painter.fill(dot.circle(bounds, baseline), color).draw();
         }
+        if let Some((color, weight)) = self.underscore {
+            let rule = Rect::new(bounds.x0, bounds.y1, bounds.x0 + words, bounds.y1 + weight);
+            painter.fill(rule, color).draw();
+        }
     }
 }
 
 /// `child` with `marks` painted around it.
 pub(crate) fn marked<V>(marks: Marks, child: V) -> Decorated<V> {
     Decorated::new(Decoration::Marks(marks), child)
+}
+
+/// A list row's `words`, underscored in ink at `scale` while `selected`: a 2px rule as wide as
+/// the words, just under their line, inside the row. Unselected words keep the same box, so
+/// choosing a row moves nothing.
+pub(crate) fn underscored<V>(
+    palette: &Palette<Color>,
+    selected: bool,
+    scale: f64,
+    words: V,
+) -> Decorated<V> {
+    marked(
+        Marks {
+            underscore: selected.then_some((palette.ink, UNDERSCORE * scale)),
+            ..Marks::default()
+        },
+        words,
+    )
 }
 
 /// The slot a list row keeps for the unsaved dot at its trailing end, `height` tall, reserved on

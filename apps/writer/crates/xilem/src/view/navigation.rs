@@ -7,7 +7,7 @@ use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::map::Workspace;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::marks::dot_slot;
+use crate::presentation::marks::{dot_slot, underscored};
 use crate::presentation::row::{listed, named_row, row};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
@@ -219,12 +219,16 @@ fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .map(|(index, example)| {
                     let selected = example.name == current;
                     listed(
-                        &state.palette,
                         selected,
                         row(
                             selected,
-                            one_line(example.name, Type::Control, scale, state.palette.ink)
-                                .width(width.px()),
+                            underscored(
+                                &state.palette,
+                                selected,
+                                f64::from(scale),
+                                one_line(example.name, Type::Control, scale, state.palette.ink),
+                            )
+                            .width(width.px()),
                             move |state: &mut Writer| state.select_example(index),
                         )
                         .disabled(state.phase() != Phase::Writing),

@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::marks::underscored;
 use crate::presentation::print::section_heading;
 use crate::presentation::row::{listed, row};
 use crate::presentation::space;
@@ -23,23 +24,27 @@ fn commands(app: &App, width: f64) -> impl WidgetView<App> + use<> {
             let binding = app.preferences.config.writer.shortcuts.binding(command);
             let selected = app.settings.command == command;
             listed(
-                &app.theme.palette,
                 selected,
                 row(
                     selected,
-                    label(
-                        scale,
-                        format!(
-                            "{} · {}",
-                            command_label(command),
-                            if binding.is_empty() {
-                                "Disabled"
-                            } else {
-                                binding
-                            }
-                        ),
-                    )
-                    .typeset(Type::Control, scale),
+                    underscored(
+                        &app.theme.palette,
+                        selected,
+                        f64::from(scale),
+                        label(
+                            scale,
+                            format!(
+                                "{} · {}",
+                                command_label(command),
+                                if binding.is_empty() {
+                                    "Disabled"
+                                } else {
+                                    binding
+                                }
+                            ),
+                        )
+                        .typeset(Type::Control, scale),
+                    ),
                     move |app: &mut App| app.choose_shortcut(command),
                 ),
             )

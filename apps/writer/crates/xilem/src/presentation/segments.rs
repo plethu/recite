@@ -8,7 +8,7 @@
 //!   desk.
 use super::control_style::{ControlStyle, styled};
 use super::group::tab_list;
-use super::material::{Bar, Edge, bar};
+use super::material::{Bar, bar};
 use super::{Type, radio_button, space};
 use crate::app::keyboard::{DefaultFocus, FallbackFocus};
 use recite_writer_session::palette::{Palette, TONAL};
@@ -141,9 +141,8 @@ fn chip<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     select: F,
 ) -> impl WidgetView<S> + use<S, F> {
     bar(
-        selected.then_some(Bar::solid(
+        selected.then_some(Bar::under(
             palette.ink,
-            Edge::Bottom,
             12. * f64::from(scale),
             LIFT * f64::from(scale),
         )),
@@ -227,7 +226,7 @@ pub(crate) fn tab<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     select: F,
 ) -> impl WidgetView<S> + use<S, F> {
     bar(
-        selected.then_some(Bar::solid(palette.teal, Edge::Bottom, 0., 0.)),
+        selected.then_some(Bar::under(palette.teal, 0., 0.)),
         styled(
             ControlStyle::Tab,
             button(
