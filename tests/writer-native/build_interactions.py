@@ -54,7 +54,7 @@ def run(api, bus, registry, binary, output):
                 first.unlink()
                 second.unlink()
                 window.act("Build options")
-                window.wait(lambda: window.find("Build saved"), "build options slip")
+                window.wait(lambda: window.find("Build saved files"), "build options slip")
                 target = window.find_action("opening")
                 assert window.call(target, "Accessible", "GetRole")[0] == int(
                     api.Atspi.Role.RADIO_BUTTON
@@ -65,7 +65,7 @@ def run(api, bus, registry, binary, output):
                     lambda: window.call(target, "Accessible", "GetState")[0][0] & checked,
                     "selected build radio",
                 )
-                window.act("Build saved")
+                window.act("Build saved files")
                 window.wait(first.is_file, "selected output published")
                 window.wait(lambda: not window.find("Cancel build"), "selected build finished")
                 assert not second.exists()

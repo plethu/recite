@@ -86,7 +86,7 @@ pub(super) fn build_actions(
         .disabled(blocked),
         print::primary_action(
             writer.ui_scale(),
-            "Build saved",
+            "Build saved files",
             &writer.palette,
             blocked,
             Writer::build_saved,

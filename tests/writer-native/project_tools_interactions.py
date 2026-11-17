@@ -94,7 +94,7 @@ def run(api, bus, registry, binary, output):
                 command(window, "Build scenes")
                 window.wait(lambda: window.find("Build options"), "build result slip")
                 window.act("Build options")
-                window.wait(lambda: window.find("Build saved"), "build options slip")
+                window.wait(lambda: window.find("Build saved files"), "build options slip")
                 window.wait(
                     lambda: window.find_text(
                         "recite.project.toml · 1 source file · 1 output target"
@@ -102,7 +102,7 @@ def run(api, bus, registry, binary, output):
                     "singular saved build input and target summary",
                 )
                 capture(output, "-build")
-                window.act("Build saved")
+                window.act("Build saved files")
                 asset = project / "build/scene.recitec"
                 window.wait(lambda: asset.is_file(), "saved-input output", timeout=30)
                 window.wait(
@@ -141,7 +141,7 @@ def run(api, bus, registry, binary, output):
                 source.write_text(
                     source.read_text().replace("The last tram waits.x", "Fresh build inputs.")
                 )
-                window.act("Build saved")
+                window.act("Build saved files")
 
                 def cancel_or_complete():
                     cancel = window.find_action("Cancel build")

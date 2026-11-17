@@ -1,18 +1,20 @@
 //! A build's result as a bar seated on the status line that also reports it, across the window:
-//! the outcome, Build options as a quiet disclosure (or a failure's way to its report page), the
-//! build as the bar's one Primary, and a dismiss icon. The options open inside the bar: what a
-//! build reads, the outputs to build and Save all and build. It does not take focus; the writer
-//! keeps writing.
+//! the outcome on one line, Build options as a quiet disclosure (or a failure's way to its report
+//! page), the build as the bar's one Primary, and a dismiss icon; in a narrow window the actions
+//! take a second row. The options open inside the bar: what a build reads, the outputs to build
+//! and Save all and build. It does not take focus; the writer keeps writing.
 use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::sheet_text::one_line;
 use crate::presentation::tokens::size;
 use crate::presentation::{Icon, Type, disclosure, group::named, print, space};
+use recite_writer_app::COMPACT_WINDOW;
 use xilem::{
     WidgetView,
     core::one_of::Either,
     masonry::{layout::AsUnit, parley::style::FontWeight, properties::LineBreaking},
     style::{Padding, Style},
-    view::{CrossAxisAlignment, FlexExt, button, flex_col, flex_row, sized_box},
+    view::{CrossAxisAlignment, FlexExt, FlexSpacer, button, flex_col, flex_row, sized_box},
 };
 
 pub(crate) fn result(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -24,21 +26,25 @@ pub(crate) fn result(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>>
     let palette = &writer.palette;
     let open = result.succeeded && writer.workspaces.build_options;
     let (busy, empty) = state(writer);
+    // The message keeps one line, ending in an ellipsis where it would not fit; the status
+    // sentence and the bar's description carry it whole.
+    let message = result.detail.as_ref().map_or_else(
+        || result.headline.clone(),
+        |detail| format!("{} · {detail}", result.headline),
+    );
     let outcome = flex_row((
-        Type::Control
-            .label(scale, result.headline)
-            .weight(FontWeight::SEMI_BOLD)
-            .prop(LineBreaking::Clip),
-        result.detail.map(|detail| {
-            print::meta(scale, detail)
-                .color(palette.muted)
-                .prop(LineBreaking::Clip)
-                .flex(1.)
-        }),
+        one_line(result.headline.clone(), Type::Control, scale, palette.ink)
+            .weight(FontWeight::SEMI_BOLD),
+        result
+            .detail
+            .clone()
+            .map(|detail| one_line(detail, Type::Meta, scale, palette.muted).flex(1.)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(space::SIBLINGS.px())
     .flex(1.);
+    // Where the window is narrow for the UI scale, the actions take a second row.
+    let narrow = writer.viewport.width < COMPACT_WINDOW * f64::from(scale);
     let way = if result.succeeded {
         Either::A(styled(
             ControlStyle::Action,
@@ -61,41 +67,52 @@ pub(crate) fn result(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>>
             Writer::open_build_page,
         ))
     };
-    Some(named(
-        "Build result",
-        sized_box(
-            flex_col((
-                flex_row((
-                    outcome,
-                    way,
-                    print::primary_action(
-                        scale,
-                        "Build saved",
-                        palette,
-                        super::view::build_blocked(writer, busy, empty),
-                        Writer::build_saved,
-                    ),
-                    print::icon_action(
-                        scale,
-                        "Dismiss build result",
-                        Icon::Close,
-                        palette,
-                        false,
-                        Writer::dismiss_build_result,
-                    ),
-                ))
+    let build = print::primary_action(
+        scale,
+        "Build saved files",
+        palette,
+        super::view::build_blocked(writer, busy, empty),
+        Writer::build_saved,
+    );
+    let dismiss = print::icon_action(
+        scale,
+        "Dismiss build result",
+        Icon::Close,
+        palette,
+        false,
+        Writer::dismiss_build_result,
+    );
+    let rows = if narrow {
+        Either::A(flex_col((
+            flex_row((outcome, dismiss))
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .gap(space::SIBLINGS.px()),
-                open.then(|| options(writer, busy, empty)),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(space::SIBLINGS.px()),
+            flex_row((FlexSpacer::Flex(1.), way, build))
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .gap(space::SIBLINGS.px()),
+        )))
+    } else {
+        Either::B(
+            flex_row((outcome, way, build, dismiss))
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .gap(space::SIBLINGS.px()),
         )
-        .padding(Padding::from_vh(space::SIBLINGS.px(), space::KINDS.px()))
-        .background_color(palette.floating)
-        .border_color(palette.rule)
-        .border_width(1.px()),
-    ))
+    };
+    Some(
+        named(
+            "Build result",
+            sized_box(
+                flex_col((rows, open.then(|| options(writer, busy, empty))))
+                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                    .gap(space::SIBLINGS.px()),
+            )
+            .padding(Padding::from_vh(space::SIBLINGS.px(), space::KINDS.px()))
+            .background_color(palette.floating)
+            .border_color(palette.rule)
+            .border_width(1.px()),
+        )
+        .description(message),
+    )
 }
 
 /// Whether the project's builds are busy, and whether it has no outputs.

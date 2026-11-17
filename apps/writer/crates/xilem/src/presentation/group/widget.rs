@@ -10,6 +10,8 @@ use xilem::masonry::{
 };
 pub(crate) struct Group {
     name: ArcStr,
+    /// What the group says beyond its name, such as a message shown abbreviated inside it.
+    description: ArcStr,
     role: Role,
     child: WidgetPod<dyn Widget>,
 }
@@ -17,15 +19,24 @@ impl Group {
     pub fn new(name: ArcStr, role: Role, child: NewWidget<impl Widget + ?Sized>) -> Self {
         Self {
             name,
+            description: ArcStr::from(""),
             role,
             child: child.erased().to_pod(),
         }
+    }
+    pub fn with_description(mut self, description: ArcStr) -> Self {
+        self.description = description;
+        self
     }
     pub fn child_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, dyn Widget> {
         this.ctx.get_mut(&mut this.widget.child)
     }
     pub fn set_name(this: &mut WidgetMut<'_, Self>, name: ArcStr) {
         this.widget.name = name;
+        this.ctx.request_accessibility_update();
+    }
+    pub fn set_description(this: &mut WidgetMut<'_, Self>, description: ArcStr) {
+        this.widget.description = description;
         this.ctx.request_accessibility_update();
     }
     pub fn set_role(this: &mut WidgetMut<'_, Self>, role: Role) {
@@ -59,6 +70,9 @@ impl Widget for Group {
     }
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
         node.set_label(self.name.as_ref());
+        if !self.description.is_empty() {
+            node.set_description(self.description.as_ref());
+        }
         if self.role == Role::Dialog {
             node.set_modal();
         }

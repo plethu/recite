@@ -200,7 +200,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
     mounted.activate("Build options");
     mounted.settle();
     assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Write);
-    mounted.find("Build saved");
+    mounted.find("Build saved files");
     mounted
         .state
         .writer
