@@ -4,6 +4,8 @@
 //! keeps one line and the actions follow it, or take a second line inside the slip when the row is
 //! too narrow for both; a banner never becomes a page. The edge and the offset come out of the
 //! padding, so a banner is as tall as its words and padding were on inset paper.
+#[cfg(test)]
+mod tests;
 use super::material::{Decorated, Decoration};
 use super::{print, space};
 use recite_writer_session::palette::Palette;
