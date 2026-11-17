@@ -173,6 +173,11 @@ fn source_updates_are_rows_that_accept_or_keep_and_open_their_diff() {
         let label = node.label().or_else(|| node.value()).unwrap_or_default();
         keeps += usize::from(label.starts_with("Keep · "));
         accepts += usize::from(label.starts_with("Accept · "));
+        if label.starts_with("Keep · ") || label.starts_with("Accept · ") {
+            // A compact pair centred in its row, never stretched to the row's height.
+            let height = node.bounding_box().map_or(0., |bounds| bounds.height());
+            assert!((24. ..=34.).contains(&height), "{label}: {height}");
+        }
         diffs += usize::from(node.role() == Role::Label && label == "Previous source");
         if node.role() == Role::Button || label.contains(" · ") {
             names.insert(label.to_string());

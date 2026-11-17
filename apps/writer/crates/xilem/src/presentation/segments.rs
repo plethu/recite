@@ -187,17 +187,14 @@ pub(crate) fn segments_on_paper<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
 /// How far a track on floating paper shows around its chips.
 const RIM: f64 = 2.;
 
-/// A quiet pair for a long list of choices, such as each source update's Accept or Keep: no
-/// track, so only the chosen side shows its raised chip and ink bar, and rows of pairs stay light.
-pub(crate) fn segments_quiet<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
+/// A pair repeated down a long list, such as each source update's Accept or Keep: the shared
+/// tonal well of [`segments_on_paper`] at its own height, centred in a taller row, so the label
+/// sits in the chip, the chosen side's ink bar stays under it and both sides read as choices.
+pub(crate) fn segments_compact<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
+    palette: &Palette<Color>,
     choices: Seq,
 ) -> impl WidgetView<S> + use<S, Seq> {
-    sized_box(radio_group(
-        flex_row(choices)
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(0.px()),
-    ))
-    .width(Dim::MaxContent)
+    sized_box(segments_on_paper(palette, choices)).height(Dim::MaxContent)
 }
 
 fn track<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
