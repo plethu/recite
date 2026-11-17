@@ -113,7 +113,9 @@ fn draw_edges(state: &Writer, scene: &Scene, recording: &mut record::Scene) {
         } else {
             1.5
         };
-        let stroke = Stroke::new(weight / f64::from(scene.camera.zoom))
+        // Ink weights are screen pixels at the interface's scale.
+        let relative = f64::from(scene.camera.relative());
+        let stroke = Stroke::new(weight / relative)
             .with_caps(kurbo::Cap::Round)
             .with_join(kurbo::Join::Round);
         let dashes: &[f64] = match (link.conditional, link.returning) {
@@ -122,12 +124,9 @@ fn draw_edges(state: &Writer, scene: &Scene, recording: &mut record::Scene) {
             (false, true) => &[4., 3.],
             (false, false) => &[],
         };
-        let route_stroke = stroke.clone().with_dashes(
-            0.,
-            dashes
-                .iter()
-                .map(|length| length / f64::from(scene.camera.zoom)),
-        );
+        let route_stroke = stroke
+            .clone()
+            .with_dashes(0., dashes.iter().map(|length| length / relative));
         if let Some(curve) = provisional_edge(scene, index) {
             painter
                 .stroke(curve, &stroke, color)

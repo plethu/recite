@@ -139,8 +139,11 @@ impl Writer {
     }
 
     pub fn configure(&mut self, config: recite_config::UserConfig) {
-        if self.ui_scale() != presentation::scale(&config.writer) {
+        let scale = presentation::scale(&config.writer);
+        if self.ui_scale() != scale {
             self.map.cancel_gestures();
+            // The map zooms with the interface, as the sheet does.
+            self.map.rescale(scale);
         }
         self.palette = presentation::palette(&config.writer);
         self.config = config;

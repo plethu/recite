@@ -40,6 +40,7 @@ fn continuous_zoom_keeps_the_point_under_the_pointer_stationary() {
         y: 80.,
         zoom: 0.7,
         framing: Framing::Free,
+        scale: 1.,
     };
     let anchor = (310., 210.);
     let world = (
@@ -51,4 +52,28 @@ fn continuous_zoom_keeps_the_point_under_the_pointer_stationary() {
         assert!((camera.x + world.0 * camera.zoom - anchor.0).abs() < 0.001);
         assert!((camera.y + world.1 * camera.zoom - anchor.1).abs() < 0.001);
     }
+}
+
+#[test]
+fn the_ui_scale_is_the_zoom_s_100_percent() {
+    let viewport = (1200., 700.);
+    let entry = (440., 12., 320.);
+    let mut camera = Camera::default();
+    camera.rescale(2.);
+    camera.frame_entry(viewport, entry);
+    // At 200% the entry card is twice as wide on screen, centred, and reads as 100%.
+    assert_eq!(camera.zoom, 2.);
+    assert_eq!(camera.relative(), 1.);
+    assert_eq!(
+        camera.x + (entry.0 + entry.2 / 2.) * camera.zoom,
+        viewport.0 / 2.
+    );
+    // Fit never enlarges past 100% of the interface, and pointer zoom stops at 200% of it.
+    camera.fit(viewport, (0., 0., 10., 10.));
+    assert_eq!(camera.relative(), 1.);
+    camera.zoom_at(100., (0., 0.));
+    assert_eq!(camera.relative(), 2.);
+    // Changing the interface keeps the relative zoom and the world point at the origin.
+    camera.rescale(1.);
+    assert_eq!((camera.zoom, camera.relative()), (2., 2.));
 }

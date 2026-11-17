@@ -123,7 +123,11 @@ fn zoom(state: &Writer) -> impl WidgetView<Writer> + use<> {
             scale,
             format!(
                 "{:.0}%",
-                state.map.scene(state).map_or(1., |scene| scene.camera.zoom) * 100.
+                state
+                    .map
+                    .scene(state)
+                    .map_or(1., |scene| scene.camera.relative())
+                    * 100.
             ),
             false,
             Writer::reset_map_zoom,

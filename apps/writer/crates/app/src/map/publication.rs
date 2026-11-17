@@ -50,6 +50,8 @@ impl Writer {
             self.reading.selected.clone(),
             workspace,
         );
+        // A new scene's camera starts at the interface's 100%; rescaling an existing one is a no-op.
+        self.map.rescale(self.ui_scale());
         self.status = "Map ready".into();
         self.remember_location();
         Ok(())

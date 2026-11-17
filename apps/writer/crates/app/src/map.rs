@@ -153,6 +153,13 @@ impl MapSession {
             }
         }
     }
+    /// Zoom every scene's camera with the interface: the same relative zoom at `scale`.
+    pub(crate) fn rescale(&mut self, scale: f32) {
+        for scene in self.scenes.values_mut() {
+            scene.camera.rescale(scale);
+            scene.frame();
+        }
+    }
     pub fn scene(&self, writer: &Writer) -> Option<&Scene> {
         self.scenes.get(writer.session.model().document().key())
     }

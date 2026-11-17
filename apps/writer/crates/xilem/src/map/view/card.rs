@@ -43,7 +43,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         || !scene
             .projection
             .is_current(state.session.model().document());
-    let zoom = scene.camera.zoom;
+    let zoom = scene.camera.relative();
     let width = f64::from(scene.node(index).width);
     let target = Target {
         beat: id.clone(),
@@ -73,10 +73,9 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     // F2 or a double-click renames the beat in place: a face whose title is the field lies over
     // the card, which keeps its name, state and focus beneath, and over its grip.
     let renaming = rename::editing(state, &block.id, Place::Card).map(|inline| {
-        let field = rename::field(
+        let field = rename::card_field(
             state,
             inline,
-            Type::Control,
             TITLE.max(TITLE_FLOOR / zoom) / Type::Control.metrics().0,
         );
         let field = sized_box(field).width((width - 2. * space::TEXT).px());
@@ -205,7 +204,7 @@ fn contents<T: WidgetView<Writer>>(
     title: T,
 ) -> impl WidgetView<Writer> + use<T> {
     let synopsis = &scene.projection.synopsis[index];
-    let zoom = scene.camera.zoom;
+    let zoom = scene.camera.relative();
     let width = f64::from(scene.node(index).width);
     flex_col((
         title,
