@@ -11,10 +11,15 @@ use xilem::{
     masonry::properties::Dimensions,
 };
 
-pub(crate) struct Overhung<V>(V, f64);
+pub(crate) struct Overhung<V>(V, f64, f64);
 /// `child`, `reach` taller than its row counts it: half the reach above and half below.
 pub(crate) fn overhang<V>(child: V, reach: f64) -> Overhung<V> {
-    Overhung(child, reach)
+    Overhung(child, reach, 0.5)
+}
+/// `child`, `reach` taller than its row counts it, all of the reach below, such as a caption
+/// that hangs from a label into the spacing under its row.
+pub(crate) fn hang_below<V>(child: V, reach: f64) -> Overhung<V> {
+    Overhung(child, reach, 0.)
 }
 impl<V> ViewMarker for Overhung<V> {}
 impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Overhung<V> {
@@ -23,7 +28,10 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Overhung<V> {
     fn build(&self, ctx: &mut ViewCtx, state: &mut S) -> (Self::Element, Self::ViewState) {
         let (child, local) = ctx.with_id(ViewId::new(0), |ctx| self.0.build(ctx, state));
         (
-            Pod::new_with_props(Overhang::new(child.new_widget, self.1), Dimensions::AUTO),
+            Pod::new_with_props(
+                Overhang::new(child.new_widget, self.1, self.2),
+                Dimensions::AUTO,
+            ),
             local,
         )
     }
@@ -44,8 +52,8 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Overhung<V> {
                 state,
             );
         });
-        if self.1 != previous.1 {
-            Overhang::set_reach(&mut pod, self.1);
+        if (self.1, self.2) != (previous.1, previous.2) {
+            Overhang::set_reach(&mut pod, self.1, self.2);
         }
     }
     fn teardown(

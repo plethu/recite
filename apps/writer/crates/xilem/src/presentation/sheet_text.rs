@@ -3,6 +3,7 @@
 //! order.
 use super::ShapedText;
 use std::num::NonZeroUsize;
+use xilem::masonry::TextAlign;
 use xilem::masonry::parley::{LineHeight, style::FontWeight};
 use xilem::{
     Pod, ViewCtx,
@@ -23,6 +24,7 @@ pub(crate) struct SheetText {
     line_height: LineHeight,
     /// One line ending in an ellipsis instead of wrapping; the full text is still read aloud.
     single: bool,
+    align: TextAlign,
 }
 /// `text` in the reading face at `size`, in `color`, with the manuscript's leading.
 pub(crate) fn sheet_text(text: impl Into<ArcStr>, size: f32, color: Color) -> SheetText {
@@ -34,6 +36,7 @@ pub(crate) fn sheet_text(text: impl Into<ArcStr>, size: f32, color: Color) -> Sh
         weight: FontWeight::NORMAL,
         line_height: super::Sheet::LEADING,
         single: false,
+        align: TextAlign::Start,
     }
 }
 /// `text` set in `role` at `scale` on one line, abbreviated with an ellipsis where it would not
@@ -52,6 +55,7 @@ pub(crate) fn one_line(
         weight: role.weight(),
         line_height: LineHeight::Absolute(role.metrics().1 * scale),
         single: true,
+        align: TextAlign::Start,
     }
 }
 impl SheetText {
@@ -64,6 +68,12 @@ impl SheetText {
     pub fn manuscript(mut self, size: f32) -> Self {
         self.size = size;
         self.line_height = super::Sheet::LEADING;
+        self
+    }
+    /// Set against the widget's right edge, such as a caption in the margin column under its
+    /// right-aligned label.
+    pub fn end(mut self) -> Self {
+        self.align = TextAlign::End;
         self
     }
     /// Set in `families` instead of the role's own, such as an id in Plex Mono at Body size.
@@ -82,7 +92,8 @@ impl<S: 'static> View<S, (), ViewCtx> for SheetText {
             .with_style(StyleProperty::FontSize(self.size))
             .with_style(StyleProperty::FontWeight(self.weight))
             .with_style(StyleProperty::LineHeight(self.line_height))
-            .with_max_lines(self.single.then_some(NonZeroUsize::MIN));
+            .with_max_lines(self.single.then_some(NonZeroUsize::MIN))
+            .with_align(self.align);
         (
             Pod::new_with_props(
                 text,
@@ -112,6 +123,9 @@ impl<S: 'static> View<S, (), ViewCtx> for SheetText {
         }
         if self.weight != previous.weight {
             ShapedText::insert_style(&mut text, StyleProperty::FontWeight(self.weight));
+        }
+        if self.align != previous.align {
+            ShapedText::set_align(&mut text, self.align);
         }
         if self.line_height != previous.line_height {
             ShapedText::insert_style(&mut text, StyleProperty::LineHeight(self.line_height));

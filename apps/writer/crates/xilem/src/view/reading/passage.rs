@@ -5,9 +5,7 @@ use crate::presentation::grid::Grid;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER};
 use crate::presentation::marks::{Mark, marked};
 use crate::presentation::space;
-use crate::presentation::{
-    Page, Sheet, disclosure_width, overhang, print, route_name, route_toggle,
-};
+use crate::presentation::{Page, Sheet, disclosure_width, overhang, route_name, route_toggle};
 use crate::presentation::{control_inset, label_inset};
 use crate::reading::PassageNumber;
 use crate::view::workspace::Layout;
@@ -24,11 +22,11 @@ mod tests;
 pub(super) use choice::route_choice;
 pub(super) use continuation::{RouteFace, absorbed, continuation_row, ends, joined};
 pub(super) use metadata::route_to;
-use metadata::{CaptionPlacement, metadata, route};
+use metadata::{route, routes, with_id};
 
-/// Space between a reply and its overhanging source label.
+/// Space a row keeps under its text before the row gap.
 const CAPTION_CLEARANCE: f64 = 4.;
-/// The spacing between reply rows: the caption's clearance and the text rhythm.
+/// The spacing between reply rows: the row's clearance and the text rhythm.
 const ROUTE_REACH: f64 = CAPTION_CLEARANCE + space::TEXT;
 
 /// The grid every manuscript row is set on.
@@ -155,84 +153,78 @@ pub(super) fn row(
             PassageKind::Dialogue { .. } => false,
         };
     flex_col((
-        flex_col((
-            marked(
-                &state.palette,
-                passage_mark(state, active),
-                flex_row((
-                    // Options, not one Either, so each keeps its own baselines in the row.
-                    speaking.then(|| choice::speaker(state, &grid, passage)),
-                    (!speaking && (wide || !label.is_empty() || numbered.is_some()))
-                        .then(|| margin(state, &grid, label, numbered)),
-                    super::super::manuscript::passage_editor(state, passage, number, measure, size),
-                    column
-                        .then(|| route(state, passage, active, destination))
-                        .flatten()
-                        .map(|route| hang_route(state, route)),
-                    column
-                        .then(|| metadata::choice(state, passage, active, destination))
-                        .flatten()
-                        .map(|choice| hang_route(state, choice)),
-                    (grid.destination > 0.)
-                        .then(|| continuation.clone())
-                        .flatten()
-                        .map(|(owner, target)| {
-                            // Beside a speaker control the row's gutter is narrower by its inset.
-                            sized_box(hang_route(
-                                state,
-                                route_choice(state, owner, Some(&target), grid.destination),
-                            ))
-                            .padding(Padding::left(
-                                if speaking { label_inset() } else { 0. }.px(),
-                            ))
-                        }),
-                ))
-                .direction(if wide {
-                    Axis::Horizontal
-                } else {
-                    Axis::Vertical
-                })
-                .cross_axis_alignment(if wide {
-                    CrossAxisAlignment::FirstBaseline
-                } else {
-                    CrossAxisAlignment::Start
-                })
-                .gap(
-                    if wide && speaking {
-                        GUTTER - label_inset()
-                    } else if wide {
-                        GUTTER
-                    } else {
-                        space::UNIT
-                    }
-                    .px(),
-                ),
-            ),
-            // Every row keeps a line for its id below it, shown while the row is written, so the
-            // next row never paints over the id and choosing or typing never moves a row.
-            (!stacked_reply).then(|| {
-                metadata(
-                    state,
-                    passage,
-                    active,
-                    CaptionPlacement::Under {
-                        margin: grid.text(),
-                        route: column,
-                    },
-                )
-            }),
-        ))
-        .gap(0.px()),
-        stacked_reply.then(|| {
-            sized_box(metadata(
-                state,
-                passage,
-                active,
-                CaptionPlacement::BesideDestination {
-                    width: width - grid.text(),
-                },
+        sized_box(marked(
+            &state.palette,
+            passage_mark(state, active),
+            flex_row((
+                // Options, not one Either, so each keeps its own baselines in the row.
+                speaking.then(|| {
+                    with_id(
+                        state,
+                        &grid,
+                        (passage, active),
+                        choice::speaker(state, &grid, passage),
+                    )
+                }),
+                (!speaking && (wide || !label.is_empty() || numbered.is_some())).then(|| {
+                    with_id(
+                        state,
+                        &grid,
+                        (passage, active),
+                        margin(state, &grid, label, numbered),
+                    )
+                }),
+                super::super::manuscript::passage_editor(state, passage, number, measure, size),
+                column
+                    .then(|| route(state, passage, active, destination))
+                    .flatten()
+                    .map(|route| hang_route(state, route)),
+                column
+                    .then(|| metadata::choice(state, passage, active, destination))
+                    .flatten()
+                    .map(|choice| hang_route(state, choice)),
+                (grid.destination > 0.)
+                    .then(|| continuation.clone())
+                    .flatten()
+                    .map(|(owner, target)| {
+                        // Beside a speaker control the row's gutter is narrower by its inset.
+                        sized_box(hang_route(
+                            state,
+                            route_choice(state, owner, Some(&target), grid.destination),
+                        ))
+                        .padding(Padding::left(
+                            if speaking { label_inset() } else { 0. }.px(),
+                        ))
+                    }),
             ))
-            .padding(Padding::left(grid.text().px()))
+            .direction(if wide {
+                Axis::Horizontal
+            } else {
+                Axis::Vertical
+            })
+            .cross_axis_alignment(if wide {
+                CrossAxisAlignment::FirstBaseline
+            } else {
+                CrossAxisAlignment::Start
+            })
+            .gap(
+                if wide && speaking {
+                    GUTTER - label_inset()
+                } else if wide {
+                    GUTTER
+                } else {
+                    space::UNIT
+                }
+                .px(),
+            ),
+        ))
+        // The row's clearance under its text, which a stacked reply's route takes instead.
+        .padding(Padding::bottom(
+            if stacked_reply { 0. } else { CAPTION_CLEARANCE }.px(),
+        )),
+        stacked_reply.then(|| {
+            sized_box(routes(state, passage, active, width - grid.text()))
+                .padding(Padding::left(grid.text().px()))
         }),
         // Where destinations wrap, the continuation sits under the line, where its words start.
         (grid.destination <= 0.)

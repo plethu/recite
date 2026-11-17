@@ -46,6 +46,7 @@ pub(crate) struct ShapedText {
     styles: StyleSet,
     ranged: Vec<(Range<usize>, StyleProperty)>,
     max_lines: Option<NonZeroUsize>,
+    align: TextAlign,
     shaped: Vec<Shaped>,
     active: usize,
     clock: u64,
@@ -63,6 +64,7 @@ impl ShapedText {
             styles,
             ranged: Vec::new(),
             max_lines: None,
+            align: TextAlign::Start,
             shaped: Vec::new(),
             active: 0,
             clock: 0,
@@ -88,6 +90,16 @@ impl ShapedText {
     pub(crate) fn with_max_lines(mut self, limit: Option<NonZeroUsize>) -> Self {
         self.max_lines = limit;
         self
+    }
+    /// Set the lines against `align`'s edge of the widget, such as a caption against a column's
+    /// right edge.
+    pub(crate) fn with_align(mut self, align: TextAlign) -> Self {
+        self.align = align;
+        self
+    }
+    pub(crate) fn set_align(this: &mut WidgetMut<'_, Self>, align: TextAlign) {
+        this.widget.align = align;
+        this.ctx.request_layout();
     }
     /// The text currently drawn, which ends in an ellipsis when abbreviated.
     pub(crate) fn displayed_text(&self) -> &str {
@@ -280,13 +292,11 @@ impl Widget for ShapedText {
         self.active = self.shape(fonts, layouts, max_advance);
         let shaped = &mut self.shaped[self.active];
         let options = TextAlignOptions::default();
-        shaped
-            .layout
-            .align(Some(inline_space), TextAlign::Start, options);
+        shaped.layout.align(Some(inline_space), self.align, options);
         if let Some(abbreviation) = &mut shaped.abbreviation {
             abbreviation
                 .layout
-                .align(Some(inline_space), TextAlign::Start, options);
+                .align(Some(inline_space), self.align, options);
         }
         let display = shaped.display();
         match (

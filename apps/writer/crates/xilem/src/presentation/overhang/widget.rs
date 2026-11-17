@@ -9,24 +9,27 @@ use xilem::masonry::{
     layout::{LenReq, Length},
 };
 
-/// Lays its child out `reach` taller than the height it reports, the extra split evenly above
-/// and below, so the child's target overlaps its neighbours' spacing without adding to it.
+/// Lays its child out `reach` taller than the height it reports, the extra split above and below
+/// by `above`'s share, so the child overlaps its neighbours' spacing without adding to it.
 pub(crate) struct Overhang {
     child: WidgetPod<dyn Widget>,
     reach: f64,
+    above: f64,
 }
 impl Overhang {
-    pub fn new(child: NewWidget<impl Widget + ?Sized>, reach: f64) -> Self {
+    pub fn new(child: NewWidget<impl Widget + ?Sized>, reach: f64, above: f64) -> Self {
         Self {
             child: child.erased().to_pod(),
             reach: reach.max(0.),
+            above: above.clamp(0., 1.),
         }
     }
     pub fn child_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, dyn Widget> {
         this.ctx.get_mut(&mut this.widget.child)
     }
-    pub fn set_reach(this: &mut WidgetMut<'_, Self>, reach: f64) {
+    pub fn set_reach(this: &mut WidgetMut<'_, Self>, reach: f64, above: f64) {
         this.widget.reach = reach.max(0.);
+        this.widget.above = above.clamp(0., 1.);
         this.ctx.request_layout();
     }
 }
@@ -54,7 +57,7 @@ impl Widget for Overhang {
             &mut self.child,
             Size::new(size.width, size.height + self.reach),
         );
-        ctx.place_child(&mut self.child, Point::new(0., -self.reach / 2.));
+        ctx.place_child(&mut self.child, Point::new(0., -self.reach * self.above));
         ctx.derive_baselines(&self.child);
     }
     fn paint(&mut self, _: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, _: &mut Painter<'_>) {}

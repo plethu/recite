@@ -1,96 +1,60 @@
-//! What sits beside or under a reply's text: its destination button and, while it is edited, its
-//! stable id as a source label.
+//! What sits beside or under a reply's text, its destination button, and the margin's source label:
+//! the stable id of the row being written.
 use super::*;
-use crate::presentation::tokens::size;
-use xilem::masonry::parley::LineHeight;
+use crate::presentation::sheet_text::one_line;
+use crate::presentation::{Type, hang_below};
 
-/// How far a line's id drops below its clearance: past the field's 2px focus outline and 3px more.
-const OUTLINE_CLEARANCE: f64 = size::FOCUS_OUTLINE + 2. + 3. - CAPTION_CLEARANCE;
-/// The id's leading over its size: [`Type::Id`]'s 16px line for 12px text.
-const ID_LEADING: f64 = 16. / 12.;
-/// The space an id keeps below itself before the next row starts.
-const ID_BELOW: f64 = 8.;
+/// Space between a margin label and the id under it.
+const ID_GAP: f64 = 2.;
 
-/// How far an id drops below its row's clearance: past the field's focus outline, and past a
-/// destination's target where one hangs into the gap below a reply.
-fn id_drop(route: bool) -> f64 {
-    if route {
-        (ROUTE_REACH - CAPTION_CLEARANCE).max(OUTLINE_CLEARANCE)
-    } else {
-        OUTLINE_CLEARANCE
-    }
+/// The margin column's `content` with, while the row is written, its stable id under it: set like
+/// the reply numbers, right-aligned against the gutter and ending in an ellipsis where the column
+/// is too narrow, its whole id still read aloud. Beside the measure the id hangs into the spacing
+/// under the row, so choosing a row never moves another; above it, it takes its own line.
+pub(super) fn with_id<V: WidgetView<Writer>>(
+    state: &Writer,
+    grid: &Grid,
+    (passage, active): (&Passage, bool),
+    content: V,
+) -> impl WidgetView<Writer> + use<V> {
+    let wide = grid.margin > 0.;
+    let size = Sheet::Number.size(Page::of(state));
+    let (id_size, id_line) = Type::Id.metrics();
+    let line = f64::from(size * id_line / id_size);
+    let id = active.then(|| {
+        let id = one_line(
+            format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id),
+            Type::Id,
+            size / id_size,
+            state.palette.muted,
+        );
+        // As wide as the column, so its right edge meets the label's, the speaker control's
+        // padding hanging past both into the gutter.
+        if wide { id.end() } else { id }.width(if wide { grid.margin } else { grid.measure }.px())
+    });
+    let reach = if wide && active { ID_GAP + line } else { 0. };
+    hang_below(
+        flex_col((content, id))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(ID_GAP.px()),
+        reach,
+    )
 }
 
-/// The height an id under its row takes: its clearance, its line at the floored size and the space
-/// below it, so the next row starts below the id rather than painting over it.
-fn id_row_height(caption_size: f32, route: bool) -> f64 {
-    CAPTION_CLEARANCE + id_drop(route) + f64::from(caption_size) * ID_LEADING + ID_BELOW
-}
-
-/// Source labels either reserve their own line or share a stacked destination's target height.
-pub(super) enum CaptionPlacement {
-    Under { margin: f64, route: bool },
-    BesideDestination { width: f64 },
-}
-
-pub(super) fn metadata(
+/// A stacked reply's route, or the destination control while it is written, across `width`.
+pub(super) fn routes(
     state: &Writer,
     passage: &Passage,
     active: bool,
-    placement: CaptionPlacement,
+    width: f64,
 ) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    let caption_size = Sheet::Number.size(Page::of(state));
-    // The line being written keeps its id while focus is elsewhere, such as in a heading's rename.
-    let metadata = if active {
-        format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id)
-    } else {
-        String::new()
-    };
-    match placement {
-        CaptionPlacement::BesideDestination { width } => {
-            let caption_width = width * 0.25;
-            let route_width = (width - caption_width - 8.).max(80.);
-            Either::A(
-                // Options, not one Either, so the route keeps its own baselines in the row.
-                flex_row((
-                    route(state, passage, active, route_width),
-                    choice(state, passage, active, route_width),
-                    print::id(scale, metadata)
-                        .text_size(caption_size)
-                        .prop(LineBreaking::Clip)
-                        .color(state.palette.muted)
-                        .width(caption_width.px()),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .gap(space::SIBLINGS.px())
-                .width(width.px()),
-            )
-        }
-        CaptionPlacement::Under { margin, route } => Either::B(
-            sized_box(
-                flex_row((
-                    flex_col(()).dims((margin.px(), 0.px())),
-                    // Lowered past the field's focus outline, so the outline never meets it.
-                    sized_box(
-                        print::id(scale, metadata)
-                            .text_size(caption_size)
-                            .line_height(LineHeight::Absolute(
-                                (f64::from(caption_size) * ID_LEADING) as f32,
-                            ))
-                            .color(state.palette.muted),
-                    )
-                    .padding(Padding::top(id_drop(route).px())),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(space::SIBLINGS.px()),
-            )
-            // Every row keeps its id's line, shown while it is written, so the next row starts
-            // below the id at every scale and choosing a row never moves another.
-            .padding(Padding::top(CAPTION_CLEARANCE.px()))
-            .height(id_row_height(caption_size, route).px()),
-        ),
-    }
+    // Options, not one Either, so the route keeps its own baselines in the row.
+    flex_row((
+        route(state, passage, active, width),
+        choice(state, passage, active, width),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .width(width.px())
 }
 
 /// A resting reply's route; the reply being written shows its [`choice`] instead.

@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::ShapedText;
 use crate::{
     keyed::keyed,
     tests::support::{mounted::Mounted, open, project},
@@ -108,14 +109,14 @@ fn replies_keep_the_column_rhythm_and_never_move_while_one_is_edited() {
             .transform_rect_bbox(widget.ctx().border_box())
     };
     let (second, third) = (bounds("Edit passage 2"), bounds("Edit passage 3"));
-    // The taller of a row's reply and destination ends the row; then its id's line and the
-    // column gap.
+    // The taller of a row's reply and destination ends the row; then the 16px column gap. A
+    // reserved source-label line would add about 22px more.
     let row_end = second.y1.max(bounds("→ Missing Courier").y1);
     assert!(
-        third.y0 - row_end <= 64.,
-        "rows keep one id line below themselves: {second:?} {third:?}"
+        third.y0 - row_end <= 20.,
+        "resting rows reserve nothing below themselves: {second:?} {third:?}"
     );
-    // Typing never moves a row below.
+    // The id hangs into the gap from the margin: neither selecting nor typing moves a row below.
     let resting = bounds_of(&mounted, "Edit passage 3");
     let reply = mounted
         .state
@@ -135,7 +136,6 @@ fn replies_keep_the_column_rhythm_and_never_move_while_one_is_edited() {
         .state
         .change(|model| model.select(View::Passage(reply.clone())));
     mounted.settle();
-    // Every row keeps its id's line, so selecting a reply moves nothing.
     let selected = bounds_of(&mounted, "Edit passage 3");
     assert_eq!(selected, resting);
     mounted.state.change(|model| {
@@ -265,7 +265,7 @@ fn only_a_beat_that_ends_the_conversation_shows_the_end_rule() {
 }
 
 #[test]
-fn a_written_row_s_id_has_a_row_of_its_own_at_every_scale() {
+fn a_written_row_s_id_sits_in_the_margin_clear_of_every_other_row() {
     for scale in [100, 200] {
         let mut writer = Writer::from_session(crate::session::Session::examples().unwrap(), None);
         writer
@@ -302,9 +302,14 @@ fn a_written_row_s_id_has_a_row_of_its_own_at_every_scale() {
                 .change(|model| model.select(View::Passage(passage.clone())));
             mounted.settle();
             let id = format!("{STABLE_ID_FIELD_PREFIX}{passage}");
-            let [caption] = text_bounds(&mounted, &id)[..] else {
+            let [caption] = shaped_bounds(&mounted, &id)[..] else {
                 panic!("one id for {passage} at {scale}%");
             };
+            let margin = super::grid(&mounted.state).margin;
+            assert!(
+                caption.width() <= margin + 1.,
+                "{id} at {scale}% keeps to the {margin}px margin column: {caption:?}"
+            );
             for other in row_bounds(&mounted, &id) {
                 let overlap = caption.intersect(other);
                 assert!(
@@ -318,7 +323,33 @@ fn a_written_row_s_id_has_a_row_of_its_own_at_every_scale() {
     }
 }
 
-/// The bounds of every label but `except` and every focusable control: the rows an id must clear.
+/// The bounds of each mounted shaped text whose whole text is `text`.
+fn shaped_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
+    mounted: &Mounted<Writer, V>,
+    text: &str,
+) -> Vec<Rect> {
+    let mut found = Vec::new();
+    let mut pending = vec![mounted.harness.root_widget().as_dyn()];
+    while let Some(widget) = pending.pop() {
+        if !widget.ctx().is_stashed()
+            && widget
+                .downcast::<ShapedText>()
+                .is_some_and(|shaped| shaped.inner().text().as_ref() == text)
+        {
+            found.push(
+                widget
+                    .ctx()
+                    .window_transform()
+                    .transform_rect_bbox(widget.ctx().border_box()),
+            );
+        }
+        pending.extend(widget.children());
+    }
+    found
+}
+
+/// The bounds of every label and shaped text but `except` and every focusable control: the rows
+/// an id must clear.
 fn row_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
     mounted: &Mounted<Writer, V>,
     except: &str,
@@ -331,7 +362,12 @@ fn row_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
         }
         let label = widget
             .downcast::<Label>()
-            .map(|label| label.inner().text().as_ref() != except);
+            .map(|label| label.inner().text().as_ref() != except)
+            .or_else(|| {
+                widget
+                    .downcast::<ShapedText>()
+                    .map(|shaped| shaped.inner().text().as_ref() != except)
+            });
         if label.unwrap_or_else(|| widget.ctx().accepts_focus()) {
             found.push(
                 widget
