@@ -86,6 +86,9 @@ pub(super) fn galley<V: WidgetView<Writer>>(
     .gap(0.px())
 }
 
+/// How much taller than its words a title field is above and below them: its focus border's room.
+const TITLE_FIELD_ROOM: f64 = 2.;
+
 /// The scene's title in Display, once at the top of the sheet.
 fn scene_title(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     let key = state.session.model().document().key().as_str();
@@ -160,8 +163,9 @@ fn heading(
         )))
     } else if selected {
         // Padded like the read-only headings' buttons, so every heading starts on one line.
+        // Its line also keeps the rename field's room above and below, so renaming moves nothing.
         Either::A(Either::B(
-            sized_box(text).padding(Padding::from_vh(0.px(), inset.px())),
+            sized_box(text).padding(Padding::from_vh(TITLE_FIELD_ROOM.px(), inset.px())),
         ))
     } else {
         Either::B(styled(

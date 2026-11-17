@@ -80,7 +80,12 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 print::meta(state.ui_scale(), "Split needs a wider window").color(text),
             )
         }),
-        (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
+        // A refused rename's clash is said in writer words under its field; the compiler's own
+        // words are not repeated here.
+        (!matches!(state.status.as_str(), "Ready" | "Map ready")
+            && !(state.workspaces.screen == crate::workspaces::Screen::Rename
+                && state.rename_clash().is_some()))
+        .then(|| {
             (
                 print::separator(state.ui_scale(), text),
                 // One line, ending in an ellipsis where it would not fit; read in full.

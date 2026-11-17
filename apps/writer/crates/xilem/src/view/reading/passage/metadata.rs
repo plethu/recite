@@ -20,12 +20,12 @@ pub(super) fn metadata(
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let caption_size = Sheet::Number.size(Page::of(state));
-    let metadata =
-        if active && (state.editing_passage(&passage.id) || state.session.model().has_draft()) {
-            format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id)
-        } else {
-            String::new()
-        };
+    // The line being written keeps its id while focus is elsewhere, such as in a heading's rename.
+    let metadata = if active {
+        format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id)
+    } else {
+        String::new()
+    };
     match placement {
         CaptionPlacement::BesideDestination { width } => {
             let caption_width = width * 0.25;
