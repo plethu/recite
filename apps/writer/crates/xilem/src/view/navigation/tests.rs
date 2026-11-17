@@ -161,7 +161,7 @@ fn long_scene(count: usize) -> String {
 }
 
 #[test]
-fn a_long_scene_scrolls_its_beats_in_a_list_that_keeps_the_selected_beat_in_view() {
+fn a_long_scene_scrolls_its_beats_in_a_list_that_keeps_the_selected_beat_in_its_middle() {
     let directory = support::project(&long_scene(40)).unwrap();
     let mut writer = support::open(&directory).unwrap();
     writer.viewport.width = 1200.;
@@ -225,11 +225,23 @@ fn a_long_scene_scrolls_its_beats_in_a_list_that_keeps_the_selected_beat_in_view
     );
     mounted.harness.focus_on(None);
 
-    // Choosing a beat already in view leaves the list where it is.
+    // A chosen beat comes to the middle, so a row past either edge shows in part while more
+    // beats lie beyond it.
     select(&mut mounted, &mut jobs, "beat_28");
-    assert_eq!(
-        window_bounds(&mounted, beat_row(&mounted, "beat_30").0),
-        bounds
+    let middle = window_bounds(&mounted, beat_row(&mounted, "beat_28").0);
+    assert!(
+        (middle.center().y - view.center().y).abs() < 2.,
+        "{middle:?} in {view:?}"
+    );
+    let above = window_bounds(&mounted, beat_row(&mounted, "beat_25").0);
+    let below = window_bounds(&mounted, beat_row(&mounted, "beat_31").0);
+    assert!(
+        above.y0 < view.y0 && above.y1 > view.y0,
+        "{above:?} {view:?}"
+    );
+    assert!(
+        below.y0 < view.y1 && below.y1 > view.y1,
+        "{below:?} {view:?}"
     );
     assert!(mounted.is_selected("Beat 28"));
 }

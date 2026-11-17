@@ -95,6 +95,9 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .focusable(false)
             .overscan(OVERSCAN, OVERSCAN)
             .reveal(selected)
+            // The selected beat comes to the middle, so part of a row shows past either edge
+            // while more beats lie beyond it; at the scene's ends the list stops flush.
+            .reveal_in_middle(true)
             .on_scroll(|state: &mut Writer, range| {
                 state.attention.show_beats(range);
                 MessageResult::Action(())

@@ -41,9 +41,16 @@ pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<
             !closing && !repair,
         ),
     ))
-    .direction(action_axis(state))
+    // One row at every width: a narrow pane, such as Split's, sets it compact instead of stacking.
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
+    .gap(
+        if action_axis(state) == kurbo::Axis::Vertical {
+            space::UNIT
+        } else {
+            space::SIBLINGS
+        }
+        .px(),
+    )
     // The words line up with the manuscript's text column, the plus hanging before it.
     // An empty beat's row lines up the same way.
     .padding(Padding::left(
