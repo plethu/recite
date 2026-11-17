@@ -11,15 +11,25 @@ const ID_LEADING: f64 = 16. / 12.;
 /// The space an id keeps below itself before the next row starts.
 const ID_BELOW: f64 = 8.;
 
+/// How far an id drops below its row's clearance: past the field's focus outline, and past a
+/// destination's target where one hangs into the gap below a reply.
+fn id_drop(route: bool) -> f64 {
+    if route {
+        (ROUTE_REACH - CAPTION_CLEARANCE).max(OUTLINE_CLEARANCE)
+    } else {
+        OUTLINE_CLEARANCE
+    }
+}
+
 /// The height an id under its row takes: its clearance, its line at the floored size and the space
 /// below it, so the next row starts below the id rather than painting over it.
-pub(super) fn id_row_height(caption_size: f32) -> f64 {
-    CAPTION_CLEARANCE + OUTLINE_CLEARANCE + f64::from(caption_size) * ID_LEADING + ID_BELOW
+fn id_row_height(caption_size: f32, route: bool) -> f64 {
+    CAPTION_CLEARANCE + id_drop(route) + f64::from(caption_size) * ID_LEADING + ID_BELOW
 }
 
 /// Source labels either reserve their own line or share a stacked destination's target height.
 pub(super) enum CaptionPlacement {
-    Under { margin: f64 },
+    Under { margin: f64, route: bool },
     BesideDestination { width: f64 },
 }
 
@@ -57,7 +67,7 @@ pub(super) fn metadata(
                 .width(width.px()),
             )
         }
-        CaptionPlacement::Under { margin } => Either::B(
+        CaptionPlacement::Under { margin, route } => Either::B(
             sized_box(
                 flex_row((
                     flex_col(()).dims((margin.px(), 0.px())),
@@ -70,22 +80,15 @@ pub(super) fn metadata(
                             ))
                             .color(state.palette.muted),
                     )
-                    .padding(Padding::top(OUTLINE_CLEARANCE.px())),
+                    .padding(Padding::top(id_drop(route).px())),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::SIBLINGS.px()),
             )
-            // A resting row keeps only the clearance below its descenders; the row being written
-            // adds its id's own line, so the next row starts below the id at every scale.
+            // Every row keeps its id's line, shown while it is written, so the next row starts
+            // below the id at every scale and choosing a row never moves another.
             .padding(Padding::top(CAPTION_CLEARANCE.px()))
-            .height(
-                if active {
-                    id_row_height(caption_size)
-                } else {
-                    CAPTION_CLEARANCE
-                }
-                .px(),
-            ),
+            .height(id_row_height(caption_size, route).px()),
         ),
     }
 }

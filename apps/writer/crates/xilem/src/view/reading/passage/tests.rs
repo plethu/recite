@@ -108,12 +108,12 @@ fn replies_keep_the_column_rhythm_and_never_move_while_one_is_edited() {
             .transform_rect_bbox(widget.ctx().border_box())
     };
     let (second, third) = (bounds("Edit passage 2"), bounds("Edit passage 3"));
-    // The taller of a row's reply and destination ends the row; then the 16px column gap. A
-    // reserved source-label line would add about 22px more.
+    // The taller of a row's reply and destination ends the row; then its id's line and the
+    // column gap.
     let row_end = second.y1.max(bounds("→ Missing Courier").y1);
     assert!(
-        third.y0 - row_end <= 20.,
-        "resting rows reserve nothing below themselves: {second:?} {third:?}"
+        third.y0 - row_end <= 64.,
+        "rows keep one id line below themselves: {second:?} {third:?}"
     );
     // Typing never moves a row below.
     let resting = bounds_of(&mounted, "Edit passage 3");
@@ -135,9 +135,9 @@ fn replies_keep_the_column_rhythm_and_never_move_while_one_is_edited() {
         .state
         .change(|model| model.select(View::Passage(reply.clone())));
     mounted.settle();
-    // Selecting a reply gives its id a row of its own; typing then moves nothing.
+    // Every row keeps its id's line, so selecting a reply moves nothing.
     let selected = bounds_of(&mounted, "Edit passage 3");
-    assert!(selected.y0 >= resting.y0, "{selected:?} {resting:?}");
+    assert_eq!(selected, resting);
     mounted.state.change(|model| {
         model.set_draft("Anything I can do to help with the relay?".into());
         Ok(())

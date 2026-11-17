@@ -208,8 +208,8 @@ pub(super) fn row(
                     .px(),
                 ),
             ),
-            // The row being written gives its id a line of its own below it; resting rows keep
-            // their rhythm, and typing never moves a row.
+            // Every row keeps a line for its id below it, shown while the row is written, so the
+            // next row never paints over the id and choosing or typing never moves a row.
             (!stacked_reply).then(|| {
                 metadata(
                     state,
@@ -217,6 +217,7 @@ pub(super) fn row(
                     active,
                     CaptionPlacement::Under {
                         margin: grid.text(),
+                        route: column,
                     },
                 )
             }),
