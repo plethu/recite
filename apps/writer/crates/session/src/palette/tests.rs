@@ -36,6 +36,8 @@ fn second_ink_and_overprint_keep_text_on_safe_surfaces() {
                 "teal rule: dark={dark} monochrome={monochrome}"
             );
         }
+        // The status words carry state, behind a modal too: no dim lies over the bar, and under
+        // one its words fall to 2.2-5.6:1, so the bar keeps its own contrast.
         for text in [p.status_text, p.status_signal] {
             assert!(
                 contrast(text, p.status_bar) >= 4.5,

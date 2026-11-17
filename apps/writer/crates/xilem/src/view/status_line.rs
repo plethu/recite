@@ -14,25 +14,9 @@ pub(super) fn status_height(scale: f32) -> f64 {
     2. * space::UNIT + f64::from(Type::Meta.metrics().1 * scale)
 }
 
-/// How much of its ink the bar's words keep behind a modal.
-const DIMMED: f32 = 0.45;
-
 pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
-    // Behind the close decision the bar is inert and its words dim with the rest of the window;
-    // the backdrop's overprint is the bar's own ink, so it cannot dim the bar by itself.
-    let dimmed = state.phase() != Phase::Writing;
-    let fade = |color: xilem::peniko::Color| {
-        if dimmed {
-            color.with_alpha(DIMMED)
-        } else {
-            color
-        }
-    };
-    let (text, signal) = (
-        fade(state.palette.status_text),
-        fade(state.palette.status_signal),
-    );
+    let (text, signal) = (state.palette.status_text, state.palette.status_signal);
     let diagnostics = state.session.model().document().diagnostic_snapshot();
     let refusal = state.reading_refusal();
     let saved = if state.session.project_root().is_none() {

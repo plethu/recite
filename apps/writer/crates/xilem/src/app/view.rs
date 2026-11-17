@@ -103,12 +103,13 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                         .cross_axis_alignment(CrossAxisAlignment::Stretch)
                         .gap(0.px())
                         .dims(Dim::Stretch),
-                        // A picker's or rename slip's backdrop dims the whole window, the tab row
-                        // and status bar included; the layer is empty and takes no pointer events
-                        // otherwise.
-                        modal_layer(app.picker.is_some(), picker_layer(app, scale, status_bar)),
+                        // A picker's or rename slip's backdrop dims the window above the status
+                        // bar, the tab row included; the bar carries state, so its words keep their
+                        // contrast. The layer is empty and takes no pointer events otherwise.
+                        modal_layer(app.picker.is_some(), status_bar, picker_layer(app, scale)),
                         modal_layer(
                             app.writer.as_ref().is_some_and(rename::floats),
+                            status_bar,
                             slot::rename_slot(app),
                         ),
                     ))
@@ -122,11 +123,20 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     )
 }
 
-/// A layer over the whole window that fills it while `open` and is an empty corner otherwise, so
-/// it never takes the pointer events of the window beneath.
-fn modal_layer<V: WidgetView<App>>(open: bool, layer: V) -> impl WidgetView<App> + use<V> {
+/// A layer over the window above its `status_bar` that fills it while `open` and is an empty
+/// corner otherwise, so it never takes the pointer events of the window beneath.
+fn modal_layer<V: WidgetView<App>>(
+    open: bool,
+    status_bar: f64,
+    layer: V,
+) -> impl WidgetView<App> + use<V> {
     indexed_stack((
-        sized_box(layer).dims(Dim::Stretch),
+        sized_box(sized_box(layer).dims(Dim::Stretch))
+            .dims(Dim::Stretch)
+            .padding(Padding {
+                bottom: status_bar.px(),
+                ..Padding::all(0.px())
+            }),
         sized_box(flex_col(())).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!open))
@@ -134,8 +144,8 @@ fn modal_layer<V: WidgetView<App>>(open: bool, layer: V) -> impl WidgetView<App>
 }
 
 /// An open picker over the backdrop: below the tab row at a fixed height from the window's top
-/// edge, or hanging from the combobox that opened it, and always above the status bar.
-fn picker_layer(app: &App, scale: f64, status_bar: f64) -> impl WidgetView<App> + use<> {
+/// edge, or hanging from the combobox that opened it; its layer ends above the status bar.
+fn picker_layer(app: &App, scale: f64) -> impl WidgetView<App> + use<> {
     let placement = picker::view::placement(app);
     backdrop(
         app.theme.palette.backdrop,
@@ -156,10 +166,6 @@ fn picker_layer(app: &App, scale: f64, status_bar: f64) -> impl WidgetView<App> 
             UnitPoint::TOP_LEFT
         } else {
             UnitPoint::TOP
-        })
-        .padding(Padding {
-            bottom: status_bar.px(),
-            ..Padding::all(0.px())
         })
         .dims(Dim::Stretch),
     )

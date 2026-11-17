@@ -71,7 +71,7 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         // list builds (those in view and one past them) the container that turns its
         // double-click into an in-place rename.
         assert!(
-            nodes <= 254,
+            nodes <= 255,
             "bounded Map mounted {nodes} accessibility nodes: {roles:?}; {names:?}"
         );
         assert!(scene.mounted_indices().count() <= 4);
