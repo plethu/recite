@@ -48,9 +48,7 @@ def run(api, bus, registry, binary, output):
             with output.with_suffix(".writer.log").open("w") as log:
                 process = subprocess.Popen(arguments, stdout=log, stderr=subprocess.STDOUT)
                 window = attach(api, bus, registry, process)
-                window.wait(
-                    lambda: window.find("Open in editor"), "recovered source repair"
-                )
+                window.wait(lambda: window.find("Open in editor"), "recovered source repair")
                 assert not window.enabled("Save")
                 assert not window.enabled("Save all")
                 assert source.read_text() == SOURCE
@@ -85,9 +83,7 @@ def run(api, bus, registry, binary, output):
 
                 process = subprocess.Popen(arguments, stdout=log, stderr=subprocess.STDOUT)
                 window = attach(api, bus, registry, process)
-                window.wait(
-                    lambda: window.find("Open in editor"), "restarted source repair"
-                )
+                window.wait(lambda: window.find("Open in editor"), "restarted source repair")
                 window.act("Import repaired source…")
                 repaired = SOURCE.replace("The last tram waits.", "The repaired tram waits.")
                 exported.write_text(repaired)

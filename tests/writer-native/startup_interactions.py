@@ -99,7 +99,9 @@ def run(api, bus, registry, binary, output):
                 window.act("Create a new project")
                 field(window, "Project name")
                 window.wait(
-                    lambda: window.has_state(window.find_action("Create a new project"), "SELECTED"),
+                    lambda: window.has_state(
+                        window.find_action("Create a new project"), "SELECTED"
+                    ),
                     "create tab selected",
                 )
                 capture(output, "-create-form")

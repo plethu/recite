@@ -78,9 +78,7 @@ def open_catalogue(window, path):
     show_queue(window)
     if not window.find("Catalogue path"):
         # Without a catalogue the path waits behind "Open a catalogue…"; with one, behind its files.
-        window.act(
-            "Open a catalogue…" if window.find("Open a catalogue…") else "Catalogue files"
-        )
+        window.act("Open a catalogue…" if window.find("Open a catalogue…") else "Catalogue files")
     reveal(window, "Catalogue path")
     fill(window, "Catalogue path", str(path))
     window.reveal_end("Open catalogue")

@@ -77,9 +77,7 @@ def run(api, bus, registry, binary, output):
                 assert window.find("Exit focus")
                 results["nested_picker_restores_focus_without_leaving_writing_mode"] = True
                 key("f", control=True, shift=True)
-                window.wait(
-                    lambda: window.find("Find scene, beat or text…"), "workspace restored"
-                )
+                window.wait(lambda: window.find("Find scene, beat or text…"), "workspace restored")
                 window.focus(node)
                 prefix(window)
                 capture(output, "-prefix")

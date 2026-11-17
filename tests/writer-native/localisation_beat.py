@@ -127,9 +127,7 @@ def exercise(window, po, output, results, scale):
     window.wait(
         lambda: window.find_text("A passage without a catalogue entry."), "next beat source"
     )
-    window.wait(
-        lambda: window.find_text("No catalogue entry yet"), "explicit missing entry"
-    )
+    window.wait(lambda: window.find_text("No catalogue entry yet"), "explicit missing entry")
     command(window, "Localise")
     window.wait(
         lambda: window.find_text("A passage without a catalogue entry."),

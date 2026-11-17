@@ -265,8 +265,8 @@ comments are replaced. A record whose `msgid` or `msgid_plural` changed keeps it
 the gettext `fuzzy` flag and records the previous source as `#|` values. Translator comments, other
 flags and unknown fields are preserved. Ambiguous contexts and singular/plural shape changes fail
 without writing. A changed speaker or other extracted comment updates the comment only; it does not
-put the translation up for review. A refresh may keep named contexts: a kept record stays
-exactly as it is and a kept new entry is not added, so the next refresh offers both again.
+put the translation up for review. A refresh may keep named contexts: a kept record stays exactly as
+it is and a kept new entry is not added, so the next refresh offers both again.
 
 `recite-core::po` owns the review state of a saved record, shared by Writer and headless checks:
 
