@@ -58,7 +58,6 @@ pub(crate) fn field(
     .gap(space::UNIT.px())
 }
 
-/// What the rename field edits, for a caption beside or above it.
 /// The field on a map card, in the card's own units at `scale`: the card zooms with the map, so
 /// the caption and the well's padding take the card's metrics rather than the interface's, and
 /// the field never pushes the card's words past its foot.
@@ -83,6 +82,7 @@ pub(crate) fn card_field(
     .gap(space::UNIT.px())
 }
 
+/// What the rename field edits, for a caption beside or above it.
 pub(crate) fn caption(state: &Writer) -> impl WidgetView<Writer> + use<> {
     print::meta(state.ui_scale(), "Beat id").color(state.palette.muted)
 }
