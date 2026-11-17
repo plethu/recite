@@ -41,7 +41,7 @@ pub(in crate::tests::gallery) fn in_place(record: &mut Recorder, variant: Varian
                 variant,
             );
             let source = std::fs::read_to_string(&path).unwrap();
-            std::fs::write(&path, source.replacen("Mara", "Mara Vey", 1)).unwrap();
+            std::fs::write(&path, source.replacen("Mara", "Mara Lind", 1)).unwrap();
             stage.act(|app| {
                 if let Some(writer) = &mut app.writer {
                     let evidence = writer
