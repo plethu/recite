@@ -59,7 +59,10 @@ impl Widget for Decor {
     }
     fn update(&mut self, ctx: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, event: &Update) {
         if matches!(event, Update::ChildFocusChanged(_))
-            && matches!(self.decoration, Decoration::Ring(_))
+            && matches!(
+                self.decoration,
+                Decoration::Ring(_) | Decoration::Outline(..)
+            )
         {
             ctx.request_post_paint();
         }
@@ -153,6 +156,16 @@ impl Widget for Decor {
             // its centre line, so it never touches the surface around the control.
             let ring = ctx.border_box().inset(-1.5 * RING);
             painter.stroke(ring, &Stroke::new(RING), color).draw();
+        }
+        if let Decoration::Outline(Some(color), offset) = self.decoration
+            && ctx.has_focus_target()
+        {
+            // Stroked on its centre line, so its inner edge sits `offset` outside the child.
+            let outline = ctx
+                .border_box()
+                .inset(offset + RING / 2.)
+                .to_rounded_rect(offset);
+            painter.stroke(outline, &Stroke::new(RING), color).draw();
         }
     }
     fn accessibility_role(&self) -> Role {

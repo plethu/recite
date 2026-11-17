@@ -24,6 +24,12 @@ pub(crate) fn focus_ring<V>(color: Option<Color>, child: V) -> Decorated<V> {
     Decorated::new(Decoration::Ring(color), child)
 }
 
+/// A 2px focus outline `offset` pixels outside `child`, painted over its surroundings without
+/// changing its metrics.
+pub(crate) fn focus_outline<V>(color: Color, offset: f64, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Outline(Some(color), offset), child)
+}
+
 /// A 2px bar along the bottom of `child`, or nothing while `bar` is `None`.
 pub(crate) fn bar<V>(bar: Option<Bar>, child: V) -> Decorated<V> {
     Decorated::new(Decoration::Bar(bar), child)

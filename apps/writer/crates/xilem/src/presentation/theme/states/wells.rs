@@ -37,11 +37,13 @@ pub(in super::super) fn field<W: Widget>(
         &Selector::classes(&[ControlStyle::TitleField.class()]),
         STRONG,
     );
+    // A line's field keeps no focus border of its own: the Writer outlines it outside its edge,
+    // clear of the glyphs and the caret.
     Look {
         rest: Some((Color::TRANSPARENT, Color::TRANSPARENT)),
         hover: (p.hover, Color::TRANSPARENT),
         pressed: (p.pressed, Color::TRANSPARENT),
-        focus: Some(p.accent),
+        focus: Some(Color::TRANSPARENT),
         disabled: (Color::TRANSPARENT, Color::TRANSPARENT),
         border: 1.,
         sinks: false,

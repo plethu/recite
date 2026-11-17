@@ -4,7 +4,8 @@ use crate::attention::{EditingTarget, PassageField};
 use crate::presentation::{
     Page, Sheet,
     control_style::{ControlStyle, styled},
-    print,
+    material, print,
+    tokens::size,
 };
 use crate::reading::PassageNumber;
 use recite_writer_model::Passage;
@@ -55,7 +56,7 @@ fn field(
     (width, size): (f64, f32),
 ) -> impl WidgetView<Writer> + use<> {
     let target = EditingTarget::passage(state, passage.to_owned());
-    keyed(
+    let field = keyed(
         (
             state.session.model().document().key().clone(),
             passage.to_owned(),
@@ -85,5 +86,7 @@ fn field(
             ),
         ),
     )
-    .width(width.px())
+    .width(width.px());
+    // Focus is an outline outside the field, clear of its glyphs and caret; the row keeps its pitch.
+    material::focus_outline(state.palette.accent, size::FOCUS_OUTLINE, field)
 }

@@ -18,6 +18,9 @@ pub(crate) enum Decoration {
     /// A 2px ring inside the child's edge while focus is within it, for filled controls whose
     /// own border would vanish into the fill.
     Ring(Option<Color>),
+    /// A 2px outline `offset` pixels outside the child's edge while focus is within it, for text
+    /// whose own border would crowd its glyphs and caret. It takes no layout room.
+    Outline(Option<Color>, f64),
     /// A 2px bar along one edge: a chosen tab's underline, a chosen segment's mark or a selected
     /// row's leading bar.
     Bar(Option<Bar>),

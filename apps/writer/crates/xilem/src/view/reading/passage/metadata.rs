@@ -1,6 +1,10 @@
 //! What sits beside or under a reply's text: its destination button and, while it is edited, its
 //! stable id as a source label.
 use super::*;
+use crate::presentation::tokens::size;
+
+/// How far a line's id drops below its clearance: past the field's 2px focus outline and 3px more.
+const OUTLINE_CLEARANCE: f64 = size::FOCUS_OUTLINE + 2. + 3. - CAPTION_CLEARANCE;
 
 /// Source labels either reserve their own line or share a stacked destination's target height.
 pub(super) enum CaptionPlacement {
@@ -46,10 +50,15 @@ pub(super) fn metadata(
             sized_box(
                 flex_row((
                     flex_col(()).dims((margin.px(), 0.px())),
-                    print::id(scale, metadata)
-                        .text_size(caption_size)
-                        .color(state.palette.muted),
+                    // Lowered past the field's focus outline, so the outline never meets it.
+                    sized_box(
+                        print::id(scale, metadata)
+                            .text_size(caption_size)
+                            .color(state.palette.muted),
+                    )
+                    .padding(Padding::top(OUTLINE_CLEARANCE.px())),
                 ))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::SIBLINGS.px()),
             )
             // Only clearance below the reply's descenders takes space; the caption itself

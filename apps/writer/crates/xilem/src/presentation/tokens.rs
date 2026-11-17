@@ -40,6 +40,8 @@ pub(crate) mod size {
     /// A text control on a page or sheet, and a list row. The agreed 32 rounded up past the
     /// comparison reference's 32.2, so no hit target shrinks.
     pub const ROW: f64 = 33.;
+    /// The gap between a line's field and its focus outline, outside the field's layout.
+    pub const FOCUS_OUTLINE: f64 = 5.;
     /// An icon button's square hit area around its 20px face: as tall as the text buttons it
     /// replaced, never smaller than the comparison reference.
     pub const ICON_TARGET: f64 = 32.;
