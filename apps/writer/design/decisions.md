@@ -83,8 +83,9 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
   Enter and Open script open it). Enter reviews the project rename and a slip under the field says
   what it changes ("Renames a to b in 3 references across 2 files") with Rename, Review all
   changes and Cancel, stacked in the narrow sidebar; Esc cancels and focus returns to where it
-  was, or to the row or card under its new name when the field took its place. Rename stages one Undo step and the status line offers Undo; only a
-  refused rename opens the full page. Insertion affordances ("+ Line", "+ Reply", "+ Beat") sit
+  was, or to the row or card under its new name when the field took its place. Rename stages
+  one Undo step and the status line offers Undo; only a refused rename opens the full page.
+  Insertion affordances ("+ Line", "+ Reply", "+ Beat") sit
   after the beat, never between rows, so choosing a passage never moves another; Line and Reply
   insert after the passage being written when it is of their kind. The passage being written
   offers its choice on the label itself: its margin speaker label and its destination are the
