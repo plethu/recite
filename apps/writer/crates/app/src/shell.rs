@@ -189,6 +189,18 @@ impl Shell {
             && !self.path.trim().is_empty()
             && (!self.creating || !self.name.trim().is_empty())
     }
+    /// Why the form's primary action is unavailable, while the writer can do something about it.
+    pub fn project_form_hint(&self) -> Option<&'static str> {
+        if self.opening.is_some() || self.auxiliary {
+            None
+        } else if self.path.trim().is_empty() {
+            Some("Choose a project folder first.")
+        } else if self.creating && self.name.trim().is_empty() {
+            Some("Name the project first.")
+        } else {
+            None
+        }
+    }
     pub fn browse(&mut self) {
         if self.auxiliary || self.opening.is_some() {
             return;

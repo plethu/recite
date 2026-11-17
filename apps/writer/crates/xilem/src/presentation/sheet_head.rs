@@ -1,6 +1,7 @@
 //! The head of a tool or Localise sheet: the page's title in Display with an optional muted
-//! caption, the sheet's own actions, and a named close icon that returns to where it opened from. On a narrow sheet the actions take a second
-//! row under the title, so neither squeezes the other.
+//! caption, the sheet's own actions, and its link and named close icons, the close returning to
+//! where it opened from. On a narrow sheet the actions take a second row under the title, so
+//! neither squeezes the other.
 use super::{Icon, Type, print, space};
 use recite_writer_session::palette::Palette;
 use xilem::{
@@ -14,12 +15,14 @@ use xilem::{
     },
 };
 
-/// What closes a sheet: the action, and whether it is unavailable now.
-pub(crate) struct Close<F> {
+/// What closes a sheet: the action, and whether it and the sheet's link are unavailable now.
+pub(crate) struct Close<F, L> {
     /// Where the icon returns to, as its accessible name, such as "Return to writing".
     pub name: &'static str,
     pub disabled: bool,
     pub action: F,
+    /// Copies a link to the sheet: beside its title, as the galley's beat heading carries one.
+    pub link: L,
 }
 
 /// How a sheet head sets its parts: the interface scale, and whether the actions take a second
@@ -35,12 +38,13 @@ pub(crate) fn sheet_head<
     T: Into<ArcStr>,
     A: FlexSequence<S> + Send + Sync,
     F: Fn(&mut S) + Send + Sync + 'static,
+    L: Fn(&mut S) + Send + Sync + 'static,
 >(
     Layout { scale, stacked }: Layout,
     palette: &Palette<Color>,
     (title, caption, actions): (T, Option<ArcStr>, A),
-    close: Close<F>,
-) -> impl WidgetView<S, Widget = Flex> + use<S, T, A, F> {
+    close: Close<F, L>,
+) -> impl WidgetView<S, Widget = Flex> + use<S, T, A, F, L> {
     // The caption is one muted line under the title: what the sheet holds, never instructions.
     let title: ArcStr = title.into();
     let title = flex_col((
@@ -60,6 +64,14 @@ pub(crate) fn sheet_head<
     .main_axis_alignment(MainAxisAlignment::Center)
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::UNIT.px());
+    let link = print::icon_action(
+        scale,
+        "Copy link",
+        Icon::Link,
+        palette,
+        close.disabled,
+        close.link,
+    );
     let close = print::icon_action(
         scale,
         close.name,
@@ -76,8 +88,9 @@ pub(crate) fn sheet_head<
     flex_col((grid((
         title.grid_pos(0, 0),
         actions.grid_pos(u16::from(!stacked), u16::from(stacked)),
-        flex_row((close,))
+        flex_row((link, close))
             .cross_axis_alignment(CrossAxisAlignment::Center)
+            .gap(space::UNIT.px())
             .grid_pos(2, 0),
     ))
     .columns([

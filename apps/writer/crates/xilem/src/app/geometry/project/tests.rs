@@ -128,10 +128,10 @@ fn project_screen_headers_keep_complete_buttons_inside_the_allocated_window() {
                     app.writer.as_mut().unwrap().workspaces.screen = screen;
                     let (root, update) = render(&mut app, width);
                     let left = app.writer.as_ref().unwrap().navigation_width() + 16.;
+                    // A sheet carries its link in its head, beside its close, not in the toolbar.
                     for title in [
                         "Back",
                         "Forward",
-                        "Copy link",
                         "Return to writing",
                         "Workspace",
                         "Save",

@@ -220,6 +220,7 @@ pub(crate) fn captioned_head<
             name,
             disabled: state.phase() != Phase::Writing,
             action: close,
+            link: Writer::copy_link,
         },
     )
 }

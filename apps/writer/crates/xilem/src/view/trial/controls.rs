@@ -34,6 +34,7 @@ pub(super) fn header(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + u
                     name: "Return to writing",
                     disabled: state.phase() != Phase::Writing,
                     action: Writer::return_from_trial,
+                    link: Writer::copy_link,
                 },
             ),
             context::details(state, width),

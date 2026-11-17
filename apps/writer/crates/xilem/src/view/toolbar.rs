@@ -83,11 +83,12 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
             blocked || state.navigation.history.step(true).is_none(),
             |state: &mut Writer| state.history_step(true),
         ),
-        // The galley's beat heading carries the link; wherever no heading shows, the toolbar does.
+        // The galley's beat heading and every sheet's head carry the link; the map's title and
+        // any writing view without a heading leave it to the toolbar.
         (state.visible_workspace() == crate::map::Workspace::Map
-            || state.trial.visible
-            || state.workspaces.screen != crate::workspaces::Screen::Write
-            || !super::manuscript::galley(state, &surface::Surface::resolve(state)))
+            || (!state.trial.visible
+                && state.workspaces.screen == crate::workspaces::Screen::Write
+                && !super::manuscript::galley(state, &surface::Surface::resolve(state))))
         .then(|| {
             print::icon_action(
                 scale,

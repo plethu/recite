@@ -29,6 +29,21 @@ fn menu_actions_close_the_workspace_menu_first() {
 }
 
 #[test]
+fn an_unavailable_project_action_says_what_it_waits_for() {
+    let mut shell = Shell::empty();
+    assert_eq!(
+        shell.project_form_hint(),
+        Some("Choose a project folder first.")
+    );
+    shell.edit_project_path("/typed".into());
+    assert_eq!(shell.project_form_hint(), None);
+    shell.choose_project_action(true);
+    assert_eq!(shell.project_form_hint(), Some("Name the project first."));
+    shell.edit_project_name("Saga".into());
+    assert!(shell.project_form_hint().is_none() && shell.project_form_ready());
+}
+
+#[test]
 fn project_form_edits_clear_a_reported_problem_and_typed_folders_replace_chosen_ones() {
     let mut shell = Shell::empty();
     shell.project_failed(ProjectAction::Open, "missing".into());

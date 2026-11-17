@@ -149,7 +149,7 @@ fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 paragraph(
                     state.ui_scale(),
                     format!(
-                        "Source diagnostics · line {} · {}",
+                        "Line {} · {}",
                         diagnostic.span.start.line(),
                         diagnostic.message
                     ),

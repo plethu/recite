@@ -13,7 +13,7 @@ use xilem::{
     masonry::{
         kurbo::Axis,
         layout::{AsUnit, Dim},
-        properties::TextAreaLabel,
+        properties::{LineBreaking, TextAreaLabel},
     },
     style::Style,
     view::{
@@ -184,6 +184,7 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 text_input(app.path.clone(), |app: &mut App, text| {
                     app.edit_project_path(text)
                 })
+                .placeholder("Type a folder path, or browse")
                 .typeset(Type::Body, scale)
                 .disabled(busy)
                 .prop(TextAreaLabel::new("Project folder"))
@@ -217,11 +218,14 @@ fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     flex_col((
         label(scale, "Project name"),
         styled(ControlStyle::DeskField, text_input(app.name.clone(), |app: &mut App, text| app.edit_project_name(text))
+            .placeholder("The name Writer shows for it")
             .typeset(Type::Body, scale)
             .disabled(app.opening.is_some() || app.auxiliary)
             .prop(TextAreaLabel::new("Project name")).prop(ProjectField(true))
             .width(field_width.px())),
-        paragraph(scale, "Creates recite.project.toml and a first scene with a default beat. Existing project files are preserved.", width),
+        // Its guidance sits a step under the field, as one group with it.
+        sized_box(paragraph(scale, "Creates recite.project.toml and a first scene with a default beat. Existing project files are preserved.", width))
+            .padding(xilem::style::Padding::top(space::UNIT.px())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::UNIT.px())
@@ -269,12 +273,21 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             .direction(direction)
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::SIBLINGS.px()),
+            // Why the primary is unavailable, under it, so the row never moves as it changes.
+            app.project_form_hint().map(|hint| {
+                print::caption(scale, hint)
+                    .color(app.theme.palette.muted)
+                    .prop(LineBreaking::WordWrap)
+            }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(space::SIBLINGS.px()),
     )
-    .padding(xilem::style::Padding::from_vh(
-        space::KINDS.px(),
-        space::GROUPS.px(),
-    ))
+    // The fields' own padding is the gap above, so the actions sit one group under the guidance.
+    .padding(xilem::style::Padding {
+        top: 0.px(),
+        bottom: space::KINDS.px(),
+        left: space::GROUPS.px(),
+        right: space::GROUPS.px(),
+    })
 }

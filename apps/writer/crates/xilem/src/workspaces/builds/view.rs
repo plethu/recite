@@ -36,7 +36,9 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
             paragraph(
                 scale,
                 if builds.is_none_or(|builds| builds.targets.is_empty()) {
-                    "This project has no outputs set up yet, so there is nothing to build."
+                    "This project has no outputs set up yet, so there is nothing to build. Add a \
+                     [[scenes]] entry with an id, an asset path and a start block to \
+                     recite.project.toml, then reopen this page."
                 } else {
                     "No builds yet. Build saved files writes your outputs; the result appears \
                      above the status line."
