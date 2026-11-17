@@ -1,9 +1,7 @@
 //! Catalogue files, bounded queue rows and entry fields are independent native components.
 use crate::WriterLayout;
-use crate::presentation::material::{Texture, backdrop, screen};
 use crate::presentation::tokens::size;
 use crate::presentation::{Page, Sheet, Type, print, space};
-use xilem::peniko::Color;
 mod comparison;
 mod creation;
 mod entry;
@@ -104,23 +102,11 @@ fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 "Translations"
             },
             catalogue.then(|| writer.localisation.catalogue_caption().into()),
-            (
-                catalogue.then(|| files::head_actions(writer)),
-                empty(writer).then(|| halftone(writer)),
-            ),
+            (catalogue.then(|| files::head_actions(writer)),),
         ),
         ("Return to writing", Writer::return_to_writing),
     )
     .prop(crate::attention::PaneEntry(catalogue))
-}
-/// A square of the plum halftone screen beside an empty heading.
-fn halftone(writer: &Writer) -> impl WidgetView<Writer> + use<> {
-    let side = (size::ROW * f64::from(writer.ui_scale())).px();
-    backdrop(
-        Color::TRANSPARENT,
-        screen(Texture::default(), writer.palette.accent),
-        flex_col(()).dims((side, side)),
-    )
 }
 fn prose_size(writer: &Writer) -> f32 {
     Sheet::Dialogue.size(Page::of(writer))

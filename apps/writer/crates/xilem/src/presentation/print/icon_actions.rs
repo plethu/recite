@@ -6,7 +6,7 @@ use recite_writer_session::palette::Palette;
 use xilem::peniko::Color;
 use xilem::{
     WidgetView,
-    masonry::{layout::AsUnit, widgets::Button},
+    masonry::{core::ArcStr, layout::AsUnit, widgets::Button},
     style::Style,
     view,
 };
@@ -39,13 +39,13 @@ pub(crate) fn icon_toggle<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
 
 /// A margin toggle with words, such as "Reviewed": named in full, reporting `pressed`, and while on
 /// held in the pressed sink with a tick before its words, so the state shows by shape as well.
-pub(crate) fn text_toggle<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+pub(crate) fn text_toggle<S: 'static, N: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,
-    (name, text): (&'static str, &'static str),
+    (name, text): (N, &'static str),
     palette: &Palette<Color>,
     (pressed, disabled): (bool, bool),
     callback: F,
-) -> impl WidgetView<S, Widget = Button> + use<S, F> {
+) -> impl WidgetView<S, Widget = Button> + use<S, N, F> {
     styled(
         if pressed {
             ControlStyle::ToggleOn
@@ -61,7 +61,7 @@ pub(crate) fn text_toggle<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
             .gap((space::UNIT * f64::from(scale)).px()),
             callback,
         )
-        .accessible_label(name)
+        .accessible_label(name.into())
         .toggled(pressed)
         .disabled(disabled),
     )

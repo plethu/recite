@@ -21,6 +21,8 @@ pub(super) fn margin(
     let reviewed = translation.key.clone();
     let anchor = row.source.id.clone();
     let on = draft.reviewed;
+    // Each row's controls name their line, so a beat's rows read apart in a list of controls.
+    let line = &row.source.id;
     flex_row((
         // Quiet, so the Reviewed toggle is the row's one filled control.
         styled(
@@ -34,6 +36,7 @@ pub(super) fn margin(
                 ),
                 move |writer: &mut Writer| writer.toggle_translation_details(&anchor),
             )
+            .accessible_label(format!("Translation details · {line}"))
             .expanded(row.details),
         ),
         xilem::view::FlexSpacer::Flex(1.),
@@ -44,7 +47,7 @@ pub(super) fn margin(
             .then(|| {
                 print::text_toggle(
                     scale,
-                    ("Reviewed translation", "Reviewed"),
+                    (format!("Reviewed translation · {line}"), "Reviewed"),
                     &writer.palette,
                     (draft.reviewed, blocked),
                     move |writer: &mut Writer| writer.review_translation(&reviewed, !on),

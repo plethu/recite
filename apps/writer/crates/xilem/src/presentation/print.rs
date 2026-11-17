@@ -77,6 +77,21 @@ pub(crate) fn action<S: 'static>(
     )
 }
 
+/// A quiet action whose name says more than its words, such as which row it opens.
+pub(crate) fn action_named<S: 'static>(
+    scale: f32,
+    (text, name): (impl Into<ArcStr>, impl Into<ArcStr>),
+    disabled: bool,
+    callback: impl Fn(&mut S) + Send + Sync + 'static,
+) -> impl WidgetView<S, Widget = Button> {
+    styled(
+        ControlStyle::Action,
+        view::button(Type::Control.label(scale, text), callback)
+            .accessible_label(name.into())
+            .disabled(disabled),
+    )
+}
+
 /// The one filled action on a surface. Its focus is a ring inside the fill, in the text colour.
 pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,

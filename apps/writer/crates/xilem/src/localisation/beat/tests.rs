@@ -358,9 +358,11 @@ fn a_translation_row_discloses_its_details_in_place_and_reports_its_reviewed_tog
     let first = row_key(&writer, 0);
     let mut mounted = Mounted::new(writer, surface);
     assert!(!mounted.contains_text("Open translation entry"));
-    assert!(mounted.is_expanded("Translation details", false));
-    mounted.activate("Translation details");
-    assert!(mounted.is_expanded("Translation details", true));
+    // Each row's controls name its line, so a beat's rows read apart.
+    let details = format!("Translation details · {FIRST}");
+    assert!(mounted.is_expanded(&details, false));
+    mounted.activate(&details);
+    assert!(mounted.is_expanded(&details, true));
     mounted.find("Open translation entry");
     // The plural row discloses its rule and the wordings that share its source.
     if !mounted.state.localisation.passage.as_ref().unwrap().rows[0]
@@ -377,13 +379,13 @@ fn a_translation_row_discloses_its_details_in_place_and_reports_its_reviewed_tog
     // An entry without a fuzzy flag is reviewed; the toggle reports both states.
     assert!(support::is_pressed(
         &mut mounted.state,
-        "Reviewed translation",
+        &format!("Reviewed translation · {FIRST}"),
         true
     ));
     mounted.state.review_translation(&first, false);
     assert!(support::is_pressed(
         &mut mounted.state,
-        "Reviewed translation",
+        &format!("Reviewed translation · {FIRST}"),
         false
     ));
     mounted.state.toggle_translation_details(FIRST);

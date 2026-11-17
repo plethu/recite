@@ -85,8 +85,8 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
         .gap(space::SIBLINGS.px()),
     )
 }
-/// The sheet's own actions: back to the source, the queue, and Save all drafts, which is the
-/// sheet's one primary while drafts wait and stays in place, unavailable, when none do.
+/// The sheet's own actions: back to the source, the queue, and Save all drafts, the sheet's one
+/// primary, shown only while drafts wait, as in the queue.
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let blocked = writer.project_action_blocked() || writer.localisation.slot.read_only();
@@ -97,14 +97,15 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.catalogue_action(work::Action::Query)
         })
         .disabled(blocked),
-        print::emphasised_action(
-            scale,
-            "Save all translation drafts",
-            &writer.palette,
-            drafts,
-            blocked || !drafts,
-            Writer::save_translation_drafts,
-        ),
+        drafts.then(|| {
+            print::primary_action(
+                scale,
+                "Save all translation drafts",
+                &writer.palette,
+                blocked,
+                Writer::save_translation_drafts,
+            )
+        }),
     ))
     .gap(space::SIBLINGS.px())
 }

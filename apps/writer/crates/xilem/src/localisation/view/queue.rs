@@ -1,17 +1,32 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::control_inset;
 use crate::presentation::segments::{segment, segments_along};
 use crate::presentation::space;
 use crate::presentation::tokens::{breakpoint, size};
 use crate::presentation::{Type, Typeset, search_field};
 use crate::presentation::{manuscript_text, print};
 use xilem::masonry::kurbo::Axis;
+
+/// The most words of a source line a queue row's name carries.
+const OPENING_WORDS: usize = 6;
+
+/// A source line's opening words, ending in an ellipsis where the line goes on.
+fn opening(source: &str) -> String {
+    let words: Vec<&str> = source.split_whitespace().collect();
+    if words.len() > OPENING_WORDS {
+        format!("{}…", words[..OPENING_WORDS].join(" "))
+    } else {
+        words.join(" ")
+    }
+}
 pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let state = &writer.localisation;
     let blocked = writer.project_action_blocked() || state.slot.read_only();
     let width = writer.page_width();
     let wide = width >= breakpoint::TWO_COLUMNS * f64::from(scale);
+    let inset = control_inset(scale);
     let measure = if wide {
         (width - space::GROUPS) / 2.
     } else {
@@ -28,10 +43,24 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             });
             flex_row((
                 flex_col((
-                    manuscript_text(prose_size(writer), row.source.clone()).width(measure.px()),
-                    print::action(
+                    // Set in by the action's padding, so the source line and the words of its
+                    // action start on one edge.
+                    sized_box(
+                        manuscript_text(prose_size(writer), row.source.clone())
+                            .width((measure - inset).max(0.).px()),
+                    )
+                    .padding(xilem::style::Padding::left(inset.px())),
+                    // Its name carries the line's opening words, so rows of one scene read apart.
+                    print::action_named(
                         scale,
-                        format!("Open translation · {}", row.caption),
+                        (
+                            format!("Open translation · {}", row.caption),
+                            format!(
+                                "Open translation · {} · {}",
+                                row.caption,
+                                opening(&row.source)
+                            ),
+                        ),
                         blocked,
                         move |writer: &mut Writer| {
                             if let Some(key) = &key {

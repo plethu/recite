@@ -143,18 +143,26 @@ def open_entry(window):
     return field(window, "Translation form 1")
 
 
+def details(window):
+    """The beat row's details disclosure, named with its line id: "Translation details · <id>"."""
+    return next(
+        (name for _, name in window.nodes() if name.startswith("Translation details · ")), None
+    )
+
+
 def edit(window, value):
     window.wait(
         lambda: (
-            (window.find_action("Translation details") and window.enabled("Translation details"))
+            ((name := details(window)) and window.find_action(name) and window.enabled(name))
             or (window.find("Translation form 1") and window.enabled("Translation form 1"))
         ),
         "editable translation destination ready",
     )
     if not window.find("Translation form 1"):
-        reveal(window, "Translation details")
-        window.act("Translation details")
-        window.wait(lambda: window.expanded("Translation details"), "details disclosed")
+        name = details(window)
+        reveal(window, name)
+        window.act(name)
+        window.wait(lambda: window.expanded(name), "details disclosed")
         reveal(window, "Open translation entry")
         window.act("Open translation entry")
     reveal(window, "Translation form 1")
