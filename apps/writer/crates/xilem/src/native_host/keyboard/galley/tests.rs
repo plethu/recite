@@ -70,10 +70,26 @@ fn a_chosen_later_beat_comes_to_the_top_and_the_running_head_follows_the_scroll(
     );
     let root = mounted.harness.render_root();
     let portal = reading::manuscript(root, None).unwrap();
-    let heading = heading_offset(&portal).unwrap() - scrolled;
+    let heading = heading_offset(&portal).unwrap().0 - scrolled;
     assert_eq!(
         heading,
         HEAD + LEAD,
         "the heading sits clear of the running head"
     );
+}
+
+#[test]
+fn the_first_beat_keeps_the_scene_title_whole_at_200_percent() {
+    let mut writer = relay_hub(Some("relay_desk"));
+    let mut config = writer.config.clone();
+    config.writer.presentation = config
+        .writer
+        .presentation
+        .with_value(recite_config::WriterPresentationField::UiScale, 200)
+        .unwrap();
+    writer.configure(config);
+    let mut mounted = Mounted::new(writer, surface);
+    let mut galley = Galley::default();
+    galley.synchronize(mounted.harness.render_root());
+    assert_eq!(viewport(&mut mounted), 0., "the scene title stays whole");
 }

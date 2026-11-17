@@ -26,12 +26,13 @@ mod read_only;
 mod tests;
 use read_only::read_only;
 
-/// Marks the selected beat's heading, so the native host can bring the selection into view.
+/// Marks the selected beat's heading, so the native host can bring the selection into view, and
+/// whether that beat opens the scene, when the scene title above it comes into view too.
 #[derive(Clone, Copy, Default, PartialEq)]
-pub(crate) struct SelectedBeat(pub bool);
+pub(crate) struct SelectedBeat(pub bool, pub bool);
 impl Property for SelectedBeat {
     fn static_default() -> &'static Self {
-        static OTHER: SelectedBeat = SelectedBeat(false);
+        static OTHER: SelectedBeat = SelectedBeat(false, false);
         &OTHER
     }
 }
@@ -208,7 +209,7 @@ fn heading(
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap((grid.gutter() - inset).max(0.).px())
     .width(grid.row().px())
-    .prop(SelectedBeat(selected))
+    .prop(SelectedBeat(selected, index == 0))
 }
 
 /// The selected beat's quiet icon actions, always in the Tab order.

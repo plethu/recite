@@ -127,13 +127,11 @@ pub(crate) fn emphasised_action<
                 ControlStyle::Tonal
             },
             view::button(
+                // One weight in both states, so the words keep their width and nothing beside
+                // the action moves as it becomes primary; the fill carries the emphasis.
                 Type::Control
                     .label(scale, text)
-                    .weight(if primary {
-                        FontWeight::SEMI_BOLD
-                    } else {
-                        Type::Control.weight()
-                    })
+                    .weight(Type::Control.weight())
                     .color(if disabled {
                         palette.muted
                     } else if primary {

@@ -45,15 +45,12 @@ pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
     // The words line up with the manuscript's text column, the plus hanging before it.
+    // An empty beat's row lines up the same way.
     .padding(Padding::left(
-        if state.reading.rows.is_empty() {
-            0.
-        } else {
-            (super::super::reading::text_column(state)
-                - control_inset(Page::of(state).control())
-                - print::insert_hang(Page::of(state).control()))
-            .max(0.)
-        }
+        (super::super::reading::text_column(state)
+            - control_inset(Page::of(state).control())
+            - print::insert_hang(Page::of(state).control()))
+        .max(0.)
         .px(),
     ))
 }

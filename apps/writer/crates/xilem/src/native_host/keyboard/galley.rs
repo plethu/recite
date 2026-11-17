@@ -72,11 +72,13 @@ impl Galley {
 /// scene title in view.
 /// The heading lands `lead` below the sheet's top edge. Returns where the galley scrolled to.
 fn reveal_selected(root: &mut RenderRoot, portal: WidgetId, lead: f64) -> Option<f64> {
-    let target = root
+    let (target, first) = root
         .get_widget(portal)
         .and_then(|widget| widget.downcast::<Portal<Flex>>())
         .and_then(|portal| heading_offset(&portal))?;
-    let y = if target < TITLE + lead {
+    // The scene's first beat shows the scene title above it at every interface scale; any other
+    // heading lands whole below the running head, never cut by the sheet's top edge.
+    let y = if first || target < TITLE + lead {
         0.
     } else {
         target - lead
@@ -94,8 +96,9 @@ fn viewport(root: &RenderRoot, portal: WidgetId) -> Option<f64> {
         .map(|portal| portal.get_viewport_pos().y)
 }
 
-/// The selected beat heading's top in the manuscript content's coordinates.
-fn heading_offset(portal: &WidgetRef<'_, Portal<Flex>>) -> Option<f64> {
+/// The selected beat heading's top in the manuscript content's coordinates, and whether its beat
+/// opens the scene.
+fn heading_offset(portal: &WidgetRef<'_, Portal<Flex>>) -> Option<(f64, bool)> {
     let bounds = portal
         .ctx()
         .window_transform()
@@ -106,16 +109,16 @@ fn heading_offset(portal: &WidgetRef<'_, Portal<Flex>>) -> Option<f64> {
         if widget.ctx().is_stashed() {
             continue;
         }
-        if widget
+        if let Some(SelectedBeat(true, first)) = widget
             .downcast::<Flex>()
-            .is_some_and(|flex| flex.get_prop::<SelectedBeat>().0)
+            .map(|flex| *flex.get_prop::<SelectedBeat>())
         {
             let top = widget
                 .ctx()
                 .window_transform()
                 .transform_rect_bbox(widget.ctx().border_box())
                 .y0;
-            return Some(top - origin);
+            return Some((top - origin, first));
         }
         pending.extend(widget.children());
     }
