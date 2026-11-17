@@ -1,5 +1,6 @@
 //! The error wedge: a 24px target that names a problem and carries its diagnostic as the
-//! accessible description, so a screen reader hears what is wrong before acting on it.
+//! accessible description, so a screen reader hears what is wrong before acting on it. Where a
+//! problem is repeated in a row, card or message, the same widget paints the error sign instead.
 mod view;
 pub(crate) use view::{wedge, wedge_glyph};
 use xilem::{
@@ -12,7 +13,7 @@ use xilem::{
             keyboard::{Key, NamedKey},
         },
         imaging::Painter,
-        kurbo::{Axis, BezPath, Size, Stroke},
+        kurbo::{Axis, BezPath, Cap, Circle, Line, Size, Stroke},
         layout::{AsUnit, LenReq, Length},
     },
     peniko::Color,
@@ -138,12 +139,34 @@ impl Widget for Wedge {
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let edge = ctx.border_box();
-        let inset = self.glyph.map_or(1., |side| side / SIDE);
+        if let Some(side) = self.glyph {
+            // The repeated mark is the standard error sign, a circled exclamation mark, so it
+            // never reads as a disclosure or play arrow.
+            let weight = (side / 10.).max(1.5);
+            let (centre, radius) = (edge.center(), side / 2. - weight / 2.);
+            painter
+                .stroke(Circle::new(centre, radius), &Stroke::new(weight), self.ink)
+                .draw();
+            let bar = Line::new(
+                (centre.x, centre.y - 0.5 * radius),
+                (centre.x, centre.y + 0.1 * radius),
+            );
+            painter
+                .stroke(bar, &Stroke::new(weight).with_caps(Cap::Round), self.ink)
+                .draw();
+            painter
+                .fill(
+                    Circle::new((centre.x, centre.y + 0.45 * radius), 0.6 * weight),
+                    self.ink,
+                )
+                .draw();
+            return;
+        }
         // A wedge pointing into the text: a filled triangle in the error ink.
         let mut wedge = BezPath::new();
-        wedge.move_to((edge.x0 + 7. * inset, edge.y0 + 6. * inset));
-        wedge.line_to((edge.x1 - 6. * inset, edge.y0 + edge.height() / 2.));
-        wedge.line_to((edge.x0 + 7. * inset, edge.y1 - 6. * inset));
+        wedge.move_to((edge.x0 + 7., edge.y0 + 6.));
+        wedge.line_to((edge.x1 - 6., edge.y0 + edge.height() / 2.));
+        wedge.line_to((edge.x0 + 7., edge.y1 - 6.));
         wedge.close_path();
         painter.fill(wedge, self.ink).draw();
         if ctx.is_focus_target() {

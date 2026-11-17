@@ -28,14 +28,14 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     }
     let selected = scene.selected.as_deref() == Some(&block.id);
     // The galley's margin marks repeat here: the reading beat's bar, and a wedge on a beat with a
-    // problem, which the card's name also says.
+    // problem as the error sign, which the card's name also says.
     let reading = state.reading.selected.as_deref() == Some(block.id.as_str());
     let problem = state
         .beat_problems()
         .iter()
         .any(|(beat, _)| beat == &block.id);
     let name = if problem {
-        format!("{title} · Problem")
+        format!("Error: {title}")
     } else {
         title.clone()
     };

@@ -31,6 +31,16 @@ pub(in super::super) fn field<W: Widget>(
     ] {
         well(rule, lead).push(&mut stack, &selector, STRONG);
     }
+    // A refused value: the well's border and rule in the error ink, besides its invalid state.
+    Look {
+        rest: Some((p.ink.with_alpha(WELL), p.error)),
+        ..well(p.error, 0.)
+    }
+    .push(
+        &mut stack,
+        &Selector::classes(&[ControlStyle::InvalidField.class()]),
+        STRONG,
+    );
     // A title's field: one pixel of padding gives the 2px focus border its room.
     Look::well(p, (1., size::CONTROL_PAD * scale), p.well_rule).push(
         &mut stack,

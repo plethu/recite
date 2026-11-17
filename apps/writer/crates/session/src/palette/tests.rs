@@ -392,3 +392,22 @@ fn a_scroll_bar_thumb_in_the_boundary_colour_holds_three_to_one_on_every_host() 
         }
     }
 }
+
+#[test]
+fn an_error_message_in_the_error_ink_reads_as_text_wherever_it_shows() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        // A tool page and a slip are paper; a field's refused value sits beside its well.
+        for (host, name) in [
+            (p.surface, "page"),
+            (p.floating, "slip"),
+            (p.grained_desk(), "desk"),
+        ] {
+            assert!(
+                contrast(p.error, host) >= 4.5,
+                "error text on {name}: dark={dark} monochrome={monochrome}: {}",
+                contrast(p.error, host)
+            );
+        }
+    }
+}

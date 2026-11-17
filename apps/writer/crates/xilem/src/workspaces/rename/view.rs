@@ -1,8 +1,11 @@
 use crate::WriterLayout;
+use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 mod comparison;
+#[cfg(test)]
+mod tests;
 use super::*;
 use crate::presentation::marks::{GLYPH, wedge_glyph};
 use crate::session::RecoveryReason;
@@ -45,7 +48,8 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
 }
 /// The fallback after a refused rename, or a rename opened from a link: the beat as a label and
 /// value beside the field holding its new id, the name already typed. A clash the review would
-/// refuse is said under the field in the writer's words, with a wedge, and marks it invalid.
+/// refuse is said under the field in the error ink after the error sign, and marks it invalid
+/// with an error border; what Review still waits for is said under it and describes Review.
 fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
     let blocked = writer.project_action_blocked();
@@ -69,25 +73,44 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
         .gap(space::SIBLINGS.px()),
         label(scale, "New beat name"),
-        text_input(panel.name.clone(), Writer::change_rename_name)
-            .typeset(Type::Body, scale)
-            .disabled(blocked || panel.block.is_empty())
-            .prop(TextAreaLabel::new("New beat name").with_error(clash.clone())),
+        styled(
+            if clash.is_some() {
+                ControlStyle::InvalidField
+            } else {
+                ControlStyle::Field
+            },
+            text_input(panel.name.clone(), Writer::change_rename_name)
+                .typeset(Type::Body, scale)
+                .disabled(blocked || panel.block.is_empty())
+                .prop(TextAreaLabel::new("New beat name").with_error(clash.clone())),
+        ),
+        // The refusal in the error ink after the error sign, read as an error.
         clash.map(|clash| {
             flex_row((
                 wedge_glyph(GLYPH * f64::from(scale), writer.palette.error),
-                print::caption(scale, clash).color(writer.palette.ink),
+                print::caption(scale, format!("Error: {clash}")).color(writer.palette.error),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)
             .gap(space::UNIT.px())
         }),
+        // What Review still waits for, under the field it concerns; Review reads it too.
+        reason(writer).map(|reason| print::caption(scale, reason).color(writer.palette.muted)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(space::UNIT.px())
     .width(width.px())
     .prop(PaneEntry(true))
 }
-/// What a proposal still lacks before it can be reviewed, said beside its disabled Primary.
+/// What a proposal still lacks before it can be reviewed, while it is proposed.
+fn reason(writer: &Writer) -> Option<&'static str> {
+    let panel = &writer.workspaces.rename;
+    panel
+        .changes
+        .is_empty()
+        .then(|| missing(&panel.block, &panel.name, writer.rename_clash().is_some()))
+        .flatten()
+}
+/// What a proposal still lacks before it can be reviewed, said under its field.
 fn missing(block: &str, name: &str, clash: bool) -> Option<&'static str> {
     if clash {
         Some("Choose an id no other beat in this file has")
@@ -110,24 +133,20 @@ fn summary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
 /// The sheet's own actions: Review is its primary while proposing; once reviewed, Rename is,
 /// beside a tonal Cancel back to the proposal.
 fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + use<> {
-    let panel = &writer.workspaces.rename;
     let blocked = writer.project_action_blocked();
     let scale = writer.ui_scale();
     let review = writer
         .session
         .project()
         .is_some_and(|project| project.files().rename_review.is_some());
-    let missing = (!reviewing)
-        .then(|| missing(&panel.block, &panel.name, writer.rename_clash().is_some()))
-        .flatten();
+    let missing = (!reviewing).then(|| reason(writer)).flatten();
     flex_row((
-        missing.map(|reason| print::caption(scale, reason).color(writer.palette.muted)),
         reviewing.then(|| {
             text_button(scale, "Cancel", Writer::discard_rename_review)
                 .accessible_label("Cancel rename")
                 .disabled(blocked)
         }),
-        print::primary_action(
+        print::primary_described(
             scale,
             if reviewing {
                 "Rename"
@@ -135,12 +154,16 @@ fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + u
                 "Review project rename"
             },
             &writer.palette,
-            blocked
-                || if reviewing {
-                    !review
-                } else {
-                    missing.is_some()
-                },
+            (
+                blocked
+                    || if reviewing {
+                        !review
+                    } else {
+                        missing.is_some()
+                    },
+                false,
+            ),
+            missing,
             move |writer: &mut Writer| {
                 if reviewing {
                     writer.apply_project_rename();

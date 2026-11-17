@@ -31,6 +31,8 @@ pub(crate) enum ControlStyle {
     /// well and its rule with only the focus border's room above and below the text, so it keeps
     /// the title's line.
     TitleField,
+    /// A field on paper whose value is refused: its border and rule take the error ink.
+    InvalidField,
     /// A button shaped like a search field on the desk: it opens a search.
     Entry,
     /// A list row at rest.
@@ -68,6 +70,7 @@ impl ControlStyle {
             Self::DeskField => "writer-desk-field",
             Self::SearchField => "writer-search-field",
             Self::TitleField => "writer-title-field",
+            Self::InvalidField => "writer-invalid-field",
             Self::Icon => "writer-icon",
             Self::IconOn => "writer-icon-on",
             Self::ToggleOn => "writer-toggle-on",

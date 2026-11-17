@@ -72,8 +72,8 @@ impl<S: 'static, F: Fn(&mut S) + Send + Sync + 'static> View<S, (), ViewCtx> for
     }
 }
 
-/// A decorative wedge `side` square in `ink`, for a row or card whose name already says there is
-/// a problem.
+/// A decorative error sign `side` square in `ink`, a circled exclamation mark, for a row, card or
+/// message whose words already say there is a problem.
 pub(crate) fn wedge_glyph(side: f64, ink: Color) -> GlyphView {
     GlyphView { side, ink }
 }

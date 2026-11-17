@@ -129,25 +129,45 @@ pub(crate) fn primary_returning<
     (disabled, returning): (bool, bool),
     callback: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
+    primary_described(scale, text, palette, (disabled, returning), None, callback)
+}
+
+/// [`primary_returning`] whose accessible description says why it waits, such as what a
+/// proposal still lacks, the same words the view sets beside the field they concern.
+pub(crate) fn primary_described<
+    S: 'static,
+    T: Into<ArcStr>,
+    F: Fn(&mut S) + Send + Sync + 'static,
+>(
+    scale: f32,
+    text: T,
+    palette: &Palette<Color>,
+    (disabled, returning): (bool, bool),
+    description: Option<&'static str>,
+    callback: F,
+) -> impl WidgetView<S> + use<S, T, F> {
+    let button = view::button(
+        // One weight in both states, so the words keep their width and nothing beside the action
+        // moves as it becomes available.
+        Type::Control
+            .label(scale, text)
+            .weight(FontWeight::SEMI_BOLD)
+            .color(if disabled {
+                palette.muted
+            } else {
+                palette.on_accent
+            }),
+        callback,
+    );
+    let button = match description {
+        Some(description) => button.accessible_description(description),
+        None => button,
+    };
     super::material::focus_ring(
         Some(palette.on_accent),
         styled(
             ControlStyle::Primary,
-            view::button(
-                // One weight in both states, so the words keep their width and nothing beside
-                // the action moves as it becomes available.
-                Type::Control
-                    .label(scale, text)
-                    .weight(FontWeight::SEMI_BOLD)
-                    .color(if disabled {
-                        palette.muted
-                    } else {
-                        palette.on_accent
-                    }),
-                callback,
-            )
-            .disabled(disabled)
-            .prop(ReturnFocus(returning)),
+            button.disabled(disabled).prop(ReturnFocus(returning)),
         ),
     )
 }

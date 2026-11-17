@@ -229,7 +229,7 @@ fn beat_row(state: &Writer, rows: &Rows<'_>, beat: &Beat) -> impl WidgetView<Wri
         state.palette.ink,
     );
     // The current beat is the list's selected row: the plate, the ink bar and the state.
-    // A beat with a problem repeats the margin wedge, and its name says so.
+    // A beat with a problem shows the error sign, and its name starts by saying so.
     double_click(
         listed(
             &state.palette,
@@ -247,7 +247,7 @@ fn beat_row(state: &Writer, rows: &Rows<'_>, beat: &Beat) -> impl WidgetView<Wri
                 move |state: &mut Writer| state.inspect(id.clone()),
             )
             .accessible_label(if problem {
-                format!("{text} · Problem")
+                format!("Error: {text}")
             } else {
                 text
             })
