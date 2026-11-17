@@ -4,6 +4,7 @@ pub(crate) mod focus;
 pub(crate) mod galley;
 mod held;
 mod history;
+mod in_view;
 mod keys;
 use keys::{Keystroke, Stroke, key, physical};
 mod manuscript;
@@ -54,6 +55,7 @@ pub(crate) struct Keyboard {
     radio: radio::Arrows,
     galley: galley::Galley,
     reading: reading::Position,
+    in_view: in_view::InView,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
@@ -252,6 +254,10 @@ impl Keyboard {
                 .synchronize(root, &context, &self.composition);
             self.document_menu.synchronize(root, &context);
             self.reading.capture(root);
+            self.in_view.synchronize(
+                root,
+                context.editing.as_ref().filter(|_| context.writer_active),
+            );
             self.galley.synchronize(root);
             self.focus.hold_modal(root, &context);
             self.focus.settle(root);

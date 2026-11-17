@@ -7,7 +7,7 @@ use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::tokens::size;
-use crate::presentation::{Icon, Type, disclosure, group::named, print, space};
+use crate::presentation::{Icon, Type, disclosure, group::named, pane, print, space};
 use recite_writer_app::COMPACT_WINDOW;
 use xilem::{
     WidgetView,
@@ -102,7 +102,7 @@ pub(crate) fn result(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>>
         named(
             "Build result",
             sized_box(
-                flex_col((rows, open.then(|| options(writer, busy, empty))))
+                flex_col((rows, open.then(|| capped(writer, narrow, busy, empty))))
                     .cross_axis_alignment(CrossAxisAlignment::Stretch)
                     .gap(space::SIBLINGS.px()),
             )
@@ -125,6 +125,52 @@ fn state(writer: &Writer) -> (bool, bool) {
         builds.is_some_and(|builds| builds.busy()),
         builds.is_none_or(|builds| builds.targets.is_empty()),
     )
+}
+
+/// The most of the window the open bar takes; its options scroll inside the rest.
+const BAR_SHARE: f64 = 0.35;
+
+/// The options under the bar's rows, scrolling in a pane where the bar would take more than
+/// [`BAR_SHARE`] of the window, so the work above keeps most of it.
+fn capped(
+    writer: &Writer,
+    narrow: bool,
+    busy: bool,
+    empty: bool,
+) -> impl WidgetView<Writer> + use<> {
+    let scale = f64::from(writer.ui_scale());
+    let rows = if narrow {
+        2. * size::ROW * scale + space::SIBLINGS
+    } else {
+        size::ROW * scale
+    };
+    // The bar's padding and the gap above the options.
+    let room =
+        (BAR_SHARE * writer.viewport.height - rows - 3. * space::SIBLINGS).max(size::ROW * scale);
+    let targets = writer
+        .session
+        .project()
+        .map_or(0, |project| project.files().builds.targets.len());
+    // A Meta line, the outputs (one sentence, or a choice per output and All), and the action.
+    let outputs = if targets <= 1 {
+        f64::from(Type::Body.metrics().1) * scale
+    } else {
+        (targets + 1) as f64 * size::ROW * scale
+    };
+    let natural = f64::from(Type::Meta.metrics().1) * scale
+        + outputs
+        + size::ROW * scale
+        + 2. * space::SIBLINGS;
+    if natural <= room {
+        Either::A(options(writer, busy, empty))
+    } else {
+        Either::B(
+            sized_box(
+                pane("Build outputs", options(writer, busy, empty)).constrain_horizontal(true),
+            )
+            .height(room.px()),
+        )
+    }
 }
 
 /// The build options inside the bar: what a build reads, the outputs to build, and Save all and
