@@ -129,13 +129,7 @@ fn project_screen_headers_keep_complete_buttons_inside_the_allocated_window() {
                     let (root, update) = render(&mut app, width);
                     let left = app.writer.as_ref().unwrap().navigation_width() + 16.;
                     // A sheet carries its link in its head, beside its close, not in the toolbar.
-                    for title in [
-                        "Back",
-                        "Forward",
-                        "Return to writing",
-                        "Workspace",
-                        "Save",
-                    ] {
+                    for title in ["Back", "Forward", "Return to writing", "Workspace", "Save"] {
                         let bounds = header_button(&root, &update, title);
                         assert!(
                             // Pixel snapping may round a fractional label's button up by
