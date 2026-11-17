@@ -43,6 +43,9 @@ pub(crate) struct Ticks {
     /// Stock beyond the block's trailing and bottom edges, such as a card's offset, which the
     /// marks clear as part of the block.
     pub stock: f64,
+    /// The block's width where it differs from its box: a beat is as wide as its grid, though a
+    /// route hanging in the destination column reaches past it.
+    pub span: Option<f64>,
 }
 impl Ticks {
     /// Ticks at `scale` for a block with `room` of clear paper around it: 2×8 ticks 4px off the
@@ -56,11 +59,19 @@ impl Ticks {
             arm: arm.min(room - CLEAR - gap).max(weight),
             weight,
             stock: 0.,
+            span: None,
         }
     }
     /// The same ticks clearing `stock` beyond the trailing and bottom edges.
     pub fn clearing(self, stock: f64) -> Self {
         Self { stock, ..self }
+    }
+    /// The same ticks around a block `span` wide, whatever its box.
+    pub fn spanning(self, span: f64) -> Self {
+        Self {
+            span: Some(span),
+            ..self
+        }
     }
     /// The eight ticks around `block`.
     pub fn rects(self, block: Rect) -> [Rect; 8] {
@@ -69,8 +80,15 @@ impl Ticks {
             arm,
             weight,
             stock,
+            span,
         } = self;
-        let (x0, y0, x1, y1) = (block.x0, block.y0, block.x1 + stock, block.y1 + stock);
+        let width = span.unwrap_or(block.width());
+        let (x0, y0, x1, y1) = (
+            block.x0,
+            block.y0,
+            block.x0 + width + stock,
+            block.y1 + stock,
+        );
         [
             // Top leading: across, then up.
             Rect::new(x0 - gap - arm, y0, x0 - gap, y0 + weight),

@@ -87,7 +87,8 @@ pub(super) fn galley<V: WidgetView<Writer>>(
 }
 
 /// The current beat's crop marks, kept within the clear paper around the beat: the sheet's pad
-/// beside it and half the space between beats above and below it.
+/// beside it and half the space between beats above and below it. They frame the beat's grid
+/// row, which a hanging route's box can outreach.
 fn crop(state: &Writer, grid: &Grid, current: bool) -> Marks {
     Marks::crop(
         &state.palette,
@@ -96,7 +97,8 @@ fn crop(state: &Writer, grid: &Grid, current: bool) -> Marks {
             f64::from(Page::of(state).control()),
             grid.pad.min(HALF_BEAT),
             grid.sheet,
-        ),
+        )
+        .spanning(grid.row()),
     )
 }
 
