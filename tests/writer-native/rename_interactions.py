@@ -82,6 +82,12 @@ def run(api, bus, registry, binary, output):
                 )
                 if window.find("Review all changes"):
                     capture_settled(window, output, "-inline")
+                    # The reviewed slip is a decision: a dialog named for the beat it renames.
+                    slip = window.find("Rename old")
+                    assert slip and window.call(slip, "Accessible", "GetRole")[0] == int(
+                        window.api.Atspi.Role.DIALOG
+                    )
+                    results["inline_rename_review_is_a_named_dialog"] = True
                     window.act("Review all changes")
                     window.wait(lambda: window.find("Cancel rename"), "reviewed rename page")
                     window.act("Cancel rename")

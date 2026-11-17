@@ -155,3 +155,57 @@ fn a_reviewed_rename_hangs_its_slip_under_the_heading_and_moves_nothing() {
             .is_none()
     );
 }
+
+#[test]
+fn a_reviewed_rename_is_a_named_dialog_over_an_inert_window_that_tab_never_leaves() {
+    let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+    let app = App::with_writer(support::open(&directory).unwrap());
+    let mut mounted = Mounted::new(app, page);
+    mounted.settle();
+    let writer = mounted.state.writer.as_mut().unwrap();
+    let beat = writer.reading.selected.clone().expect("a selected beat");
+    let mut tools = ToolDriver::new(writer);
+    writer.rename_beat();
+    writer.edit_inline_rename("renamed".into());
+    writer.commit_inline_rename();
+    tools.finish(writer);
+    mounted.settle();
+    let heading = slip_anchor(mounted.harness.render_root()).expect("the heading is the anchor");
+    let writer = mounted.state.writer.as_mut().unwrap();
+    writer.place_inline_rename(heading.0, heading.1);
+    mounted.settle();
+    // The slip is a dialog named for the beat, and the window's controls behind it are inert.
+    let tree = mounted.harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let (mut dialog, mut live_behind) = (None, Vec::new());
+    while let Some(node) = pending.pop() {
+        if node.role() == Role::Dialog {
+            dialog = node.label();
+            continue;
+        }
+        if node.role() == Role::Button && !node.is_disabled() && node.label().is_some() {
+            live_behind.push(node.label().unwrap_or_default());
+        }
+        pending.extend(node.children());
+    }
+    assert_eq!(dialog.as_deref(), Some(format!("Rename {beat}").as_str()));
+    assert!(
+        live_behind.iter().all(|name| name.contains("problem")),
+        "only the status bar's own controls stay live: {live_behind:?}"
+    );
+    let mut inside = Vec::new();
+    modal_controls(mounted.harness.root_widget().as_dyn(), false, &mut inside);
+    assert!(!inside.is_empty(), "the slip is mounted");
+    for backwards in [false, true] {
+        for _ in 0..2 * inside.len() + 2 {
+            mounted.harness.press_tab_key(backwards);
+            to_tab_stop(mounted.harness.render_root(), backwards);
+            mounted.settle();
+            let focused = mounted.harness.focused_widget_id();
+            assert!(
+                focused.is_some_and(|id| inside.contains(&id)),
+                "Tab (backwards: {backwards}) left the rename slip for {focused:?}"
+            );
+        }
+    }
+}

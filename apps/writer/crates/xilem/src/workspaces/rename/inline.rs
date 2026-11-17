@@ -4,6 +4,7 @@
 use super::Writer;
 use crate::app::keyboard::{DefaultFocus, ModalSurface};
 use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::group;
 use crate::presentation::slip::slip;
 use crate::presentation::tokens::{size, space};
 use crate::presentation::{Type, Typeset, material, paragraph, print};
@@ -199,6 +200,15 @@ pub(crate) fn floats(state: &Writer) -> bool {
         .is_some_and(|inline| inline.anchor.is_some() && inline.stage != Stage::Editing)
 }
 
+/// Whether a rename's review is a decision over the backdrop: a named dialog, with the window
+/// behind it inert until it is answered.
+pub(crate) fn modal(state: &Writer) -> bool {
+    floats(state)
+        && state
+            .inline_rename()
+            .is_some_and(|inline| inline.stage == Stage::Reviewed)
+}
+
 /// The review's progress or consequence slip of a rename at a heading or sidebar row, floating
 /// over the window from the point the native host measured under that name, so nothing in the
 /// document moves. Once the review is ready the slip is a decision over the backdrop. A card's
@@ -217,7 +227,11 @@ pub(crate) fn floating(state: &Writer) -> Option<impl WidgetView<Writer> + use<>
     } else {
         Actions::Row
     };
-    let slip = consequence(state, inline.place, width, actions)?;
+    let slip = group::dialog_while(
+        inline.stage == Stage::Reviewed,
+        format!("Rename {}", inline.beat),
+        consequence(state, inline.place, width, actions)?,
+    );
     // A slip with a two-line sentence stays inside the window above a low name.
     let tall = 2. * space::KINDS
         + space::TEXT

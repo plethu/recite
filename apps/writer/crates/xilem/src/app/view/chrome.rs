@@ -5,6 +5,7 @@ use crate::presentation::sheet_text::one_line;
 use crate::presentation::tokens::{breakpoint, size};
 use crate::presentation::{Type, space};
 use crate::presentation::{identity, paragraph, print};
+use crate::workspaces::rename::inline::modal as rename_modal;
 use crate::{
     Phase, Writer,
     app::{App, picker},
@@ -22,7 +23,8 @@ use xilem::{
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let searching = app.picker.is_some();
+    // A picker or a rename's decision holds the window: the tab row behind it is inert.
+    let searching = app.picker.is_some() || app.writer.as_ref().is_some_and(rename_modal);
     let blocked = searching
         || app
             .writer
@@ -233,7 +235,7 @@ fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
         || app
             .writer
             .as_ref()
-            .is_none_or(|writer| writer.phase() != Phase::Writing);
+            .is_none_or(|writer| writer.phase() != Phase::Writing || rename_modal(writer));
     flex_row((
         print::action(scale, "Go to", disabled, |app: &mut App| {
             app.search_from_menu(picker::Search::GoTo)

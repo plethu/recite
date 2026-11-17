@@ -65,6 +65,15 @@ pub(crate) fn status<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         child,
     }
 }
+/// `child` as a named dialog while `modal`, and a plain container otherwise: a slip that becomes a
+/// decision once its content is ready, without rebuilding its controls.
+pub(crate) fn dialog_while<V>(modal: bool, name: impl Into<ArcStr>, child: V) -> Named<V> {
+    if modal {
+        dialog(name, child)
+    } else {
+        inert(false, child)
+    }
+}
 pub(crate) fn dialog<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),

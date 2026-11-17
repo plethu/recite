@@ -70,7 +70,11 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                                     indexed_stack((welcome::panel(app), slot))
                                         .active(usize::from(!app.show_welcome())),
                                 )
-                                .disabled(app.picker.is_some()),
+                                // Behind a picker or a rename's decision the workspace is inert.
+                                .disabled(
+                                    app.picker.is_some()
+                                        || app.writer.as_ref().is_some_and(rename::modal),
+                                ),
                                 // Settings is a side sheet over the live workspace, clear of the
                                 // status bar. A stack keeps the layer in place while it is
                                 // closed, so the layers above it keep theirs.
