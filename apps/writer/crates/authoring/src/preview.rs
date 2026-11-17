@@ -47,6 +47,8 @@ pub enum PreviewError {
 #[derive(Clone, Debug, Default)]
 pub struct PreviewPage {
     pub text: String,
+    /// Who speaks the text, as the script names them; none for a speakerless line or a stand-in.
+    pub speaker: Option<String>,
     pub choices: Vec<DialogueChoice>,
     pub ended: bool,
     pub effects: Vec<recite_runtime::DialogueEffectRequest>,
@@ -64,6 +66,7 @@ pub const REPLY_PROMPT: &str = "Choose a reply";
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreviewTurn {
     pub text: String,
+    pub speaker: Option<String>,
     pub reply: Option<String>,
 }
 
@@ -192,9 +195,16 @@ impl Preview {
         let mut page = PreviewPage::default();
         for event in output.events() {
             match event {
-                PreviewEvent::Line(line) => page.text = line.text.clone(),
+                PreviewEvent::Line(line) => {
+                    page.text = line.text.clone();
+                    page.speaker = line.speaker.as_ref().map(|id| id.as_str().to_owned());
+                }
                 PreviewEvent::Prompt(prompt) => {
                     page.prompt = prompt.line().is_none();
+                    page.speaker = prompt
+                        .line()
+                        .and_then(|line| line.speaker.as_ref())
+                        .map(|id| id.as_str().to_owned());
                     page.text = prompt
                         .line()
                         .map_or_else(|| REPLY_PROMPT.to_owned(), |line| line.text.clone());

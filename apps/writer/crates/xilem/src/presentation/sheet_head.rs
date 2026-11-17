@@ -8,7 +8,10 @@ use xilem::{
     masonry::{core::ArcStr, layout::AsUnit, properties::LineBreaking, widgets::Flex},
     peniko::Color,
     style::Style,
-    view::{CrossAxisAlignment, FlexExt, FlexSequence, flex_col, flex_row},
+    view::{
+        CrossAxisAlignment, FlexSequence, GridExt, GridTrackSize, MainAxisAlignment, flex_col,
+        flex_row, grid,
+    },
 };
 
 /// What closes a sheet: the action, and whether it is unavailable now.
@@ -49,9 +52,9 @@ pub(crate) fn sheet_head<
                 .prop(LineBreaking::WordWrap)
         }),
     ))
+    .main_axis_alignment(MainAxisAlignment::Center)
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::UNIT.px())
-    .flex(1.);
+    .gap(space::UNIT.px());
     let close = print::icon_action(
         scale,
         close.name,
@@ -60,21 +63,29 @@ pub(crate) fn sheet_head<
         close.disabled,
         close.action,
     );
-    let (inline, below) = if stacked {
-        (None, Some(actions))
-    } else {
-        (Some(actions), None)
-    };
-    flex_col((
-        flex_row((title, inline, close))
+    // One grid either way: the actions move between the title's row and the row under it
+    // without being rebuilt, so a control keeps its identity and focus as the sheet narrows.
+    let actions = flex_row(actions)
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(space::SIBLINGS.px());
+    flex_col((grid((
+        title.grid_pos(0, 0),
+        actions.grid_pos(u16::from(!stacked), u16::from(stacked)),
+        flex_row((close,))
             .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(space::TEXT.px()),
-        below.map(|actions| {
-            flex_row(actions)
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .gap(space::SIBLINGS.px())
-        }),
+            .grid_pos(2, 0),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
+    .columns([
+        GridTrackSize::FRACTION,
+        GridTrackSize::Auto,
+        GridTrackSize::Auto,
+    ])
+    .rows(if stacked {
+        vec![GridTrackSize::Auto; 2]
+    } else {
+        vec![GridTrackSize::Auto]
+    })
+    .gap(space::TEXT.px()),))
+    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+    .gap(0.px())
 }

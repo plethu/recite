@@ -4,14 +4,14 @@ use crate::presentation::space;
 use crate::{attention::EntryContext, presentation::group};
 use xilem::masonry::kurbo::Axis;
 
-pub(super) fn panel(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+pub(super) fn panel(state: &Writer, width: f64) -> Option<impl WidgetView<Writer> + use<>> {
     let message = state.trial_feedback()?;
-    Some(summary(state, message))
+    Some(summary(state, message, width))
 }
 
-fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + use<> {
+fn summary(state: &Writer, message: &'static str, width: f64) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let wide = state.content_width() >= 360. * f64::from(scale);
+    let wide = width >= 360. * f64::from(scale);
     group::status(
         message,
         flex_row((
@@ -19,9 +19,9 @@ fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + u
                 scale,
                 message,
                 if wide {
-                    state.content_width() - 220. * f64::from(scale)
+                    width - 220. * f64::from(scale)
                 } else {
-                    state.content_width()
+                    width
                 },
             ),
             state.trial.failed().then(|| {
@@ -49,7 +49,7 @@ fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + u
     )
 }
 
-pub(super) fn details(state: &Writer) -> impl WidgetView<Writer> + use<> {
+pub(super) fn details(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     named(
         "Preview preparation diagnostic",
@@ -66,7 +66,7 @@ pub(super) fn details(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 paragraph(
                     scale,
                     state.trial.failure().unwrap_or_default().to_owned(),
-                    state.content_width() - 48.,
+                    width - 2. * space::KINDS,
                 ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)

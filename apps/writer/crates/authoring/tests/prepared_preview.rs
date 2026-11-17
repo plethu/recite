@@ -96,9 +96,14 @@ fn a_preview_keeps_a_transcript_of_shown_lines_and_chosen_replies()
             break;
         }
         let text = page.text.clone();
+        let speaker = page.speaker.clone();
         model.advance_preview(None)?;
         if !text.is_empty() {
-            expected.push(PreviewTurn { text, reply: None });
+            expected.push(PreviewTurn {
+                text,
+                speaker,
+                reply: None,
+            });
         }
     }
     let page = model.preview_page().ok_or("page")?;
@@ -110,10 +115,13 @@ fn a_preview_keeps_a_transcript_of_shown_lines_and_chosen_replies()
         } else {
             page.text.clone()
         },
+        speaker: page.speaker.clone(),
         reply: Some(reply),
     });
     model.advance_preview(Some(0))?;
     assert_eq!(model.preview_transcript(), expected.as_slice());
+    // Each shown line keeps who spoke it, as the script names them.
+    assert_eq!(expected[0].speaker.as_deref(), Some("alice"));
     // A new preview starts a new transcript.
     model.start_preview()?;
     assert!(model.preview_transcript().is_empty());

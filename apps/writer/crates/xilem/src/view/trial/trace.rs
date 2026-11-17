@@ -12,27 +12,29 @@ use xilem::{masonry::properties::LineBreaking, view::button};
 mod record;
 mod value;
 
+/// The head's toggle for the running preview's trace, once it has one.
+pub(super) fn toggle(writer: &Writer, disabled: bool) -> Option<impl WidgetView<Writer> + use<>> {
+    writer.session.model().preview_trace()?;
+    Some(print::action(
+        writer.ui_scale(),
+        if writer.trial.trace.open {
+            "Hide preview trace"
+        } else {
+            "Preview trace"
+        },
+        disabled,
+        |writer: &mut Writer| writer.trial.trace.open = !writer.trial.trace.open,
+    ))
+}
+
+/// The trace under the transcript, while open.
 pub(super) fn panel(writer: &Writer, disabled: bool) -> Option<impl WidgetView<Writer> + use<>> {
     let trace = writer.session.model().preview_trace()?;
-    let browser = writer.trial.trace;
-    let scale = writer.ui_scale();
-    Some(
-        flex_col((
-            text_button(
-                scale,
-                if browser.open {
-                    "Hide preview trace"
-                } else {
-                    "Preview trace"
-                },
-                |writer: &mut Writer| writer.trial.trace.open = !writer.trial.trace.open,
-            )
-            .disabled(disabled),
-            browser.open.then(|| contents(writer, trace, disabled)),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::TEXT.px()),
-    )
+    writer
+        .trial
+        .trace
+        .open
+        .then(|| contents(writer, trace, disabled))
 }
 fn contents(
     writer: &Writer,

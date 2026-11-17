@@ -19,7 +19,7 @@ mod controls;
 mod galley;
 pub(crate) use galley::SelectedBeat;
 mod passage;
-pub(super) use passage::text_column;
+pub(super) use passage::{margin, text_column};
 mod refusal;
 pub(super) mod viewport;
 use xilem::{AnyWidgetView, masonry::kurbo::Axis, style::Padding};

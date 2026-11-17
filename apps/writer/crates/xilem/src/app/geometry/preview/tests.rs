@@ -1,11 +1,16 @@
 use super::*;
 
 fn preview_bounds(mounted: &Mounted<App, impl WidgetView<App, Widget = Passthrough>>) -> Rect {
+    labelled_bounds(mounted, "Conversation preview")
+}
+
+fn labelled_bounds(
+    mounted: &Mounted<App, impl WidgetView<App, Widget = Passthrough>>,
+    name: &str,
+) -> Rect {
     let mut pending = vec![mounted.harness.root_widget().as_dyn()];
     while let Some(widget) = pending.pop() {
-        if support::native_label(&mounted.harness, widget.id()).as_deref()
-            == Some("Conversation preview")
-        {
+        if support::native_label(&mounted.harness, widget.id()).as_deref() == Some(name) {
             return widget
                 .ctx()
                 .window_transform()
@@ -13,7 +18,7 @@ fn preview_bounds(mounted: &Mounted<App, impl WidgetView<App, Widget = Passthrou
         }
         pending.extend(widget.children());
     }
-    panic!("preview pane");
+    panic!("no widget labelled {name}");
 }
 
 #[test]
@@ -172,4 +177,47 @@ fn current_run_stays_under_configuration_and_focus_retains_the_collapsed_referen
     let writer = mounted.state.writer.as_ref().unwrap();
     assert_eq!(writer.trial.settings.variant, "formal");
     assert_eq!(writer.session.model().preview_page().unwrap().text, prose);
+}
+
+fn named_bounds(
+    mounted: &Mounted<App, impl WidgetView<App, Widget = Passthrough>>,
+    name: &str,
+) -> Rect {
+    let widget = mounted.harness.get_widget_with_id(mounted.find(name));
+    widget
+        .ctx()
+        .window_transform()
+        .transform_rect_bbox(widget.ctx().border_box())
+}
+
+#[test]
+fn preview_is_a_sheet_with_the_run_s_actions_in_its_head_and_speakers_in_the_margin() {
+    let source = ":: start default\n> speaker=mara @ffee6p8\n  Hello there.\n> speaker=mara @rthh7ab\n  Still here.\n-> END\n";
+    let directory = support::project(source).unwrap();
+    let mut writer = support::open(&directory).unwrap();
+    writer.change(|model| model.start_preview());
+    writer.trial.visible = true;
+    let mut mounted = Mounted::new(App::with_writer(writer), page);
+    mounted
+        .harness
+        .process_window_event(WindowEvent::Resize((1280, 720).into()));
+    mounted.settle();
+    let pane = preview_bounds(&mounted);
+    let paper = labelled_bounds(&mounted, "Transcript");
+    // The paper rests on the desk, narrower than the pane.
+    assert!(paper.width() + 16. <= pane.width(), "{paper:?} in {pane:?}");
+    // Continue and the close icon sit in the head, above the transcript, the close at its right.
+    let next = named_bounds(&mounted, "Continue preview");
+    let close = named_bounds(&mounted, "Return to writing");
+    assert!(
+        next.y1 <= paper.y0 && close.y1 <= paper.y0,
+        "{next:?} {close:?} {paper:?}"
+    );
+    assert!(close.x0 > next.x1, "{close:?} after {next:?}");
+    assert!(mounted.contains_text("MARA"));
+    mounted.activate("Continue preview");
+    // The shown line joins the transcript with its speaker; the next line names its own.
+    assert!(mounted.contains_text("Hello there."));
+    assert!(mounted.contains_text("Still here."));
+    assert!(mounted.contains_text("MARA"));
 }

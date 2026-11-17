@@ -1,61 +1,94 @@
-//! Submission stays outside the independently scrolling conversation and next-run form.
+//! The preview sheet's head: the title in Display with the run's captured context as its caption,
+//! the run's actions, and the close icon back to writing. It stays put above the transcript.
 use super::*;
-use crate::presentation::space;
-use crate::presentation::{Type, Typeset};
-use xilem::masonry::kurbo::Axis;
+use crate::presentation::sheet_head::{Close, Layout, sheet_head};
+use xilem::masonry::core::ArcStr;
 
-pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
+/// The head width at 100% below which the run's actions, up to six, leave the title's row.
+const HEAD_ROW: f64 = 900.;
+
+pub(super) fn header(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let wide = state.content_width() >= 600. * f64::from(scale);
-    flex_col((
-        grid((
-            flex_row((
-                label(scale, "Preview").typeset(Type::Section, scale),
-                submission(state),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(space::KINDS.px())
-            .grid_pos(0, 0),
-            flex_row((
-                print::action(
+    let width = grid.width - 2. * grid.pad - grid.text();
+    let caption = state
+        .session
+        .model()
+        .preview_provenance()
+        .map(|snapshot| ArcStr::from(snapshot.summary.clone()));
+    sized_box(
+        flex_col((
+            sheet_head(
+                Layout {
                     scale,
-                    "Return to writing",
-                    state.phase() != Phase::Writing,
-                    Writer::return_from_trial,
-                ),
-                print::action(
-                    scale,
-                    "Configure preview",
-                    state.phase() != Phase::Writing,
-                    Writer::configure_trial,
-                ),
-            ))
-            .gap(space::SIBLINGS.px())
-            .grid_pos(u16::from(wide), u16::from(!wide)),
+                    // Narrower than this, the run's actions take a row under the title.
+                    stacked: width < HEAD_ROW * f64::from(scale),
+                },
+                &state.palette,
+                ("Preview", caption, (actions(state),)),
+                Close {
+                    name: "Return to writing",
+                    disabled: state.phase() != Phase::Writing,
+                    action: Writer::return_from_trial,
+                },
+            ),
+            context::details(state, width),
+            feedback::panel(state, width),
         ))
-        .columns([
-            GridTrackSize::FRACTION,
-            if wide {
-                GridTrackSize::Auto
-            } else {
-                GridTrackSize::Fixed(0.px())
-            },
-        ])
-        .rows([GridTrackSize::Auto; 2])
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(space::SIBLINGS.px()),
-        feedback::panel(state),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(space::SIBLINGS.px())
+    )
+    .padding(Padding {
+        top: if grid.sheet {
+            space::REGIONS
+        } else {
+            space::KINDS
+        }
+        .px(),
+        bottom: space::SIBLINGS.px(),
+        left: (grid.pad + grid.text()).px(),
+        right: grid.pad.px(),
+    })
 }
 
-fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
+/// Whether the run waits only for the writer to go on: no replies, question or effect pending.
+fn can_continue(page: &PreviewPage) -> bool {
+    page.choices.is_empty()
+        && !page.ended
+        && page.condition.is_none()
+        && page.waiting_effect.is_none()
+}
+
+/// The run's actions. Continue is the one Primary while the run can go on; otherwise starting
+/// or restarting is, unless the run waits on a reply or answer, when no action outranks those.
+fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase() != Phase::Writing || state.session.read_only();
+    let busy = state.trial.busy();
     let unfinished = state.unfinished_trial_edit().is_some();
     let applying = state.navigation.applying_preview();
+    let page = state
+        .session
+        .model()
+        .preview_page()
+        .filter(|_| state.trial.visible);
+    let continuing = page.is_some_and(can_continue) && !unfinished && !applying && !busy;
+    let waiting = page.is_some_and(|page| !page.ended && !can_continue(page));
+    let restart_primary = !continuing && !waiting;
+    let configuring = state.phase() != Phase::Writing;
     flex_row((
-        print::primary_action(
+        continuing.then(|| {
+            print::primary_action(
+                scale,
+                "Continue preview",
+                &state.palette,
+                closing,
+                |state: &mut Writer| {
+                    let result = state.session.advance_preview(None);
+                    state.report_trial_step(result);
+                },
+            )
+        }),
+        print::emphasised_action(
             scale,
             if applying {
                 "Applying edit…"
@@ -67,8 +100,9 @@ fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .submission_caption(state.session.model().preview_page().is_some())
             },
             &state.palette,
+            restart_primary || unfinished,
             closing
-                || state.trial.busy()
+                || busy
                 || state.navigation.busy()
                 || state.work.busy()
                 || state.localisation.preview_blocked()
@@ -82,7 +116,7 @@ fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 }
             },
         ),
-        (state.trial.busy() || applying).then(|| {
+        (busy || applying).then(|| {
             text_button(
                 scale,
                 "Cancel preparation",
@@ -90,12 +124,15 @@ fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
             )
             .disabled(closing || (!applying && !state.trial.can_cancel()))
         }),
+        print::action(
+            scale,
+            "Configure preview",
+            configuring,
+            Writer::configure_trial,
+        ),
+        context::toggle(state),
+        trace::toggle(state, closing),
     ))
-    .direction(if state.content_width() >= 360. * f64::from(scale) {
-        Axis::Horizontal
-    } else {
-        Axis::Vertical
-    })
-    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(space::SIBLINGS.px())
 }

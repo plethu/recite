@@ -109,6 +109,7 @@ impl Workbench {
                 } else {
                     previous.text
                 },
+                speaker: previous.speaker,
                 reply,
             });
         }

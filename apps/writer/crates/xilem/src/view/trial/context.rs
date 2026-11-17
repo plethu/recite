@@ -1,41 +1,28 @@
 //! A short captured summary stays subordinate to prose; full provenance is explicit.
 use super::*;
-use crate::WriterLayout;
-use crate::presentation::space;
-use recite_writer_model::PreviewProvenance;
-use xilem::masonry::properties::LineBreaking;
 
-pub(super) fn summary(
-    state: &Writer,
-    snapshot: &PreviewProvenance,
-) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    flex_col((
-        flex_row((
-            print::meta(scale, snapshot.summary.clone())
-                .prop(LineBreaking::WordWrap)
-                .color(state.palette.muted)
-                .flex(1.),
-            text_button(
-                scale,
-                if state.trial.context_details {
-                    "Hide preview context"
-                } else {
-                    "Preview context"
-                },
-                |state: &mut Writer| state.trial.context_details = !state.trial.context_details,
-            ),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(space::SIBLINGS.px())
-        .width(state.script_width().px()),
-        state.trial.context_details.then(|| {
-            flex_row((print::meta(scale, snapshot.caption.clone())
-                .prop(LineBreaking::WordWrap)
-                .color(state.palette.muted)
-                .width(state.script_width().px()),))
-        }),
+/// The head's toggle for the run's full provenance, once a run has captured one.
+pub(super) fn toggle(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    state.session.model().preview_provenance()?;
+    Some(print::action(
+        state.ui_scale(),
+        if state.trial.context_details {
+            "Hide preview context"
+        } else {
+            "Preview context"
+        },
+        false,
+        |state: &mut Writer| state.trial.context_details = !state.trial.context_details,
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::UNIT.px())
+}
+
+/// The run's full provenance under the head's caption, while shown.
+pub(super) fn details(state: &Writer, width: f64) -> Option<impl WidgetView<Writer> + use<>> {
+    let snapshot = state.session.model().preview_provenance()?;
+    state.trial.context_details.then(|| {
+        flex_row((print::meta(state.ui_scale(), snapshot.caption.clone())
+            .prop(LineBreaking::WordWrap)
+            .color(state.palette.muted)
+            .width(width.px()),))
+    })
 }

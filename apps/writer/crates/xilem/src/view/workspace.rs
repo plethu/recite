@@ -8,7 +8,7 @@ use crate::presentation::{Page, space};
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::masonry::layout::Dim;
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack};
-mod sheet;
+pub(super) mod sheet;
 use crate::presentation::grid::Grid;
 use recite_writer_app::COMPACT_WINDOW;
 
@@ -96,7 +96,7 @@ pub(super) fn workspace(
                         // paper's edge, clear of the columns and their pad.
                         pane(
                             "Script",
-                            sheet::columns(&layout, manuscript(state, surface)),
+                            sheet::columns(&layout.grid, manuscript(state, surface)),
                         )
                         .constrain_horizontal(true)
                         .width(Dim::Stretch)
