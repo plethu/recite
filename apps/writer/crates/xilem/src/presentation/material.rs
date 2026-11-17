@@ -16,8 +16,6 @@ mod backdrop;
 mod decor;
 pub(crate) use backdrop::{Texture, backdrop, cover, screen};
 mod grain;
-#[cfg(test)]
-pub(crate) use decor::Decor;
 pub(crate) use decor::{Bar, Decorated, Decoration};
 pub(crate) use grain::{desk, grain};
 

@@ -4,7 +4,7 @@
 mod tests;
 mod widget;
 use crate::presentation::marks::Marks;
-pub(crate) use widget::Decor;
+use widget::Decor;
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
