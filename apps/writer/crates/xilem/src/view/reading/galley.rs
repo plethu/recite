@@ -188,7 +188,9 @@ fn heading(
                 )
             }),
         ))
-        .width(grid.margin.px()),
+        // Where the button's inset outgrows the gutter, as at 200%, the margin column gives up
+        // the difference, so the heading's words start on the scene title's and the lines' edge.
+        .width((grid.margin - (inset - grid.gutter()).max(0.)).max(0.).px()),
         // The heading hugs its words, so a focused heading's ring stays inside the measure. A
         // rename's slip floats over the window from under it, so nothing below moves.
         // Centred in the row, so the heading's line and its tools share one centre line.

@@ -14,9 +14,12 @@ const BLEED_PAD: f64 = 16.;
 /// Between the margin column and the measure, and between the measure and destinations.
 pub(crate) const GUTTER: f64 = 16.;
 pub(crate) const DESTINATION_GUTTER: f64 = 24.;
-/// The least measure a sheet keeps, and the least beside a destination column.
+/// The least measure a sheet keeps, and the least beside a destination column: 420px, and never
+/// under about 45 characters of the reading face, so a zoomed or larger reading size wraps its
+/// destinations under their replies before the line column gets cramped.
 const SHEET_MEASURE: f64 = 480.;
 const DESTINATION_MEASURE: f64 = 420.;
+const DESTINATION_CHARACTERS: f64 = 45.;
 /// The longest measure: 68 average characters of the reading face, whose average advance in
 /// running prose is about 0.46em (77 characters set in 710px at 20px). At the reference size
 /// that is about 626px, a little inside the 640px `size::MEASURE` that sets interface prose.
@@ -53,18 +56,24 @@ impl Grid {
         // so at 200% the measure is the same 68 characters and the text reflows to fit the
         // pane. The destination column also holds its route button's padding.
         let unit = f64::from(page.scale());
-        let longest = CHARACTERS * CHARACTER * f64::from(Sheet::Dialogue.size(page));
+        let reading = CHARACTER * f64::from(Sheet::Dialogue.size(page));
+        let longest = CHARACTERS * reading;
+        let least = (DESTINATION_CHARACTERS * reading).max(DESTINATION_MEASURE);
         // Destinations keep their 13px floor at small reading sizes, so the column follows the
         // destination type rather than the reading size.
         let route = f64::from(Sheet::Destination.size(page))
             / f64::from(Sheet::Destination.size(Page::REFERENCE));
         let destination = DESTINATION * route + 2. * control_inset(page.zoom);
         let width = available - 2. * DESK_SIDE;
-        let measure =
-            width - 2. * SHEET_PAD - MARGIN * unit - GUTTER - DESTINATION_GUTTER - destination;
+        let room = width - 2. * SHEET_PAD - MARGIN * unit - GUTTER;
+        let measure = room - DESTINATION_GUTTER - destination;
         if sheet && measure >= SHEET_MEASURE {
-            let measure = measure.min(longest);
-            let columns = MARGIN * unit + GUTTER + measure + DESTINATION_GUTTER + destination;
+            let (measure, destination) = if measure >= least {
+                (measure.min(longest), destination)
+            } else {
+                (room.min(longest), 0.)
+            };
+            let columns = MARGIN * unit + GUTTER + measure + Self::trailing(destination);
             return Self {
                 sheet: true,
                 // The sheet is no wider than its capped columns and their pad, so a wide pane
@@ -84,7 +93,7 @@ impl Grid {
         let gutter = if margin > 0. { GUTTER } else { 0. };
         let beside =
             available - 2. * BLEED_PAD - margin - gutter - DESTINATION_GUTTER - destination;
-        let (measure, destination) = if beside >= DESTINATION_MEASURE {
+        let (measure, destination) = if beside >= least {
             (beside, destination)
         } else {
             (available - 2. * BLEED_PAD - margin - gutter, 0.)

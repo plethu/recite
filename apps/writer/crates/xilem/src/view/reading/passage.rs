@@ -93,7 +93,8 @@ pub(in crate::view) fn margin<S: 'static>(
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
-    .gap(space::UNIT.px())
+    // Zoomed with the sheet, so "REPLIES" and its first number stay apart at 200%.
+    .gap((space::UNIT * f64::from(page.zoom)).px())
     .width(width.px())
 }
 

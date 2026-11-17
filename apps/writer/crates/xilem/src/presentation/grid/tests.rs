@@ -63,3 +63,18 @@ fn without_room_for_a_480px_measure_or_beside_the_map_the_paper_is_full_bleed() 
     assert_eq!((tiny.margin, tiny.gutter()), (0., 0.));
     assert!(tiny.measure > 0.);
 }
+
+#[test]
+fn under_45_characters_beside_them_destinations_wrap_under_their_replies() {
+    // At 200% in a 1200px window the scene list hides; beside a destination column the line
+    // column would hold about 34 characters, so destinations wrap and the line takes the room.
+    let page = Page::new(20., 2.);
+    let zoomed = Grid::resolve(1200. - 32., page, true);
+    assert_eq!(zoomed.destination, 0.);
+    assert!(zoomed.measure >= 45. * 0.46 * f64::from(Sheet::Dialogue.size(page)));
+    // A larger reading size on a sheet keeps the sheet and wraps its destinations instead.
+    let larger = Grid::resolve(1200. - 224. - 32., Page::new(26., 1.), true);
+    assert!(larger.sheet);
+    assert_eq!(larger.destination, 0.);
+    assert!((larger.pad * 2. + larger.row() - larger.width).abs() < 1e-9);
+}
