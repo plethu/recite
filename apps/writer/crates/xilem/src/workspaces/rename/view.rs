@@ -4,15 +4,17 @@ use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
 mod comparison;
 use super::*;
+use crate::presentation::marks::{GLYPH, wedge_glyph};
 use crate::session::RecoveryReason;
 use crate::{
     attention::{Pane, PaneEntry, Region},
     presentation::{label, paragraph, print, text_button},
 };
 use comparison::comparison;
+use recite_writer_app::workspaces::rename::Report;
 use xilem::{
     WidgetView,
-    masonry::{kurbo::Axis, layout::AsUnit, properties::TextAreaLabel},
+    masonry::{layout::AsUnit, properties::TextAreaLabel},
     style::Style,
     view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, text_input},
 };
@@ -41,20 +43,19 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Rename)))
 }
-/// The fallback after a refused rename, or a rename opened from a link: the beat is fixed text,
-/// and its new id is a field holding the name already typed.
+/// The fallback after a refused rename, or a rename opened from a link: the beat as a label and
+/// value beside the field holding its new id, the name already typed. A clash the review would
+/// refuse is said under the field in the writer's words, with a wedge, and marks it invalid.
 fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
     let blocked = writer.project_action_blocked();
     let scale = writer.ui_scale();
-    let wide = writer.page_width() >= 520. * f64::from(scale);
-    let field_width = if wide {
-        (writer.page_width() - 16.) / 2.
-    } else {
-        writer.page_width()
-    };
-    flex_row((
-        flex_col((
+    let width = writer
+        .page_width()
+        .min(size::FIELD_COLUMN * f64::from(scale));
+    let clash = writer.rename_clash();
+    flex_col((
+        flex_row((
             print::meta(scale, "Beat").color(writer.palette.muted),
             print::id(
                 scale,
@@ -65,31 +66,32 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 },
             ),
         ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::UNIT.px())
-        .width(field_width.px()),
-        flex_col((
-            label(scale, "New beat name"),
-            text_input(panel.name.clone(), Writer::change_rename_name)
-                .typeset(Type::Body, scale)
-                .disabled(blocked || panel.block.is_empty())
-                .prop(TextAreaLabel::new("New beat name")),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .gap(space::UNIT.px())
-        .width(field_width.px()),
+        .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+        .gap(space::SIBLINGS.px()),
+        label(scale, "New beat name"),
+        text_input(panel.name.clone(), Writer::change_rename_name)
+            .typeset(Type::Body, scale)
+            .disabled(blocked || panel.block.is_empty())
+            .prop(TextAreaLabel::new("New beat name").with_error(clash.clone())),
+        clash.map(|clash| {
+            flex_row((
+                wedge_glyph(GLYPH * f64::from(scale), writer.palette.error),
+                print::caption(scale, clash).color(writer.palette.ink),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .gap(space::UNIT.px())
+        }),
     ))
-    .direction(if wide {
-        Axis::Horizontal
-    } else {
-        Axis::Vertical
-    })
-    .gap(space::KINDS.px())
+    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+    .gap(space::UNIT.px())
+    .width(width.px())
     .prop(PaneEntry(true))
 }
 /// What a proposal still lacks before it can be reviewed, said beside its disabled Primary.
-fn missing(block: &str, name: &str) -> Option<&'static str> {
-    if block.trim().is_empty() {
+fn missing(block: &str, name: &str, clash: bool) -> Option<&'static str> {
+    if clash {
+        Some("Choose an id no other beat in this file has")
+    } else if block.trim().is_empty() {
         Some("Choose Rename beat in Commands to pick a beat")
     } else if name.trim().is_empty() {
         Some("Enter a new beat id")
@@ -116,10 +118,10 @@ fn head_actions(writer: &Writer, reviewing: bool) -> impl WidgetView<Writer> + u
         .project()
         .is_some_and(|project| project.files().rename_review.is_some());
     let missing = (!reviewing)
-        .then(|| missing(&panel.block, &panel.name))
+        .then(|| missing(&panel.block, &panel.name, writer.rename_clash().is_some()))
         .flatten();
     flex_row((
-        missing.map(|reason| print::meta(scale, reason).color(writer.palette.muted)),
+        missing.map(|reason| print::caption(scale, reason).color(writer.palette.muted)),
         reviewing.then(|| {
             text_button(scale, "Cancel", Writer::discard_rename_review)
                 .accessible_label("Cancel rename")
@@ -195,7 +197,13 @@ pub(crate) fn recovery(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
 }
 /// The last rename's report, every part of it.
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    let pages = writer.workspaces.rename.report.as_ref()?.pages();
+    let report = writer.workspaces.rename.report.as_ref()?;
+    // A refusal the field already explains in the writer's words is not repeated in the
+    // compiler's.
+    if matches!(report, Report::Problem(_)) && writer.rename_clash().is_some() {
+        return None;
+    }
+    let pages = report.pages();
     let width = writer.page_width().min(size::MEASURE);
     Some(
         flex_col(

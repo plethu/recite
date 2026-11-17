@@ -58,6 +58,8 @@ pub(crate) mod size {
     pub const FIELD_MIN: f64 = 180.;
     /// The longest line of guidance and report prose on a sheet, at every scale.
     pub const MEASURE: f64 = 640.;
+    /// A form's single column of label, field and error, such as a rename's new id.
+    pub const FIELD_COLUMN: f64 = 480.;
     /// The least width of the file tab, and of the wordmark's column while the scene list hides.
     pub const TAB_MIN: f64 = 96.;
     /// A picker's width, and how far below the window's top edge it opens.

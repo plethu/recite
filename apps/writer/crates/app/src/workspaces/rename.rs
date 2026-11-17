@@ -78,6 +78,21 @@ impl Writer {
             }));
         }
     }
+    /// The clash a review would refuse, known before asking: a beat in the open file already has
+    /// the proposal's new id. Said in the writer's words, for the field it concerns.
+    pub fn rename_clash(&self) -> Option<String> {
+        let panel = &self.workspaces.rename;
+        let name = panel.name.trim();
+        if name.is_empty() || name == panel.block.trim() {
+            return None;
+        }
+        let document = self.session.model().document();
+        document
+            .block_summaries()
+            .iter()
+            .any(|block| block.id().as_str() == name)
+            .then(|| format!("A beat named {name} already exists in {}.", document.key()))
+    }
     pub fn review_project_rename(&mut self) {
         let panel = &self.workspaces.rename;
         self.project_action(ProjectAction::ReviewRename {

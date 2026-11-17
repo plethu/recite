@@ -68,3 +68,24 @@ fn successful_save_preserves_a_problem_report() {
         Some(Report::Problem(_))
     ));
 }
+
+#[test]
+fn a_known_clash_is_said_in_the_writer_s_words_before_any_review() {
+    let directory = support::project(SOURCE).unwrap();
+    let mut writer = support::open(&directory).unwrap();
+    writer.change_rename_block("old".into());
+    for (name, clash) in [
+        ("", false),
+        ("old", false),
+        ("fresh", false),
+        ("start", true),
+    ] {
+        writer.change_rename_name(name.into());
+        assert_eq!(writer.rename_clash().is_some(), clash, "{name:?}");
+    }
+    let key = writer.session.model().document().key().to_string();
+    assert_eq!(
+        writer.rename_clash().as_deref(),
+        Some(format!("A beat named start already exists in {key}.").as_str())
+    );
+}
