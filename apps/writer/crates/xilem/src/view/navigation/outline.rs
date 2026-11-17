@@ -24,9 +24,12 @@ struct Rows<'a> {
 
 /// The most beats a scene lists in place; a longer scene's beats scroll in a list of their own.
 const ALL_BEATS: usize = 12;
-/// How many rows a scrolling beat list shows: a half row past the last whole one shows there are
-/// more, beside its scroll thumb.
-const LIST_ROWS: f64 = 6.5;
+/// How many rows a scrolling beat list shows. With the selected beat in the middle, half a row is
+/// cut through its words at either edge while more beats lie beyond it.
+const LIST_ROWS: f64 = 6.;
+/// The list's ends stop half a row inside its edges, as fractions of its height, so at the scene's
+/// first or last beat the far edge still cuts a row through its words.
+const LIST_END: f64 = 0.5 / LIST_ROWS;
 /// How far past its view a scrolling beat list keeps rows built, in view lengths: one row each
 /// way, so Tab and Shift+Tab reach the next beat, which then scrolls into view.
 const OVERSCAN: f64 = 1. / LIST_ROWS;
@@ -95,9 +98,10 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .focusable(false)
             .overscan(OVERSCAN, OVERSCAN)
             .reveal(selected)
-            // The selected beat comes to the middle, so part of a row shows past either edge
-            // while more beats lie beyond it; at the scene's ends the list stops flush.
+            // The selected beat comes to the middle, so half a row shows past either edge while
+            // more beats lie beyond it; at the scene's ends the list stops half a row in.
             .reveal_in_middle(true)
+            .start_end(LIST_END, 1. - LIST_END)
             .on_scroll(|state: &mut Writer, range| {
                 state.attention.show_beats(range);
                 MessageResult::Action(())

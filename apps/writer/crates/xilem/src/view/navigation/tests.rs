@@ -195,6 +195,14 @@ fn a_long_scene_scrolls_its_beats_in_a_list_that_keeps_the_selected_beat_in_its_
     assert!((7..=9).contains(&rows.len()), "{rows:?}");
     assert!(rows.contains(&"beat_0".to_string()));
     assert!(!rows.contains(&"beat_12".to_string()), "{rows:?}");
+    // At the scene's first beat the list stops half a row in, so its bottom edge still cuts a
+    // row through its words.
+    let first = window_bounds(&mounted, beat_row(&mounted, "beat_0").0);
+    let cut = window_bounds(&mounted, beat_row(&mounted, "beat_5").0);
+    assert!(
+        first.y0 - view.y0 > 8. && (cut.center().y - view.y1).abs() < 4.,
+        "{first:?} {cut:?} in {view:?}"
+    );
 
     // A beat chosen elsewhere, as by Ctrl+Down or Find, scrolls into view, selected and a Tab stop.
     let select = |mounted: &mut Mounted<Writer, _>, jobs: &mut _, beat: &str| {
@@ -250,12 +258,17 @@ fn a_long_scene_scrolls_its_beats_in_a_list_that_keeps_the_selected_beat_in_its_
         below.y0 < view.y1 && below.y1 > view.y1,
         "{below:?} {view:?}"
     );
+    // Each edge cuts its row through the words, not only through the row's padding.
+    assert!(
+        (above.center().y - view.y0).abs() < 4. && (below.center().y - view.y1).abs() < 4.,
+        "{above:?} {below:?} in {view:?}"
+    );
     assert!(mounted.is_selected("Beat 28"));
 }
 
 #[test]
 fn the_beat_list_thumb_spans_the_track_from_the_first_beat_to_the_last() {
-    let height = 6.5 * 33.;
+    let height = 6. * 33.;
     let (length, top) = super::outline::thumb_place(40, 0..7, height);
     assert_eq!(top, 2.);
     assert!(length >= 45., "{length}");
