@@ -15,12 +15,20 @@ use xilem::{masonry::properties, view::checkbox};
 mod language;
 mod values;
 
-/// The Configure preview slip: the next run's inputs on floating paper, anchored under the
-/// preview's header and over its transcript, which stays in place beneath. The language query takes
-/// focus as it opens, Tab stays inside, and Esc or its close returns to the preview.
-pub(super) fn slip(state: &Writer) -> impl WidgetView<Writer> + use<> {
+/// The Configure preview slip: the next run's inputs on floating paper, hanging under Configure
+/// preview over the transcript, which stays in place beneath. Until the host has measured that
+/// action it sits at the transcript's right edge. The language query takes focus as it opens, Tab
+/// stays inside, and Esc or its close returns to the preview.
+pub(super) fn slip(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let width = (size::SLIP_WIDTH * f64::from(scale)).min(state.content_width() - OFFSET);
+    // Inside the paper's 1px edges, with room for the slip's stock to show.
+    let last = (grid.width - 2. - width - OFFSET).max(0.);
+    let left = state
+        .trial
+        .settings
+        .anchor
+        .map_or(last, |x| f64::from(x).min(last));
     let inner = width - 2. * space::KINDS - 2.;
     let disabled = state.phase() != Phase::Writing || state.session.read_only();
     // Room for the slip's stock offset inside the transcript's area.
@@ -59,6 +67,7 @@ pub(super) fn slip(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ),
     ))
     .padding(Padding {
+        left: left.px(),
         right: OFFSET.px(),
         bottom: OFFSET.px(),
         ..Padding::all(0.px())

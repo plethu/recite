@@ -1,5 +1,6 @@
 //! Runtime controls; capture policy and traversal stay in the shared owners.
 use super::*;
+use crate::app::keyboard::SlipHost;
 use crate::presentation::grid::Grid;
 use crate::presentation::{Page, pane, space};
 use crate::{
@@ -36,9 +37,12 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 zstack((
                     pane("Transcript", columns(&grid, content(state, &grid)))
                         .constrain_horizontal(true),
-                    state.configuring_trial().then(|| inputs::slip(state)),
+                    state
+                        .configuring_trial()
+                        .then(|| inputs::slip(state, &grid)),
                 ))
-                .alignment(UnitPoint::TOP_RIGHT)
+                .alignment(UnitPoint::TOP_LEFT)
+                .prop(SlipHost(true))
                 .flex(1.),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -74,11 +78,11 @@ fn content(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     let setup_first = state.configuring_trial() && page.is_none_or(|page| page.ended);
     let measure = grid.measure;
     flex_col((
-        (state.trial.visible
-            && state.trial_feedback().is_none()
-            && !matches!(state.trial.settings.review, Review::Diagnostic))
-        .then(|| {
-            state.trial_status().map(|status| {
+        // Before a run the status is the head's caption instead, so the head keeps its height.
+        (state.session.model().preview_provenance().is_some())
+            .then(|| status(state))
+            .flatten()
+            .map(|status| {
                 prose_column(
                     grid,
                     print::meta(scale, status.to_owned())
@@ -86,9 +90,7 @@ fn content(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
                         .prop(LineBreaking::WordWrap)
                         .width(measure.px()),
                 )
-            })
-        })
-        .flatten(),
+            }),
         matches!(state.trial.settings.review, Review::Diagnostic)
             .then(|| prose_column(grid, feedback::details(state, measure))),
         grid_view((
@@ -108,6 +110,15 @@ fn content(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Preview)))
+}
+
+/// The run's status sentence while there is one to show: none beside feedback or a diagnostic.
+fn status(state: &Writer) -> Option<&str> {
+    (state.trial.visible
+        && state.trial_feedback().is_none()
+        && !matches!(state.trial.settings.review, Review::Diagnostic))
+    .then(|| state.trial_status())
+    .flatten()
 }
 
 fn setup(state: &Writer, grid: &Grid) -> Option<impl WidgetView<Writer> + use<>> {

@@ -16,7 +16,7 @@ pub(super) use targets::renames;
 pub(crate) use targets::slip_anchor;
 use targets::{
     default_focus, fallback_focus, find, first_wedge, marked, outside_modal, place_picker,
-    return_focus,
+    return_focus, slip_host,
 };
 
 #[derive(Clone, Default, PartialEq)]
@@ -130,24 +130,42 @@ impl Focus {
             root.focus_on(Some(target));
         }
     }
-    /// Hang an inline rename's slip from the heading or row it renames, again whenever that moves.
+    /// Hang an inline rename's slip from the heading or row it renames, and the Configure preview
+    /// slip under its action, again whenever that moves.
     fn synchronize_slip(&mut self, root: &RenderRoot, context: &Context) {
-        if context.modal != Some(Modal::Rename) {
-            self.slip = None;
-            return;
-        }
+        let inputs = match context.modal {
+            Some(Modal::Rename) => false,
+            Some(Modal::PreviewInputs) => true,
+            _ => {
+                self.slip = None;
+                return;
+            }
+        };
         if root.needs_rewrite_passes() {
             return;
         }
         let Some(corner) = slip_anchor(root) else {
             return;
         };
+        // The inputs slip floats in the transcript under the head, so only its offset matters.
+        let corner = if inputs {
+            let Some(edge) = slip_host(root) else {
+                return;
+            };
+            (corner.0.saturating_sub(edge), 0)
+        } else {
+            corner
+        };
         if self.slip != Some(corner) {
             self.slip = Some(corner);
             let _ = context.proxy.message(Invocation {
-                action: Action::PlaceRenameSlip {
-                    x: corner.0,
-                    y: corner.1,
+                action: if inputs {
+                    Action::PlaceInputsSlip { x: corner.0 }
+                } else {
+                    Action::PlaceRenameSlip {
+                        x: corner.0,
+                        y: corner.1,
+                    }
                 },
                 generation: context.generation,
             });

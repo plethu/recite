@@ -2,11 +2,11 @@
 //! and the numbered replies, on the same grid and in the same roles as Script.
 use super::*;
 use crate::app::keyboard::ReturnFocus;
-use crate::presentation::Sheet;
 use crate::presentation::control_inset;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::row::named_row;
 use crate::presentation::sheet_text::sheet_text;
+use crate::presentation::{FACE, Icon, SMALL, Sheet, mark};
 
 /// A numbered reply as the galley sets one: the number in the margin column, "REPLIES" beside
 /// the first, and the text on the measure. The whole row is the reply's button, its number its
@@ -34,6 +34,20 @@ pub(super) fn reply(
             .label(page, number.to_string())
             .color(state.palette.muted)
     });
+    // A route arrow after the words says the row is a way on at rest, beside the hover fill and
+    // focus ring; where no destination column follows the measure, the words make room for it.
+    let scale = page.control() * SMALL;
+    let gap = if grid.margin > 0. {
+        grid.gutter()
+    } else {
+        space::TEXT
+    };
+    let cue = FACE * f64::from(scale) + gap;
+    let measure = if grid.destination > 0. {
+        grid.measure
+    } else {
+        (grid.measure - cue).max(0.)
+    };
     styled(
         ControlStyle::Action,
         named_row(
@@ -41,18 +55,11 @@ pub(super) fn reply(
             flex_row((
                 margin,
                 inline,
-                sheet_text(text, Sheet::Reply.size(page), state.palette.ink)
-                    .width(grid.measure.px()),
+                sheet_text(text, Sheet::Reply.size(page), state.palette.ink).width(measure.px()),
+                mark(scale, "", Icon::Forward, state.palette.muted),
             ))
             .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
-            .gap(
-                if grid.margin > 0. {
-                    grid.gutter()
-                } else {
-                    space::TEXT
-                }
-                .px(),
-            ),
+            .gap(gap.px()),
             move |state: &mut Writer| state.choose_preview(index),
         )
         .disabled(disabled)

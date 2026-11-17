@@ -160,6 +160,30 @@ fn an_opened_picker_takes_the_place_of_the_label_that_opened_it() {
 }
 
 #[test]
+fn the_configure_preview_slip_hangs_where_the_host_measured_its_action() {
+    use keyboard::{Action, Generations, Invocation, Scope};
+    let directory = test_support::project(SOURCE).unwrap();
+    let mut shell = Shell::with_writer(test_support::open(&directory).unwrap());
+    let shortcuts = shell.preferences.config.writer.shortcuts.clone();
+    shell.writer.as_mut().unwrap().configure_trial();
+    assert_eq!(shell.writer.as_ref().unwrap().trial.settings.anchor, None);
+    let captured = Scope::capture(&shell);
+    assert!(shell.invoke(
+        &captured,
+        &shortcuts,
+        Generations::default(),
+        Invocation {
+            action: Action::PlaceInputsSlip { x: 135 },
+            generation: Generations::default().command,
+        },
+    ));
+    assert_eq!(
+        shell.writer.as_ref().unwrap().trial.settings.anchor,
+        Some(135)
+    );
+}
+
+#[test]
 fn rename_beat_from_commands_asks_which_beat_while_its_shortcut_renames_the_selected_one() {
     let directory = test_support::project(SOURCE).unwrap();
     let writer = test_support::open(&directory).unwrap();

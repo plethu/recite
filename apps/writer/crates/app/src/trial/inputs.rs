@@ -42,6 +42,9 @@ pub struct Settings {
     /// Source-only is off but no language is chosen yet: the language search is open for one.
     pub choosing_language: bool,
     pub review: Review,
+    /// How far right of the preview's transcript the Configure preview action starts, as the
+    /// native host measured it, so the slip hangs under the action that opened it.
+    pub anchor: Option<u32>,
 }
 
 impl Settings {
@@ -56,6 +59,10 @@ impl Settings {
 }
 
 impl Writer {
+    /// Hang the Configure preview slip `x` right of the transcript's edge, under its action.
+    pub fn place_trial_inputs(&mut self, x: u32) {
+        self.trial.settings.anchor = Some(x);
+    }
     pub fn review_trial_inputs(&mut self) {
         if self.phase != super::Phase::Writing || self.session.read_only() || !self.trial.failed() {
             return;

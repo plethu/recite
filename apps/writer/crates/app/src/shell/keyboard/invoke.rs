@@ -81,6 +81,11 @@ impl Shell {
                     writer.place_inline_rename(x, y);
                 }
             }
+            Action::PlaceInputsSlip { x } => {
+                if let Some(writer) = &mut self.writer {
+                    writer.place_trial_inputs(x);
+                }
+            }
             Action::RenameBeat(target) => {
                 if let Some(writer) = &mut self.writer {
                     writer.rename_beat_in(target);

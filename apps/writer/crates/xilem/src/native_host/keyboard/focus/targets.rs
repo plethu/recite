@@ -1,9 +1,11 @@
 //! The widgets focus moves to: the picker's query or active result, a modal surface's default
 //! control, the first problem wedge, and the control an opened picker hangs from.
 use super::*;
-use crate::app::keyboard::{FallbackFocus, ModalSurface, RenamesBeat, ReturnFocus, SlipAnchor};
+use crate::app::keyboard::{
+    FallbackFocus, ModalSurface, RenamesBeat, ReturnFocus, SlipAnchor, SlipHost,
+};
 use crate::workspaces::rename::inline::Target;
-use xilem::masonry::widgets::{RadioButton, SizedBox};
+use xilem::masonry::widgets::{RadioButton, SizedBox, ZStack};
 
 pub(super) fn find(root: &RenderRoot, kind: Kind) -> Option<WidgetId> {
     let mut pending = vec![root.get_layer_root(0)];
@@ -143,6 +145,24 @@ pub(crate) fn slip_anchor(root: &RenderRoot) -> Option<(u32, u32)> {
                 corner.x.max(0.).round() as u32,
                 corner.y.max(0.).round() as u32,
             ));
+        }
+        pending.extend(widget.children());
+    }
+    None
+}
+/// The left edge, in window coordinates, of the mounted stack a slip floats in.
+pub(super) fn slip_host(root: &RenderRoot) -> Option<u32> {
+    let mut pending = vec![root.get_layer_root(0)];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() {
+            continue;
+        }
+        if widget
+            .downcast::<ZStack>()
+            .is_some_and(|host| host.get_prop::<SlipHost>().0)
+        {
+            let origin = widget.ctx().window_transform() * widget.ctx().border_box().origin();
+            return Some(origin.x.max(0.).round() as u32);
         }
         pending.extend(widget.children());
     }

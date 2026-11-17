@@ -12,7 +12,7 @@ use xilem::{
     masonry::{
         core::{Property, UsesProperty, WidgetTag},
         properties::Dimensions,
-        widgets::{Button, Passthrough, RadioButton, SizedBox, TextInput},
+        widgets::{Button, Passthrough, RadioButton, SizedBox, TextInput, ZStack},
     },
 };
 
@@ -58,6 +58,18 @@ impl Property for SlipAnchor {
     }
 }
 impl UsesProperty<SlipAnchor> for SizedBox {}
+
+/// Marks the stack a slip floats in, such as the preview's transcript under Configure preview:
+/// the host measures the slip's anchor from its edge.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct SlipHost(pub bool);
+impl Property for SlipHost {
+    fn static_default() -> &'static Self {
+        static OTHER: SlipHost = SlipHost(false);
+        &OTHER
+    }
+}
+impl UsesProperty<SlipHost> for ZStack {}
 
 /// Marks a sidebar beat row or map card: F2 on it renames its beat in place there.
 #[derive(Clone, Default, PartialEq)]

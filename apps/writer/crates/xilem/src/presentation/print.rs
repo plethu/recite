@@ -121,13 +121,11 @@ pub(crate) fn primary_returning<
         styled(
             ControlStyle::Primary,
             view::button(
+                // One weight in both states, so the words keep their width and nothing beside
+                // the action moves as it becomes available.
                 Type::Control
                     .label(scale, text)
-                    .weight(if disabled {
-                        FontWeight::NORMAL
-                    } else {
-                        FontWeight::SEMI_BOLD
-                    })
+                    .weight(FontWeight::SEMI_BOLD)
                     .color(if disabled {
                         palette.muted
                     } else {
@@ -141,8 +139,8 @@ pub(crate) fn primary_returning<
     )
 }
 
-/// An action that is tonal at rest and becomes the view's primary while `primary` holds, such as
-/// Save with unsaved changes. Both states share one widget, so focus survives the change, and the
+/// An action that rests in `rest`, tonal or quiet, and becomes the view's primary while `primary`
+/// holds, such as Save with unsaved changes. Both states share one widget, so focus survives the change, and the
 /// accessible name never changes.
 pub(crate) fn emphasised_action<
     S: 'static,
@@ -152,7 +150,7 @@ pub(crate) fn emphasised_action<
     scale: f32,
     text: T,
     palette: &Palette<Color>,
-    primary: bool,
+    (primary, rest): (bool, ControlStyle),
     disabled: bool,
     callback: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
@@ -160,11 +158,7 @@ pub(crate) fn emphasised_action<
     super::material::focus_ring(
         primary.then_some(palette.on_accent),
         styled(
-            if primary {
-                ControlStyle::Primary
-            } else {
-                ControlStyle::Tonal
-            },
+            if primary { ControlStyle::Primary } else { rest },
             view::button(
                 // One weight in both states, so the words keep their width and nothing beside
                 // the action moves as it becomes primary; the fill carries the emphasis.

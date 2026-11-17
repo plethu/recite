@@ -24,7 +24,7 @@ mod icons;
 pub(crate) mod identity;
 pub(crate) mod material;
 pub(crate) mod print;
-pub(crate) use icons::{Icon, SMALL, mark};
+pub(crate) use icons::{FACE, Icon, SMALL, mark};
 pub(crate) mod marks;
 pub(crate) mod number;
 mod radio;

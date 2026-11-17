@@ -98,6 +98,10 @@ pub enum Action {
         x: u32,
         y: u32,
     },
+    /// The Configure preview slip hangs under its action, this far right of the transcript.
+    PlaceInputsSlip {
+        x: u32,
+    },
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

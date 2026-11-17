@@ -151,7 +151,7 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
                 scale,
                 "Save",
                 &state.palette,
-                state.save_is_primary(),
+                (state.save_is_primary(), ControlStyle::Tonal),
                 blocked || state.localisation.saving() || state.source_repair_pending(),
                 Writer::save,
             )

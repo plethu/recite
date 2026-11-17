@@ -1,6 +1,8 @@
 //! The preview sheet's head: the title in Display with the run's captured context as its caption,
 //! the run's actions, and the close icon back to writing. It stays put above the transcript.
 use super::*;
+use crate::app::keyboard::SlipAnchor;
+use crate::presentation::control_style::ControlStyle;
 use crate::presentation::sheet_head::{Close, Layout, sheet_head};
 use xilem::masonry::core::ArcStr;
 
@@ -14,7 +16,10 @@ pub(super) fn header(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + u
         .session
         .model()
         .preview_provenance()
-        .map(|snapshot| ArcStr::from(snapshot.summary.clone()));
+        .map(|snapshot| ArcStr::from(snapshot.summary.clone()))
+        // Before a run, its status: the head keeps one caption line in every state, so the
+        // actions never move as a run starts.
+        .or_else(|| super::status(state).map(ArcStr::from));
     sized_box(
         flex_col((
             sheet_head(
@@ -76,19 +81,21 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let restart_primary = !continuing && !waiting;
     let configuring = state.phase() != Phase::Writing;
     flex_row((
-        continuing.then(|| {
-            // After a step whose Continue goes away, focus moves to the next Continue or reply.
+        // Always in the row, unavailable while the run cannot go on, so no action moves as a run
+        // starts, waits on a reply or ends. After a step that leaves it unavailable, focus moves
+        // to the next reply.
+        {
             print::primary_returning(
                 scale,
                 "Continue preview",
                 &state.palette,
-                (closing, true),
+                (closing || !continuing, true),
                 |state: &mut Writer| {
                     let result = state.session.advance_preview(None);
                     state.report_trial_step(result);
                 },
             )
-        }),
+        },
         print::emphasised_action(
             scale,
             if applying {
@@ -101,7 +108,8 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .submission_caption(state.session.model().preview_page().is_some())
             },
             &state.palette,
-            restart_primary || unfinished,
+            // Quiet unless it is the run's next step, so Continue and the replies lead.
+            (restart_primary || unfinished, ControlStyle::Action),
             closing
                 || busy
                 || state.navigation.busy()
@@ -125,12 +133,14 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
             )
             .disabled(closing || (!applying && !state.trial.can_cancel()))
         }),
-        print::action(
+        // Its slip hangs from under it while open.
+        sized_box(print::action(
             scale,
             "Configure preview",
             configuring,
             Writer::configure_trial,
-        ),
+        ))
+        .prop(SlipAnchor(state.configuring_trial())),
         context::toggle(state),
         trace::toggle(state, closing),
     ))
