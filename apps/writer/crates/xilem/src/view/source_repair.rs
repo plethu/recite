@@ -153,13 +153,18 @@ fn repair_banner(state: &Writer, importing: bool) -> impl WidgetView<Writer> + u
         "Accepted source · Saved"
     };
     let open = importing && state.repair.importing;
-    // The lead-in says the source needs repair; the message says where the repair stands.
-    let message = flex_col((
-        print::caption(scale, status).color(state.palette.muted),
-        open.then(|| import_row(state, busy)),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-    .gap(space::SIBLINGS.px());
+    // The lead-in says the source needs repair; the message says where the repair stands. A
+    // closed import row adds no gap, so the message stays centred on the actions.
+    let caption = print::caption(scale, status).color(state.palette.muted);
+    let message = if open {
+        Either::A(
+            flex_col((caption, import_row(state, busy)))
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(space::SIBLINGS.px()),
+        )
+    } else {
+        Either::B(caption)
+    };
     let actions = flex_row((
         text_button(scale, "Reload", Writer::reload)
             .accessible_label("Reload (keep recovery copy)")

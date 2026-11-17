@@ -32,12 +32,18 @@ pub(crate) fn banner<S: 'static, M: WidgetView<S>, A: WidgetView<S>>(
     stacked: bool,
     width: f64,
 ) -> impl WidgetView<S> + use<S, M, A> {
-    // The lead-in shares the message's first baseline, whether the message is one line or more.
+    // A one-line banner centres the lead-in, message and actions on one axis; a stacked message
+    // keeps the lead-in on its first baseline. A flexed row stretches to the actions' height, and
+    // aligning baselines there would set a bare label's text at its top.
     let message = flex_row((
         print::caps(scale, lead.to_uppercase()).color(palette.accent),
         message.flex(1.),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+    .cross_axis_alignment(if stacked {
+        CrossAxisAlignment::FirstBaseline
+    } else {
+        CrossAxisAlignment::Center
+    })
     .gap(space::SIBLINGS.px());
     let body = if stacked {
         Either::A(
