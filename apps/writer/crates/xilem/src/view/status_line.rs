@@ -70,14 +70,16 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 ),
             )
         },
+        // A status sentence takes the room: the Split note returns once it is read.
         (state.workspaces.screen == crate::workspaces::Screen::Write
-            && !workspace::Layout::resolve(state).split_available)
-            .then(|| {
-                (
-                    print::separator(state.ui_scale(), text),
-                    print::meta(state.ui_scale(), "Split needs a wider window").color(text),
-                )
-            }),
+            && !workspace::Layout::resolve(state).split_available
+            && matches!(state.status.as_str(), "Ready" | "Map ready"))
+        .then(|| {
+            (
+                print::separator(state.ui_scale(), text),
+                print::meta(state.ui_scale(), "Split needs a wider window").color(text),
+            )
+        }),
         (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
             (
                 print::separator(state.ui_scale(), text),

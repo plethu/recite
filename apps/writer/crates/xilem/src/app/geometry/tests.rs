@@ -16,6 +16,8 @@ use xilem::{
         widgets::{Passthrough, SizedBox, TextArea, TextInput},
     },
 };
+#[path = "overlays/tests.rs"]
+mod overlays;
 #[path = "preview/tests.rs"]
 mod preview;
 #[path = "project/tests.rs"]

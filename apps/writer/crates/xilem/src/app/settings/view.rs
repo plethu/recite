@@ -17,11 +17,12 @@ use xilem::{
     view::{CrossAxisAlignment, FlexSpacer, flex_col, flex_row, indexed_stack, sized_box},
 };
 
-/// The sheet's width: 360px, or the whole window below the comfortable minimum and at 200%.
+/// The sheet's width: 360px, or the window less a margin either side below the comfortable
+/// minimum and at 200%, so the sheet never runs past the window; its rows reflow inside it.
 pub(in crate::app) fn sheet_width(app: &App) -> f64 {
     let scale = f64::from(crate::presentation::scale(&app.preferences.config.writer));
     if app.viewport.width < COMPACT_WINDOW * scale || scale >= 2. {
-        app.viewport.width
+        (app.viewport.width - 2. * space::KINDS).max(0.)
     } else {
         size::SIDE_SHEET * scale
     }
