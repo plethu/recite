@@ -82,7 +82,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         // Past the reading beat's mark, which stays in view at the card's leading edge.
         placed::placed(
             Affine::translate((THICKNESS, 0.)),
-            sized_box(contents(state, scene, (index, true), field))
+            sized_box(renaming(state, scene, index, field))
                 .padding(Padding {
                     left: (space::TEXT - THICKNESS).px(),
                     ..Padding::all(space::TEXT.px())
@@ -96,7 +96,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     });
     let returning = state.rename_return() == Some(&target);
     let body = button_any_pointer(
-        contents(state, scene, (index, false), heading),
+        contents(state, scene, index, heading),
         move |state: &mut Writer, pointer| {
             let press = match pointer {
                 None => Press::Keyboard,
@@ -197,15 +197,52 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
 }
 
 /// A card's words under `title`: the speaker, the opening prose and its annotations.
-/// A card's title over its speaker, excerpt and annotations. A rename's face repeats the card's
-/// lines for sight only, the card beneath reads them, and gives its taller field an excerpt line,
-/// so the words keep clear of the card's foot.
 fn contents<T: WidgetView<Writer>>(
     state: &Writer,
     scene: &Scene,
-    (index, renaming): (usize, bool),
+    index: usize,
     title: T,
 ) -> impl WidgetView<Writer> + use<T> {
+    let (lines, annotations) = lines(state, scene, index, false);
+    let width = f64::from(scene.node(index).width);
+    flex_col((title, lines, annotations))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::SIBLINGS.px())
+        .dims(((width - 24.).px(), (HEIGHT - 24.).px()))
+}
+
+/// A rename's face: the field over the card's lines, repeated for sight only since the card
+/// beneath reads them, with an excerpt a line shorter so the taller field's words keep clear of
+/// the card's foot.
+fn renaming<T: WidgetView<Writer>>(
+    state: &Writer,
+    scene: &Scene,
+    index: usize,
+    field: T,
+) -> impl WidgetView<Writer> + use<T> {
+    let (lines, annotations) = lines(state, scene, index, true);
+    let width = f64::from(scene.node(index).width);
+    flex_col((
+        field,
+        group::decorative(lines),
+        annotations.map(group::decorative),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
+    .dims(((width - 24.).px(), (HEIGHT - 24.).px()))
+}
+
+/// A card's speaker over its excerpt, `shorter` by a line under a rename's field, and its
+/// annotations.
+fn lines(
+    state: &Writer,
+    scene: &Scene,
+    index: usize,
+    shorter: bool,
+) -> (
+    impl WidgetView<Writer> + use<>,
+    Option<impl WidgetView<Writer> + use<>>,
+) {
     let synopsis = &scene.projection.synopsis[index];
     let zoom = scene.camera.relative();
     let width = f64::from(scene.node(index).width);
@@ -214,7 +251,7 @@ fn contents<T: WidgetView<Writer>>(
         label(1., synopsis.speaker.clone())
             .text_size(13_f32.max(11. / zoom))
             .color(state.palette.muted),
-        if renaming { excerpt.shorter() } else { excerpt }.width((width - 24.).px()),
+        if shorter { excerpt.shorter() } else { excerpt }.width((width - 24.).px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::UNIT.px());
@@ -223,22 +260,5 @@ fn contents<T: WidgetView<Writer>>(
             .text_size(13_f32.max(11. / zoom))
             .color(state.palette.muted)
     });
-    flex_col((
-        title,
-        if renaming {
-            Either::A(group::decorative(lines))
-        } else {
-            Either::B(lines)
-        },
-        annotations.map(|annotations| {
-            if renaming {
-                Either::A(group::decorative(annotations))
-            } else {
-                Either::B(annotations)
-            }
-        }),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px())
-    .dims(((width - 24.).px(), (HEIGHT - 24.).px()))
+    (lines, annotations)
 }
