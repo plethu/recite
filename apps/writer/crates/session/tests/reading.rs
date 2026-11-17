@@ -101,7 +101,7 @@ fn caption(entry: &ScriptEntry) -> &str {
     match entry {
         ScriptEntry::Group { heading, .. } => heading,
         ScriptEntry::Jump(text) | ScriptEntry::Source(text) => text,
-        ScriptEntry::Effect(effect) => &effect.reading,
+        ScriptEntry::Effect(effect) => &effect.source,
         ScriptEntry::Passage(passage) => &passage.text,
     }
 }
