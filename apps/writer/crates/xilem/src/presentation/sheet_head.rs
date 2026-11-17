@@ -47,7 +47,7 @@ pub(crate) fn sheet_head<
             .label(scale, title)
             .prop(LineBreaking::WordWrap),
         caption.map(|caption| {
-            print::meta(scale, caption)
+            print::caption(scale, caption)
                 .color(palette.muted)
                 .prop(LineBreaking::WordWrap)
         }),

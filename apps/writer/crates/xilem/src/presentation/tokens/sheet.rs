@@ -36,9 +36,10 @@ impl Page {
     pub fn scale(self) -> f32 {
         self.reading / Sheet::REFERENCE * self.zoom
     }
-    /// The scene title's scale: Display at 1.6R, a clear step above the beat headings under it.
+    /// The scene title's scale: Display at 1.6R, a clear step above the beat headings under it,
+    /// and never smaller than every other title.
     pub fn title(self) -> f32 {
-        1.6 * self.reading / Type::Display.metrics().0 * self.zoom
+        (1.6 * self.reading / Type::Display.metrics().0).max(1.) * self.zoom
     }
     /// A beat heading's scale: Section at 1.2R, one step above the 1.0R lines it heads.
     pub fn section(self) -> f32 {

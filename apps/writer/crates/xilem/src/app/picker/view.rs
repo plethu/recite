@@ -154,7 +154,7 @@ pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
                         .width(width.px()),
                         scoped.then(|| scopes(app, width)),
                         (count == 0).then(|| {
-                            print::meta(scale, empty_message(mode, picker))
+                            print::caption(scale, empty_message(mode, picker))
                                 .color(app.theme.palette.muted)
                         }),
                         (count > 0).then(|| {

@@ -10,8 +10,8 @@ fn the_spacing_scale_is_the_agreed_seven_steps() {
 #[test]
 fn interface_roles_scale_with_the_interface_and_keep_their_leading() {
     for (role, size, line) in [
-        (Type::Display, 28., 32.),
-        (Type::Section, 20., 24.),
+        (Type::Display, 32., 36.),
+        (Type::Section, 24., 28.),
         (Type::Control, 14., 20.),
         (Type::Body, 14., 20.),
         (Type::Meta, 12., 16.),
@@ -82,7 +82,9 @@ fn the_scene_title_beat_headings_and_folio_follow_the_reading_size_zoomed() {
     for zoom in [1., 1.5, 2.] {
         for reading in [14., 20., 28.] {
             let page = Page::new(reading, zoom);
-            assert!((Type::Display.size(page.title()) - 1.6 * reading * zoom).abs() < 1e-4);
+            // The scene title is 1.6R, never under the other titles' Display size.
+            let title = (1.6 * reading).max(Type::Display.metrics().0) * zoom;
+            assert!((Type::Display.size(page.title()) - title).abs() < 1e-4);
             // Beat headings sit one step above the lines they head.
             assert!((Type::Section.size(page.section()) - 1.2 * reading * zoom).abs() < 1e-4);
             assert!(Type::Section.size(page.section()) > Sheet::Dialogue.size(page));

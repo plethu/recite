@@ -40,7 +40,13 @@ pub(crate) fn title(scale: f32, text: impl Into<ArcStr>) -> Label {
     Type::Display.label(scale, text)
 }
 
-/// Counts, hints and status sentences: Meta, in Plex Sans. Callers set the muted colour.
+/// A sheet's or dialog's caption and guidance under a field or list: Body, in Plex Sans, so a
+/// sentence a writer reads is never set smaller than body text. Callers set the muted colour.
+pub(crate) fn caption(scale: f32, text: impl Into<ArcStr>) -> Label {
+    Type::Body.label(scale, text)
+}
+
+/// Counts, shortcuts and key hints: Meta, in Plex Sans. Callers set the muted colour.
 pub(crate) fn meta(scale: f32, text: impl Into<ArcStr>) -> Label {
     Type::Meta.label(scale, text)
 }

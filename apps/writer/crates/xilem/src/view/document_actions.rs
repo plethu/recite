@@ -82,7 +82,7 @@ pub(super) fn close_decision(state: &Writer) -> Option<impl WidgetView<Writer> +
                                 .label(scale, title)
                                 .prop(LineBreaking::WordWrap)
                                 .width(width.px()),
-                            print::meta(scale, state.document_caption())
+                            print::caption(scale, state.document_caption())
                                 .color(state.palette.muted)
                                 .prop(LineBreaking::WordWrap)
                                 .width(width.px()),

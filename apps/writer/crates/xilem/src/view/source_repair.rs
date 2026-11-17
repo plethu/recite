@@ -57,7 +57,7 @@ pub(super) fn panel(
                         },
                     )
                     .prop(LineBreaking::WordWrap),
-                print::meta(scale, caption)
+                print::caption(scale, caption)
                     .color(state.palette.muted)
                     .prop(LineBreaking::WordWrap),
             ))
@@ -154,7 +154,7 @@ fn repair_banner(state: &Writer, importing: bool) -> impl WidgetView<Writer> + u
             Type::Control
                 .label(scale, "Source needs repair")
                 .weight(FontWeight::SEMI_BOLD),
-            print::meta(scale, status).color(state.palette.muted),
+            print::caption(scale, status).color(state.palette.muted),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .gap(space::SIBLINGS.px()),

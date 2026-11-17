@@ -39,7 +39,7 @@ pub(in crate::app) fn settings(app: &App) -> impl WidgetView<App> + use<> {
                     "Settings",
                     flex_col((
                         flex_row((
-                            Type::Section.label(scale, "Settings"),
+                            Type::Display.label(scale, "Settings"),
                             FlexSpacer::Flex(1.),
                             print::icon_action(
                                 scale,

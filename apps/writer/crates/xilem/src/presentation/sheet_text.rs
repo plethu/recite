@@ -59,6 +59,13 @@ impl SheetText {
         self.weight = weight;
         self
     }
+    /// Set at `size` with the manuscript's leading, such as a source line quoted at the sheet's
+    /// own reading size.
+    pub fn manuscript(mut self, size: f32) -> Self {
+        self.size = size;
+        self.line_height = super::Sheet::LEADING;
+        self
+    }
     /// Set in `families` instead of the role's own, such as an id in Plex Mono at Body size.
     pub fn families(mut self, families: &'static [&'static str]) -> Self {
         self.families = families;

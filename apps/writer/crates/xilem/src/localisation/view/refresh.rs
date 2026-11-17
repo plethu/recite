@@ -6,7 +6,7 @@ use crate::presentation::segments::{segment_titled, segments};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, disclosure, print};
+use crate::presentation::{Page, Sheet, Type, disclosure, print};
 use recite_writer_app::localisation::refresh::Update;
 use recite_writer_session::typography::FONT_PROSE;
 use xilem::masonry::parley::style::FontWeight;
@@ -154,6 +154,7 @@ fn row(
     let palette = &writer.palette;
     let refresh = writer.localisation.refresh.as_ref();
     let open = refresh.is_some_and(|refresh| refresh.open.contains(&index));
+    let page = Page::of(writer);
     let kept = refresh.is_some_and(|refresh| refresh.is_kept(index));
     let name = name(update);
     let meta = if update.beat.is_empty() {
@@ -192,9 +193,10 @@ fn row(
                         open,
                         palette.ink,
                         flex_col((
-                            // The source line in the reading face, then where it is, as meta.
+                            // The source line as the sheet sets it, then where it is, as meta.
                             one_line(update.excerpt.clone(), Type::Body, scale, palette.ink)
-                                .families(FONT_PROSE),
+                                .families(FONT_PROSE)
+                                .manuscript(Sheet::Dialogue.size(page)),
                             one_line(meta, Type::Meta, scale, palette.muted),
                         ))
                         .cross_axis_alignment(CrossAxisAlignment::Stretch)

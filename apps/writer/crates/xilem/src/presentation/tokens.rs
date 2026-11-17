@@ -123,15 +123,16 @@ pub(crate) mod breakpoint {
 /// An interface type role.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Type {
-    /// Fraunces 600, 28/32: the scene title and page titles.
+    /// Fraunces 600, 32/36: the scene title and every page, sheet and panel title.
     Display,
-    /// Fraunces 600, 20/24: beat headings, panel and tool sections.
+    /// Fraunces 600, 24/28: beat headings, panel and tool sections.
     Section,
     /// Plex Sans 500, 14/20: buttons, tabs, rows and menu items.
     Control,
     /// Plex Sans 400, 14/20: guidance and sentences.
     Body,
-    /// Plex Sans 400, 12/16, muted by the caller: counts, hints and status sentences.
+    /// Plex Sans 400, 12/16, muted by the caller: counts, shortcuts and the status bar. Captions
+    /// and guidance a writer reads are Body.
     Meta,
     /// Plex Mono 12/16: ids, source labels and the folio only.
     Id,
@@ -140,8 +141,8 @@ impl Type {
     /// Size and line height in logical pixels at 100% UI scale.
     pub const fn metrics(self) -> (f32, f32) {
         match self {
-            Self::Display => (28., 32.),
-            Self::Section => (20., 24.),
+            Self::Display => (32., 36.),
+            Self::Section => (24., 28.),
             Self::Control | Self::Body => (14., 20.),
             Self::Meta | Self::Id => (12., 16.),
         }

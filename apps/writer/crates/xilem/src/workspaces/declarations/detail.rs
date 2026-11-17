@@ -11,7 +11,7 @@ pub(super) fn detail(writer: &Writer, width: f64, height: f64) -> impl WidgetVie
     let chosen = panel.selected.and_then(|index| panel.rows.get(index));
     flex_col((
         chosen.is_none().then(|| {
-            print::meta(scale, "Choose a declaration to see its fields.")
+            print::caption(scale, "Choose a declaration to see its fields.")
                 .color(writer.palette.muted)
         }),
         chosen.map(|chosen| {
