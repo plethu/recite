@@ -9,7 +9,6 @@ use crate::presentation::print;
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
 use recite_writer_model::EditOperation;
-use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::{LineBreaking, TextAreaLabel};
 use xilem::view::FlexSequence;
 
@@ -154,15 +153,9 @@ fn repair_banner(state: &Writer, importing: bool) -> impl WidgetView<Writer> + u
         "Accepted source · Saved"
     };
     let open = importing && state.repair.importing;
+    // The lead-in says the source needs repair; the message says where the repair stands.
     let message = flex_col((
-        flex_row((
-            Type::Control
-                .label(scale, "Source needs repair")
-                .weight(FontWeight::SEMI_BOLD),
-            print::caption(scale, status).color(state.palette.muted),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(space::SIBLINGS.px()),
+        print::caption(scale, status).color(state.palette.muted),
         open.then(|| import_row(state, busy)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -185,6 +178,7 @@ fn repair_banner(state: &Writer, importing: bool) -> impl WidgetView<Writer> + u
     .gap(space::SIBLINGS.px());
     banner(
         &state.palette,
+        (scale, "Source needs repair"),
         (message, actions),
         open || width < 560. * f64::from(scale),
         width,

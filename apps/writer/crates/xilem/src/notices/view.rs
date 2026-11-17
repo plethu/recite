@@ -73,15 +73,13 @@ fn notice(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let stacked = width < 880. * f64::from(scale);
     Some(banner(
         &writer.palette,
+        (scale, "Changed on disk"),
         (
             flex_row((
                 Type::Control
                     .label(
                         scale,
-                        format!(
-                            "Changed on disk · {count} {}",
-                            if count == 1 { "file" } else { "files" }
-                        ),
+                        format!("{count} {}", if count == 1 { "file" } else { "files" }),
                     )
                     .weight(FontWeight::SEMI_BOLD),
                 print::id(scale, path.display().to_string()).color(writer.palette.muted),

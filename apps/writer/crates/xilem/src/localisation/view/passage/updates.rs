@@ -18,12 +18,13 @@ pub(super) fn updates(
         let state = &writer.localisation;
         banner(
             &writer.palette,
+            (scale, "Source updates"),
             (
                 Type::Control
                     .label(
                         scale,
                         format!(
-                            "Source changed · {unmatched} {} without a catalogue entry",
+                            "{unmatched} {} without a catalogue entry",
                             if unmatched == 1 {
                                 "passage"
                             } else {

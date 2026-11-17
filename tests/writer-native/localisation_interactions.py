@@ -239,7 +239,7 @@ def run(api, bus, registry, binary, output):
                 )
                 po.write_text(disk)
                 window.wait(
-                    lambda: window.find_text("Changed on disk · 1 file"),
+                    lambda: window.find_text("CHANGED ON DISK") and window.find_text("1 file"),
                     "external catalogue notice laid out",
                 )
                 reveal(window, "Save translation")

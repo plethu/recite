@@ -135,7 +135,7 @@ fn malformed_source_offers_external_repair_without_an_editable_manuscript() {
     let labels = labels(&mut writer).unwrap();
     assert!(!labels.iter().any(|label| label == "Manuscript"));
     assert!(labels.iter().any(|label| label == "Open in editor"));
-    assert!(labels.iter().any(|label| label == "Source needs repair"));
+    assert!(labels.iter().any(|label| label == "SOURCE NEEDS REPAIR"));
 }
 
 #[test]
