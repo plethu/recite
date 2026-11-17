@@ -67,7 +67,13 @@ impl Writer {
         let (files, _) = project.parts_mut();
         if let Some(result) = files.builds.job.as_ref().and_then(job::Job::poll) {
             let message = result.message();
-            self.status = summary(&message);
+            // The status line says the outcome; the result's slip or page carries the detail.
+            self.status = if result.is_success() {
+                "Built"
+            } else {
+                "Build failed"
+            }
+            .into();
             self.workspaces.build_feedback = super::text::pages(&message);
             // On the build page its report shows in place; elsewhere a slip carries it.
             self.workspaces.build_result = self.workspaces.screen != Screen::Build;

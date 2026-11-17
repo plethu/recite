@@ -16,7 +16,8 @@ fn the_build_command_builds_at_once_and_its_result_waits_on_a_slip_away_from_the
     assert!(result.succeeded);
     assert_eq!(result.headline, "Built build/start.recitec");
     assert!(result.detail.is_none());
-    assert_eq!(writer.status, result.headline);
+    // The status line keeps the short outcome; the slip carries the detail.
+    assert_eq!(writer.status, "Built");
     // The build options open on the slip and close with it.
     writer.toggle_build_options();
     assert!(writer.workspaces.build_options);
@@ -44,6 +45,7 @@ fn the_build_command_builds_at_once_and_its_result_waits_on_a_slip_away_from_the
     assert!(!failure.succeeded);
     assert_eq!(failure.headline, "Build did not complete");
     assert!(failure.detail.unwrap().contains("schema"));
+    assert_eq!(writer.status, "Build failed");
     writer.open_build_page();
     assert!(writer.build_result().is_none());
 }
