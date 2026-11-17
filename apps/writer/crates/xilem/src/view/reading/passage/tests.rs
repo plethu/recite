@@ -310,13 +310,13 @@ fn a_written_row_s_id_sits_in_the_margin_clear_of_every_other_row() {
                 caption.width() <= margin + 1.,
                 "{id} at {scale}% keeps to the {margin}px margin column: {caption:?}"
             );
-            for other in row_bounds(&mounted, &id) {
+            for (other, what) in row_bounds(&mounted, &id) {
                 let overlap = caption.intersect(other);
                 assert!(
                     other.contains(caption.center()) && other.area() > 4. * caption.area()
                         || overlap.width() <= 0.
                         || overlap.height() <= 0.,
-                    "{id} at {scale}%: {caption:?} meets {other:?}"
+                    "{id} at {scale}%: {caption:?} meets {what} at {other:?}"
                 );
             }
         }
@@ -348,14 +348,26 @@ fn shaped_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
     found
 }
 
-/// The bounds of every label and shaped text but `except` and every focusable control: the rows
-/// an id must clear.
+/// The bounds and kind of every label and shaped text but `except` and every focusable control in
+/// the manuscript: the rows an id must clear. The running head and foot, which rows pass under as
+/// they scroll, are not rows.
 fn row_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
     mounted: &Mounted<Writer, V>,
     except: &str,
-) -> Vec<Rect> {
+) -> Vec<(Rect, String)> {
     let mut found = Vec::new();
     let mut pending = vec![mounted.harness.root_widget().as_dyn()];
+    let manuscript = loop {
+        let widget = pending.pop().expect("a manuscript");
+        if widget
+            .get_prop::<crate::view::ReadingViewport>()
+            .is_manuscript()
+        {
+            break widget;
+        }
+        pending.extend(widget.children());
+    };
+    let mut pending = vec![manuscript];
     while let Some(widget) = pending.pop() {
         if widget.ctx().is_stashed() {
             continue;
@@ -369,12 +381,17 @@ fn row_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
                     .map(|shaped| shaped.inner().text().as_ref() != except)
             });
         if label.unwrap_or_else(|| widget.ctx().accepts_focus()) {
-            found.push(
+            found.push((
                 widget
                     .ctx()
                     .window_transform()
                     .transform_rect_bbox(widget.ctx().border_box()),
-            );
+                format!(
+                    "{} {:?}",
+                    widget.inner().short_type_name(),
+                    widget.inner().get_debug_text()
+                ),
+            ));
         }
         pending.extend(widget.children());
     }
