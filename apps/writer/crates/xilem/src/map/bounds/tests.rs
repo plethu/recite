@@ -70,9 +70,10 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         // container that a modal surface disables, and each beat row the sidebar's scrolling beat
         // list builds (those in view and one past them) the container that turns its
         // double-click into an in-place rename, with the stack that lays the list's scroll thumb
-        // over it and the thumb's two boxes.
+        // over it and the thumb's two boxes, and the column that keeps the scene search above the
+        // scrolled scene list. Chrome costs are fixed; the mounted-card bound below scales.
         assert!(
-            nodes <= 259,
+            nodes <= 263,
             "bounded Map mounted {nodes} accessibility nodes: {roles:?}; {names:?}"
         );
         assert!(scene.mounted_indices().count() <= 4);
