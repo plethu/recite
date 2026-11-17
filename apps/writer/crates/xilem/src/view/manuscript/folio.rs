@@ -3,7 +3,7 @@ use super::*;
 use crate::presentation::print;
 use crate::presentation::running::running_head;
 use crate::presentation::space;
-use crate::presentation::tokens::Sheet;
+use crate::presentation::tokens::Page;
 use crate::view::workspace::Layout;
 use xilem::masonry::parley::style::FontWeight;
 use xilem::{masonry::properties::LineBreaking, style::Padding};
@@ -14,8 +14,8 @@ pub(in crate::view) fn footer(state: &Writer) -> Option<impl WidgetView<Writer> 
     let beat = state.reading.selected.as_ref()?;
     let position = state.reading.position.as_ref()?;
     let grid = Layout::resolve(state).grid;
-    // The folio belongs to the sheet: it follows the reading size, not the UI scale.
-    let scale = Sheet::folio_scale(state.reading_size());
+    // The folio belongs to the sheet: it follows the reading size, zoomed with it.
+    let scale = Page::of(state).folio();
     Some(
         flex_col((
             print::hairline(&state.palette),
@@ -57,7 +57,7 @@ pub(in crate::view) fn head(state: &Writer) -> Option<impl WidgetView<Writer> + 
     Some(running_head(
         flex_col((
             print::meta(
-                Sheet::folio_scale(state.reading_size()),
+                Page::of(state).folio(),
                 format!(
                     "{scene} › {}",
                     recite_writer_session::choices::display_name(beat)

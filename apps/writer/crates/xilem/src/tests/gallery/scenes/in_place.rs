@@ -214,8 +214,13 @@ fn rename_in<V: WidgetView<App, Widget = Passthrough>>(
             let Some(beat) = beat else {
                 return;
             };
-            let mut tools = ToolDriver::new(writer);
             writer.rename_beat_in(Target { beat, place });
+        }
+    });
+    // The field takes focus as it opens; typing and Enter come after, as they would by hand.
+    stage.act(|app| {
+        if let Some(writer) = &mut app.writer {
+            let mut tools = ToolDriver::new(writer);
             writer.edit_inline_rename("front_desk".into());
             if reviewed {
                 writer.commit_inline_rename();

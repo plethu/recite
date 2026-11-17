@@ -32,30 +32,59 @@ fn interface_roles_scale_with_the_interface_and_keep_their_leading() {
 
 #[test]
 fn sheet_roles_follow_the_reading_size_but_never_fall_below_their_floors() {
-    assert_eq!(Sheet::Dialogue.size(20.), 20.);
-    assert_eq!(Sheet::Label.size(20.), 12.);
-    assert!((Sheet::Destination.size(20.) - 14.4).abs() < 1e-4);
+    let page = |reading| Page::new(reading, 1.);
+    assert_eq!(Sheet::Dialogue.size(page(20.)), 20.);
+    assert_eq!(Sheet::Label.size(page(20.)), 12.);
+    assert!((Sheet::Destination.size(page(20.)) - 14.4).abs() < 1e-4);
     // At the smallest reading sizes labels and destinations keep 11 and 13 pixels.
     for reading in [10., 12., 14., 16.] {
-        assert!(Sheet::Label.size(reading) >= 11.);
-        assert!(Sheet::Destination.size(reading) >= 13.);
+        assert!(Sheet::Label.size(page(reading)) >= 11.);
+        assert!(Sheet::Destination.size(page(reading)) >= 13.);
     }
-    assert!((Sheet::Reply.size(20.) - 18.).abs() < 1e-4);
+    assert!((Sheet::Reply.size(page(20.)) - 18.).abs() < 1e-4);
     assert_eq!(Sheet::text(Some(1)), Sheet::Reply);
     assert_eq!(Sheet::text(None), Sheet::Dialogue);
-    assert!((Sheet::Label.tracking(20.) - 0.72).abs() < 1e-4);
-    assert_eq!(Sheet::Destination.tracking(20.), 0.);
+    assert!((Sheet::Label.tracking(page(20.)) - 0.72).abs() < 1e-4);
+    assert_eq!(Sheet::Destination.tracking(page(20.)), 0.);
 }
 
 #[test]
-fn the_scene_title_beat_headings_and_folio_take_the_reading_size_not_the_ui_scale() {
-    for reading in [14., 20., 28.] {
-        let sheet = Sheet::scale(reading);
-        assert!((Type::Display.size(sheet) - 1.4 * reading).abs() < 1e-4);
-        assert!((Type::Section.size(sheet) - reading).abs() < 1e-4);
-        // The folio is 0.6R, held at 11px at small reading sizes.
-        let folio = Sheet::folio_scale(reading);
-        assert!((Type::Id.size(folio) - (0.6 * reading).max(11.)).abs() < 1e-4);
+fn the_ui_scale_zooms_every_sheet_role_and_its_floors() {
+    let roles = [
+        Sheet::Dialogue,
+        Sheet::Reply,
+        Sheet::Number,
+        Sheet::Label,
+        Sheet::Destination,
+    ];
+    for reading in [12., 14., 20., 28.] {
+        let normal = Page::new(reading, 1.);
+        let zoomed = Page::new(reading, 2.);
+        for role in roles {
+            assert!((role.size(zoomed) - 2. * role.size(normal)).abs() < 1e-4);
+        }
+        assert!((zoomed.scale() - 2. * normal.scale()).abs() < 1e-4);
+        assert!((zoomed.folio() - 2. * normal.folio()).abs() < 1e-4);
+        // Controls on the sheet zoom with it and never fall below the interface's size.
+        assert!(zoomed.control() >= 2. && normal.control() >= 1.);
+        assert!(zoomed.target() >= 48. && normal.target() >= size::TARGET);
+    }
+}
+
+#[test]
+fn the_scene_title_beat_headings_and_folio_follow_the_reading_size_zoomed() {
+    for zoom in [1., 1.5, 2.] {
+        for reading in [14., 20., 28.] {
+            let page = Page::new(reading, zoom);
+            assert!((Type::Display.size(page.title()) - 1.6 * reading * zoom).abs() < 1e-4);
+            // Beat headings sit one step above the lines they head.
+            assert!((Type::Section.size(page.section()) - 1.2 * reading * zoom).abs() < 1e-4);
+            assert!(Type::Section.size(page.section()) > Sheet::Dialogue.size(page));
+            assert!(Type::Display.size(page.title()) > Type::Section.size(page.section()));
+            // The folio is 0.6R, held at 11px at small reading sizes, zoomed.
+            let folio = Type::Id.size(page.folio());
+            assert!((folio - (0.6 * reading).max(11.) * zoom).abs() < 1e-4);
+        }
     }
 }
 
@@ -67,7 +96,7 @@ fn the_manuscript_line_box_is_taller_than_the_reference_at_every_reading_size() 
     for reading in [12., 14., 16., 20., 24., 32.] {
         for role in [Sheet::Dialogue, Sheet::Reply] {
             assert!(
-                role.size(reading) * leading >= reading * 1.2,
+                role.size(Page::new(reading, 1.)) * leading >= reading * 1.2,
                 "{role:?} at {reading}"
             );
         }

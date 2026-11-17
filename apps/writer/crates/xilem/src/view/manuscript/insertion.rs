@@ -3,7 +3,7 @@
 //! else at the beat's end; the caret lands in the new passage. The row sits after the beat, so
 //! choosing a passage never moves another.
 use super::*;
-use crate::presentation::control_inset;
+use crate::presentation::{Page, control_inset};
 use recite_writer_model::{PassageKind, View};
 
 pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -50,8 +50,8 @@ pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<
             0.
         } else {
             (super::super::reading::text_column(state)
-                - control_inset(state.ui_scale())
-                - print::insert_hang(state.ui_scale()))
+                - control_inset(Page::of(state).control())
+                - print::insert_hang(Page::of(state).control()))
             .max(0.)
         }
         .px(),
@@ -82,8 +82,9 @@ fn add_button(
     command: StructuralCommand,
     enabled: bool,
 ) -> impl WidgetView<Writer> + use<> {
+    // The row zooms with the sheet it ends, never below the interface's own size.
     print::insert_action(
-        state.ui_scale(),
+        Page::of(state).control(),
         title,
         &state.palette,
         !enabled,

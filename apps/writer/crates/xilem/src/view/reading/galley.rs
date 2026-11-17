@@ -90,7 +90,7 @@ fn scene_title(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use<> {
     let key = state.session.model().document().key().as_str();
     let scene = display_name(key.rsplit('/').next().unwrap_or(key));
     sized_box(
-        print::title(Sheet::scale(state.reading_size()), scene)
+        print::title(Page::of(state).title(), scene)
             .prop(LineBreaking::WordWrap)
             .width((grid.row() - grid.text()).px()),
     )
@@ -126,7 +126,6 @@ fn heading(
     total: usize,
     problems: &[(String, String)],
 ) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
     let id = beat_id(state, index);
     let name = display_name(&id);
     let selected = state.reading.selected.as_deref() == Some(id.as_str());
@@ -135,9 +134,10 @@ fn heading(
         .iter()
         .find(|(beat, _)| beat == &id)
         .map(|(_, message)| message.clone());
-    let inset = control_inset(scale);
-    // Set with the manuscript: a Section heading at the reading size, whatever the UI scale.
-    let sheet = Sheet::scale(state.reading_size());
+    // Set with the manuscript: a Section heading one step above its lines, zoomed with them.
+    let page = Page::of(state);
+    let sheet = page.section();
+    let inset = control_inset(page.control());
     let text = Type::Section
         .label(sheet, name.clone())
         .color(if selected {
@@ -203,7 +203,7 @@ fn heading(
             selected && rename::hangs_from(state, &id, Place::Heading),
         ))
         .flex(1.),
-        selected.then(|| actions(state, blocked)),
+        selected.then(|| actions(state, page.control(), blocked)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap((grid.gutter() - inset).max(0.).px())
@@ -212,8 +212,7 @@ fn heading(
 }
 
 /// The selected beat's quiet icon actions, always in the Tab order.
-fn actions(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
+fn actions(state: &Writer, scale: f32, blocked: bool) -> impl WidgetView<Writer> + use<> {
     flex_row((
         print::icon_action(
             scale,

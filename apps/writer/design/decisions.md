@@ -28,6 +28,12 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
   interface type roles, which scale with the UI, and the sheet roles, which follow the reading size
   with floors. Views compose tokens and helpers from `presentation/` rather than hard-coding
   colours, sizes or gaps.
+- **UI scale zooms the sheet.** The Reading size setting is the sheet's size at 100%. The UI scale
+  zooms the whole sheet as a browser zooms a page: lines, replies, numbers, labels, destinations,
+  the scene title (Display, 1.6R), beat headings (Section, 1.2R) and the folio, with their 11 and
+  13px floors, and the grid's measure and columns, which are set in ems. Where the pane is
+  narrower than the zoomed measure the text reflows. Controls on the sheet zoom with it and never
+  fall below the interface's own size, so no text or target is smaller at 200% than at 100%.
 - **Controls.** One state table (`presentation/theme/states.rs`) styles every control class; wells
   share one look. Every one-of choice is a segment on one tonal track; only Write | Localise are
   tabs.

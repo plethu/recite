@@ -1,6 +1,6 @@
 //! A real Xilem view loop with live workers, the Writer's own theme and fonts, and a rendered frame.
 use super::record::Recorder;
-use crate::native_host::keyboard::galley::Galley;
+use crate::native_host::keyboard::Keyboard;
 use crate::native_host::keyboard::{focus::slip_anchor, tab::to_tab_stop};
 use crate::tests::support::native_label;
 use masonry::testing::{TestHarness, TestHarnessParams};
@@ -81,8 +81,9 @@ pub(crate) struct Stage<S: 'static, V: WidgetView<S, Widget = Passthrough>> {
     look: fn(&mut S, bool) -> Look,
     properties: Arc<DefaultProperties>,
     pub frame: Frame,
-    /// The native host's galley upkeep: the chosen beat brought into view, the running head.
-    galley: Galley,
+    /// The native host's keyboard upkeep after each rebuild: default focus in modal surfaces,
+    /// slips and in-place edits, and the galley's chosen beat brought into view.
+    keyboard: Keyboard,
     /// Problems that do not stop a capture but make a frame less trustworthy.
     pub warnings: Vec<String>,
 }
@@ -126,7 +127,7 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Stage<S, V> {
             properties: initial.properties,
             responses,
             frame,
-            galley: Galley::default(),
+            keyboard: Keyboard::default(),
             warnings: vec![],
         };
         stage.settle();
@@ -196,7 +197,7 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Stage<S, V> {
             .edit_root_widget(|root| next.rebuild(view, local, context, root, state));
         self.view = next;
         self.harness.redraw();
-        self.galley.synchronize(self.harness.render_root());
+        self.keyboard.synchronize(self.harness.render_root());
     }
 
     /// Change state directly through a named app operation, then let the view catch up.

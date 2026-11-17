@@ -5,7 +5,9 @@ use crate::presentation::grid::Grid;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER};
 use crate::presentation::marks::{Mark, marked};
 use crate::presentation::space;
-use crate::presentation::{Sheet, disclosure_width, overhang, print, route_name, route_toggle};
+use crate::presentation::{
+    Page, Sheet, disclosure_width, overhang, print, route_name, route_toggle,
+};
 use crate::presentation::{control_inset, label_inset};
 use crate::reading::PassageNumber;
 use crate::view::workspace::Layout;
@@ -66,7 +68,7 @@ pub(in crate::view) fn margin<S: 'static>(
     label: String,
     number: Option<usize>,
 ) -> impl WidgetView<S> + use<S> {
-    let reading = state.reading_size();
+    let page = Page::of(state);
     let width = if grid.margin > 0. {
         grid.margin
     } else {
@@ -79,13 +81,13 @@ pub(in crate::view) fn margin<S: 'static>(
         empty.then(|| sized_box(flex_col(())).dims((0.px(), 0.px()))),
         (!label.is_empty()).then(|| {
             Sheet::Label
-                .label(reading, label)
+                .label(page, label)
                 .color(state.palette.accent)
                 .prop(LineBreaking::Clip)
         }),
         number.map(|number| {
             Sheet::Number
-                .label(reading, number.to_string())
+                .label(page, number.to_string())
                 .color(state.palette.muted)
         }),
     ))
@@ -112,7 +114,7 @@ pub(super) fn row(
     reply: Option<usize>,
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
-    let reading = state.reading_size();
+    let page = Page::of(state);
     let grid = grid(state);
     let wide = grid.margin > 0.;
     // Nested groups indent the row; the margin column and the gutters keep their widths.
@@ -131,7 +133,7 @@ pub(super) fn row(
         })
     .max(120.);
     let (label, numbered) = margin_label(passage, reply);
-    let size = Sheet::text(reply).size(reading);
+    let size = Sheet::text(reply).size(page);
     let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
     let speaking = active && matches!(passage.kind, PassageKind::Dialogue { .. });
     // A written reply always shows its destination control; a resting one only a route.

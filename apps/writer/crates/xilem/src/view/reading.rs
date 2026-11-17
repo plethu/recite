@@ -10,7 +10,7 @@ use crate::presentation::grid::Grid;
 use crate::presentation::material;
 use crate::presentation::print;
 use crate::presentation::space;
-use crate::presentation::{Sheet, Type, Typeset};
+use crate::presentation::{Page, Sheet, Type, Typeset};
 use crate::reading::{Content, Row};
 use recite_core::DocumentKey;
 use recite_writer_model::{AnalysisStamp, RouteOwner};
@@ -130,7 +130,7 @@ fn content(state: &Writer, beat: &str, row: &Row, width: f64) -> Box<AnyWidgetVi
         }
         Content::Heading(text) => sized_box(
             prose(state.ui_scale(), text.clone())
-                .text_size(Sheet::Dialogue.size(state.reading_size()))
+                .text_size(Sheet::Dialogue.size(Page::of(state)))
                 .line_height(Sheet::LEADING),
         )
         .width(width.px())

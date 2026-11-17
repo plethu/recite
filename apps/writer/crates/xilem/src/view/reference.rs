@@ -2,7 +2,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::pane;
-use crate::presentation::space;
+use crate::presentation::{Page, Sheet, space};
 use crate::presentation::{group::named, manuscript_text, print};
 use recite_writer_model::{PassageKind, ScriptEntry};
 use recite_writer_session::{choices::display_name, reading::Excerpt};
@@ -200,8 +200,11 @@ fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetV
                     .prop(LineBreaking::WordWrap)
                     .width(caption_width.px())
                     .color(state.palette.muted),
-                manuscript_text(0.75 * state.reading_size(), passage.text.clone())
-                    .width((width - caption_width - 8.).px()),
+                manuscript_text(
+                    0.75 * Sheet::Dialogue.size(Page::of(state)),
+                    passage.text.clone(),
+                )
+                .width((width - caption_width - 8.).px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(space::UNIT.px())

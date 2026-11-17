@@ -262,6 +262,28 @@ fn accessibility(harness: &TestHarness<Passthrough>, scale: f64) -> (Vec<Value>,
                 ));
             }
         }
+        // The largest text the node sets, from the text runs under it: its font size and the
+        // height of that run's line box. The comparison holds both against the baseline.
+        let mut text: Option<[f64; 2]> = None;
+        let mut runs: Vec<_> = node.children().collect();
+        while let Some(run) = runs.pop() {
+            if run.is_hidden() {
+                continue;
+            }
+            if run.role() != Role::TextRun {
+                runs.extend(run.children());
+                continue;
+            }
+            let Some(size) = run.data().font_size().map(|size| round(f64::from(size))) else {
+                continue;
+            };
+            let line = run
+                .bounding_box()
+                .map_or(0., |rect| round(rect.height() / scale));
+            if text.is_none_or(|[largest, _]| size > largest) {
+                text = Some([size, line]);
+            }
+        }
         nodes.push(json!({
             "role": role,
             "label": label,
@@ -271,9 +293,15 @@ fn accessibility(harness: &TestHarness<Passthrough>, scale: f64) -> (Vec<Value>,
             "focused": node.is_focused_in_tree(),
             "disabled": node.is_disabled(),
             "bounds": bounds,
+            "text": text,
         }));
     }
     (nodes, lint)
+}
+
+/// A measurement to a tenth of a logical pixel.
+fn round(value: f64) -> f64 {
+    (value * 10.).round() / 10.
 }
 
 fn escape(text: &str) -> String {

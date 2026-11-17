@@ -2,7 +2,7 @@
 use crate::WriterLayout;
 use crate::presentation::material::{Texture, backdrop, screen};
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, print, space};
+use crate::presentation::{Page, Sheet, Type, print, space};
 use xilem::peniko::Color;
 mod comparison;
 mod creation;
@@ -123,7 +123,7 @@ fn halftone(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     )
 }
 fn prose_size(writer: &Writer) -> f32 {
-    writer.reading_size()
+    Sheet::Dialogue.size(Page::of(writer))
 }
 fn destinations(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let pages = (

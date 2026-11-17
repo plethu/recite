@@ -8,6 +8,8 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
+mod text;
+
 /// A channel difference at or below this is antialiasing noise, not a change.
 const TOLERANCE: u8 = 8;
 
@@ -216,6 +218,7 @@ fn accessibility(
             describe(was.as_ref())
         ));
     }
+    let (before_snapshot, after_snapshot) = (before, after);
     let (before, after) = (controls(before), controls(after));
     for ((role, label), nodes) in &before {
         let Some(current) = after.get(&(role.clone(), label.clone())) else {
@@ -253,6 +256,7 @@ fn accessibility(
             }
         }
     }
+    text::shrinks(name, (before_snapshot, after_snapshot), report);
     let (was, now) = (lint(old), lint(new));
     for finding in now.difference(&was) {
         report

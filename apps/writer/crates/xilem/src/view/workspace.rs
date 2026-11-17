@@ -4,7 +4,7 @@ use crate::map::Workspace;
 use crate::presentation::group::named;
 use crate::presentation::pane;
 use crate::presentation::segments::{segment, segments};
-use crate::presentation::space;
+use crate::presentation::{Page, space};
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::masonry::layout::Dim;
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack};
@@ -54,7 +54,7 @@ impl Layout {
         // Script alone may rest a sheet on the desk; beside the map the paper is full-bleed.
         let grid = Grid::resolve(
             script_pane,
-            (state.reading_size(), state.ui_scale()),
+            Page::of(state),
             workspace == Workspace::Script && state.viewport.width >= COMPACT_WINDOW,
         );
         Self {

@@ -2,7 +2,7 @@
 use super::*;
 use crate::attention::{EditingTarget, PassageField};
 use crate::presentation::{
-    Sheet,
+    Page, Sheet,
     control_style::{ControlStyle, styled},
     print,
 };
@@ -20,7 +20,7 @@ pub(in crate::view) fn prose_editor(
         passage,
         state.session.model().draft().to_owned(),
         "Manuscript".into(),
-        (width, Sheet::Dialogue.size(state.reading_size())),
+        (width, Sheet::Dialogue.size(Page::of(state))),
     )
 }
 pub(in crate::view) fn passage_editor(

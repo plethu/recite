@@ -15,7 +15,7 @@ pub(super) fn metadata(
     placement: CaptionPlacement,
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let caption_size = Sheet::Number.size(state.reading_size());
+    let caption_size = Sheet::Number.size(Page::of(state));
     let metadata =
         if active && (state.editing_passage(&passage.id) || state.session.model().has_draft()) {
             format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id)
@@ -101,7 +101,7 @@ pub(in crate::view::reading) fn route_to(
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
     let target = destination.to_owned();
-    let size = Sheet::Destination.size(state.reading_size());
+    let size = Sheet::Destination.size(Page::of(state));
     // The chevron is drawn for Control text; it scales to the destination's size.
     let glyph = size / Type::Control.metrics().0;
     sized_box(styled(
@@ -114,7 +114,7 @@ pub(in crate::view::reading) fn route_to(
                 size,
                 // Sized with the manuscript it belongs to, not with the interface chrome.
                 Sheet::Destination
-                    .label(state.reading_size(), display_name(destination))
+                    .label(Page::of(state), display_name(destination))
                     .prop(LineBreaking::WordWrap)
                     // Fill the content box so the text starts at the column's left edge.
                     .width(

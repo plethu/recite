@@ -3,7 +3,7 @@ use crate::WriterLayout;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::row::named_row;
 use crate::presentation::sheet_text::sheet_text;
-use crate::presentation::{Sheet, print, revealed, space};
+use crate::presentation::{Page, Sheet, print, revealed, space};
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
 use xilem::masonry::properties;
 
@@ -32,11 +32,11 @@ pub(super) fn playback(
                     choice.text.clone(),
                     flex_row((
                         Sheet::Number
-                            .label(state.reading_size(), format!("{}", index + 1))
+                            .label(Page::of(state), format!("{}", index + 1))
                             .color(state.palette.muted),
                         sheet_text(
                             choice.text.clone(),
-                            Sheet::Reply.size(state.reading_size()),
+                            Sheet::Reply.size(Page::of(state)),
                             state.palette.ink,
                         )
                         .width(state.script_width().px()),
@@ -67,10 +67,11 @@ pub(super) fn playback(
         (!page.ended && !page.text.is_empty()).then(|| {
             revealed(
                 shown,
-                flex_row((
-                    sized_box(manuscript_text(state.reading_size(), page.text.clone()))
-                        .width(state.script_width().px()),
-                )),
+                flex_row((sized_box(manuscript_text(
+                    Sheet::Dialogue.size(Page::of(state)),
+                    page.text.clone(),
+                ))
+                .width(state.script_width().px()),)),
             )
         }),
         page.condition.as_ref().map(|request| {
@@ -150,7 +151,7 @@ pub(super) fn playback(
 /// chosen after them as a reply row, with a hairline closing each turn before the next.
 fn transcript(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = state.script_width();
-    let reading = state.reading_size();
+    let page = Page::of(state);
     let muted = state.palette.muted;
     let turns = state
         .session
@@ -160,11 +161,11 @@ fn transcript(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .map(|turn| {
             flex_col((
                 (!turn.text.is_empty()).then(|| {
-                    sheet_text(turn.text.clone(), Sheet::Dialogue.size(reading), muted)
+                    sheet_text(turn.text.clone(), Sheet::Dialogue.size(page), muted)
                         .width(width.px())
                 }),
                 turn.reply.as_ref().map(|reply| {
-                    sheet_text(format!("→ {reply}"), Sheet::Reply.size(reading), muted)
+                    sheet_text(format!("→ {reply}"), Sheet::Reply.size(page), muted)
                         .width(width.px())
                 }),
                 sized_box(print::hairline(&state.palette)).width(width.px()),

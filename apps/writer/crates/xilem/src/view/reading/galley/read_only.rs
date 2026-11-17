@@ -62,11 +62,11 @@ pub(super) fn read_only(
 
 /// One read-only row, on the same grid and at the same sizes as an editable one.
 fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Writer>> {
-    let reading = state.reading_size();
+    let page = Page::of(state);
     match &row.content {
         Content::Passage { passage, .. } => {
             let (label, number) = margin_label(passage, row.reply);
-            let size = Sheet::text(row.reply).size(reading);
+            let size = Sheet::text(row.reply).size(page);
             let measure = grid.measure;
             let destination = match &passage.kind {
                 PassageKind::Choice {
@@ -77,7 +77,7 @@ fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Wr
             let wide = grid.margin > 0.;
             let route = |target: String| {
                 Sheet::Destination
-                    .label(reading, target)
+                    .label(page, target)
                     .color(state.palette.teal_text)
                     .prop(LineBreaking::WordWrap)
             };
@@ -123,7 +123,7 @@ fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Wr
         Content::Heading(text) => sized_box(
             sheet_text(
                 text.clone(),
-                Sheet::Dialogue.size(reading),
+                Sheet::Dialogue.size(page),
                 state.palette.muted,
             )
             .width(grid.measure.px()),
@@ -149,7 +149,7 @@ fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Wr
             None::<Label>,
             // As tall as the route button it stands for, so the row keeps the editable height.
             flex_col((Sheet::Destination
-                .label(reading, format!("→ {}", display_name(target)))
+                .label(page, format!("→ {}", display_name(target)))
                 .color(state.palette.teal_text)
                 .prop(LineBreaking::WordWrap)
                 .width(

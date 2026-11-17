@@ -184,6 +184,56 @@ fn comparison_blocks_lost_focus_shrunk_targets_and_new_findings_but_lists_rename
 }
 
 #[test]
+fn comparison_blocks_text_that_shrinks_and_lists_line_boxes_that_do_for_review() {
+    let node = |role: &str, words: &str, height: f64, text: serde_json::Value| {
+        let interactive = role != "Label";
+        json!({ "role": role, "label": interactive.then_some(words),
+                "value": (!interactive).then_some(words), "interactive": interactive,
+                "focusable": interactive, "disabled": false,
+                "bounds": [0., 0., 200., height], "text": text })
+    };
+    let baseline = tempfile::tempdir().unwrap();
+    write_capture(
+        baseline.path(),
+        json!([
+            // Recorded font sizes.
+            node("Button", "Go to Watch", 48., json!([28.8, 36.])),
+            node("Button", "Rename", 48., json!([14., 20.])),
+            // A baseline from before font sizes were recorded: its line boxes stand in.
+            node("Label", "Relay Desk", 71., json!(null)),
+            node("Label", "Two lines of guidance", 40., json!(null)),
+        ]),
+        json!([]),
+    );
+    let current = tempfile::tempdir().unwrap();
+    write_capture(
+        current.path(),
+        json!([
+            node("Button", "Go to Watch", 48., json!([14.4, 21.])),
+            // Within rounding.
+            node("Button", "Rename", 48., json!([13.6, 20.])),
+            node("Label", "Relay Desk", 29., json!([24., 29.])),
+            // The same text in one line where it took two: no shrink.
+            node("Label", "Two lines of guidance", 20., json!([14., 20.])),
+        ]),
+        json!([]),
+    );
+    let manifest: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(current.path().join("manifest.json")).unwrap())
+            .unwrap();
+    let report = compare(current.path(), &manifest, baseline.path()).unwrap();
+    assert_eq!(
+        report.regressions,
+        ["scene--light--00: Button \"Go to Watch\" text shrank from 28.8px to 14.4px"]
+    );
+    // A line box alone cannot tell type from leading: a reviewer justifies it.
+    assert_eq!(
+        report.review,
+        ["scene--light--00: Label \"Relay Desk\" text shrank from a 35.5px line to 29px"]
+    );
+}
+
+#[test]
 fn variant_ids_are_unique_and_extremes_are_core_scenes() {
     let mut ids: Vec<_> = Variant::ALL.iter().map(|variant| variant.id).collect();
     ids.sort_unstable();

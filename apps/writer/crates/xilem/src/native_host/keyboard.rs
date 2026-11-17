@@ -41,7 +41,7 @@ enum Composition {
     },
 }
 #[derive(Default)]
-pub(super) struct Keyboard {
+pub(crate) struct Keyboard {
     modifiers: ModifiersState,
     composition: Composition,
     focus: focus::Focus,

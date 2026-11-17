@@ -1,12 +1,14 @@
 //! The type and spacing scales. Every Writer gap, padding and text size comes from here, so
 //! proximity encodes relationship and weight and size, not whitespace, carry hierarchy.
 //!
-//! Interface roles multiply by the UI scale. Sheet roles derive from the reading size, never from
-//! the UI scale, and keep a floor so small reading sizes stay legible.
+//! Interface roles multiply by the UI scale. Sheet roles derive from the reading size, and the UI
+//! scale zooms the whole sheet as a browser zooms a page, floors included.
+mod sheet;
 #[cfg(test)]
 mod tests;
 use super::{label, print::font};
-use recite_writer_session::typography::{FONT_DISPLAY, FONT_MONO, FONT_PROSE, FONT_UI};
+use recite_writer_session::typography::{FONT_DISPLAY, FONT_MONO, FONT_UI};
+pub(crate) use sheet::{Page, Sheet};
 use xilem::{
     masonry::{
         core::ArcStr,
@@ -189,86 +191,5 @@ impl<S: 'static, A: 'static> Typeset for TextInput<S, A> {
             .text_size(size * scale)
             .weight(role.weight())
             .line_height(LineHeight::Absolute(line * scale))
-    }
-}
-
-/// A sheet type role, derived from the reading size R.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Sheet {
-    /// Literata 400, R / 1.45R: lines.
-    Dialogue,
-    /// Literata 400, 0.9R / 1.45: replies.
-    Reply,
-    /// Plex Mono at 0.6R: a reply's hanging number.
-    Number,
-    /// Plex Sans 600, 0.6R caps, +0.06em: speaker labels and "REPLIES" only. At least 11px.
-    Label,
-    /// Plex Sans 500, 0.72R: reply destinations. At least 13px.
-    Destination,
-}
-impl Sheet {
-    /// The reading size the sheet's interface roles are drawn for.
-    pub const REFERENCE: f32 = 20.;
-    /// The scale interface roles take on the sheet: the reading size over its reference, never
-    /// the UI scale. The scene title (Display) is 1.4R, a beat heading (Section) 1.0R and the
-    /// folio (Id) 0.6R, with their lines in proportion.
-    pub fn scale(reading: f32) -> f32 {
-        reading / Self::REFERENCE
-    }
-    /// The sheet scale for the running head and foot, whose Meta and Id text keep the 11px floor
-    /// of the sheet's smallest type.
-    pub fn folio_scale(reading: f32) -> f32 {
-        Self::scale(reading).max(11. / Type::Meta.metrics().0)
-    }
-    /// The manuscript's leading, on editable fields and read-only text alike, so a beat sets the
-    /// same lines whether or not its fields are mounted.
-    pub const LEADING: LineHeight = LineHeight::FontSizeRelative(1.45);
-    /// The role of a manuscript row's text: a reply when it has a reply number, a line otherwise.
-    pub const fn text(reply: Option<usize>) -> Self {
-        if reply.is_some() {
-            Self::Reply
-        } else {
-            Self::Dialogue
-        }
-    }
-    /// Size in logical pixels for reading size `reading`, floors included.
-    pub fn size(self, reading: f32) -> f32 {
-        match self {
-            Self::Dialogue => reading,
-            Self::Reply => 0.9 * reading,
-            Self::Number => 0.6 * reading,
-            Self::Label => (0.6 * reading).max(11.),
-            Self::Destination => (0.72 * reading).max(13.),
-        }
-    }
-    pub const fn weight(self) -> FontWeight {
-        match self {
-            Self::Dialogue | Self::Reply | Self::Number => FontWeight::NORMAL,
-            Self::Label => FontWeight::SEMI_BOLD,
-            Self::Destination => FontWeight::MEDIUM,
-        }
-    }
-    pub const fn families(self) -> &'static [&'static str] {
-        match self {
-            Self::Dialogue | Self::Reply => FONT_PROSE,
-            Self::Number => FONT_MONO,
-            Self::Label | Self::Destination => FONT_UI,
-        }
-    }
-    /// Tracking for caps labels: +0.06em.
-    pub fn tracking(self, reading: f32) -> f32 {
-        if self == Self::Label {
-            0.06 * self.size(reading)
-        } else {
-            0.
-        }
-    }
-    /// A label set in this role for reading size `reading`.
-    pub fn label(self, reading: f32, text: impl Into<ArcStr>) -> Label {
-        label(1., text)
-            .font(font(self.families()))
-            .text_size(self.size(reading))
-            .weight(self.weight())
-            .letter_spacing(self.tracking(reading))
     }
 }

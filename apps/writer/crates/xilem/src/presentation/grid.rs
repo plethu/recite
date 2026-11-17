@@ -4,7 +4,7 @@
 //! paper goes full-bleed, its margin narrows and destinations wrap under their replies.
 #[cfg(test)]
 mod tests;
-use super::tokens::{Sheet, control_inset};
+use super::tokens::{Page, Sheet, control_inset};
 
 /// Desk either side of a sheet, beyond the workspace's own 16px padding: 24px in all.
 pub(crate) const DESK_SIDE: f64 = 8.;
@@ -22,8 +22,6 @@ const DESTINATION_MEASURE: f64 = 420.;
 /// that is about 626px, a little inside the 640px `size::MEASURE` that sets interface prose.
 const CHARACTERS: f64 = 68.;
 const CHARACTER: f64 = 0.46;
-/// The reading size the column widths below are set for; other sizes scale them.
-const REFERENCE_READING: f64 = Sheet::REFERENCE as f64;
 /// The margin column on a sheet and on full-bleed paper.
 const MARGIN: f64 = 96.;
 const BLEED_MARGIN: f64 = 72.;
@@ -48,18 +46,19 @@ pub(crate) struct Grid {
 }
 
 impl Grid {
-    /// The grid for paper `available` wide at reading size `reading`. `sheet` says whether a
-    /// sheet may rest on the desk at all, as it may in Script but not beside the map.
-    pub fn resolve(available: f64, (reading, scale): (f32, f32), sheet: bool) -> Self {
-        // Sheet columns are set with the manuscript: in proportion to its reading size. The
-        // destination column also holds its route button's padding, which scales with the UI.
-        let unit = f64::from(reading) / REFERENCE_READING;
-        let longest = CHARACTERS * CHARACTER * f64::from(reading);
+    /// The grid for paper `available` wide for `page`. `sheet` says whether a sheet may rest on
+    /// the desk at all, as it may in Script but not beside the map.
+    pub fn resolve(available: f64, page: Page, sheet: bool) -> Self {
+        // Sheet columns are set with the manuscript: in proportion to its zoomed reading size,
+        // so at 200% the measure is the same 68 characters and the text reflows to fit the
+        // pane. The destination column also holds its route button's padding.
+        let unit = f64::from(page.scale());
+        let longest = CHARACTERS * CHARACTER * f64::from(Sheet::Dialogue.size(page));
         // Destinations keep their 13px floor at small reading sizes, so the column follows the
         // destination type rather than the reading size.
-        let route = f64::from(Sheet::Destination.size(reading))
-            / f64::from(Sheet::Destination.size(REFERENCE_READING as f32));
-        let destination = DESTINATION * route + 2. * control_inset(scale);
+        let route = f64::from(Sheet::Destination.size(page))
+            / f64::from(Sheet::Destination.size(Page::REFERENCE));
+        let destination = DESTINATION * route + 2. * control_inset(page.zoom);
         let width = available - 2. * DESK_SIDE;
         let measure =
             width - 2. * SHEET_PAD - MARGIN * unit - GUTTER - DESTINATION_GUTTER - destination;

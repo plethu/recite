@@ -4,7 +4,6 @@
 //! labels' faces and places, so choosing a passage moves nothing.
 use super::*;
 use crate::app::keyboard::PickerAnchor;
-use crate::presentation::tokens::size;
 use crate::presentation::{Type, label_inset, material};
 use recite_writer_app::Opener;
 use recite_writer_model::RouteOwner;
@@ -39,7 +38,7 @@ pub(super) fn speaker(
     let wide = grid.margin > 0.;
     let inset = label_inset();
     let label = Sheet::Label.label(
-        state.reading_size(),
+        Page::of(state),
         speaker
             .as_deref()
             .map_or_else(|| NO_SPEAKER.to_owned(), str::to_uppercase),
@@ -67,7 +66,7 @@ pub(super) fn speaker(
                 } else {
                     Dim::FitContent
                 })
-                .with_height(size::TARGET.px()),
+                .with_height(Page::of(state).target().px()),
         );
     let id = passage.id.clone();
     let opener = Opener::Speaker(id.clone());
@@ -129,7 +128,7 @@ pub(super) fn destination(
             state.palette.muted,
         ),
     };
-    let size = Sheet::Destination.size(state.reading_size());
+    let size = Sheet::Destination.size(Page::of(state));
     // The arrow is drawn for Control text; it scales to the destination's size.
     let glyph = size / Type::Control.metrics().0;
     let owner = RouteOwner::Reply(passage.id.clone());
@@ -143,7 +142,7 @@ pub(super) fn destination(
                 color,
                 size,
                 Sheet::Destination
-                    .label(state.reading_size(), text)
+                    .label(Page::of(state), text)
                     .prop(LineBreaking::WordWrap)
                     .width(
                         (width - 2. * control_inset(state.ui_scale()) - disclosure_width(glyph))
