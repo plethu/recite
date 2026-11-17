@@ -2,8 +2,8 @@
 use super::*;
 use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::presentation::marks::{GLYPH, Mark, THICKNESS, marked, wedge_glyph};
-use crate::presentation::space;
 use crate::presentation::{Icon, SMALL, Type, excerpt, mark, print};
+use crate::presentation::{group, space};
 use crate::workspaces::rename::inline::{self as rename, Place, Target};
 use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
@@ -82,7 +82,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         // Past the reading beat's mark, which stays in view at the card's leading edge.
         placed::placed(
             Affine::translate((THICKNESS, 0.)),
-            sized_box(contents(state, scene, index, field))
+            sized_box(contents(state, scene, (index, true), field))
                 .padding(Padding {
                     left: (space::TEXT - THICKNESS).px(),
                     ..Padding::all(space::TEXT.px())
@@ -96,7 +96,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     });
     let returning = state.rename_return() == Some(&target);
     let body = button_any_pointer(
-        contents(state, scene, index, heading),
+        contents(state, scene, (index, false), heading),
         move |state: &mut Writer, pointer| {
             let press = match pointer {
                 None => Press::Keyboard,
@@ -197,22 +197,25 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
 }
 
 /// A card's words under `title`: the speaker, the opening prose and its annotations.
+/// A card's title over its speaker, excerpt and annotations. A rename's face repeats the card's
+/// lines for sight only, the card beneath reads them, and gives its taller field an excerpt line,
+/// so the words keep clear of the card's foot.
 fn contents<T: WidgetView<Writer>>(
     state: &Writer,
     scene: &Scene,
-    index: usize,
+    (index, renaming): (usize, bool),
     title: T,
 ) -> impl WidgetView<Writer> + use<T> {
     let synopsis = &scene.projection.synopsis[index];
     let zoom = scene.camera.relative();
     let width = f64::from(scene.node(index).width);
-    flex_col((
-        title,
+    let excerpt = excerpt(synopsis.prose.clone(), zoom);
+    let lines = flex_col((
         flex_col((
             label(1., synopsis.speaker.clone())
                 .text_size(13_f32.max(11. / zoom))
                 .color(state.palette.muted),
-            excerpt(synopsis.prose.clone(), zoom).width((width - 24.).px()),
+            if renaming { excerpt.shorter() } else { excerpt }.width((width - 24.).px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(space::UNIT.px()),
@@ -221,6 +224,16 @@ fn contents<T: WidgetView<Writer>>(
                 .text_size(13_f32.max(11. / zoom))
                 .color(state.palette.muted)
         }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px());
+    flex_col((
+        title,
+        if renaming {
+            group::decorative(lines)
+        } else {
+            group::inert(false, lines)
+        },
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())

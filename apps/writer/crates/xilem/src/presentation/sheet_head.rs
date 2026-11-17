@@ -3,6 +3,7 @@
 //! where it opened from. On a narrow sheet the actions take a second row under the title, so
 //! neither squeezes the other.
 use super::{Icon, Type, print, space};
+use crate::attention::EntrySkip;
 use recite_writer_session::palette::Palette;
 use xilem::{
     WidgetView,
@@ -48,12 +49,17 @@ pub(crate) fn sheet_head<
     // The caption is one muted line under the title: what the sheet holds, never instructions.
     let title: ArcStr = title.into();
     let title = flex_col((
-        super::group::heading(
-            1,
-            title.clone(),
-            Type::Display
-                .label(scale, title)
-                .prop(LineBreaking::WordWrap),
+        // Focus enters at the heading of a page with nothing to act on yet, so it shows there.
+        super::material::focus_outline(
+            palette.accent,
+            2.,
+            super::group::heading(
+                1,
+                title.clone(),
+                Type::Display
+                    .label(scale, title)
+                    .prop(LineBreaking::WordWrap),
+            ),
         ),
         caption.map(|caption| {
             print::caption(scale, caption)
@@ -71,7 +77,8 @@ pub(crate) fn sheet_head<
         palette,
         close.disabled,
         close.link,
-    );
+    )
+    .prop(EntrySkip(true));
     let close = print::icon_action(
         scale,
         close.name,
@@ -79,7 +86,8 @@ pub(crate) fn sheet_head<
         palette,
         close.disabled,
         close.action,
-    );
+    )
+    .prop(EntrySkip(true));
     // One grid either way: the actions move between the title's row and the row under it
     // without being rebuilt, so a control keeps its identity and focus as the sheet narrows.
     let actions = flex_row(actions)

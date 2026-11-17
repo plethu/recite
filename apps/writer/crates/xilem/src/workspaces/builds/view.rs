@@ -1,6 +1,6 @@
 use super::*;
 use crate::WriterLayout;
-use crate::attention::{Pane, PaneEntry, Region};
+use crate::attention::{EntrySkip, Pane, PaneEntry, Region};
 use crate::presentation::space;
 use crate::presentation::{group::named, label, paragraph, print, radio_button, text_button};
 use xilem::{
@@ -97,7 +97,9 @@ pub(super) fn build_actions(
             "Save all and build",
             Writer::save_and_build,
         )
-        .disabled(blocked),
+        .disabled(blocked)
+        // Focus enters the page at its primary, beside this.
+        .prop(EntrySkip(true)),
         print::primary_action(
             writer.ui_scale(),
             "Build saved files",

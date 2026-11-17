@@ -1,12 +1,13 @@
 //! Native pane geometry and focus history stay outside product commands.
 use super::*;
-use crate::attention::{EntryContext, Pane, PaneEntry, PaneMotion, PaneRequest, Region};
+use crate::attention::{EntryContext, EntrySkip, Pane, PaneEntry, PaneMotion, PaneRequest, Region};
+use crate::presentation::group::Group;
 use crate::workspaces::Screen;
 use xilem::masonry::{
     accesskit,
     core::{Widget, WidgetRef},
     kurbo::Point,
-    widgets::{Flex, Portal, SizedBox, TextArea},
+    widgets::{Button, Flex, Portal, SizedBox, TextArea},
 };
 
 #[derive(Default)]
@@ -324,16 +325,42 @@ fn pane_entry(widget: WidgetRef<'_, dyn Widget>, pane: Pane) -> Option<Entry> {
         }
         pending.extend(child.children());
     }
-    first_focusable(widget, pane != Pane::Preview).map(|focus| Entry {
-        focus,
-        context: focus,
-    })
+    first_focusable(widget, pane != Pane::Preview)
+        .or_else(|| page_heading(widget))
+        .map(|focus| Entry {
+            focus,
+            context: focus,
+        })
+}
+/// A page's heading, which takes focus by code when the page has no control of its own to enter
+/// at, as a tool page that can do nothing yet.
+fn page_heading(widget: WidgetRef<'_, dyn Widget>) -> Option<WidgetId> {
+    let mut pending = vec![widget];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() {
+            continue;
+        }
+        if widget
+            .downcast::<Group>()
+            .is_some_and(|group| group.inner().level() == Some(1))
+        {
+            return Some(widget.id());
+        }
+        pending.extend(widget.children().into_iter().rev());
+    }
+    None
 }
 fn first_focusable(widget: WidgetRef<'_, dyn Widget>, prefer_text: bool) -> Option<WidgetId> {
     let mut pending = vec![widget];
     let mut fallback = None;
     while let Some(widget) = pending.pop() {
         if widget.ctx().is_stashed() || widget.ctx().is_disabled() {
+            continue;
+        }
+        if widget
+            .downcast::<Button>()
+            .is_some_and(|button| button.get_prop::<EntrySkip>().0)
+        {
             continue;
         }
         if widget.ctx().accepts_focus() {

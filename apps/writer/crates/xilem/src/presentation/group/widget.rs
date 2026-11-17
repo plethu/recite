@@ -15,6 +15,8 @@ pub(crate) struct Group {
     role: Role,
     /// A heading's level: 1 for a page or scene, 2 and 3 for its sections.
     level: Option<usize>,
+    /// Whether the group and its words are kept out of the accessibility tree.
+    hidden: bool,
     child: WidgetPod<dyn Widget>,
 }
 impl Group {
@@ -24,12 +26,25 @@ impl Group {
             description: ArcStr::from(""),
             role,
             level: None,
+            hidden: false,
             child: child.erased().to_pod(),
         }
+    }
+    /// The heading's level, if this group is a heading.
+    pub fn level(&self) -> Option<usize> {
+        self.level
     }
     pub fn with_level(mut self, level: Option<usize>) -> Self {
         self.level = level;
         self
+    }
+    pub fn with_hidden(mut self, hidden: bool) -> Self {
+        self.hidden = hidden;
+        self
+    }
+    pub fn set_hidden(this: &mut WidgetMut<'_, Self>, hidden: bool) {
+        this.widget.hidden = hidden;
+        this.ctx.request_accessibility_update();
     }
     pub fn with_description(mut self, description: ArcStr) -> Self {
         self.description = description;
@@ -80,6 +95,10 @@ impl Widget for Group {
         self.role
     }
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
+        if self.hidden {
+            node.set_hidden();
+            return;
+        }
         node.set_label(self.name.as_ref());
         if !self.description.is_empty() {
             node.set_description(self.description.as_ref());

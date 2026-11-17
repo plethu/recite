@@ -15,6 +15,8 @@ pub(crate) struct Named<V> {
     role: Role,
     level: Option<usize>,
     disabled: bool,
+    /// Kept out of the accessibility tree, as a face that repeats words read elsewhere.
+    hidden: bool,
     child: V,
 }
 pub(crate) fn named<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
@@ -24,6 +26,7 @@ pub(crate) fn named<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         level: None,
         role: Role::Group,
         disabled: false,
+        hidden: false,
         child,
     }
 }
@@ -36,6 +39,7 @@ pub(crate) fn inert<V>(disabled: bool, child: V) -> Named<V> {
         level: None,
         role: Role::GenericContainer,
         disabled,
+        hidden: false,
         child,
     }
 }
@@ -46,6 +50,7 @@ pub(crate) fn list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         level: None,
         role: Role::List,
         disabled: false,
+        hidden: false,
         child,
     }
 }
@@ -58,6 +63,7 @@ pub(crate) fn tab_list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         level: None,
         role: Role::TabList,
         disabled: false,
+        hidden: false,
         child,
     }
 }
@@ -68,6 +74,7 @@ pub(crate) fn status<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         level: None,
         role: Role::Status,
         disabled: false,
+        hidden: false,
         child,
     }
 }
@@ -87,6 +94,7 @@ pub(crate) fn dialog<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         level: None,
         role: Role::Dialog,
         disabled: false,
+        hidden: false,
         child,
     }
 }
@@ -100,7 +108,16 @@ pub(crate) fn heading<V>(level: usize, name: impl Into<ArcStr>, child: V) -> Nam
         role: Role::Heading,
         level: Some(level),
         disabled: false,
+        hidden: false,
         child,
+    }
+}
+/// `child` drawn but kept out of the accessibility tree: a face that repeats words a control
+/// beneath it already carries, such as a card's lines under its rename field.
+pub(crate) fn decorative<V>(child: V) -> Named<V> {
+    Named {
+        hidden: true,
+        ..inert(false, child)
     }
 }
 impl<V> Named<V> {
@@ -123,7 +140,8 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Named<V> {
         let mut pod = Pod::new_with_props(
             Group::new(self.name.clone(), self.role, child.new_widget)
                 .with_description(self.description.clone())
-                .with_level(self.level),
+                .with_level(self.level)
+                .with_hidden(self.hidden),
             Dimensions::MAX,
         );
         pod.new_widget.options.disabled = self.disabled;
@@ -151,6 +169,9 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Named<V> {
         }
         if self.level != previous.level {
             Group::set_level(&mut pod, self.level);
+        }
+        if self.hidden != previous.hidden {
+            Group::set_hidden(&mut pod, self.hidden);
         }
         ctx.with_id(ViewId::new(0), |ctx| {
             self.child.rebuild(
