@@ -1,6 +1,7 @@
 //! The galley's rows in a preview: shown lines with their speakers, the transcript of past turns,
 //! and the numbered replies, on the same grid and in the same roles as Script.
 use super::*;
+use crate::app::keyboard::ReturnFocus;
 use crate::presentation::Sheet;
 use crate::presentation::control_inset;
 use crate::presentation::control_style::{ControlStyle, styled};
@@ -54,7 +55,9 @@ pub(super) fn reply(
             ),
             move |state: &mut Writer| state.choose_preview(index),
         )
-        .disabled(disabled),
+        .disabled(disabled)
+        // The first reply takes focus when a step's Continue or chosen reply goes away.
+        .prop(ReturnFocus(index == 0)),
     )
 }
 

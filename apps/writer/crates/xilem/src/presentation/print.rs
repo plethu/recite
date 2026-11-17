@@ -1,6 +1,7 @@
 //! Print hierarchy and native action styles for Recite's writing surfaces.
 use super::Type;
 use super::control_style::{ControlStyle, styled};
+use crate::app::keyboard::ReturnFocus;
 use recite_writer_session::palette::Palette;
 use xilem::peniko::Color;
 
@@ -84,6 +85,22 @@ pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send +
     disabled: bool,
     callback: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
+    primary_returning(scale, text, palette, (disabled, false), callback)
+}
+
+/// [`primary_action`] that takes focus back when the control holding it goes while `returning`,
+/// such as Continue preview after a step.
+pub(crate) fn primary_returning<
+    S: 'static,
+    T: Into<ArcStr>,
+    F: Fn(&mut S) + Send + Sync + 'static,
+>(
+    scale: f32,
+    text: T,
+    palette: &Palette<Color>,
+    (disabled, returning): (bool, bool),
+    callback: F,
+) -> impl WidgetView<S> + use<S, T, F> {
     super::material::focus_ring(
         Some(palette.on_accent),
         styled(
@@ -103,7 +120,8 @@ pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send +
                     }),
                 callback,
             )
-            .disabled(disabled),
+            .disabled(disabled)
+            .prop(ReturnFocus(returning)),
         ),
     )
 }

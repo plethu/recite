@@ -135,7 +135,7 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 tab(
                     scale,
                     &app.theme.palette,
-                    "Open an existing project",
+                    ("Open an existing project", true),
                     !app.creating,
                     busy,
                     |app: &mut App| app.choose_project_action(false),
@@ -143,7 +143,7 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 tab(
                     scale,
                     &app.theme.palette,
-                    "Create a new project",
+                    ("Create a new project", true),
                     app.creating,
                     busy,
                     |app: &mut App| app.choose_project_action(true),

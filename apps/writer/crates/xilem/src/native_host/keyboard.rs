@@ -254,6 +254,7 @@ impl Keyboard {
             self.reading.capture(root);
             self.galley.synchronize(root);
             self.focus.hold_modal(root, &context);
+            self.focus.settle(root);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {

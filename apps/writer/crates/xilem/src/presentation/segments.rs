@@ -10,6 +10,7 @@ use super::control_style::{ControlStyle, styled};
 use super::group::tab_list;
 use super::material::{Bar, Edge, bar};
 use super::{Type, radio_button, space};
+use crate::app::keyboard::{DefaultFocus, FallbackFocus};
 use recite_writer_session::palette::{Palette, TONAL};
 use xilem::{
     WidgetView,
@@ -65,6 +66,8 @@ fn choice<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
             side: 0.px(),
             gap: 0.px(),
         })
+        // The chosen segment takes focus when the control holding it goes, as after a view switch.
+        .prop(FallbackFocus(selected))
 }
 
 pub(crate) fn segment<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(
@@ -204,10 +207,11 @@ fn track<S: 'static, Seq: FlexSequence<S> + Send + Sync>(
 
 /// A text tab: a native tab whose name is its text, selected while chosen. Only the selected tab
 /// is a Tab stop; Left and Right reach the others (roving focus).
+/// A tab; `start` marks the one a window that has never held focus starts on.
 pub(crate) fn tab<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,
     palette: &Palette<Color>,
-    title: &'static str,
+    (title, start): (&'static str, bool),
     selected: bool,
     disabled: bool,
     select: F,
@@ -231,7 +235,8 @@ pub(crate) fn tab<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
             .accessible_label(title)
             .selected(selected)
             .focusable(selected)
-            .disabled(disabled),
+            .disabled(disabled)
+            .prop(DefaultFocus(start && selected)),
         ),
     )
 }

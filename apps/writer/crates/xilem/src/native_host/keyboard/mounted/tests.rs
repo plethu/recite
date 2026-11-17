@@ -29,6 +29,8 @@ mod manuscript;
 mod preview;
 #[path = "project/tests.rs"]
 mod project;
+#[path = "recovery/tests.rs"]
+mod recovery;
 #[path = "tab/tests.rs"]
 mod tab;
 

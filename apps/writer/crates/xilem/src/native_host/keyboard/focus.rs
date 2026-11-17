@@ -14,7 +14,10 @@ use xilem::masonry::widgets::{Button, TextInput};
 mod targets;
 pub(super) use targets::renames;
 pub(crate) use targets::slip_anchor;
-use targets::{default_focus, find, first_wedge, outside_modal, place_picker, return_focus};
+use targets::{
+    default_focus, fallback_focus, find, first_wedge, marked, outside_modal, place_picker,
+    return_focus,
+};
 
 #[derive(Clone, Default, PartialEq)]
 pub(super) enum Kind {
@@ -46,6 +49,10 @@ pub(super) struct Focus {
     edit_request: Option<EditRequest>,
     /// Where an inline rename's slip was last told to hang.
     slip: Option<(u32, u32)>,
+    /// Whether a control held focus after the last pass.
+    held: bool,
+    /// The control this host last moved focus to, while it still holds it.
+    placed: Option<WidgetId>,
 }
 impl Focus {
     pub fn synchronize_manuscript(
@@ -197,6 +204,9 @@ impl Focus {
             root.focus_on(find(root, Kind::Query));
         }
         self.picker_instance = context.picker_instance.clone();
+        if !picker && context.modal.is_none() {
+            self.recover(root, context);
+        }
         if !picker {
             self.last = root.focused_widget().or(self.last);
             self.revealed = None;
@@ -211,6 +221,46 @@ impl Focus {
             }
             self.revealed = Some(generation);
         }
+    }
+    /// Focus never falls out of the window: when the control holding it goes away, as a closed
+    /// decision's invoker, a finished preview step's Continue or the line under a view switch, it
+    /// moves to the marked successor, the line being written, or the marked fallback such as the
+    /// chosen view segment. A window that has never held focus starts on its default control, such
+    /// as the welcome page's chosen tab.
+    fn recover(&mut self, root: &mut RenderRoot, context: &Context) {
+        let focused = root.focused_widget();
+        if focused != self.placed {
+            self.placed = None;
+        }
+        // A control this host placed focus on that has lost its mark, as the segment of a view
+        // the writer then switched away from, gives focus on as if it had gone.
+        let stale = focused.is_some_and(|id| self.placed == Some(id) && !marked(root, id));
+        if focused.is_none() && !self.held && self.last.is_none() {
+            // Nothing has ever held focus here.
+            let start = default_focus(root);
+            if start.is_some() {
+                self.placed = start;
+                root.focus_on(start);
+            }
+        } else if stale || (focused.is_none() && self.held) {
+            let target = return_focus(root)
+                .or_else(|| {
+                    context
+                        .editing
+                        .as_ref()
+                        .and_then(|target| super::manuscript::find(root.get_layer_root(0), target))
+                })
+                .or_else(|| fallback_focus(root))
+                .or_else(|| default_focus(root));
+            if target.is_some() {
+                self.placed = target;
+                root.focus_on(target);
+            }
+        }
+    }
+    /// Note whether focus is held once every part of the host has had its pass.
+    pub fn settle(&mut self, root: &RenderRoot) {
+        self.held = root.focused_widget().is_some();
     }
     pub fn kind(&mut self, root: &RenderRoot, generation: CommandGeneration) -> Kind {
         let Some(focused) = root.focused_widget() else {

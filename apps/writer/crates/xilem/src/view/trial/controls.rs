@@ -77,11 +77,12 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let configuring = state.phase() != Phase::Writing;
     flex_row((
         continuing.then(|| {
-            print::primary_action(
+            // After a step whose Continue goes away, focus moves to the next Continue or reply.
+            print::primary_returning(
                 scale,
                 "Continue preview",
                 &state.palette,
-                closing,
+                (closing, true),
                 |state: &mut Writer| {
                     let result = state.session.advance_preview(None);
                     state.report_trial_step(result);

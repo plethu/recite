@@ -157,7 +157,7 @@ fn authoring_modes(writer: &Writer, searching: bool) -> impl WidgetView<App> + u
             tab(
                 writer.ui_scale(),
                 &writer.palette,
-                title,
+                (title, false),
                 selected == localise,
                 searching
                     || writer.project_action_blocked()

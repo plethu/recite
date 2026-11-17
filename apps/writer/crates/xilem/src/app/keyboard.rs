@@ -12,7 +12,7 @@ use xilem::{
     masonry::{
         core::{Property, UsesProperty, WidgetTag},
         properties::Dimensions,
-        widgets::{Button, Passthrough, SizedBox, TextInput},
+        widgets::{Button, Passthrough, RadioButton, SizedBox, TextInput},
     },
 };
 
@@ -81,6 +81,19 @@ impl Property for ReturnFocus {
     }
 }
 impl UsesProperty<ReturnFocus> for Button {}
+
+/// Marks the control focus falls back to when the control holding it goes away and nothing nearer
+/// is marked: the chosen view segment after a view switch, or the welcome page's chosen tab.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct FallbackFocus(pub bool);
+impl Property for FallbackFocus {
+    fn static_default() -> &'static Self {
+        static OTHER: FallbackFocus = FallbackFocus(false);
+        &OTHER
+    }
+}
+impl UsesProperty<FallbackFocus> for Button {}
+impl UsesProperty<FallbackFocus> for RadioButton {}
 
 /// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it.
 #[derive(Clone, Copy, Default, PartialEq)]

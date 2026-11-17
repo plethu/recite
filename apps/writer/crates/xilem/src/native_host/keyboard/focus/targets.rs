@@ -1,9 +1,9 @@
 //! The widgets focus moves to: the picker's query or active result, a modal surface's default
 //! control, the first problem wedge, and the control an opened picker hangs from.
 use super::*;
-use crate::app::keyboard::{ModalSurface, RenamesBeat, ReturnFocus, SlipAnchor};
+use crate::app::keyboard::{FallbackFocus, ModalSurface, RenamesBeat, ReturnFocus, SlipAnchor};
 use crate::workspaces::rename::inline::Target;
-use xilem::masonry::widgets::SizedBox;
+use xilem::masonry::widgets::{RadioButton, SizedBox};
 
 pub(super) fn find(root: &RenderRoot, kind: Kind) -> Option<WidgetId> {
     let mut pending = vec![root.get_layer_root(0)];
@@ -42,6 +42,41 @@ pub(super) fn default_focus(root: &RenderRoot) -> Option<WidgetId> {
             return Some(input.area_pod().id());
         }
         pending.extend(widget.children());
+    }
+    None
+}
+/// Whether `id` still carries a mark that makes it a place for focus: a default, a successor or a
+/// fallback.
+pub(super) fn marked(root: &RenderRoot, id: WidgetId) -> bool {
+    let Some(widget) = root.get_widget(id) else {
+        return false;
+    };
+    if let Some(button) = widget.downcast::<Button>() {
+        return button.get_prop::<DefaultFocus>().0
+            || button.get_prop::<ReturnFocus>().0
+            || button.get_prop::<FallbackFocus>().0;
+    }
+    widget
+        .downcast::<RadioButton>()
+        .is_some_and(|radio| radio.get_prop::<FallbackFocus>().0)
+}
+/// The enabled, mounted control marked to take focus when nothing nearer holds it.
+pub(super) fn fallback_focus(root: &RenderRoot) -> Option<WidgetId> {
+    let mut pending = vec![root.get_layer_root(0)];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() || widget.ctx().is_disabled() {
+            continue;
+        }
+        let marked = widget
+            .downcast::<Button>()
+            .is_some_and(|button| button.get_prop::<FallbackFocus>().0)
+            || widget
+                .downcast::<RadioButton>()
+                .is_some_and(|radio| radio.get_prop::<FallbackFocus>().0);
+        if marked {
+            return Some(widget.id());
+        }
+        pending.extend(widget.children().into_iter().rev());
     }
     None
 }
