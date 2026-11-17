@@ -34,9 +34,10 @@ pub(in crate::view) fn grid(state: &Writer) -> Grid {
     Layout::resolve(state).grid
 }
 
-/// Where dialogue text starts in a row, for actions that line up with it.
-pub(in crate::view) fn text_column(state: &Writer) -> f64 {
-    grid(state).text()
+/// Where the margin column ends in a row: the margin labels' right edge, where a hanging plus
+/// ends too.
+pub(in crate::view) fn margin_end(state: &Writer) -> f64 {
+    grid(state).margin
 }
 
 /// What a row's margin column holds: a speaker, or a reply's number with "REPLIES" beside the

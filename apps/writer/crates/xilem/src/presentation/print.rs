@@ -10,7 +10,7 @@ mod icon_actions;
 mod separator;
 mod title;
 pub(crate) use icon_actions::{
-    icon_action, icon_action_width, icon_toggle, insert_action, insert_hang, text_toggle,
+    icon_action, icon_action_width, icon_toggle, insert_action, insert_reach, text_toggle,
 };
 pub(crate) use separator::separator;
 pub(crate) use title::Title;
@@ -21,7 +21,7 @@ use xilem::{
         parley::{FontFamily, FontFamilyName, GenericFamily, style::FontWeight},
         widgets::Button,
     },
-    style::Style,
+    style::{Padding, Style},
     view::{self, Label},
 };
 
@@ -291,15 +291,23 @@ pub(crate) fn hairline<S: 'static>(palette: &Palette<Color>) -> impl WidgetView<
         .prop(ContentColor::new(palette.rule))
 }
 
-/// The dotted rule that ends a beat, `width` wide with the end mark at its centre.
+/// The end of a beat that ends the conversation: the end mark flush left on the text column,
+/// `lead` in, then a faint dotted rule running right to the row's end, `width` from its start.
 pub(crate) fn end_rule<S: 'static>(
     scale: f32,
     palette: &Palette<Color>,
-    width: f64,
+    (lead, width): (f64, f64),
 ) -> impl WidgetView<S> + use<S> {
-    use xilem::masonry::{kurbo::Axis, layout::AsUnit, properties::ContentColor};
-    view::divider(Axis::Horizontal, end_mark(scale, palette))
-        .dash_pattern(&[1.px(), 3.px()])
-        .prop(ContentColor::new(palette.rule))
-        .width(width.px())
+    use xilem::masonry::{
+        kurbo::Axis, layout::AsUnit, properties::ContentColor, widgets::Placement,
+    };
+    view::sized_box(
+        view::divider(Axis::Horizontal, end_mark(scale, palette))
+            .placement(Placement::Start)
+            .pad((super::space::SIBLINGS * f64::from(scale)).px())
+            .dash_pattern(&[1.px(), 3.px()])
+            .prop(ContentColor::new(palette.rule))
+            .width((width - lead).max(0.).px()),
+    )
+    .padding(Padding::left(lead.px()))
 }

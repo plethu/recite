@@ -67,10 +67,10 @@ pub(crate) fn text_toggle<S: 'static, N: Into<ArcStr>, F: Fn(&mut S) + Send + Sy
     )
 }
 
-/// How far an insertion affordance's words sit from its start: the plus and its gap, so the
-/// plus can hang before a column and the words line up with it.
-pub(crate) fn insert_hang(scale: f32) -> f64 {
-    (icons::FACE * f64::from(icons::SMALL) + space::UNIT) * f64::from(scale)
+/// How far an insertion affordance's plus reaches from the affordance's start, so the plus can
+/// hang in the margin column with its end on the margin labels' edge.
+pub(crate) fn insert_reach(scale: f32) -> f64 {
+    icons::FACE * f64::from(icons::SMALL) * icons::PLUS_END * f64::from(scale)
 }
 
 /// An insertion affordance: a quiet action led by a plus, such as "+ Line" after the last row,

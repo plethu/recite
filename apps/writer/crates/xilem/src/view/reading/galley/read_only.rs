@@ -49,7 +49,7 @@ pub(super) fn read_only(
             sized_box(print::end_rule(
                 state.ui_scale(),
                 &state.palette,
-                grid.row(),
+                (grid.text(), grid.row()),
             ))
             .padding(Padding::top(space::KINDS.px()))
         }),

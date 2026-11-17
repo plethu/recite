@@ -49,7 +49,7 @@ impl Widget for NativeIcon {
         painter
             .stroke(
                 self.0.icon.path(),
-                &Stroke::new(1.6)
+                &Stroke::new(super::STROKE)
                     .with_caps(Cap::Round)
                     .with_join(Join::Round),
                 self.0.color,

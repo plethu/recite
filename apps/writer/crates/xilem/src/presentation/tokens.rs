@@ -7,7 +7,7 @@ mod sheet;
 #[cfg(test)]
 mod tests;
 use super::{label, print::font};
-use recite_writer_session::typography::{FONT_DISPLAY, FONT_MONO, FONT_UI};
+use recite_writer_session::typography::{FONT_DISPLAY, FONT_MONO, FONT_PROSE, FONT_UI};
 pub(crate) use sheet::{Page, Sheet};
 use xilem::{
     masonry::{
@@ -129,8 +129,11 @@ pub(crate) mod breakpoint {
 pub(crate) enum Type {
     /// Fraunces 600, 32/36: the scene title and every page, sheet and panel title.
     Display,
-    /// Fraunces 600, 24/28: beat headings, panel and tool sections.
+    /// Fraunces 600, 24/28: panel and tool sections.
     Section,
+    /// Literata 600, 22/28: beat headings in the galley, in the manuscript's face, so the scene
+    /// title stays the sheet's only display line.
+    Beat,
     /// Plex Sans 500, 14/20: buttons, tabs, rows and menu items.
     Control,
     /// Plex Sans 400, 14/20: guidance and sentences.
@@ -147,13 +150,14 @@ impl Type {
         match self {
             Self::Display => (32., 36.),
             Self::Section => (24., 28.),
+            Self::Beat => (22., 28.),
             Self::Control | Self::Body => (14., 20.),
             Self::Meta | Self::Id => (12., 16.),
         }
     }
     pub const fn weight(self) -> FontWeight {
         match self {
-            Self::Display | Self::Section => FontWeight::SEMI_BOLD,
+            Self::Display | Self::Section | Self::Beat => FontWeight::SEMI_BOLD,
             Self::Control => FontWeight::MEDIUM,
             Self::Body | Self::Meta | Self::Id => FontWeight::NORMAL,
         }
@@ -161,6 +165,7 @@ impl Type {
     pub const fn families(self) -> &'static [&'static str] {
         match self {
             Self::Display | Self::Section => FONT_DISPLAY,
+            Self::Beat => FONT_PROSE,
             Self::Control | Self::Body | Self::Meta => FONT_UI,
             Self::Id => FONT_MONO,
         }

@@ -30,10 +30,18 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
   colours, sizes or gaps.
 - **UI scale zooms the sheet.** The Reading size setting is the sheet's size at 100%. The UI scale
   zooms the whole sheet as a browser zooms a page: lines, replies, numbers, labels, destinations,
-  the scene title (Display, 1.6R), beat headings (Section, 1.2R) and the folio, with their 11 and
+  the scene title (Display, 1.6R), beat headings (Beat, 1.1R) and the folio, with their 11 and
   13px floors, and the grid's measure and columns, which are set in ems. Where the pane is
   narrower than the zoomed measure the text reflows. Controls on the sheet zoom with it and never
   fall below the interface's own size, so no text or target is smaller at 200% than at 100%.
+- **One display line per sheet.** The scene title is the sheet's only Fraunces display line. Beat
+  headings are Literata semibold at 1.1R (22px at R20), a face change and a 1.45 size ratio below
+  the title, so an empty beat named like its scene no longer reads as a second title, and the
+  same metrics on every beat, so selecting one never reflows. This is the one deliberate shrink
+  against the baseline (headings were 32px). A beat that ends the conversation ends with the
+  end mark flush left on the text column and a faint dotted rule running right; an empty beat
+  keeps it, because it still says the conversation ends there. The insertion affordances' plus
+  hangs in the margin column with its end on the margin labels' right edge.
 - **Controls.** One state table (`presentation/theme/states.rs`) styles every control class; wells
   share one look. Every one-of choice is a segment on one tonal track; only Write | Localise are
   tabs.

@@ -1,5 +1,5 @@
 //! The continuous scene galley. The sheet shows the scene: its title once in Display, then every
-//! beat in the galley window under a Section heading, 48px apart with a rule. Only the selected
+//! beat in the galley window under a beat heading, 48px apart with a rule. Only the selected
 //! beat mounts editable fields; the others are read-only text at the same metrics, so choosing a
 //! beat never reflows the page. Each read-only beat's heading is a button that mounts it.
 use super::passage::{grid, margin, margin_label};
@@ -139,7 +139,7 @@ fn beat_id(state: &Writer, index: usize) -> String {
         .map_or_else(String::new, |block| block.id.clone())
 }
 
-/// A beat's heading row: margin marks, the Section heading, and for the selected beat its
+/// A beat's heading row: its marks, the beat heading, and for the selected beat its
 /// actions at the end of the row.
 fn heading(
     state: &Writer,
@@ -156,11 +156,11 @@ fn heading(
         .iter()
         .find(|(beat, _)| beat == &id)
         .map(|(_, message)| message.clone());
-    // Set with the manuscript: a Section heading one step above its lines, zoomed with them.
+    // Set with the manuscript: in the lines' own face, a step above them, zoomed with them.
     let page = Page::of(state);
-    let sheet = page.section();
+    let sheet = page.beat();
     let inset = control_inset(page.control());
-    let text = Type::Section
+    let text = Type::Beat
         .label(sheet, name.clone())
         .color(if selected {
             state.palette.ink
@@ -176,7 +176,7 @@ fn heading(
     let title = if let Some(inline) = renaming {
         Either::A(Either::A(rename::input(
             inline,
-            (Type::Section, sheet),
+            (Type::Beat, sheet),
             ControlStyle::TitleField,
         )))
     } else if selected {

@@ -51,12 +51,12 @@ pub(in crate::view) fn actions(state: &Writer) -> impl WidgetView<Writer> + use<
         }
         .px(),
     )
-    // The words line up with the manuscript's text column, the plus hanging before it.
-    // An empty beat's row lines up the same way.
+    // The plus hangs in the margin column, its end on the margin labels' right edge, and the
+    // words follow it; an empty beat's row lines up the same way.
     .padding(Padding::left(
-        (super::super::reading::text_column(state)
+        (super::super::reading::margin_end(state)
             - control_inset(Page::of(state).control())
-            - print::insert_hang(Page::of(state).control()))
+            - print::insert_reach(Page::of(state).control()))
         .max(0.)
         .px(),
     ))

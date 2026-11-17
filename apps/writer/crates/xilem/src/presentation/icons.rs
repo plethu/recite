@@ -169,8 +169,11 @@ pub(crate) struct Face {
 pub(crate) const SMALL: f32 = 0.8;
 /// An icon's face at 100%, drawn on a 24-unit grid.
 pub(crate) const FACE: f64 = 20.;
-/// The grid icon paths are drawn on.
+/// The grid icon paths are drawn on, and the round-capped stroke they are drawn with.
 const GRID: f64 = 24.;
+const STROKE: f64 = 1.6;
+/// How far the plus reaches across its face, its round cap included, as a share of the face.
+pub(crate) const PLUS_END: f64 = (19. + STROKE / 2.) / GRID;
 /// A decorative face named `name`, for marks that replace a glyph inside other content.
 pub(crate) fn mark(scale: f32, name: &'static str, icon: Icon, color: Color) -> Face {
     face(scale, name, icon, color)

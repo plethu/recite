@@ -12,6 +12,7 @@ fn interface_roles_scale_with_the_interface_and_keep_their_leading() {
     for (role, size, line) in [
         (Type::Display, 32., 36.),
         (Type::Section, 24., 28.),
+        (Type::Beat, 22., 28.),
         (Type::Control, 14., 20.),
         (Type::Body, 14., 20.),
         (Type::Meta, 12., 16.),
@@ -26,6 +27,10 @@ fn interface_roles_scale_with_the_interface_and_keep_their_leading() {
         assert_eq!(role.weight(), FontWeight::SEMI_BOLD);
         assert_eq!(role.families(), FONT_DISPLAY);
     }
+    // Beat headings are the manuscript's face at semibold: the scene title is the only display
+    // line on the sheet.
+    assert_eq!(Type::Beat.weight(), FontWeight::SEMI_BOLD);
+    assert_eq!(Type::Beat.families(), FONT_PROSE);
     assert_eq!(Type::Id.families(), FONT_MONO);
     assert_eq!(Type::Meta.families(), FONT_UI);
 }
@@ -85,10 +90,12 @@ fn the_scene_title_beat_headings_and_folio_follow_the_reading_size_zoomed() {
             // The scene title is 1.6R, never under the other titles' Display size.
             let title = (1.6 * reading).max(Type::Display.metrics().0) * zoom;
             assert!((Type::Display.size(page.title()) - title).abs() < 1e-4);
-            // Beat headings sit one step above the lines they head.
-            assert!((Type::Section.size(page.section()) - 1.2 * reading * zoom).abs() < 1e-4);
-            assert!(Type::Section.size(page.section()) > Sheet::Dialogue.size(page));
-            assert!(Type::Display.size(page.title()) > Type::Section.size(page.section()));
+            // Beat headings sit a step above the lines they head and well below the title: with
+            // the change of face, the ratio tells a heading from a title of the same words.
+            let heading = Type::Beat.size(page.beat());
+            assert!((heading - 1.1 * reading * zoom).abs() < 1e-4);
+            assert!(heading > Sheet::Dialogue.size(page));
+            assert!(Type::Display.size(page.title()) >= 1.45 * heading);
             // The folio is 0.6R, held at 11px at small reading sizes, zoomed.
             let folio = Type::Id.size(page.folio());
             assert!((folio - (0.6 * reading).max(11.) * zoom).abs() < 1e-4);

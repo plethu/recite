@@ -32,7 +32,7 @@ impl Page {
         Self::new(state.reading_size(), state.ui_scale())
     }
     /// The scale interface roles take on the sheet: the reading size over its reference, zoomed.
-    /// The scene title takes [`Self::title`] and beat headings [`Self::section`].
+    /// The scene title takes [`Self::title`] and beat headings [`Self::beat`].
     pub fn scale(self) -> f32 {
         self.reading / Sheet::REFERENCE * self.zoom
     }
@@ -41,9 +41,10 @@ impl Page {
     pub fn title(self) -> f32 {
         (1.6 * self.reading / Type::Display.metrics().0).max(1.) * self.zoom
     }
-    /// A beat heading's scale: Section at 1.2R, one step above the 1.0R lines it heads.
-    pub fn section(self) -> f32 {
-        1.2 * self.reading / Type::Section.metrics().0 * self.zoom
+    /// A beat heading's scale: Beat at 1.1R, a step above the 1.0R lines it heads in their own
+    /// face at semibold, and well below the scene title's 1.6R display line.
+    pub fn beat(self) -> f32 {
+        1.1 * self.reading / Type::Beat.metrics().0 * self.zoom
     }
     /// The running head's and foot's scale, whose Meta and Id text keep the sheet's 11px floor,
     /// zoomed with it.
