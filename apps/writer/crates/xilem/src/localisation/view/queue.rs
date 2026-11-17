@@ -173,6 +173,11 @@ fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
     } else {
         Axis::Vertical
     })
-    .cross_axis_alignment(CrossAxisAlignment::Start)
+    // Beside the segments, the count sits on their words' baseline.
+    .cross_axis_alignment(if wide {
+        CrossAxisAlignment::FirstBaseline
+    } else {
+        CrossAxisAlignment::Start
+    })
     .gap(space::TEXT.px())
 }
