@@ -15,6 +15,10 @@ use xilem::{masonry::properties, view::checkbox};
 mod language;
 mod values;
 
+/// Room each side of the slip's scrolling fields for a focused control's ring, which the slip's
+/// own padding gives up so the fields keep their place under the heading.
+const RING_ROOM: f64 = size::FOCUS_OUTLINE + 3.;
+
 /// The Configure preview slip: the next run's inputs on floating paper, hanging under Configure
 /// preview over the transcript, which stays in place beneath. Until the host has measured that
 /// action it sits at the transcript's right edge. The language query takes focus as it opens, Tab
@@ -53,7 +57,8 @@ pub(super) fn slip(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use
                         ),
                     ))
                     .cross_axis_alignment(CrossAxisAlignment::Center)
-                    .gap(space::SIBLINGS.px()),
+                    .gap(space::SIBLINGS.px())
+                    .padding(Padding::from_vh(0.px(), RING_ROOM.px())),
                     pane("Preview inputs", editor(state, disabled, inner))
                         .constrain_horizontal(true)
                         .flex(1.),
@@ -62,7 +67,10 @@ pub(super) fn slip(state: &Writer, grid: &Grid) -> impl WidgetView<Writer> + use
                 .gap(space::TEXT.px()),
             ))
             .width(width.px())
-            .padding(space::KINDS.px())
+            .padding(Padding::from_vh(
+                space::KINDS.px(),
+                (space::KINDS - RING_ROOM).px(),
+            ))
             .prop(ModalSurface(true)),
         ),
     ))
@@ -118,6 +126,7 @@ fn editor(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer>
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::GROUPS.px())
+    .padding(Padding::from_vh(0.px(), RING_ROOM.px()))
 }
 
 fn wording(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer> + use<> {
