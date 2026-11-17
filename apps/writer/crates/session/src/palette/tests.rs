@@ -282,7 +282,7 @@ fn mode_switch_marks_hold_three_to_one_where_they_sit() {
 }
 
 #[test]
-fn a_selected_row_keeps_its_text_and_bar_on_the_plate_at_rest_and_hovered() {
+fn a_selected_row_keeps_its_text_and_underscore_on_the_plate_at_rest_and_hovered() {
     for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
         let p = Palette::with_mode(dark, monochrome);
         for fill in [p.plate, Rgba::mix(p.plate, p.ink, PLATE_HOVER)] {
@@ -293,8 +293,12 @@ fn a_selected_row_keeps_its_text_and_bar_on_the_plate_at_rest_and_hovered() {
                     contrast(text, fill)
                 );
             }
-            // The leading ink bar marks the selection beside the plate's own tint.
-            assert!(contrast(p.ink, fill) >= 3.);
+            // The ink underscore under the label marks the selection beside the plate's tint.
+            assert!(
+                contrast(p.ink, fill) >= 3.,
+                "row underscore: dark={dark} monochrome={monochrome} {fill:?}: {}",
+                contrast(p.ink, fill)
+            );
         }
     }
 }
@@ -335,24 +339,45 @@ fn margin_marks_hold_three_to_one_wherever_they_repeat() {
     for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
         let p = Palette::with_mode(dark, monochrome);
         let desk = p.grained_desk();
-        // The galley margin and map cards are paper; the scene list is the desk, and the selected
-        // beat row is the plate.
+        // Crop marks sit in the sheet's pad and on the map's canvas around a card.
+        for (host, name) in [(p.surface, "sheet"), (p.canvas, "canvas")] {
+            assert!(
+                contrast(p.crop, host) >= 3.,
+                "crop marks on {name}: dark={dark} monochrome={monochrome}: {}",
+                contrast(p.crop, host)
+            );
+        }
+        // The unsaved dot sits in the sheet's pad, on a map card, in a scene row on the desk,
+        // and beside a selected row's words on the plate.
+        for (host, name) in [
+            (p.surface, "sheet"),
+            (p.canvas, "canvas"),
+            (desk, "desk"),
+            (p.plate, "selected row"),
+        ] {
+            assert!(
+                contrast(p.unsaved, host) >= 3.,
+                "unsaved dot on {name}: dark={dark} monochrome={monochrome}: {}",
+                contrast(p.unsaved, host)
+            );
+        }
+        // The problem wedge repeats on the sheet, in the scene list and on the selected row.
         for (host, name) in [
             (p.surface, "sheet"),
             (desk, "desk"),
             (p.plate, "selected row"),
         ] {
-            for (mark, kind) in [
-                (p.teal, "current bar"),
-                (p.accent, "unsaved dots"),
-                (p.error, "problem wedge"),
-            ] {
-                assert!(
-                    contrast(mark, host) >= 3.,
-                    "{kind} on {name}: dark={dark} monochrome={monochrome}: {}",
-                    contrast(mark, host)
-                );
-            }
+            assert!(
+                contrast(p.error, host) >= 3.,
+                "problem wedge on {name}: dark={dark} monochrome={monochrome}: {}",
+                contrast(p.error, host)
+            );
+        }
+        // Colour tells the marks apart, and without it the darkest ink keeps them legible.
+        if monochrome {
+            assert_eq!((p.crop, p.unsaved), (p.ink, p.ink));
+        } else {
+            assert_eq!((p.crop, p.unsaved), (p.teal, p.accent));
         }
     }
 }

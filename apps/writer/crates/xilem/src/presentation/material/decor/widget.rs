@@ -155,6 +155,9 @@ impl Widget for Decor {
                 painter.fill(bar, color).draw();
             }
         }
+        if let Decoration::Marks(marks) = &self.decoration {
+            marks.paint(painter, ctx.border_box(), ctx.first_baseline());
+        }
         if let Decoration::Ring(Some(color)) = self.decoration
             && ctx.has_focus_target()
         {

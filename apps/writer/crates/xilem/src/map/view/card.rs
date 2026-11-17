@@ -1,7 +1,7 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
 use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
-use crate::presentation::marks::{GLYPH, Mark, THICKNESS, marked, wedge_glyph};
+use crate::presentation::marks::{DOT, Dot, DotAt, GLYPH, Marks, Ticks, marked, wedge_glyph};
 use crate::presentation::{Icon, SMALL, Type, excerpt, mark, print};
 use crate::presentation::{group, space};
 use crate::workspaces::rename::inline::{self as rename, Place, Target};
@@ -18,6 +18,11 @@ use xilem::{peniko::Color, style::Padding};
 /// A card title's size, and its floor on screen as the map zooms out.
 const TITLE: f32 = 16.;
 const TITLE_FLOOR: f32 = 14.;
+/// The card's hard stock offset, right and down.
+const STOCK: f64 = 4.;
+/// The grip's trailing edge in from the card's, and its middle down from the card's top.
+const GRIP_END: f64 = 30.;
+const GRIP_MIDDLE: f64 = 18.;
 
 pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetView<Writer> + use<> {
     let block = &scene.projection.graph.blocks[index];
@@ -27,8 +32,8 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         title.push_str(" · end");
     }
     let selected = scene.selected.as_deref() == Some(&block.id);
-    // The galley's margin marks repeat here: the reading beat's bar, and a wedge on a beat with a
-    // problem as the error sign, which the card's name also says.
+    // The galley's marks repeat here: the reading beat's crop marks and unsaved dot, and a wedge
+    // on a beat with a problem as the error sign, which the card's name also says.
     let reading = state.reading.selected.as_deref() == Some(block.id.as_str());
     let problem = state
         .beat_problems()
@@ -79,20 +84,13 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             TITLE.max(TITLE_FLOOR / zoom) / Type::Control.metrics().0,
         );
         let field = sized_box(field).width((width - 2. * space::TEXT).px());
-        // Past the reading beat's mark, which stays in view at the card's leading edge.
-        placed::placed(
-            Affine::translate((THICKNESS, 0.)),
-            sized_box(renaming(state, scene, index, field))
-                .padding(Padding {
-                    left: (space::TEXT - THICKNESS).px(),
-                    ..Padding::all(space::TEXT.px())
-                })
-                .dims(((width - THICKNESS).px(), HEIGHT.px()))
-                .background_color(face)
-                // The review's slip floats over the window from under the card, as it does
-                // from a heading, over the same backdrop.
-                .prop(SlipAnchor(true)),
-        )
+        sized_box(renaming(state, scene, index, field))
+            .padding(Padding::all(space::TEXT.px()))
+            .dims((width.px(), HEIGHT.px()))
+            .background_color(face)
+            // The review's slip floats over the window from under the card, as it does
+            // from a heading, over the same backdrop.
+            .prop(SlipAnchor(true))
     });
     let returning = state.rename_return() == Some(&target);
     let body = button_any_pointer(
@@ -147,7 +145,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         } else {
             state.palette.teal
         },
-        (4., 4.),
+        (STOCK, STOCK),
     ))
     .prop(properties::Dimensions::fixed(
         scene.node(index).width.px(),
@@ -157,7 +155,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     .prop(input::CardFocus(state.palette.accent));
     let grip = (selected || scene.hovered.as_deref() == Some(&block.id)).then(|| {
         placed::placed(
-            Affine::translate((width - 30., 6.)),
+            Affine::translate((width - GRIP_END, GRIP_MIDDLE - 12.)),
             input::input(
                 input::Kind::Grip(title),
                 state.config.ui.keymap == recite_config::Keymap::Vim,
@@ -178,22 +176,29 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             }),
         )
     });
-    // Only the reading beat's card carries a mark, so the others mount nothing for it.
-    let mark = reading.then(|| {
-        marked(
-            &state.palette,
-            Some(if state.session.model().has_draft() {
-                Mark::Unsaved
-            } else {
-                Mark::Current
-            }),
-            flex_col(()).dims((THICKNESS.px(), HEIGHT.px())),
-        )
-    });
+    // The reading beat's crop marks clear the card and its stock offset; its unsaved dot sits in
+    // the top-trailing corner, before the grip.
+    let scale = f64::from(state.ui_scale());
+    let marks = Marks::crop(
+        &state.palette,
+        reading,
+        Ticks::new(scale, space::REGIONS, true).clearing(STOCK),
+    )
+    .unsaved(
+        &state.palette,
+        reading && state.session.model().has_draft(),
+        Dot::new(
+            scale,
+            DotAt::At(width - GRIP_END - DOT * scale, GRIP_MIDDLE),
+        ),
+    );
     // The rename face comes last: a zstack inserts a new layer only at its end.
-    zstack((focus, grip, mark, renaming))
-        .alignment(UnitPoint::TOP_LEFT)
-        .dims((scene.node(index).width.px(), HEIGHT.px()))
+    marked(
+        marks,
+        zstack((focus, grip, renaming))
+            .alignment(UnitPoint::TOP_LEFT)
+            .dims((scene.node(index).width.px(), HEIGHT.px())),
+    )
 }
 
 /// A card's words under `title`: the speaker, the opening prose and its annotations.

@@ -7,7 +7,7 @@ use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::map::Workspace;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::marks::{Mark, marked};
+use crate::presentation::marks::dot_slot;
 use crate::presentation::row::{listed, named_row, row};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
@@ -133,17 +133,16 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 title
             };
             // A scene row in Control semibold, its beats nested below it when it is open. Unsaved
-            // work carries the halftone mark beside the words that say so.
-            let row = marked(
-                &state.palette,
-                dirty.then_some(Mark::Unsaved),
-                styled(
-                    ControlStyle::Navigation,
-                    button(
-                        disclosure(
-                            scale,
-                            current,
-                            ink,
+            // work shows the halftone dot at the row's end, in a slot every row keeps, beside the
+            // words that say so.
+            let row = styled(
+                ControlStyle::Navigation,
+                button(
+                    disclosure(
+                        scale,
+                        current,
+                        ink,
+                        flex_row((
                             one_line(
                                 format!("{caption}{}", if dirty { " · Unsaved" } else { "" }),
                                 Type::Control,
@@ -151,16 +150,24 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                                 ink,
                             )
                             .weight(FontWeight::SEMI_BOLD)
-                            .width(
-                                (sidebar_width(state) - sidebar::ROW - disclosure_width(scale))
-                                    .px(),
+                            .flex(1.),
+                            dot_slot(
+                                &state.palette,
+                                f64::from(scale),
+                                dirty,
+                                f64::from(Type::Control.metrics().1 * scale),
                             ),
+                        ))
+                        .cross_axis_alignment(CrossAxisAlignment::Center)
+                        .gap((space::UNIT * f64::from(scale)).px())
+                        .width(
+                            (sidebar_width(state) - sidebar::ROW - disclosure_width(scale)).px(),
                         ),
-                        move |state: &mut Writer| state.switch(&path),
-                    )
-                    .expanded(current)
-                    .disabled(closing),
-                ),
+                    ),
+                    move |state: &mut Writer| state.switch(&path),
+                )
+                .expanded(current)
+                .disabled(closing),
             );
             flex_col((row, current.then(|| outline(state))))
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)

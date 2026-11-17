@@ -20,7 +20,7 @@ source produces the same pixels on any host. Fixtures live in
 
 - **Stills**: welcome and project creation; Script with a new starter project, an empty beat, a
   scene with no beats, a representative branching scene, an unapplied draft, focus mode, the
-  galley at a later beat under its running head, the margin marks and the smallest reading size; Map
+  galley at a later beat under its running head, the printer's marks and the smallest reading size; Map
   and Split; source needing repair; Preview; Localise with a catalogue and with none; the
   translations queue; Build, Rename, Declarations, disk changes and source updates; the in-place
   flows (`in_place` module): the Configure preview slip, the disk-change banner, the Build result

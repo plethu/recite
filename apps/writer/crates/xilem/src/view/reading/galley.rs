@@ -8,7 +8,7 @@ use crate::app::keyboard::SlipAnchor;
 use crate::presentation::control_inset;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER, Grid};
 use crate::presentation::group::heading as heading_role;
-use crate::presentation::marks::{Mark, marked, wedge};
+use crate::presentation::marks::{Dot, Marks, Ticks, marked, wedge};
 use crate::presentation::row::named_row;
 use crate::presentation::sheet_text::sheet_text;
 use crate::presentation::tokens::size;
@@ -70,10 +70,9 @@ pub(super) fn galley<V: WidgetView<Writer>>(
         scene_title(state, &grid),
         flex_col(before).gap(0.px()),
         selected.filter(|_| !first).map(|_| rule(state, &grid)),
-        // The selected beat carries one current bar from its heading through its last line.
+        // The selected beat carries crop marks at the corners of its heading and its rows.
         marked(
-            &state.palette,
-            selected.map(|_| Mark::Current),
+            crop(state, &grid, selected.is_some()),
             flex_col((
                 selected.map(|index| heading(state, &grid, index, total, &problems)),
                 body,
@@ -85,6 +84,20 @@ pub(super) fn galley<V: WidgetView<Writer>>(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(0.px())
+}
+
+/// The current beat's crop marks, kept within the clear paper around the beat: the sheet's pad
+/// beside it and half the space between beats above and below it.
+fn crop(state: &Writer, grid: &Grid, current: bool) -> Marks {
+    Marks::crop(
+        &state.palette,
+        current,
+        Ticks::new(
+            f64::from(Page::of(state).control()),
+            grid.pad.min(HALF_BEAT),
+            grid.sheet,
+        ),
+    )
 }
 
 /// How much taller than its words a title field is above and below them: its focus border's room.
@@ -181,46 +194,53 @@ fn heading(
             .disabled(blocked),
         ))
     };
-    // The selected beat's bar runs down the whole beat, so the heading carries none of its own.
-    flex_row((
+    // A draft of the beat's own fields shows as the unsaved dot in the pad beside its heading.
+    let unsaved = selected
+        && state.session.model().has_draft()
+        && matches!(state.session.model().view(), View::Block(beat) if beat == &id);
+    let dot = Dot::galley(f64::from(page.control()), grid.pad, 0., false);
+    marked(
+        Marks::default().unsaved(&state.palette, unsaved, dot),
         flex_row((
-            FlexSpacer::Flex(1.),
-            renaming_here.then(|| rename::caption(state)),
-            problem.map(|message| {
-                wedge(
-                    format!("Problem in {name}"),
-                    message,
-                    (state.palette.error, state.palette.accent),
-                    move |state: &mut Writer| state.edit_beat(index),
-                )
-            }),
-        ))
-        // Where the button's inset outgrows the gutter, as at 200%, the margin column gives up
-        // the difference, so the heading's words start on the scene title's and the lines' edge.
-        .width((grid.margin - (inset - grid.gutter()).max(0.)).max(0.).px()),
-        // The heading hugs its words, so a focused heading's ring stays inside the measure. A
-        // rename's slip floats over the window from under it, so nothing below moves.
-        // Centred in the row, so the heading's line and its tools share one centre line.
-        sized_box(
-            flex_col((heading_role(2, name.clone(), title),))
-                .main_axis_alignment(MainAxisAlignment::Center)
-                .cross_axis_alignment(if renaming_here {
-                    // The rename field takes the heading's measure.
-                    CrossAxisAlignment::Stretch
-                } else {
-                    CrossAxisAlignment::Start
+            flex_row((
+                FlexSpacer::Flex(1.),
+                renaming_here.then(|| rename::caption(state)),
+                problem.map(|message| {
+                    wedge(
+                        format!("Problem in {name}"),
+                        message,
+                        (state.palette.error, state.palette.accent),
+                        move |state: &mut Writer| state.edit_beat(index),
+                    )
                 }),
-        )
-        .prop(SlipAnchor(
-            selected && rename::hangs_from(state, &id, Place::Heading),
+            ))
+            // Where the button's inset outgrows the gutter, as at 200%, the margin column gives up
+            // the difference, so the heading's words start on the scene title's and the lines' edge.
+            .width((grid.margin - (inset - grid.gutter()).max(0.)).max(0.).px()),
+            // The heading hugs its words, so a focused heading's ring stays inside the measure. A
+            // rename's slip floats over the window from under it, so nothing below moves.
+            // Centred in the row, so the heading's line and its tools share one centre line.
+            sized_box(
+                flex_col((heading_role(2, name.clone(), title),))
+                    .main_axis_alignment(MainAxisAlignment::Center)
+                    .cross_axis_alignment(if renaming_here {
+                        // The rename field takes the heading's measure.
+                        CrossAxisAlignment::Stretch
+                    } else {
+                        CrossAxisAlignment::Start
+                    }),
+            )
+            .prop(SlipAnchor(
+                selected && rename::hangs_from(state, &id, Place::Heading),
+            ))
+            .flex(1.),
+            selected.then(|| actions(state, page.control(), blocked)),
         ))
-        .flex(1.),
-        selected.then(|| actions(state, page.control(), blocked)),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Center)
-    .gap((grid.gutter() - inset).max(0.).px())
-    .width(grid.row().px())
-    .prop(SelectedBeat(selected, index == 0))
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap((grid.gutter() - inset).max(0.).px())
+        .width(grid.row().px())
+        .prop(SelectedBeat(selected, index == 0)),
+    )
 }
 
 /// The selected beat's quiet icon actions, always in the Tab order.

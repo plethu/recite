@@ -52,6 +52,11 @@ pub struct Palette<C = Rgba> {
     pub teal_text: C,
     /// Second-ink selection plate; carries ink or accent text, not `teal_text` when pressed.
     pub plate: C,
+    /// The current beat's crop marks: the second ink, and ink in monochrome.
+    pub crop: C,
+    /// The unsaved halftone dot: plum, and ink in monochrome, where only its shape tells it from
+    /// the crop marks.
+    pub unsaved: C,
     /// Wordmark letters: plum on paper, warm paper on dark surfaces.
     pub wordmark: C,
     /// The bottom rule of a field's well on paper, and on the grained desk; see `field_rule`.
@@ -108,6 +113,9 @@ impl Palette<Rgba> {
             ] {
                 *c = c.monochrome();
             }
+            // Without hue the marks keep the darkest ink, and differ by shape alone.
+            p.crop = p.ink;
+            p.unsaved = p.ink;
         }
         p.with_rules()
     }
@@ -120,6 +128,7 @@ impl Palette<Rgba> {
     pub fn new(dark: bool) -> Self {
         let surface = color(dark, (250, 246, 239), (42, 38, 46));
         let ink = color(dark, (48, 36, 49), (243, 233, 223));
+        let accent = color(dark, (104, 62, 98), (212, 174, 204));
         // Mint replaces riso teal on dark paper, where it is also text-safe.
         let second_ink = color(dark, (0, 131, 138), (130, 216, 213));
         let floating = color(dark, (255, 251, 245), (54, 48, 57));
@@ -138,7 +147,7 @@ impl Palette<Rgba> {
             boundary: color(dark, (127, 116, 119), (153, 139, 154)),
             ink,
             muted,
-            accent: color(dark, (104, 62, 98), (212, 174, 204)),
+            accent,
             on_accent: color(dark, (255, 251, 245), (40, 25, 39)),
             selection: color(dark, (234, 221, 232), (72, 54, 72)),
             hover: color(dark, (238, 229, 231), (58, 51, 61)),
@@ -167,6 +176,8 @@ impl Palette<Rgba> {
             teal_text: color(dark, (15, 107, 111), (130, 216, 213)),
             // 12% second ink on paper; on dark paper, 14% mint over the surface.
             plate: color(dark, (214, 221, 213), (54, 63, 69)),
+            crop: second_ink,
+            unsaved: accent,
             well_rule: ink,
             desk_well_rule: ink,
             overprint,
@@ -271,6 +282,8 @@ impl<C> Palette<C> {
             teal: convert(self.teal),
             teal_text: convert(self.teal_text),
             plate: convert(self.plate),
+            crop: convert(self.crop),
+            unsaved: convert(self.unsaved),
             wordmark: convert(self.wordmark),
             well_rule: convert(self.well_rule),
             desk_well_rule: convert(self.desk_well_rule),

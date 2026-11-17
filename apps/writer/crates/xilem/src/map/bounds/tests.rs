@@ -71,9 +71,10 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         // list builds (those in view and one past them) the container that turns its
         // double-click into an in-place rename, with the stack that lays the list's scroll thumb
         // over it and the thumb's two boxes, and the column that keeps the scene search above the
-        // scrolled scene list. Chrome costs are fixed; the mounted-card bound below scales.
+        // scrolled scene list, and each mounted card the container that paints its printer's
+        // marks. Chrome costs are fixed; the mounted-card bound below scales.
         assert!(
-            nodes <= 263,
+            nodes <= 267,
             "bounded Map mounted {nodes} accessibility nodes: {roles:?}; {names:?}"
         );
         assert!(scene.mounted_indices().count() <= 4);

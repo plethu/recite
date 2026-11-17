@@ -51,9 +51,23 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
   margin column, measure capped at 68 characters, destination column. Every beat is set at the
   same metrics; only the selected one mounts fields, so choosing a beat never reflows the page. A
   sticky running head and foot carry the place. Below a 480px measure the paper goes full-bleed.
-- **Margin marks.** One vocabulary in the galley margin, the scene list and on map cards: a solid
-  teal bar for the current beat, a plum halftone bar for unsaved work, an error wedge for a
-  problem. They differ in shape as well as ink; only the galley's wedge takes focus.
+- **Printer's marks, not margin bars.** One family from a press sheet, painted around the work
+  and never on its words, the same in the galley, the lists and on map cards
+  (`presentation/marks.rs`). The current beat has crop marks: at each corner a pair of 2×8 ticks
+  4px off the corner, pointing outward, in the sheet pad and the space between beats (doubled at
+  200%, capped 4px inside the pad; 6px ticks 2px off on a full-bleed page); a map card has them
+  outside its stock offset, and in the scene list the current beat is the selected row. The
+  current line has no mark: its field shows it. Unsaved work is an 8px plum halftone dot, in the
+  sheet pad beside the changed line or heading, in a trailing slot every scene row keeps, and in a
+  card's top-trailing corner. A selected list row keeps its plate and has a 2px ink underscore
+  under its words. Banners are errata slips (floating paper, a closed 1px boundary edge, a 3px
+  stock offset and a plum caps lead-in). A problem keeps its error wedge. In monochrome the ticks
+  and the dot are both ink and differ by shape alone. Nothing takes layout room, input or a name;
+  only the galley's wedge takes focus. These replace the leading-edge bar, which marked the
+  current beat, unsaved work, selected rows and banners alike: the maintainer found it out of
+  keeping with the print identity and a lazy substitute for design, and it hid unsaved work on a
+  line under the beat's own bar. The toolkit layer's bar runs along the bottom only, so the
+  leading bar cannot return.
 - **In place, not forms.** A change happens on the object it changes. Rename beat (F2, the
   command or the heading's pen) turns the selected beat's heading into a field; F2 or a
   double-click on a sidebar beat row or a map card does the same to that row or card (in Map the

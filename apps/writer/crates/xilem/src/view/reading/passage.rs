@@ -3,7 +3,7 @@ use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::grid::Grid;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER};
-use crate::presentation::marks::{Mark, marked};
+use crate::presentation::marks::{Dot, Marks, marked};
 use crate::presentation::space;
 use crate::presentation::{Page, Sheet, disclosure_width, overhang, route_name, route_toggle};
 use crate::presentation::{control_inset, label_inset};
@@ -96,15 +96,15 @@ pub(in crate::view) fn margin<S: 'static>(
     .width(width.px())
 }
 
-/// The mark a passage's row carries: unsaved while it holds a draft, current while selected.
-pub(in crate::view) fn passage_mark(state: &Writer, active: bool) -> Option<Mark> {
-    active.then(|| {
-        if state.session.model().has_draft() {
-            Mark::Unsaved
-        } else {
-            Mark::Current
-        }
-    })
+/// The marks a passage's row carries: the unsaved dot in the sheet's pad while its line holds the
+/// draft. The line's own field shows which line is current, so a clean line carries no mark. Rows
+/// nested `inset` into groups keep the dot beside the beat's own edge.
+fn passage_marks(state: &Writer, grid: &Grid, active: bool, inset: f64) -> Marks {
+    Marks::default().unsaved(
+        &state.palette,
+        active && state.session.model().has_draft(),
+        Dot::galley(f64::from(Page::of(state).control()), grid.pad, inset, true),
+    )
 }
 
 pub(super) fn row(
@@ -154,8 +154,7 @@ pub(super) fn row(
         };
     flex_col((
         sized_box(marked(
-            &state.palette,
-            passage_mark(state, active),
+            passage_marks(state, &grid, active, state.script_width() - width),
             flex_row((
                 // Options, not one Either, so each keeps its own baselines in the row.
                 speaking.then(|| {
