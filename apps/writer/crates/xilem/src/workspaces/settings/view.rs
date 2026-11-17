@@ -1,3 +1,4 @@
+use crate::WriterLayout;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
@@ -27,14 +28,14 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
             paragraph(
                 scale,
                 format!("Manifest: {}", session.path().display()),
-                writer.content_width(),
+                writer.page_width(),
             )
         }),
         (!reload).then(|| {
             paragraph(
                 scale,
                 "Edit a TOML draft in your IDE, then import a validated review before applying.",
-                writer.content_width(),
+                writer.page_width(),
             )
         }),
         state(writer),
@@ -60,11 +61,7 @@ fn state(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     } else {
         "1 · Export a separate draft to begin. The saved manifest stays unchanged until Apply."
     };
-    Some(paragraph(
-        writer.ui_scale(),
-        message,
-        writer.content_width(),
-    ))
+    Some(paragraph(writer.ui_scale(), message, writer.page_width()))
 }
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
@@ -109,7 +106,7 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     )
                 }),
         ))
-        .direction(if writer.content_width() < 600. * f64::from(scale) {
+        .direction(if writer.page_width() < 600. * f64::from(scale) {
             Axis::Vertical
         } else {
             Axis::Horizontal
@@ -158,7 +155,7 @@ fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             })
             .disabled(blocked || session.is_none()),
         ))
-        .direction(if writer.content_width() < 600. * f64::from(scale) {
+        .direction(if writer.page_width() < 600. * f64::from(scale) {
             Axis::Vertical
         } else {
             Axis::Horizontal
@@ -182,7 +179,7 @@ fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .placeholder("Path to the edited TOML draft")
         .typeset(Type::Body, scale)
         .disabled(blocked)
-        .width(writer.content_width().px())
+        .width(writer.page_width().px())
         .prop(TextAreaLabel::new("Settings draft path")),
         text_button(
             scale,
@@ -202,7 +199,7 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             paragraph(
                 writer.ui_scale(),
                 page.clone(),
-                writer.content_width().min(size::MEASURE),
+                writer.page_width().min(size::MEASURE),
             ),
             (panel.feedback.len() > 1).then(|| {
                 flex_row((

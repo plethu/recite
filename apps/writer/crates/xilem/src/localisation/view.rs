@@ -70,7 +70,7 @@ fn empty_state(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         )
         .color(writer.palette.ink)
         .prop(LineBreaking::WordWrap)
-        .width(writer.script_width().px()),
+        .width(writer.script_width().min(writer.page_width()).px()),
         flex_row((
             print::primary_action(
                 scale,

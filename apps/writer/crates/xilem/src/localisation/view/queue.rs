@@ -10,7 +10,7 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let state = &writer.localisation;
     let blocked = writer.project_action_blocked() || state.slot.read_only();
-    let width = writer.content_width();
+    let width = writer.page_width();
     let wide = width >= breakpoint::TWO_COLUMNS * f64::from(scale);
     let measure = if wide {
         (width - space::GROUPS) / 2.

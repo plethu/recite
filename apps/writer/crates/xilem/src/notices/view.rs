@@ -1,6 +1,7 @@
 //! A disk change is a banner at the top of the sheet: "Changed on disk · Compare · Keep mine ·
 //! Use disk version". The comparison page opens only from Compare.
 use super::{Evidence, Target, Writer};
+use crate::WriterLayout;
 use crate::presentation::banner::banner;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::tokens::size;
@@ -67,7 +68,7 @@ fn notice(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
         Evidence::Catalogue(observed) => observed.is_current(&writer.localisation),
     };
     let count = writer.notices.found.len();
-    let width = writer.content_width();
+    let width = writer.page_width();
     // The message and the five actions share one line from about 900px of content at 100%.
     let stacked = width < 880. * f64::from(scale);
     Some(banner(

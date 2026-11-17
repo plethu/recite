@@ -7,7 +7,7 @@ use xilem::{
     masonry::layout::AsUnit,
     peniko::Color,
     style::Style,
-    view::{CrossAxisAlignment, MainAxisAlignment, flex_row, sized_box},
+    view::{CrossAxisAlignment, FlexExt, MainAxisAlignment, flex_row, sized_box},
 };
 
 /// The chevron's size relative to 20px icon faces, to sit with 14px interface text.
@@ -24,7 +24,8 @@ pub(crate) fn disclosure<S: 'static, V: WidgetView<S>>(
     } else {
         Icon::Collapsed
     };
-    flex_row((face(scale * MARK, "", icon, color), text))
+    // The words take what the row leaves them, so a one-line excerpt abbreviates within it.
+    flex_row((face(scale * MARK, "", icon, color), text.flex(1.)))
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .gap((space::UNIT * f64::from(scale)).px())
 }

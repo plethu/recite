@@ -1,4 +1,5 @@
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::space;
 use crate::presentation::tokens::{breakpoint, size};
 use crate::{
@@ -108,7 +109,7 @@ fn merge(writer: &Writer) -> impl WidgetView<Writer> + use<> {
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let report = &writer.workspaces.external.report;
     (!report.is_empty()).then(|| {
-        let width = writer.content_width().min(size::MEASURE);
+        let width = writer.page_width().min(size::MEASURE);
         flex_col(
             report
                 .iter()

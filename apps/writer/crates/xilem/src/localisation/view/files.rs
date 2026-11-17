@@ -1,4 +1,5 @@
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
@@ -51,7 +52,7 @@ pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             paragraph(
                 scale,
                 writer.localisation.catalogue_caption(),
-                writer.content_width(),
+                writer.page_width(),
             )
         }),
         (queue && state.files_open).then(|| {

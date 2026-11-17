@@ -1,4 +1,5 @@
 //! Source and translation compose as one retained bilingual manuscript.
+use crate::WriterLayout;
 use crate::presentation::space;
 mod context;
 mod incoming;
@@ -155,6 +156,6 @@ fn pages(writer: &Writer, beat: &beat::Beat) -> Option<impl WidgetView<Writer> +
 }
 fn width(writer: &Writer) -> f64 {
     writer
-        .content_width()
+        .page_width()
         .min(1320. * f64::from(writer.ui_scale()))
 }

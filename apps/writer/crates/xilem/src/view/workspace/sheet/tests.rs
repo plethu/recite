@@ -43,3 +43,25 @@ fn at_200_percent_the_sheet_zooms_and_its_text_reflows_inside_the_pane() {
     let desk = 2. * DESK_SIDE;
     assert!(zoomed.grid.width >= zoomed.script_pane - desk - 1e-6);
 }
+
+#[test]
+fn tool_pages_set_their_content_on_the_sheet_where_script_rests_on_one() {
+    let mut writer = writer(1200.);
+    // Writing keeps the whole content width; Script's sheet is inside it.
+    assert_eq!(page_width(&writer), writer.content_width());
+    writer.workspaces.screen = crate::workspaces::Screen::Build;
+    let grid = page_grid(&writer);
+    assert!(grid.sheet);
+    assert_eq!(
+        grid,
+        Layout::resolve(&writer).grid,
+        "the tool sheet is Script's"
+    );
+    // Inside the sheet's rule edges and its pad either side.
+    assert_eq!(page_width(&writer), grid.width - 2. * (grid.pad + 1.));
+    // Where Script goes full-bleed, so do tool pages, inside the workspace's padding.
+    let mut narrow = self::writer(900.);
+    narrow.workspaces.screen = crate::workspaces::Screen::Build;
+    assert!(!page_grid(&narrow).sheet);
+    assert_eq!(page_width(&narrow), narrow.content_width());
+}

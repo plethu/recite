@@ -1,4 +1,5 @@
 use super::*;
+use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::segments::{segment_titled, segments};
@@ -136,7 +137,7 @@ fn updates(writer: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(space::SIBLINGS.px())
-    .width(writer.content_width().px())
+    .width(writer.page_width().px())
 }
 /// A row's own name: its kind, its source line and its line id, so that every row and its
 /// Accept and Keep read apart however alike their lines.

@@ -7,7 +7,6 @@ use crate::{
     presentation::{group::named, print},
     trial::Review,
 };
-use recite_writer_app::COMPACT_WINDOW;
 use recite_writer_app::trial::captions;
 use recite_writer_model::PreviewPage;
 use recite_writer_session::preview::catalogue_stale;
@@ -26,7 +25,7 @@ mod trace;
 /// Preview is a sheet on the desk, like Script: its head stays put with the run's actions while the
 /// transcript scrolls beneath it on the same grid as the galley.
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let grid = sheet_grid(state);
+    let grid = super::workspace::sheet::page_grid(state);
     named(
         "Conversation preview",
         super::workspace::sheet::paper(
@@ -46,15 +45,6 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .gap(0.px())
             .prop(Region(Some(Pane::Preview))),
         ),
-    )
-}
-
-/// The preview's paper: a sheet wherever Script's would rest on the desk at this width.
-fn sheet_grid(state: &Writer) -> Grid {
-    Grid::resolve(
-        state.content_width(),
-        Page::of(state),
-        state.viewport.width >= COMPACT_WINDOW,
     )
 }
 

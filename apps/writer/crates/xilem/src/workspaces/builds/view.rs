@@ -1,4 +1,5 @@
 use super::*;
+use crate::WriterLayout;
 use crate::attention::{Pane, PaneEntry, Region};
 use crate::presentation::space;
 use crate::presentation::{Type, Typeset};
@@ -48,12 +49,11 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Build)))
-    .width(width.px())
+    // The head spans the page, so its close sits at the sheet's edge; the report keeps its measure.
+    .width(writer.page_width().px())
 }
 fn column_width(writer: &Writer) -> f64 {
-    writer
-        .content_width()
-        .min(800. * f64::from(writer.ui_scale()))
+    writer.page_width().min(800. * f64::from(writer.ui_scale()))
 }
 /// What a build reads and writes, in the writer's words: the scene files and the outputs.
 pub(super) fn inputs(writer: &Writer) -> Option<String> {

@@ -1,3 +1,4 @@
+use crate::WriterLayout;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
 use crate::presentation::{Type, Typeset};
@@ -17,7 +18,7 @@ use xilem::{
 };
 
 pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
-    let width = writer.content_width();
+    let width = writer.page_width();
     let reviewing = !writer.workspaces.rename.changes.is_empty();
     flex_col((
         crate::view::tool_head(
@@ -46,11 +47,11 @@ fn proposal(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.rename;
     let blocked = writer.project_action_blocked();
     let scale = writer.ui_scale();
-    let wide = writer.content_width() >= 520. * f64::from(scale);
+    let wide = writer.page_width() >= 520. * f64::from(scale);
     let field_width = if wide {
-        (writer.content_width() - 16.) / 2.
+        (writer.page_width() - 16.) / 2.
     } else {
-        writer.content_width()
+        writer.page_width()
     };
     flex_row((
         flex_col((
@@ -178,7 +179,7 @@ pub(crate) fn recovery(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
             paragraph(
                 writer.ui_scale(),
                 message,
-                writer.content_width().min(size::MEASURE),
+                writer.page_width().min(size::MEASURE),
             ),
             (reason == RecoveryReason::RetryCheckpoint).then(|| {
                 text_button(
@@ -195,7 +196,7 @@ pub(crate) fn recovery(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
 /// The last rename's report, every part of it.
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let pages = writer.workspaces.rename.report.as_ref()?.pages();
-    let width = writer.content_width().min(size::MEASURE);
+    let width = writer.page_width().min(size::MEASURE);
     Some(
         flex_col(
             pages

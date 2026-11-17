@@ -1,5 +1,6 @@
 //! Frontend views and native glue over `recite_writer_app::workspaces::declarations`.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::row::{listed, row};
 use crate::presentation::segments::{segment, segments};
 use crate::presentation::sheet_text::one_line;
@@ -78,7 +79,7 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
 /// chosen declaration beside it; on a narrow sheet the detail follows the list.
 fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = f64::from(writer.ui_scale());
-    let width = writer.content_width();
+    let width = writer.page_width();
     let wide = width >= breakpoint::MASTER_DETAIL * scale;
     let master = if wide {
         size::MASTER_COLUMN * scale

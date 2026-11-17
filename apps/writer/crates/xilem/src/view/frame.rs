@@ -8,7 +8,6 @@ use crate::workspaces::rename::inline::floats;
 use xilem::{
     WidgetView,
     masonry::layout::{AsUnit, UnitPoint},
-    peniko::Color,
     style::Style,
     view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, zstack},
 };
@@ -34,16 +33,15 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                                 document_actions::focus_header(state),
                             ))
                             .active(usize::from(writing && state.attention.is_focused())),
-                            pane("Workspace", content)
-                                .constrain_horizontal(true)
-                                .constrain_vertical(writing)
-                                // Writing sits on the desk; tool and Localise panels keep the surface.
-                                .background_color(if writing {
-                                    Color::TRANSPARENT
-                                } else {
-                                    state.palette.surface
-                                })
-                                .flex(1.),
+                            // Writing sits on the desk; tool and Localise pages rest on paper.
+                            super::workspace::sheet::page(
+                                state,
+                                writing,
+                                pane("Workspace", content)
+                                    .constrain_horizontal(true)
+                                    .constrain_vertical(writing),
+                            )
+                            .flex(1.),
                             retained(
                                 flex_col((reference::pinned(state),))
                                     .cross_axis_alignment(CrossAxisAlignment::Stretch)

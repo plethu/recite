@@ -1,6 +1,7 @@
 //! A reviewed rename's references as rows: where each one is (file, beat and line) over its
 //! change, drawn side by side. The list scrolls with the sheet; nothing pages.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::diff::{Side, Text, side_by_side};
 use crate::presentation::space;
 use xilem::masonry::parley::style::FontWeight;
@@ -11,7 +12,7 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
         return None;
     }
     let scale = writer.ui_scale();
-    let width = writer.content_width().min(960. * f64::from(scale));
+    let width = writer.page_width().min(960. * f64::from(scale));
     let rows = panel
         .changes
         .iter()

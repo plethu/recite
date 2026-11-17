@@ -1,6 +1,7 @@
 //! A translation change's two versions, drawn as every Writer diff is: side by side on inset paper
 //! where the sheet is wide, stacked where it is not.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::diff::{Side, Text, side_by_side};
 pub(super) fn versions(
     writer: &Writer,
@@ -11,7 +12,7 @@ pub(super) fn versions(
     side_by_side(
         &writer.palette,
         writer.ui_scale(),
-        (writer.content_width(), 920. * f64::from(writer.ui_scale())),
+        (writer.page_width(), 920. * f64::from(writer.ui_scale())),
         (
             Side {
                 caption: before_caption,

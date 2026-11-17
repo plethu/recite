@@ -8,7 +8,7 @@ use crate::presentation::{Page, space};
 use recite_config::{WriterPaneSide, WriterPresentationField};
 use xilem::masonry::layout::Dim;
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack};
-pub(super) mod sheet;
+pub(crate) mod sheet;
 use crate::presentation::grid::Grid;
 use recite_writer_app::COMPACT_WINDOW;
 

@@ -32,10 +32,15 @@ pub use recite_writer_session::startup::{HELP, LaunchOptions};
 /// Frontend measurements that depend on the rendered layout rather than authoring state.
 pub(crate) trait WriterLayout {
     fn script_width(&self) -> f64;
+    /// The width a tool or Localise page sets its content in, on its sheet or full-bleed paper.
+    fn page_width(&self) -> f64;
 }
 impl WriterLayout for Writer {
     fn script_width(&self) -> f64 {
         view::workspace::Layout::resolve(self).script
+    }
+    fn page_width(&self) -> f64 {
+        view::workspace::sheet::page_width(self)
     }
 }
 

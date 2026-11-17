@@ -102,14 +102,16 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             |state: &mut Writer, size| state.viewport.height = size.height,
             frame::frame(
                 state,
-                content.padding(Padding {
-                    bottom: if state.workspaces.screen == crate::workspaces::Screen::Write {
-                        0.px()
+                content.padding(
+                    if state.workspaces.screen == crate::workspaces::Screen::Write {
+                        Padding {
+                            bottom: 0.px(),
+                            ..Padding::all(space::KINDS.px())
+                        }
                     } else {
-                        16.px()
+                        workspace::sheet::page_padding(state)
                     },
-                    ..Padding::all(space::KINDS.px())
-                }),
+                ),
             ),
         ),
         (
@@ -210,7 +212,7 @@ pub(crate) fn captioned_head<
         Layout {
             scale,
             // Narrower than this, the sheet's actions take a row under its title.
-            stacked: state.content_width() < breakpoint::SHEET_ROW * f64::from(scale),
+            stacked: state.page_width() < breakpoint::SHEET_ROW * f64::from(scale),
         },
         &state.palette,
         (title, caption, actions),

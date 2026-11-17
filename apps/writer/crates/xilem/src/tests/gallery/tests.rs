@@ -21,7 +21,15 @@ const EXTREMES: &[&str] = &[
     "script.rename",
     "script.choices",
     "map.rename",
+    "start.create",
+    "source.repair",
+    "localise.queue",
+    "localise.none",
+    "tools.build",
+    "tools.rename",
     "tools.declarations",
+    "tools.disk",
+    "tools.updates",
 ];
 
 /// Transitions whose meaning depends on contrast alone.

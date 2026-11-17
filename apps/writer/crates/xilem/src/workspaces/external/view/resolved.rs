@@ -1,5 +1,6 @@
 //! A completed decision replaces the review rather than leaving disabled alternatives behind.
 use super::*;
+use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::presentation::space;
 use crate::presentation::tokens::size;
@@ -47,18 +48,14 @@ pub(super) fn panel(writer: &Writer, resolved: &Resolved) -> impl WidgetView<Wri
             .gap(space::TEXT.px())
             .prop(PaneEntry(true)),
         )
-        .width(writer.content_width().px()),
-        paragraph(scale, path.display().to_string(), writer.content_width()),
+        .width(writer.page_width().px()),
+        paragraph(scale, path.display().to_string(), writer.page_width()),
         report(writer),
-        paragraph(
-            scale,
-            explanation,
-            writer.content_width().min(size::MEASURE),
-        ),
+        paragraph(scale, explanation, writer.page_width().min(size::MEASURE)),
         paragraph(
             scale,
             "A complete recovery copy was kept; its location is available above.",
-            writer.content_width().min(size::MEASURE),
+            writer.page_width().min(size::MEASURE),
         ),
         text_button(
             scale,

@@ -39,13 +39,13 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
 }
 
 fn wide(writer: &Writer) -> bool {
-    writer.content_width() >= 800. * f64::from(writer.ui_scale())
+    writer.page_width() >= 800. * f64::from(writer.ui_scale())
 }
 fn entry_width(writer: &Writer) -> f64 {
     writer.script_width().min(if wide(writer) {
-        (writer.content_width() - 24.) / 2.
+        (writer.page_width() - 24.) / 2.
     } else {
-        writer.content_width()
+        writer.page_width()
     })
 }
 fn editor(

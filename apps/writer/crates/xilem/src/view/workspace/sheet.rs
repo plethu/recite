@@ -4,7 +4,8 @@
 use super::super::manuscript::folio;
 use super::*;
 use crate::presentation::grid::Grid;
-use crate::presentation::space;
+use crate::presentation::{Page, space};
+use recite_writer_app::COMPACT_WINDOW;
 use xilem::masonry::layout::UnitPoint;
 use xilem::masonry::{
     layout::Dim,
@@ -70,6 +71,7 @@ pub(in crate::view) fn paper<V: WidgetView<Writer>>(
     content: V,
 ) -> impl WidgetView<Writer> + use<V> {
     let sheet = grid.sheet;
+    let (fill, edge, width, shadow) = face(state, sheet, true);
     let paper = sized_box(content)
         // One Dimensions for both axes: a later `height` alone would reset the width to auto.
         .dims(
@@ -77,21 +79,10 @@ pub(in crate::view) fn paper<V: WidgetView<Writer>>(
                 .with_width(grid.width.px())
                 .with_height(Dim::Stretch),
         )
-        .background_color(state.palette.surface)
-        .border_color(if sheet {
-            state.palette.rule
-        } else {
-            Color::TRANSPARENT
-        })
-        .border_width(if sheet { 1.px() } else { 0.px() })
-        .box_shadow(BoxShadow::new(
-            if sheet {
-                state.palette.stock
-            } else {
-                Color::TRANSPARENT
-            },
-            (SHADOW, SHADOW),
-        ));
+        .background_color(fill)
+        .border_color(edge)
+        .border_width(width.px())
+        .box_shadow(shadow);
     flex_row((paper,))
         .main_axis_alignment(MainAxisAlignment::Center)
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -105,6 +96,104 @@ pub(in crate::view) fn paper<V: WidgetView<Writer>>(
             Padding::all(0.px())
         })
         .width(pane.px())
+}
+
+/// The paper's face: its fill, its edge's colour and width, and its stock shadow. A sheet has a
+/// rule edge and a hard shadow; full-bleed paper has neither, and no paper leaves the bare desk.
+fn face(state: &Writer, sheet: bool, paper: bool) -> (Color, Color, f64, BoxShadow) {
+    let fill = if paper {
+        state.palette.surface
+    } else {
+        Color::TRANSPARENT
+    };
+    let sheet = sheet && paper;
+    let (edge, shadow) = if sheet {
+        (state.palette.rule, state.palette.stock)
+    } else {
+        (Color::TRANSPARENT, Color::TRANSPARENT)
+    };
+    (
+        fill,
+        edge,
+        if sheet { 1. } else { 0. },
+        BoxShadow::new(shadow, (SHADOW, SHADOW)),
+    )
+}
+
+/// The grid of a sheet beside nothing: Preview's and the tool and Localise pages', which rest on
+/// the desk wherever Script's sheet would.
+pub(crate) fn page_grid(state: &Writer) -> Grid {
+    Grid::resolve(
+        state.content_width(),
+        Page::of(state),
+        state.viewport.width >= COMPACT_WINDOW,
+    )
+}
+
+/// What the workspace's own content sets in: the whole content width while writing, where the
+/// sheet is the manuscript's own, or a tool or Localise page's paper inside the sheet's edges and
+/// pad, or inside the workspace's padding on full-bleed paper.
+pub(crate) fn page_width(state: &Writer) -> f64 {
+    let grid = page_grid(state);
+    if grid.sheet && state.workspaces.screen != crate::workspaces::Screen::Write {
+        grid.width - 2. * (grid.pad + 1.)
+    } else {
+        state.content_width()
+    }
+}
+
+/// The padding around a tool or Localise page's content on its paper.
+pub(in crate::view) fn page_padding(state: &Writer) -> Padding {
+    let grid = page_grid(state);
+    if grid.sheet {
+        Padding::from_vh(space::GROUPS.px(), grid.pad.px())
+    } else {
+        Padding {
+            bottom: space::KINDS.px(),
+            ..Padding::all(space::KINDS.px())
+        }
+    }
+}
+
+/// The workspace `pane` on its paper. Tool and Localise pages rest on the same paper as Script:
+/// a sheet on the desk where Script's would rest, else full-bleed. Writing brings its own paper,
+/// so there the pane lies on the bare desk. One widget tree serves both, so switching between
+/// writing and a tool never replaces the mounted manuscript.
+pub(in crate::view) fn page<V: WidgetView<Writer>>(
+    state: &Writer,
+    writing: bool,
+    pane: V,
+) -> impl WidgetView<Writer> + use<V> {
+    let grid = page_grid(state);
+    let sheet = grid.sheet && !writing;
+    let (fill, edge, width, shadow) = face(state, grid.sheet, !writing);
+    flex_row((sized_box(pane)
+        .dims(
+            Dimensions::AUTO
+                .with_width(if sheet {
+                    Dim::Fixed(grid.width.px())
+                } else {
+                    Dim::Auto
+                })
+                .with_height(Dim::Stretch),
+        )
+        .background_color(fill)
+        .border_color(edge)
+        .border_width(width.px())
+        .box_shadow(shadow)
+        .flex(if sheet { 0. } else { 1. }),))
+    .main_axis_alignment(MainAxisAlignment::Center)
+    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+    // The desk shows above the sheet as it does above Script's, and below it beyond its shadow.
+    .padding(if sheet {
+        Padding {
+            top: space::KINDS.px(),
+            bottom: (space::KINDS + SHADOW).px(),
+            ..Padding::all(0.px())
+        }
+    } else {
+        Padding::all(0.px())
+    })
 }
 
 #[cfg(test)]

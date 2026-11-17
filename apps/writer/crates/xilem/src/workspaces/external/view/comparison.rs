@@ -2,6 +2,7 @@
 //! the sheet is wide, and the unapplied field draft that neither version holds. The sheet scrolls;
 //! nothing pages.
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::diff::{Side, Text, side_by_side};
 use xilem::masonry::parley::style::FontWeight;
 
@@ -11,7 +12,7 @@ const DRAFT_TEXT: f32 = 16.;
 pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let inspection = writer.workspaces.external.inspection()?;
     let scale = writer.ui_scale();
-    let width = writer.content_width();
+    let width = writer.page_width();
     let rows = inspection
         .changes
         .iter()
@@ -84,7 +85,7 @@ pub(super) fn pending(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
                 label(scale, "Unapplied field draft"),
                 flex_row(
                     (sized_box(manuscript_text(DRAFT_TEXT * scale, value)).width(
-                        (writer.content_width() - space::GROUPS)
+                        (writer.page_width() - space::GROUPS)
                             .min(size::MEASURE)
                             .px(),
                     ),),
