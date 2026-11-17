@@ -4,9 +4,11 @@ use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
 use crate::presentation::tokens::breakpoint;
+use crate::presentation::tokens::size;
 use crate::presentation::{Icon, Type, print};
 use recite_writer_session::choices::display_name;
 use xilem::masonry::kurbo::Axis;
+use xilem::masonry::widgets::{FlexBasis, FlexParams};
 use xilem::view::FlexSpacer;
 use xilem::view::{GridExt, GridTrackSize, button, grid};
 
@@ -63,6 +65,7 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
     let key = state.session.model().document().key().as_str();
+    let titled = state.visible_workspace() == crate::map::Workspace::Map;
     flex_row((
         print::icon_action(
             scale,
@@ -95,18 +98,22 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 Writer::copy_link,
             )
         }),
-        // One line ending in an ellipsis where the toolbar is short of room; the whole name is
-        // still read aloud.
-        (state.visible_workspace() == crate::map::Workspace::Map).then(|| {
+        // One line ending in an ellipsis only where the toolbar is short of room; the whole name
+        // is still read aloud. Like the file tab, it keeps 96px and takes the row's spare width.
+        titled.then(|| {
             one_line(
                 display_name(key.rsplit('/').next().unwrap_or(key)),
                 Type::Section,
                 scale,
                 state.palette.ink,
             )
-            .flex(1.)
+            .flex(FlexParams::new(
+                1.,
+                FlexBasis::Length((size::TAB_MIN * f64::from(scale)).px()),
+                None,
+            ))
         }),
-        FlexSpacer::Flex(1.),
+        FlexSpacer::Flex(if titled { 0. } else { 1. }),
     ))
     .gap(space::UNIT.px())
 }
