@@ -69,3 +69,9 @@ pub(crate) fn screen(texture: Texture, ink: Color) -> ImageBrush {
 pub(crate) fn backdrop<V>(dim: Color, screen: ImageBrush, child: V) -> Decorated<V> {
     Decorated::new(Decoration::Backdrop(dim, screen), child)
 }
+
+/// `child` where a modal layer leaves it in place: while given, a dim and screen painted over it,
+/// as [`backdrop`] paints them beneath its own child.
+pub(crate) fn cover<V>(backdrop: Option<(Color, ImageBrush)>, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Cover(backdrop), child)
+}

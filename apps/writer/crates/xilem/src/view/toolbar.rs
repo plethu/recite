@@ -17,7 +17,7 @@ use xilem::view::{GridExt, GridTrackSize, button, grid};
 pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let width = state.content_width();
     let wide = width >= breakpoint::TOOLBAR * f64::from(state.ui_scale());
-    let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
+    let blocked = blocked(state);
     let padding = xilem::style::Padding::from_vh(space::UNIT.px(), space::KINDS.px());
     // Tool screens have no workspaces: history, then the tools, on one row where they fit.
     if state.workspaces.screen != crate::workspaces::Screen::Write {
@@ -61,9 +61,18 @@ pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .padding(padding),
     )
 }
+/// Whether the toolbar waits on a decision or on work in progress.
+fn busy(state: &Writer) -> bool {
+    state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy()
+}
+/// Whether the toolbar's controls are inert: while it is busy, and behind the Settings sheet,
+/// where only Workspace, the sheet's toggle, stays live.
+fn blocked(state: &Writer) -> bool {
+    busy(state) || state.settings_sheet()
+}
 fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
+    let blocked = blocked(state);
     let key = state.session.model().document().key().as_str();
     let titled = state.visible_workspace() == crate::map::Workspace::Map;
     flex_row((
@@ -149,8 +158,17 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
                 |state: &mut Writer| state.undo_redo(true),
             )
         }),
-        // Workspace holds the project, document and app actions in one menu.
-        print::action(scale, "Workspace", blocked, Writer::toggle_document_menu),
+        // Workspace holds the project, document and app actions in one menu, and toggles the
+        // Settings sheet while it is open.
+        print::workspace(
+            scale,
+            (
+                state.settings_sheet(),
+                state.settings_sheet() || state.document_menu().is_open(),
+                busy(state),
+            ),
+            Writer::toggle_document_menu,
+        ),
         // Save is tonal while clean and the view's one primary with unsaved work.
         state.session.project().map(|_| {
             print::emphasised_action(

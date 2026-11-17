@@ -23,19 +23,19 @@ use xilem::{
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    // A picker, Settings or a rename's decision holds the window: the tab row behind it is inert.
-    let searching = app.picker.is_some()
-        || app.settings_open()
-        || app.writer.as_ref().is_some_and(rename_modal);
-    let blocked = searching
-        || app
-            .writer
-            .as_ref()
-            .is_some_and(|writer| writer.phase() != Phase::Writing);
+    // A picker, Settings or a rename's decision holds the window: the tab row behind it is inert,
+    // all but Settings' toggle, Workspace.
+    let held = app.picker.is_some() || app.writer.as_ref().is_some_and(rename_modal);
+    let searching = held || app.settings_open();
+    let deciding = app
+        .writer
+        .as_ref()
+        .is_some_and(|writer| writer.phase() != Phase::Writing);
+    let blocked = searching || deciding;
     // The tab row stays at every window size and interface scale.
     sized_box(
         flex_col((
-            identity_bar(app, scale, blocked),
+            identity_bar(app, scale, (blocked, held || deciding)),
             app.workspace_menu()
                 .then(|| workspace_actions(app, scale, searching)),
             (!app.status.is_empty() && (!app.show_welcome() || app.settings_open()))
@@ -55,7 +55,12 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     .padding(xilem::style::Padding::from_vh(0.px(), space::KINDS.px()))
 }
 
-fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {
+/// The tab row's identity and commands, inert while `blocked`; Workspace waits only while `held`.
+fn identity_bar(
+    app: &App,
+    scale: f32,
+    (blocked, held): (bool, bool),
+) -> impl WidgetView<App> + use<> {
     // Writing, focus mode and the tool screens share the toolbar's Workspace menu, so their tab
     // row keeps only the file, the modes and Commands; Settings is a sheet over it.
     let writing = !app.show_welcome() && app.writer.is_some();
@@ -142,9 +147,15 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
                 )
             }),
         (!writing).then(|| {
-            print::action(scale, "Workspace", blocked, |app: &mut App| {
-                app.toggle_workspace_menu()
-            })
+            print::workspace(
+                scale,
+                (
+                    app.settings_open(),
+                    app.settings_open() || app.workspace_menu(),
+                    held,
+                ),
+                |app: &mut App| app.toggle_workspace_menu(),
+            )
         }),
     ))
     .gap(space::SIBLINGS.px())

@@ -30,7 +30,7 @@ impl Shell {
                     let _ = request.reply.send(Ok(()));
                 }
                 self.show_welcome = false;
-                self.settings_open = false;
+                self.set_settings_open(false);
                 return Ok(());
             }
             let options = LaunchOptions {

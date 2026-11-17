@@ -3,7 +3,8 @@ use super::*;
 use crate::presentation::{
     Type,
     group::named,
-    material::{backdrop, desk},
+    lowered,
+    material::{backdrop, cover, desk},
     space,
     tokens::size,
 };
@@ -25,8 +26,12 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     }
     let slot = slot::writer_slot(app);
     let scale = f64::from(crate::presentation::scale(&app.preferences.config.writer));
+    let writing = app.writer.is_some() && !app.show_welcome();
+    // Settings hangs below the toolbar, whose Workspace control is its toggle; the tab row and
+    // toolbar stay clear and inert around it.
+    let below_toolbar = (size::PICKER_TOP - size::ROW) * scale;
     // The status bar's height: its vertical padding and one Meta line.
-    let status_bar = if app.writer.is_some() && !app.show_welcome() {
+    let status_bar = if writing {
         2. * space::UNIT
             + f64::from(Type::Meta.metrics().1)
                 * f64::from(crate::presentation::scale(&app.preferences.config.writer))
@@ -46,70 +51,77 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
                             // row above it dims with it.
                             zstack((
                                 app_bar(app),
-                                (app.settings_open()
-                                    || app.writer.as_ref().is_some_and(|writer| {
+                                app.writer
+                                    .as_ref()
+                                    .is_some_and(|writer| {
                                         matches!(
                                             writer.phase(),
                                             crate::Phase::ConfirmClose
                                                 | crate::Phase::ConfirmExit
                                                 | crate::Phase::Closing
                                         )
-                                    }))
-                                .then(|| {
-                                    backdrop(
-                                        app.theme.palette.backdrop,
-                                        app.theme.screen.clone(),
-                                        sized_box(flex_col(())).dims(Dim::Stretch),
-                                    )
-                                }),
+                                    })
+                                    .then(|| {
+                                        backdrop(
+                                            app.theme.palette.backdrop,
+                                            app.theme.screen.clone(),
+                                            sized_box(flex_col(())).dims(Dim::Stretch),
+                                        )
+                                    }),
                             )),
                             zstack((
                                 named(
                                     "Writer workspace",
-                                    indexed_stack((welcome::panel(app), slot))
-                                        .active(usize::from(!app.show_welcome())),
+                                    // While writing, the Writer dims and holds what Settings
+                                    // covers itself, around its toolbar.
+                                    cover(
+                                        (app.settings_open() && !writing).then(|| {
+                                            (app.theme.palette.backdrop, app.theme.screen.clone())
+                                        }),
+                                        indexed_stack((welcome::panel(app), slot))
+                                            .active(usize::from(!app.show_welcome())),
+                                    ),
                                 )
                                 // Behind a picker, Settings or a rename's decision the
-                                // workspace is inert.
+                                // workspace is inert; while writing, Settings leaves that to the
+                                // Writer, as its toolbar holds the sheet's toggle.
                                 .disabled(
                                     app.picker.is_some()
-                                        || app.settings_open()
+                                        || (app.settings_open() && !writing)
                                         || app.writer.as_ref().is_some_and(rename::modal),
                                 ),
                                 // Settings is a modal side sheet over the dimmed workspace, which
-                                // still shows each change; the status bar stays clear. A stack
-                                // keeps the layer in place while it is closed, so the layers above
-                                // it keep theirs.
-                                indexed_stack((
-                                    sized_box(backdrop(
-                                        app.theme.palette.backdrop,
-                                        app.theme.screen.clone(),
-                                        flex_row((FlexSpacer::Flex(1.), settings::settings(app)))
-                                            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                                            // Below the toolbar too, so the sheet covers none of
-                                            // it; the dim covers it with the rest.
-                                            .padding(Padding::top(
-                                                ((size::PICKER_TOP - size::ROW)
-                                                    * f64::from(crate::presentation::scale(
-                                                        &app.preferences.config.writer,
-                                                    )))
-                                                .px(),
+                                // still shows each change; the status bar stays clear. The layer
+                                // is moved down rather than padded, so the band above it leaves
+                                // the toolbar its pointer. A stack keeps the layer in place while
+                                // it is closed, so the layers above it keep theirs.
+                                lowered(
+                                    below_toolbar,
+                                    indexed_stack((
+                                        sized_box(
+                                            flex_row((
+                                                FlexSpacer::Flex(1.),
+                                                settings::settings(app),
                                             ))
+                                            .cross_axis_alignment(CrossAxisAlignment::Stretch)
                                             .dims(Dim::Stretch),
+                                        )
+                                        .dims(Dim::Stretch)
+                                        .padding(Padding {
+                                            bottom: (status_bar + below_toolbar).px(),
+                                            ..Padding::all(0.px())
+                                        }),
+                                        sized_box(flex_col(())).dims((0.px(), 0.px())),
                                     ))
-                                    .dims(Dim::Stretch)
-                                    .padding(Padding {
-                                        bottom: status_bar.px(),
-                                        ..Padding::all(0.px())
-                                    }),
-                                    sized_box(flex_col(())).dims((0.px(), 0.px())),
-                                ))
-                                .active(usize::from(!app.settings_open()))
-                                .dims(if app.settings_open() {
-                                    Dim::Stretch
-                                } else {
-                                    Dim::Auto
-                                }),
+                                    .active(usize::from(!app.settings_open()))
+                                    .dims(
+                                        if app.settings_open() {
+                                            Dim::Stretch
+                                        } else {
+                                            Dim::Auto
+                                        },
+                                    ),
+                                ),
                             ))
                             .alignment(UnitPoint::CENTER)
                             .flex(1.),

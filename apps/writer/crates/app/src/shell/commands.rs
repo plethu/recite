@@ -40,7 +40,7 @@ impl Shell {
             (_, WriterCommand::Settings) => self.show_settings(),
             (_, WriterCommand::OpenProject) => {
                 self.show_welcome = true;
-                self.settings_open = false;
+                self.set_settings_open(false);
             }
             (_, WriterCommand::Close) => self.request_close(),
             (_, _) if self.show_welcome => {

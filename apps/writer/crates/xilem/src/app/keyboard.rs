@@ -107,7 +107,8 @@ impl Property for FallbackFocus {
 impl UsesProperty<FallbackFocus> for Button {}
 impl UsesProperty<FallbackFocus> for RadioButton {}
 
-/// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it.
+/// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it. A control that
+/// toggles the surface from outside it, as Workspace does Settings, is marked with it.
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct ModalSurface(pub bool);
 impl Property for ModalSurface {

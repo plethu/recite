@@ -26,6 +26,9 @@ pub(crate) enum Decoration {
     Bar(Option<Bar>),
     /// The modal backdrop over the whole child: a dim, then a print texture, beneath the child.
     Backdrop(Color, ImageBrush),
+    /// The same backdrop painted over the child, while given: a region a modal layer leaves in
+    /// place, such as the window behind Settings around the toolbar that toggles it.
+    Cover(Option<(Color, ImageBrush)>),
     /// A slip's stock: the hard offset edge of the paper beneath it, filling the child's last
     /// `offset` pixels on the right and at the foot, less the corners the slip's face leaves bare.
     Stock(Color, f64),

@@ -30,6 +30,8 @@ pub enum Request {
     Projects,
     /// Open settings from the Writer's Workspace menu.
     Settings,
+    /// Close settings from the Writer's Workspace control, the open sheet's toggle.
+    CloseSettings,
 }
 
 /// The search surfaces the shell can open.
@@ -46,6 +48,7 @@ pub struct Shell {
     pub host: Host,
     pub writer: Option<Writer>,
     pub preferences: recite_writer_session::preferences::Preferences,
+    /// Changed only through `set_settings_open`, which tells the open Writer.
     pub(crate) settings_open: bool,
     pub settings: settings::Settings,
     pub picker: Option<picker::Picker>,
@@ -133,9 +136,11 @@ impl Shell {
         })
     }
     pub fn request_close(&mut self) {
-        if let Some(writer) = self.writer.as_mut() {
+        if self.writer.is_some() {
             self.show_welcome = false;
-            self.settings_open = false;
+            self.set_settings_open(false);
+        }
+        if let Some(writer) = self.writer.as_mut() {
             writer.request_close();
         } else {
             if let Some(opening) = &self.opening {
@@ -273,20 +278,33 @@ impl Shell {
 
 /// Intents raised by shell controls; each keeps overlays and menus consistent.
 impl Shell {
+    /// Open or close the Workspace menu; while Settings is open the control is the sheet's toggle
+    /// instead, and closes it.
     pub fn toggle_workspace_menu(&mut self) {
-        self.workspace_menu = !self.workspace_menu;
+        if self.settings_open {
+            self.close_settings();
+        } else {
+            self.workspace_menu = !self.workspace_menu;
+        }
     }
     /// Leave the project welcome screen for the open document.
     pub fn return_to_document(&mut self) {
         self.show_welcome = false;
     }
     pub fn close_settings(&mut self) {
-        self.settings_open = false;
+        self.set_settings_open(false);
+    }
+    /// Show or hide Settings, and tell the open Writer, whose Workspace control toggles the sheet.
+    pub(crate) fn set_settings_open(&mut self, open: bool) {
+        self.settings_open = open;
+        if let Some(writer) = &mut self.writer {
+            writer.settings_sheet = open;
+        }
     }
     /// Switch between the open document and the project welcome screen.
     pub fn toggle_projects(&mut self) {
         self.show_welcome = !self.show_welcome;
-        self.settings_open = false;
+        self.set_settings_open(false);
         self.workspace_menu = false;
     }
     pub fn settings_from_menu(&mut self) {
@@ -329,6 +347,7 @@ impl Shell {
             Some(Request::Search(search)) => self.open_picker(search),
             Some(Request::Projects) => self.toggle_projects(),
             Some(Request::Settings) => self.settings_from_menu(),
+            Some(Request::CloseSettings) => self.close_settings(),
             None => {}
         }
     }

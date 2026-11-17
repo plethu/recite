@@ -27,8 +27,12 @@ pub(in crate::view) fn focus_header(state: &Writer) -> impl WidgetView<Writer> +
                 Type::Control.label(scale, "Exit focus · Esc"),
                 Writer::toggle_focus,
             )
+            // Behind the Settings sheet too, which focus mode leaves no toggle above.
             .disabled(
-                state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
+                state.phase() != Phase::Writing
+                    || state.navigation.busy()
+                    || state.work.busy()
+                    || state.settings_sheet(),
             ),
         ),
     ))

@@ -62,6 +62,9 @@ pub struct Writer {
     pub notices: notices::Notices,
     pub viewport: kurbo::Size,
     pub(crate) document_menu: attention::DocumentMenu,
+    /// Whether the shell's Settings sheet hangs over this window, whose toolbar Workspace control
+    /// then toggles the sheet. The shell keeps it with its own (`Shell::set_settings_open`).
+    pub(crate) settings_sheet: bool,
     pub reading_context: reading_context::Context,
     pub config: recite_config::UserConfig,
     pub palette: recite_writer_session::palette::Palette<presentation::Color>,
@@ -124,6 +127,7 @@ impl Writer {
             choosing: None,
             app_request: None,
             pending_clipboard: None,
+            settings_sheet: false,
             lookup: None,
             workspaces: Default::default(),
             localisation: Default::default(),

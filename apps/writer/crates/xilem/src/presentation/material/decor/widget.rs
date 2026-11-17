@@ -10,6 +10,7 @@ use xilem::masonry::{
     kurbo::{Affine, Axis, BezPath, Circle, Point, Shape, Size, Stroke},
     layout::{LenReq, Length},
 };
+use xilem::peniko::{Color, ImageBrush};
 
 /// The ring's width and its distance inside the child's edge, in logical pixels.
 pub(super) const RING: f64 = 2.;
@@ -30,6 +31,18 @@ fn halftone(bar: Rect) -> BezPath {
         y += PITCH;
     }
     dots
+}
+
+/// The modal backdrop's dim and print screen over the whole child.
+fn backdrop(ctx: &PaintCtx<'_>, painter: &mut Painter<'_>, dim: Color, screen: &ImageBrush) {
+    painter.fill(ctx.content_box(), dim).draw();
+    // The screen repeats from the window's origin, so backdrops that meet, such as the tab row's
+    // over the close decision's, print one unbroken screen.
+    let origin = ctx.to_local(Point::ORIGIN).to_vec2();
+    painter
+        .fill(ctx.content_box(), screen)
+        .brush_transform(Some(Affine::translate(origin)))
+        .draw();
 }
 
 pub(crate) struct Decor {
@@ -103,14 +116,7 @@ impl Widget for Decor {
             }
         }
         if let Decoration::Backdrop(dim, screen) = &self.decoration {
-            painter.fill(ctx.content_box(), *dim).draw();
-            // The screen repeats from the window's origin, so backdrops that meet, such as the
-            // tab row's over the close decision's, print one unbroken screen.
-            let origin = ctx.to_local(Point::ORIGIN).to_vec2();
-            painter
-                .fill(ctx.content_box(), screen)
-                .brush_transform(Some(Affine::translate(origin)))
-                .draw();
+            backdrop(ctx, painter, *dim, screen);
         }
     }
     fn post_paint(
@@ -156,6 +162,9 @@ impl Widget for Decor {
             // its centre line, so it never touches the surface around the control.
             let ring = ctx.border_box().inset(-1.5 * RING);
             painter.stroke(ring, &Stroke::new(RING), color).draw();
+        }
+        if let Decoration::Cover(Some((dim, screen))) = &self.decoration {
+            backdrop(ctx, painter, *dim, screen);
         }
         if let Decoration::Outline(Some(color), offset) = self.decoration
             && ctx.has_focus_target()

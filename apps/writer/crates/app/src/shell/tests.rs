@@ -7,7 +7,7 @@ const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
 #[test]
 fn switching_to_projects_closes_settings_and_the_workspace_menu() {
     let mut shell = Shell::empty();
-    shell.settings_open = true;
+    shell.set_settings_open(true);
     shell.workspace_menu = true;
     shell.show_welcome = false;
     shell.toggle_projects();
@@ -22,10 +22,34 @@ fn menu_actions_close_the_workspace_menu_first() {
     shell.workspace_menu = true;
     shell.settings_from_menu();
     assert!(shell.settings_open && !shell.workspace_menu);
-    shell.toggle_workspace_menu();
-    assert!(shell.workspace_menu);
     shell.close_settings();
     assert!(!shell.settings_open);
+    shell.toggle_workspace_menu();
+    assert!(shell.workspace_menu);
+}
+
+#[test]
+fn workspace_closes_the_settings_sheet_it_toggles() {
+    let mut shell = Shell::empty();
+    shell.settings_from_menu();
+    shell.toggle_workspace_menu();
+    assert!(!shell.settings_open && !shell.workspace_menu);
+    let directory = test_support::project(SOURCE).unwrap();
+    let mut shell = Shell::with_writer(test_support::open(&directory).unwrap());
+    shell.settings_from_menu();
+    let writer = shell.writer.as_mut().unwrap();
+    assert!(
+        writer.settings_sheet(),
+        "the Writer knows its Workspace toggles the sheet"
+    );
+    writer.toggle_document_menu();
+    shell.apply_writer_requests();
+    let writer = shell.writer.as_ref().unwrap();
+    assert!(!shell.settings_open() && !writer.settings_sheet());
+    assert!(
+        !writer.document_menu().is_open(),
+        "closing the sheet opens no menu"
+    );
 }
 
 #[test]

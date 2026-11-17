@@ -14,7 +14,7 @@ use xilem::{
 
 mod backdrop;
 mod decor;
-pub(crate) use backdrop::{Texture, backdrop, screen};
+pub(crate) use backdrop::{Texture, backdrop, cover, screen};
 mod grain;
 pub(crate) use decor::{Bar, Decorated, Decoration, Edge};
 pub(crate) use grain::{desk, grain};

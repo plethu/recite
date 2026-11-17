@@ -2,7 +2,7 @@
 use super::Type;
 use super::control_style::{ControlStyle, styled};
 use super::group::{Named, heading};
-use crate::app::keyboard::ReturnFocus;
+use crate::app::keyboard::{ModalSurface, ReturnFocus};
 use recite_writer_session::palette::Palette;
 use xilem::peniko::Color;
 
@@ -105,6 +105,27 @@ pub(crate) fn action_named<S: 'static>(
             .accessible_label(name.into())
             .disabled(disabled),
     )
+}
+
+/// Workspace, the quiet action that opens the menu of project, document and app actions, reported
+/// expanded while what it opens is. While the Settings sheet is open it is the sheet's toggle: it
+/// stays live, shows itself pressed and is the one stop outside the sheet in its Tab cycle.
+pub(crate) fn workspace<S: 'static>(
+    scale: f32,
+    (sheet, expanded, disabled): (bool, bool, bool),
+    callback: impl Fn(&mut S) + Send + Sync + 'static,
+) -> impl WidgetView<S> {
+    view::sized_box(styled(
+        if sheet {
+            ControlStyle::ToggleOn
+        } else {
+            ControlStyle::Action
+        },
+        view::button(Type::Control.label(scale, "Workspace"), callback)
+            .expanded(expanded)
+            .disabled(disabled),
+    ))
+    .prop(ModalSurface(sheet))
 }
 
 /// A quiet action that shows or hides a panel beneath its row, its words shorter than its name

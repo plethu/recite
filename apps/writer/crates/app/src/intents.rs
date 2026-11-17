@@ -20,9 +20,14 @@ impl Writer {
     pub fn close_document_menu(&mut self) {
         self.document_menu = attention::DocumentMenu::Closed;
     }
-    /// Open or close document actions from their toolbar control.
+    /// Open or close document actions from their toolbar control, Workspace. While the Settings
+    /// sheet is open the control is its toggle instead, and closes it.
     pub fn toggle_document_menu(&mut self) {
-        self.document_menu.toggle();
+        if self.settings_sheet {
+            self.app_request = Some(shell::Request::CloseSettings);
+        } else {
+            self.document_menu.toggle();
+        }
     }
     /// Dismiss document actions without choosing one.
     pub fn dismiss_document_menu(&mut self) {
@@ -63,6 +68,11 @@ impl Writer {
     }
     pub fn document_menu(&self) -> attention::DocumentMenu {
         self.document_menu
+    }
+    /// Whether the shell's Settings sheet hangs over this window: everything but the toolbar's
+    /// Workspace control, the sheet's toggle, is inert behind it.
+    pub fn settings_sheet(&self) -> bool {
+        self.settings_sheet
     }
     /// Whether the choice slip hanging from `opener` is open.
     pub fn choosing(&self, opener: &Opener) -> bool {

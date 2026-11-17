@@ -3,6 +3,7 @@ use super::{
     Phase, Writer, document_actions, navigation, reference, retained, status_line, toolbar,
 };
 use crate::presentation::group::inert;
+use crate::presentation::material::{Texture, cover, screen};
 use crate::presentation::pane;
 use crate::workspaces::rename::inline::floats;
 use xilem::{
@@ -25,28 +26,38 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                 inert_document,
                 flex_col((
                     flex_row((
-                        retained(navigation(state), state.navigation_width() > 0.),
+                        under_sheet(
+                            state,
+                            retained(navigation(state), state.navigation_width() > 0.),
+                        ),
                         flex_col((
-                            // Tool and Localise screens share Script's one-row toolbar.
+                            // Tool and Localise screens share Script's one-row toolbar, which
+                            // stays clear of the Settings sheet's dim (see `under_sheet`).
                             indexed_stack((
                                 toolbar::toolbar(state),
                                 document_actions::focus_header(state),
                             ))
                             .active(usize::from(writing && state.attention.is_focused())),
                             // Writing sits on the desk; tool and Localise pages rest on paper.
-                            super::workspace::sheet::page(
+                            under_sheet(
                                 state,
-                                writing,
-                                pane("Workspace", content)
-                                    .constrain_horizontal(true)
-                                    .constrain_vertical(writing),
+                                super::workspace::sheet::page(
+                                    state,
+                                    writing,
+                                    pane("Workspace", content)
+                                        .constrain_horizontal(true)
+                                        .constrain_vertical(writing),
+                                ),
                             )
                             .flex(1.),
-                            retained(
-                                flex_col((reference::pinned(state),))
-                                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                                    .gap(0.px()),
-                                !state.trial.visible || state.attention.is_focused(),
+                            under_sheet(
+                                state,
+                                retained(
+                                    flex_col((reference::pinned(state),))
+                                        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                                        .gap(0.px()),
+                                    !state.trial.visible || state.attention.is_focused(),
+                                ),
                             ),
                         ))
                         .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -58,7 +69,7 @@ pub(super) fn frame<V: WidgetView<Writer>>(
                     .flex(1.),
                     // A build's result is a bar seated on the status line that reports it, across
                     // the window: the work above gives up only the bar's height.
-                    crate::workspaces::build_result(state),
+                    crate::workspaces::build_result(state).map(|bar| under_sheet(state, bar)),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .gap(0.px()),
@@ -75,10 +86,31 @@ pub(super) fn frame<V: WidgetView<Writer>>(
         // The status line carries state, so no dim lies over it: behind a modal it is inert but
         // its words keep their full contrast against the bar.
         inert(
-            inert_document || floats(state),
+            inert_document || floats(state) || state.settings_sheet(),
             status_line::status_line(state),
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(0.px())
+}
+
+/// `child` behind the Settings sheet, which hangs below the toolbar: inert and dimmed while the
+/// sheet is open. The toolbar stays clear, as its Workspace control is the sheet's toggle.
+fn under_sheet<V: WidgetView<Writer>>(
+    state: &Writer,
+    child: V,
+) -> impl WidgetView<Writer> + use<V> {
+    let open = state.settings_sheet();
+    inert(
+        open,
+        cover(
+            open.then(|| {
+                (
+                    state.palette.backdrop,
+                    screen(Texture::default(), state.palette.screen),
+                )
+            }),
+            child,
+        ),
+    )
 }

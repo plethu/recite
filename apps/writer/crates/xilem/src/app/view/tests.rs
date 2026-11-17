@@ -57,31 +57,98 @@ fn live_behind_dialog<V: WidgetView<App, Widget = Passthrough>>(
     (dialog, live)
 }
 
+/// The fixture's Writer at `scale`% in a 1200×800 window, with Settings open over it.
+fn settings_over_writer(scale: u16) -> Mounted<App, impl WidgetView<App, Widget = Passthrough>> {
+    let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+    let mut writer = support::open(&directory).unwrap();
+    let mut config = writer.config.clone();
+    config.writer.presentation = config
+        .writer
+        .presentation
+        .with_value(recite_config::WriterPresentationField::UiScale, scale)
+        .unwrap();
+    writer.configure(config.clone());
+    let mut app = App::with_writer(writer);
+    app.preferences.config = config;
+    app.settings_from_menu();
+    let mut mounted = Mounted::new(app, page);
+    mounted
+        .harness
+        .process_window_event(WindowEvent::Resize((1200, 800).into()));
+    mounted.settle();
+    mounted
+}
+
+/// Whether Settings is closed, with the document menu its toggle shares still closed.
+fn settings_closed<V: WidgetView<App, Widget = Passthrough>>(mounted: &Mounted<App, V>) -> bool {
+    let writer = mounted.state.writer.as_ref().unwrap();
+    !mounted.state.settings_open() && !writer.settings_sheet() && !writer.document_menu().is_open()
+}
+
 #[test]
 fn settings_is_a_modal_sheet_over_an_inert_window() {
     for scale in [100, 200] {
-        let directory = support::project(recite_writer_model::FIXTURE).unwrap();
-        let mut writer = support::open(&directory).unwrap();
-        let mut config = writer.config.clone();
-        config.writer.presentation = config
-            .writer
-            .presentation
-            .with_value(recite_config::WriterPresentationField::UiScale, scale)
-            .unwrap();
-        writer.configure(config.clone());
-        let mut app = App::with_writer(writer);
-        app.preferences.config = config;
-        app.settings_from_menu();
-        let mut mounted = Mounted::new(app, page);
-        mounted
-            .harness
-            .process_window_event(WindowEvent::Resize((1200, 800).into()));
-        mounted.settle();
+        let mut mounted = settings_over_writer(scale);
         let (dialog, live_behind) = live_behind_dialog(&mounted);
         assert_eq!(dialog.as_deref(), Some("Settings"));
+        assert_eq!(
+            live_behind,
+            ["Workspace"],
+            "at {scale}% only Workspace, the sheet's toggle, is live behind it"
+        );
+        assert!(mounted.is_expanded("Workspace", true));
+        // Tab and Shift+Tab cycle through the sheet and its toggle, and reach the toggle.
+        let mut inside = Vec::new();
+        modal_controls(mounted.harness.root_widget().as_dyn(), false, &mut inside);
+        let workspace = mounted.find("Workspace");
         assert!(
-            live_behind.iter().all(|name| name.contains("problem")),
-            "at {scale}% Tab reaches nothing the sheet hides: {live_behind:?}"
+            inside.contains(&workspace),
+            "at {scale}% Workspace is a stop"
+        );
+        for backwards in [false, true] {
+            let mut reached = false;
+            for _ in 0..2 * inside.len() + 2 {
+                mounted.harness.press_tab_key(backwards);
+                to_tab_stop(mounted.harness.render_root(), backwards);
+                mounted.settle();
+                let focused = mounted.harness.focused_widget_id();
+                assert!(
+                    focused.is_some_and(|id| inside.contains(&id)),
+                    "at {scale}% Tab (backwards: {backwards}) left the sheet for {focused:?}"
+                );
+                reached |= focused == Some(workspace);
+            }
+            assert!(
+                reached,
+                "at {scale}% Tab (backwards: {backwards}) reaches Workspace"
+            );
+        }
+    }
+}
+
+#[test]
+fn workspace_closes_the_settings_sheet_it_toggles() {
+    for scale in [100, 200] {
+        let mut mounted = settings_over_writer(scale);
+        mounted.activate("Workspace");
+        assert!(
+            settings_closed(&mounted),
+            "at {scale}% activating Workspace closes Settings"
+        );
+        assert!(mounted.is_expanded("Workspace", false));
+        // The sheet's layer leaves the toolbar its pointer: a press on Workspace reaches it.
+        let mut mounted = settings_over_writer(scale);
+        let workspace = mounted
+            .harness
+            .get_widget_with_id(mounted.find("Workspace"));
+        let centre = workspace.ctx().window_transform() * workspace.ctx().border_box().center();
+        mounted.harness.mouse_move(centre);
+        mounted.harness.mouse_button_press(None);
+        mounted.harness.mouse_button_release(None);
+        mounted.settle();
+        assert!(
+            settings_closed(&mounted),
+            "at {scale}% pressing Workspace closes Settings"
         );
     }
 }
