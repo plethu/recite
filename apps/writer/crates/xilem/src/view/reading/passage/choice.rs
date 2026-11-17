@@ -8,12 +8,13 @@ use crate::presentation::{Type, chooser, label_inset, material};
 use recite_writer_app::Opener;
 use recite_writer_model::RouteOwner;
 use xilem::masonry::layout::Dim;
+use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::Dimensions;
 use xilem::view::MainAxisAlignment;
 
-/// What the margin shows for a line with no speaker while it is written: a muted dash that no one
-/// reads as a name. The control itself is named "Choose a speaker…".
-const NO_SPEAKER: &str = "—";
+/// What the margin shows for a line with no speaker while it is written: a muted caption that no
+/// one reads as a name. The control itself is named "Choose a speaker…".
+const NO_SPEAKER: &str = "No speaker";
 /// What a reply's destination column shows while it is written and leads nowhere.
 const NO_DESTINATION: &str = "No destination";
 
@@ -38,12 +39,14 @@ pub(super) fn speaker(
     };
     let wide = grid.margin > 0.;
     let inset = label_inset();
-    let label = Sheet::Label.label(
-        Page::of(state),
-        speaker
-            .as_deref()
-            .map_or_else(|| NO_SPEAKER.to_owned(), str::to_uppercase),
-    );
+    // A line without a speaker says so in a muted caption, set plainly rather than as a name.
+    let label = match speaker.as_deref() {
+        Some(speaker) => Sheet::Label.label(Page::of(state), speaker.to_uppercase()),
+        None => Sheet::Label
+            .label(Page::of(state), NO_SPEAKER)
+            .weight(FontWeight::NORMAL)
+            .letter_spacing(0.),
+    };
     let name = speaker.as_deref().map_or_else(
         || "Choose a speaker…".to_owned(),
         |speaker| format!("Change speaker, {speaker}…"),
