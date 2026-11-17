@@ -182,7 +182,9 @@ impl Look {
                     disabled: (p.ink.with_alpha(TONAL_DISABLED), Color::TRANSPARENT),
                     border: STRONG,
                     sinks: true,
-                    padding: text,
+                    // Its stronger border comes out of the padding: a primary and a tonal action
+                    // share one box, so nothing moves as Save becomes primary.
+                    padding: (text.0 - (STRONG - 1.), text.1 - (STRONG - 1.)),
                     rule: None,
                     lead: 0.,
                 },

@@ -185,6 +185,32 @@ fn primary_controls_keep_their_target_and_show_distinct_focus_and_disabled_state
 }
 
 #[test]
+fn a_primary_action_and_a_tonal_one_share_one_box() {
+    let palette = palette(&WriterConfig::default());
+    for scale in [1., 2.] {
+        let boxes = [ControlStyle::Primary, ControlStyle::Tonal].map(|style| {
+            let button = NewWidget::new(Button::new(NewWidget::new(Label::new("Save"))))
+                .with_class(style.class());
+            let id = button.id();
+            let mut harness = TestHarness::create_with_size(
+                properties(&palette, scale),
+                NewWidget::new(Flex::column().with_fixed(button)),
+                (500, 200),
+            );
+            let rest = harness.get_widget_with_id(id).ctx().border_box();
+            let origin = content_origin(&harness, id);
+            harness.focus_on(Some(id));
+            assert_eq!(harness.get_widget_with_id(id).ctx().border_box(), rest);
+            (rest, origin)
+        });
+        assert_eq!(
+            boxes[0], boxes[1],
+            "Save keeps its box and its words' place at {scale}"
+        );
+    }
+}
+
+#[test]
 fn prose_and_shaped_text_take_the_palette_ink_rather_than_the_toolkit_default() {
     use xilem::masonry::{properties::ContentColor, widgets::Prose};
     for dark in [false, true] {
