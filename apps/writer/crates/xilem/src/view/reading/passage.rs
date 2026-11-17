@@ -208,8 +208,8 @@ pub(super) fn row(
                     .px(),
                 ),
             ),
-            // The source label paints into the gap below its passage without taking space, so
-            // selecting or typing never moves a row and resting rows keep their rhythm.
+            // The row being written gives its id a line of its own below it; resting rows keep
+            // their rhythm, and typing never moves a row.
             (!stacked_reply).then(|| {
                 metadata(
                     state,

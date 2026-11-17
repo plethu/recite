@@ -2,9 +2,20 @@
 //! stable id as a source label.
 use super::*;
 use crate::presentation::tokens::size;
+use xilem::masonry::parley::LineHeight;
 
 /// How far a line's id drops below its clearance: past the field's 2px focus outline and 3px more.
 const OUTLINE_CLEARANCE: f64 = size::FOCUS_OUTLINE + 2. + 3. - CAPTION_CLEARANCE;
+/// The id's leading over its size: [`Type::Id`]'s 16px line for 12px text.
+const ID_LEADING: f64 = 16. / 12.;
+/// The space an id keeps below itself before the next row starts.
+const ID_BELOW: f64 = 8.;
+
+/// The height an id under its row takes: its clearance, its line at the floored size and the space
+/// below it, so the next row starts below the id rather than painting over it.
+pub(super) fn id_row_height(caption_size: f32) -> f64 {
+    CAPTION_CLEARANCE + OUTLINE_CLEARANCE + f64::from(caption_size) * ID_LEADING + ID_BELOW
+}
 
 /// Source labels either reserve their own line or share a stacked destination's target height.
 pub(super) enum CaptionPlacement {
@@ -54,6 +65,9 @@ pub(super) fn metadata(
                     sized_box(
                         print::id(scale, metadata)
                             .text_size(caption_size)
+                            .line_height(LineHeight::Absolute(
+                                (f64::from(caption_size) * ID_LEADING) as f32,
+                            ))
                             .color(state.palette.muted),
                     )
                     .padding(Padding::top(OUTLINE_CLEARANCE.px())),
@@ -61,10 +75,17 @@ pub(super) fn metadata(
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(space::SIBLINGS.px()),
             )
-            // Only clearance below the reply's descenders takes space; the caption itself
-            // overhangs into the column gap.
+            // A resting row keeps only the clearance below its descenders; the row being written
+            // adds its id's own line, so the next row starts below the id at every scale.
             .padding(Padding::top(CAPTION_CLEARANCE.px()))
-            .height(CAPTION_CLEARANCE.px()),
+            .height(
+                if active {
+                    id_row_height(caption_size)
+                } else {
+                    CAPTION_CLEARANCE
+                }
+                .px(),
+            ),
         ),
     }
 }

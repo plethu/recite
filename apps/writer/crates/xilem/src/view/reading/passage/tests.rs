@@ -115,7 +115,7 @@ fn replies_keep_the_column_rhythm_and_never_move_while_one_is_edited() {
         third.y0 - row_end <= 20.,
         "resting rows reserve nothing below themselves: {second:?} {third:?}"
     );
-    // The label paints into the gap: neither selecting nor typing moves a row below.
+    // Typing never moves a row below.
     let resting = bounds_of(&mounted, "Edit passage 3");
     let reply = mounted
         .state
@@ -135,8 +135,9 @@ fn replies_keep_the_column_rhythm_and_never_move_while_one_is_edited() {
         .state
         .change(|model| model.select(View::Passage(reply.clone())));
     mounted.settle();
+    // Selecting a reply gives its id a row of its own; typing then moves nothing.
     let selected = bounds_of(&mounted, "Edit passage 3");
-    assert_eq!(selected, resting);
+    assert!(selected.y0 >= resting.y0, "{selected:?} {resting:?}");
     mounted.state.change(|model| {
         model.set_draft("Anything I can do to help with the relay?".into());
         Ok(())
@@ -261,4 +262,85 @@ fn only_a_beat_that_ends_the_conversation_shows_the_end_rule() {
     let mut mounted = Mounted::new(writer, surface);
     mounted.settle();
     assert_eq!(text_bounds(&mounted, "END").len(), 1);
+}
+
+#[test]
+fn a_written_row_s_id_has_a_row_of_its_own_at_every_scale() {
+    for scale in [100, 200] {
+        let mut writer = Writer::from_session(crate::session::Session::examples().unwrap(), None);
+        writer
+            .follow_location(&recite_writer_session::location::Location {
+                document: "relay_hub.recite".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        writer.viewport.width = 1200.;
+        let mut config = writer.config.clone();
+        config.writer.presentation = config
+            .writer
+            .presentation
+            .with_value(WriterPresentationField::UiScale, scale)
+            .unwrap();
+        writer.configure(config);
+        let properties = crate::presentation::Theme::new(&writer.config.writer).properties;
+        let mut mounted = Mounted::new(writer, surface);
+        mounted.harness.set_default_properties(properties);
+        mounted.settle();
+        let passages = mounted
+            .state
+            .reading
+            .rows
+            .iter()
+            .filter_map(|row| match &row.content {
+                crate::reading::Content::Passage { passage, .. } => Some(passage.id.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        for passage in passages {
+            mounted
+                .state
+                .change(|model| model.select(View::Passage(passage.clone())));
+            mounted.settle();
+            let id = format!("{STABLE_ID_FIELD_PREFIX}{passage}");
+            let [caption] = text_bounds(&mounted, &id)[..] else {
+                panic!("one id for {passage} at {scale}%");
+            };
+            for other in row_bounds(&mounted, &id) {
+                let overlap = caption.intersect(other);
+                assert!(
+                    other.contains(caption.center()) && other.area() > 4. * caption.area()
+                        || overlap.width() <= 0.
+                        || overlap.height() <= 0.,
+                    "{id} at {scale}%: {caption:?} meets {other:?}"
+                );
+            }
+        }
+    }
+}
+
+/// The bounds of every label but `except` and every focusable control: the rows an id must clear.
+fn row_bounds<V: WidgetView<Writer, Widget = Passthrough>>(
+    mounted: &Mounted<Writer, V>,
+    except: &str,
+) -> Vec<Rect> {
+    let mut found = Vec::new();
+    let mut pending = vec![mounted.harness.root_widget().as_dyn()];
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() {
+            continue;
+        }
+        let label = widget
+            .downcast::<Label>()
+            .map(|label| label.inner().text().as_ref() != except);
+        if label.unwrap_or_else(|| widget.ctx().accepts_focus()) {
+            found.push(
+                widget
+                    .ctx()
+                    .window_transform()
+                    .transform_rect_bbox(widget.ctx().border_box()),
+            );
+        }
+        pending.extend(widget.children());
+    }
+    found
 }
