@@ -13,6 +13,7 @@ mod picker;
 mod project;
 mod radio;
 mod reading;
+mod ring;
 pub(crate) mod tab;
 mod vim;
 use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, Modal, TAG};
@@ -56,6 +57,7 @@ pub(crate) struct Keyboard {
     galley: galley::Galley,
     reading: reading::Position,
     in_view: in_view::InView,
+    ring: ring::RingInView,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
@@ -261,6 +263,7 @@ impl Keyboard {
             self.galley.synchronize(root);
             self.focus.hold_modal(root, &context);
             self.focus.settle(root);
+            self.ring.synchronize(root);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {
