@@ -8,10 +8,12 @@ use xilem::peniko::Color;
 
 mod icon_actions;
 mod separator;
+mod title;
 pub(crate) use icon_actions::{
     icon_action, icon_action_width, icon_toggle, insert_action, insert_hang, text_toggle,
 };
 pub(crate) use separator::separator;
+pub(crate) use title::Title;
 use xilem::{
     WidgetView,
     masonry::{
@@ -105,8 +107,25 @@ pub(crate) fn action_named<S: 'static>(
     )
 }
 
+/// A quiet action that shows or hides a panel beneath its row, its words shorter than its name
+/// and its state reported as expanded, such as Context in the preview's head.
+pub(crate) fn action_disclosing<S: 'static>(
+    scale: f32,
+    (text, name): (&'static str, &'static str),
+    (expanded, disabled): (bool, bool),
+    callback: impl Fn(&mut S) + Send + Sync + 'static,
+) -> impl WidgetView<S, Widget = Button> {
+    styled(
+        ControlStyle::Action,
+        view::button(Type::Control.label(scale, text), callback)
+            .accessible_label(name)
+            .expanded(expanded)
+            .disabled(disabled),
+    )
+}
+
 /// The one filled action on a surface. Its focus is a ring inside the fill, in the text colour.
-pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(
+pub(crate) fn primary_action<S: 'static, T: Into<Title>, F: Fn(&mut S) + Send + Sync + 'static>(
     scale: f32,
     text: T,
     palette: &Palette<Color>,
@@ -120,7 +139,7 @@ pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send +
 /// such as Continue preview after a step.
 pub(crate) fn primary_returning<
     S: 'static,
-    T: Into<ArcStr>,
+    T: Into<Title>,
     F: Fn(&mut S) + Send + Sync + 'static,
 >(
     scale: f32,
@@ -136,7 +155,7 @@ pub(crate) fn primary_returning<
 /// proposal still lacks, the same words the view sets beside the field they concern.
 pub(crate) fn primary_described<
     S: 'static,
-    T: Into<ArcStr>,
+    T: Into<Title>,
     F: Fn(&mut S) + Send + Sync + 'static,
 >(
     scale: f32,
@@ -146,11 +165,12 @@ pub(crate) fn primary_described<
     description: Option<&'static str>,
     callback: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
+    let title = text.into();
     let button = view::button(
         // One weight in both states, so the words keep their width and nothing beside the action
         // moves as it becomes available.
         Type::Control
-            .label(scale, text)
+            .label(scale, title.face)
             .weight(FontWeight::SEMI_BOLD)
             .color(if disabled {
                 palette.muted
@@ -159,6 +179,10 @@ pub(crate) fn primary_described<
             }),
         callback,
     );
+    let button = match title.name {
+        Some(name) => button.accessible_label(name),
+        None => button,
+    };
     let button = match description {
         Some(description) => button.accessible_description(description),
         None => button,
@@ -177,7 +201,7 @@ pub(crate) fn primary_described<
 /// accessible name never changes.
 pub(crate) fn emphasised_action<
     S: 'static,
-    T: Into<ArcStr>,
+    T: Into<Title>,
     F: Fn(&mut S) + Send + Sync + 'static,
 >(
     scale: f32,
@@ -188,26 +212,31 @@ pub(crate) fn emphasised_action<
     callback: F,
 ) -> impl WidgetView<S> + use<S, T, F> {
     let primary = primary && !disabled;
+    let title = text.into();
+    let button = view::button(
+        // One weight in both states, so the words keep their width and nothing beside the action
+        // moves as it becomes primary; the fill carries the emphasis.
+        Type::Control
+            .label(scale, title.face)
+            .weight(Type::Control.weight())
+            .color(if disabled {
+                palette.muted
+            } else if primary {
+                palette.on_accent
+            } else {
+                palette.ink
+            }),
+        callback,
+    );
+    let button = match title.name {
+        Some(name) => button.accessible_label(name),
+        None => button,
+    };
     super::material::focus_ring(
         primary.then_some(palette.on_accent),
         styled(
             if primary { ControlStyle::Primary } else { rest },
-            view::button(
-                // One weight in both states, so the words keep their width and nothing beside
-                // the action moves as it becomes primary; the fill carries the emphasis.
-                Type::Control
-                    .label(scale, text)
-                    .weight(Type::Control.weight())
-                    .color(if disabled {
-                        palette.muted
-                    } else if primary {
-                        palette.on_accent
-                    } else {
-                        palette.ink
-                    }),
-                callback,
-            )
-            .disabled(disabled),
+            button.disabled(disabled),
         ),
     )
 }

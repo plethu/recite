@@ -14,14 +14,11 @@ mod value;
 /// The head's toggle for the running preview's trace, once it has one.
 pub(super) fn toggle(writer: &Writer, disabled: bool) -> Option<impl WidgetView<Writer> + use<>> {
     writer.session.model().preview_trace()?;
-    Some(print::action(
+    Some(print::action_disclosing(
         writer.ui_scale(),
-        if writer.trial.trace.open {
-            "Hide preview trace"
-        } else {
-            "Preview trace"
-        },
-        disabled,
+        // The sheet's own head says preview; the name keeps it for assistive technology.
+        ("Trace", "Preview trace"),
+        (writer.trial.trace.open, disabled),
         |writer: &mut Writer| writer.trial.trace.open = !writer.trial.trace.open,
     ))
 }

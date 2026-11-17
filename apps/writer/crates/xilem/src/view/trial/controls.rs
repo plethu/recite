@@ -88,7 +88,8 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
         {
             print::primary_returning(
                 scale,
-                "Continue preview",
+                // The sheet's own head says preview; the name keeps it for assistive technology.
+                print::Title::named("Continue", "Continue preview"),
                 &state.palette,
                 (closing || !continuing, true),
                 |state: &mut Writer| {
@@ -100,13 +101,14 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
         print::emphasised_action(
             scale,
             if applying {
-                "Applying edit…"
+                "Applying edit…".into()
             } else if unfinished {
-                "Apply edit and preview"
+                "Apply edit and preview".into()
             } else {
-                state
+                let name = state
                     .trial
-                    .submission_caption(state.session.model().preview_page().is_some())
+                    .submission_caption(state.session.model().preview_page().is_some());
+                print::Title::named(name.strip_suffix(" preview").unwrap_or(name), name)
             },
             &state.palette,
             // Quiet unless it is the run's next step, so Continue and the replies lead.
@@ -135,9 +137,9 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .disabled(closing || (!applying && !state.trial.can_cancel()))
         }),
         // Its slip hangs from under it while open.
-        sized_box(print::action(
+        sized_box(print::action_named(
             scale,
-            "Configure preview",
+            ("Configure…", "Configure preview"),
             configuring,
             Writer::configure_trial,
         ))

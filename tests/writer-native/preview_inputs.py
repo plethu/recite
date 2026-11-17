@@ -164,7 +164,8 @@ def exercise(window, po, output, results):
         lambda: window.find_text("Source revision", contains=True), "expanded captured provenance"
     )
     capture_settled(window, output, "-context-details")
-    window.act("Hide preview context")
+    # The same disclosure collapses the provenance; it reports expanded rather than renaming.
+    window.act("Preview context")
     capture_settled(window, output, "-current-context")
     action(window, "Continue preview")
     reveal_text(window, "2 billets")

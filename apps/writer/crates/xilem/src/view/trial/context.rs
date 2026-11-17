@@ -4,14 +4,11 @@ use super::*;
 /// The head's toggle for the run's full provenance, once a run has captured one.
 pub(super) fn toggle(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     state.session.model().preview_provenance()?;
-    Some(print::action(
+    Some(print::action_disclosing(
         state.ui_scale(),
-        if state.trial.context_details {
-            "Hide preview context"
-        } else {
-            "Preview context"
-        },
-        false,
+        // The sheet's own head says preview; the name keeps it for assistive technology.
+        ("Context", "Preview context"),
+        (state.trial.context_details, false),
         |state: &mut Writer| state.trial.context_details = !state.trial.context_details,
     ))
 }
