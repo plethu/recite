@@ -2234,7 +2234,7 @@ dependencies = [
 [[package]]
 name = "linebender_include_doc_path"
 version = "0.1.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2297,7 +2297,7 @@ dependencies = [
 [[package]]
 name = "masonry"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "accesskit",
  "linebender_include_doc_path",
@@ -2312,7 +2312,7 @@ dependencies = [
 [[package]]
 name = "masonry_core"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "accesskit",
  "anymap3",
@@ -2339,7 +2339,7 @@ dependencies = [
 [[package]]
 name = "masonry_imaging"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "imaging",
  "imaging_vello",
@@ -2355,7 +2355,7 @@ dependencies = [
 [[package]]
 name = "masonry_testing"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "accesskit_consumer 0.35.0",
  "image",
@@ -2368,7 +2368,7 @@ dependencies = [
 [[package]]
 name = "masonry_winit"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "accesskit_winit",
  "copypasta",
@@ -4742,7 +4742,7 @@ dependencies = [
 [[package]]
 name = "tree_arena"
 version = "0.2.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "hashbrown 0.17.1",
 ]
@@ -5931,7 +5931,7 @@ checksum = "163b33ed8786455e2fa5d72f554057ce3f3182425434f756cd39c99839d88e23"
 [[package]]
 name = "xilem"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "masonry",
  "masonry_winit",
@@ -5945,7 +5945,7 @@ dependencies = [
 [[package]]
 name = "xilem_core"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "anymore",
  "hashbrown 0.17.1",
@@ -5955,7 +5955,7 @@ dependencies = [
 [[package]]
 name = "xilem_masonry"
 version = "0.4.0"
-source = "git+https://github.com/plethu/xilem?rev=dafbc46c71f239857ce1de343f824a4456f3d6c0#dafbc46c71f239857ce1de343f824a4456f3d6c0"
+source = "git+https://github.com/plethu/xilem?rev=1d0679b429bb8c722e44edf42b3b37e4527e8c20#1d0679b429bb8c722e44edf42b3b37e4527e8c20"
 dependencies = [
  "masonry",
  "smallvec",

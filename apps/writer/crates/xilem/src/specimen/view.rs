@@ -79,7 +79,7 @@ fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             state.config.reduced_motion,
             |state: &mut Specimen, checked| state.config.reduced_motion = checked,
         )
-        .text_size(Type::Body.size(state.scale())),
+        .typeset(Type::Body, state.scale()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::TEXT.px())

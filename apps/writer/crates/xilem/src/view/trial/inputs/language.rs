@@ -24,7 +24,7 @@ pub(super) fn selector(
                 source_only,
                 |state: &mut Writer, on| state.set_source_language_only(on),
             )
-            .text_size(Type::Body.size(scale))
+            .typeset(Type::Body, scale)
             .disabled(disabled),
         ),))
         .cross_axis_alignment(CrossAxisAlignment::Start)

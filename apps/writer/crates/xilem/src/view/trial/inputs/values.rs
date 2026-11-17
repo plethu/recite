@@ -88,7 +88,7 @@ fn field(
                         .insert(name.clone(), value.to_string());
                 },
             )
-            .text_size(Type::Body.size(state.ui_scale()))
+            .typeset(Type::Body, state.ui_scale())
             .disabled(disabled),
         )
     } else {

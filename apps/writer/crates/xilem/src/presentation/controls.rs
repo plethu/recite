@@ -32,7 +32,10 @@ pub(crate) fn label(scale: f32, text: impl Into<ArcStr>) -> Label {
         .line_height(LineHeight::FontSizeRelative(line / size))
 }
 pub(crate) fn prose<State, Action>(scale: f32, text: impl Into<ArcStr>) -> Prose<State, Action> {
-    view::prose(text).text_size(super::tokens::Type::Body.size(scale))
+    let body = super::tokens::Type::Body;
+    view::prose(text)
+        .font(super::print::font(body.families()))
+        .text_size(body.size(scale))
 }
 pub(crate) fn paragraph<State: 'static, Action: 'static>(
     scale: f32,
@@ -55,3 +58,6 @@ pub(crate) fn text_button<State: 'static>(
 > {
     view::button(super::tokens::Type::Control.label(scale, text), callback)
 }
+
+#[cfg(test)]
+mod tests;

@@ -2,7 +2,7 @@ use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::segments::{segment_named, segments_on_paper};
 use crate::presentation::tokens::size;
-use crate::presentation::{Type, print, space};
+use crate::presentation::{Type, Typeset, print, space};
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::{FlexExt, checkbox};
@@ -196,7 +196,7 @@ fn check_row<F: Fn(&mut App, bool) + Send + Sync + 'static>(
     styled(
         ControlStyle::Flush,
         checkbox(caption, checked, edit)
-            .text_size(Type::Body.size(scale))
+            .typeset(Type::Body, scale)
             .dims((width.px(), (size::ROW * f64::from(scale)).px())),
     )
 }

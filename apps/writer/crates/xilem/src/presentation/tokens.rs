@@ -14,7 +14,7 @@ use xilem::{
         core::ArcStr,
         parley::{LineHeight, style::FontWeight},
     },
-    view::{Label, TextInput},
+    view::{Checkbox, Label, TextInput},
 };
 
 /// The spacing scale: 4, 8, 12, 16, 24, 32 and 48. One and two pixels are borders and rings only.
@@ -180,6 +180,14 @@ impl Typeset for Label {
             .text_size(size * scale)
             .weight(role.weight())
             .line_height(LineHeight::Absolute(line * scale))
+    }
+}
+/// A checkbox's label: family, size and weight; the toolkit sets its leading.
+impl<S, A, F> Typeset for Checkbox<S, A, F> {
+    fn typeset(self, role: Type, scale: f32) -> Self {
+        self.font(font(role.families()))
+            .text_size(role.size(scale))
+            .weight(role.weight())
     }
 }
 /// A field's accessible bounds are its line box, so a field set in Body keeps a 20px line, taller

@@ -84,7 +84,7 @@ fn editor(state: &Writer, disabled: bool, width: f64) -> impl WidgetView<Writer>
             state.trial.settings.include_drafts,
             |state: &mut Writer, value| state.trial.settings.include_drafts = value,
         )
-        .text_size(Type::Body.size(scale))
+        .typeset(Type::Body, scale)
         .disabled(disabled),
     );
     // Groups sit one group gap apart; a label sits one unit above its field.
