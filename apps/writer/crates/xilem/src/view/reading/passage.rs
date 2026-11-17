@@ -12,7 +12,7 @@ use crate::presentation::{control_inset, label_inset};
 use crate::reading::PassageNumber;
 use crate::view::workspace::Layout;
 use recite_core::STABLE_ID_FIELD_PREFIX;
-use recite_writer_model::{Passage, PassageKind};
+use recite_writer_model::{Passage, PassageKind, RouteOwner};
 use xilem::masonry::kurbo::Axis;
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::{FlexSpacer, button};
@@ -21,7 +21,8 @@ mod continuation;
 mod metadata;
 #[cfg(test)]
 mod tests;
-pub(super) use continuation::{RouteFace, continuation_row};
+pub(super) use choice::route_choice;
+pub(super) use continuation::{RouteFace, absorbed, continuation_row, joined};
 pub(super) use metadata::route_to;
 use metadata::{CaptionPlacement, metadata, route};
 
@@ -112,10 +113,18 @@ pub(super) fn row(
     number: PassageNumber,
     passage: &Passage,
     reply: Option<usize>,
-    width: f64,
+    (width, continuation): (f64, Option<(&str, &str)>),
 ) -> impl WidgetView<Writer> + use<> {
     let page = Page::of(state);
     let grid = grid(state);
+    // The beat's continuation, when it follows this line, is a route on the line's own row: the
+    // control that changes it, even where it ends the conversation under its end mark.
+    let continuation = continuation.map(|(beat, target)| {
+        (
+            (RouteOwner::Beat(beat.to_owned()), "continuation"),
+            target.to_owned(),
+        )
+    });
     let wide = grid.margin > 0.;
     // Nested groups indent the row; the margin column and the gutters keep their widths.
     let destination = if reply.is_some() {
@@ -163,6 +172,19 @@ pub(super) fn row(
                         .then(|| metadata::choice(state, passage, active, destination))
                         .flatten()
                         .map(|choice| hang_route(state, choice)),
+                    (grid.destination > 0.)
+                        .then(|| continuation.clone())
+                        .flatten()
+                        .map(|(owner, target)| {
+                            // Beside a speaker control the row's gutter is narrower by its inset.
+                            sized_box(hang_route(
+                                state,
+                                route_choice(state, owner, Some(&target), grid.destination),
+                            ))
+                            .padding(Padding::left(
+                                if speaking { label_inset() } else { 0. }.px(),
+                            ))
+                        }),
                 ))
                 .direction(if wide {
                     Axis::Horizontal
@@ -210,6 +232,14 @@ pub(super) fn row(
             ))
             .padding(Padding::left(grid.text().px()))
         }),
+        // Where destinations wrap, the continuation sits under the line, where its words start.
+        (grid.destination <= 0.)
+            .then_some(continuation)
+            .flatten()
+            .map(|(owner, target)| {
+                sized_box(route_choice(state, owner, Some(&target), grid.measure))
+                    .padding(Padding::left(grid.text().px()))
+            }),
         active
             .then(|| super::refusal::panel(state, measure))
             .flatten()

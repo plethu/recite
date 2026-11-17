@@ -85,10 +85,13 @@ def run(api, bus, registry, binary, output):
                 assert "@rthh7ab" in source.read_text()
                 results["route_requires_explicit_save_and_preserves_ids"] = True
                 window.act("Alternative · end")
-                window.reveal_end("Change continuation…")
-                window.act("Change continuation…")
+                window.reveal_end("Change continuation, End conversation…")
+                window.act("Change continuation, End conversation…")
                 choose(window, "Accepted")
-                window.wait(lambda: window.find_action("→ Accepted"), "changed continuation")
+                window.wait(
+                    lambda: window.find_action("Change continuation, Accepted…"),
+                    "changed continuation",
+                )
                 capture(output, "-continuation")
                 focus_bit = 1 << int(api.Atspi.StateType.FOCUSED)
                 results["continuation_before_save"] = {

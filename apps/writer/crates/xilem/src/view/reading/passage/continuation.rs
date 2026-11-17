@@ -42,3 +42,27 @@ pub(in crate::view::reading) fn continuation_row<M: WidgetView<Writer>, R: Widge
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(grid.gutter().px())
 }
+
+/// The continuation set on row `index`'s own line: the beat's jump straight after a line of
+/// dialogue, outside any group. A jump elsewhere then takes no row of its own; the end of the
+/// conversation keeps its end mark beneath.
+pub(in crate::view::reading) fn joined(rows: &[Row], index: usize) -> Option<&str> {
+    let [line, next] = rows.get(index..index + 2)? else {
+        return None;
+    };
+    match (&line.content, &next.content) {
+        (Content::Passage { passage, .. }, Content::Continuation(target))
+            if line.groups.is_empty()
+                && next.groups.is_empty()
+                && matches!(passage.kind, PassageKind::Dialogue { .. }) =>
+        {
+            Some(target)
+        }
+        _ => None,
+    }
+}
+
+/// Whether row `index` is a jump elsewhere set on the line before it.
+pub(in crate::view::reading) fn absorbed(rows: &[Row], index: usize) -> bool {
+    index > 0 && joined(rows, index - 1).is_some_and(|target| target != "END")
+}

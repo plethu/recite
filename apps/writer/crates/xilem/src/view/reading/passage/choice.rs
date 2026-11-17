@@ -11,8 +11,9 @@ use xilem::masonry::layout::Dim;
 use xilem::masonry::properties::Dimensions;
 use xilem::view::MainAxisAlignment;
 
-/// What the margin shows for a line with no speaker while it is written.
-const NO_SPEAKER: &str = "SPEAKER";
+/// What the margin shows for a line with no speaker while it is written: a muted dash that no one
+/// reads as a name. The control itself is named "Choose a speaker…".
+const NO_SPEAKER: &str = "—";
 /// What a reply's destination column shows while it is written and leads nowhere.
 const NO_DESTINATION: &str = "No destination";
 
@@ -108,30 +109,46 @@ pub(super) fn destination(
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
     let destination = match &passage.kind {
-        PassageKind::Choice { destination } => destination.clone(),
+        PassageKind::Choice { destination } => destination.as_deref(),
         PassageKind::Dialogue { .. } => None,
     };
-    let (text, name, color) = match destination.as_deref() {
+    route_choice(
+        state,
+        (RouteOwner::Reply(passage.id.clone()), "destination"),
+        destination,
+        width,
+    )
+}
+
+/// A route that is its own control: `destination` in the route's face, and pressing it hangs the
+/// choice of where `owner` leads from it, reporting itself expanded while that slip is open. Its
+/// name says what it changes, `noun`, and where it leads now.
+pub(in crate::view::reading) fn route_choice(
+    state: &Writer,
+    (owner, noun): (RouteOwner, &str),
+    destination: Option<&str>,
+    width: f64,
+) -> impl WidgetView<Writer> + use<> {
+    let (text, name, color) = match destination {
         Some("END") => (
             "End conversation".to_owned(),
-            "Change destination, End conversation…".to_owned(),
+            format!("Change {noun}, End conversation…"),
             state.palette.teal_text,
         ),
         Some(target) => (
             display_name(target),
-            format!("Change destination, {}…", display_name(target)),
+            format!("Change {noun}, {}…", display_name(target)),
             state.palette.teal_text,
         ),
         None => (
             NO_DESTINATION.to_owned(),
-            "Choose a destination…".to_owned(),
+            format!("Choose a {noun}…"),
             state.palette.muted,
         ),
     };
     let size = Sheet::Destination.size(Page::of(state));
     // The arrow is drawn for Control text; it scales to the destination's size.
     let glyph = size / Type::Control.metrics().0;
-    let owner = RouteOwner::Reply(passage.id.clone());
     let opener = Opener::Destination(owner.clone());
     sized_box(styled(
         ControlStyle::Action,

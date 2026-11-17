@@ -125,8 +125,16 @@ pub struct Attention {
     edit_request: Option<EditRequest>,
     /// Raised each time the writer asks to be taken to the first problem.
     problem_request: u64,
+    /// The beats a scrolling beat list last reported in view, which place its scroll thumb.
+    beats_in_view: Option<std::ops::Range<usize>>,
 }
 impl Attention {
+    pub fn beats_in_view(&self) -> Option<std::ops::Range<usize>> {
+        self.beats_in_view.clone()
+    }
+    pub fn show_beats(&mut self, range: std::ops::Range<usize>) {
+        self.beats_in_view = Some(range);
+    }
     /// How many times focus has been asked to move to the first problem.
     pub fn problem_request(&self) -> u64 {
         self.problem_request

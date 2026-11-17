@@ -226,3 +226,27 @@ fn the_speaker_label_and_destination_are_the_controls_in_their_own_places() {
     assert!(control.height() >= 24., "{control:?}");
     assert!(!mounted.contains_text("Destination…"));
 }
+
+#[test]
+fn a_beat_s_continuation_is_the_route_on_its_last_line_s_row() {
+    let source = ":: start default\n> speaker=mara @ffee6p8\n  Hello.\n> speaker=mara @rthh7ab\n  Again.\n-> next\n:: next\n> @z0g6c80\n  Goodbye.\n-> END\n";
+    let directory = project(source).unwrap();
+    let mut writer = open(&directory).unwrap();
+    writer.viewport.width = 1200.;
+    let properties = crate::presentation::Theme::new(&writer.config.writer).properties;
+    let mut mounted = Mounted::new(writer, surface);
+    mounted.harness.set_default_properties(properties);
+    mounted
+        .state
+        .change(|model| model.select(View::Passage("ffee6p8".into())));
+    mounted.settle();
+    let line = bounds_of(&mounted, "Edit passage 2");
+    // The route names what it changes and where the beat goes now; it is the only control.
+    let route = bounds_of(&mounted, "Change continuation, Next…");
+    assert!(route.x0 >= line.x1 - 1., "{route:?} beside {line:?}");
+    assert!(
+        route.y0 < line.y1 && route.y1 > line.y0,
+        "{route:?} on the row of {line:?}"
+    );
+    assert!(route.height() >= 24., "{route:?}");
+}

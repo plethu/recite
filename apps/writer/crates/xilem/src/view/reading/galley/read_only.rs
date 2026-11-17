@@ -1,7 +1,7 @@
 //! Beats whose fields are not mounted: their rows as read-only text in reading order, on the same
 //! grid and at the same sizes as the editable beat, so choosing a beat never reflows the page.
 use super::*;
-use crate::view::reading::passage::{RouteFace, continuation_row};
+use crate::view::reading::passage::{RouteFace, absorbed, continuation_row, joined};
 use xilem::masonry::properties::Dimensions;
 use xilem::view::{Label, MainAxisAlignment};
 
@@ -21,9 +21,10 @@ pub(super) fn read_only(
         rows.last().map(|row| &row.content),
         Some(Content::Continuation(_))
     );
-    let lines = rows[..shown]
-        .iter()
-        .map(|row| read_only_row(state, grid, row))
+    let lines = (0..shown)
+        // A continuation set on its line's row takes no row of its own.
+        .filter(|&index| !absorbed(&rows, index))
+        .map(|index| read_only_row(state, grid, &rows[index], joined(&rows, index)))
         .collect::<Vec<_>>();
     flex_col((
         (index != state.reading.galley().start).then(|| rule(state, grid)),
@@ -61,7 +62,12 @@ pub(super) fn read_only(
 }
 
 /// One read-only row, on the same grid and at the same sizes as an editable one.
-fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Writer>> {
+fn read_only_row(
+    state: &Writer,
+    grid: &Grid,
+    row: &Row,
+    joined: Option<&str>,
+) -> Box<AnyWidgetView<Writer>> {
     let page = Page::of(state);
     match &row.content {
         Content::Passage { passage, .. } => {
@@ -72,7 +78,10 @@ fn read_only_row(state: &Writer, grid: &Grid, row: &Row) -> Box<AnyWidgetView<Wr
                 PassageKind::Choice {
                     destination: Some(target),
                 } if target != "END" => Some(format!("→ {}", display_name(target))),
-                _ => None,
+                PassageKind::Dialogue { .. } => joined
+                    .filter(|target| *target != "END")
+                    .map(|target| format!("→ {}", display_name(target))),
+                PassageKind::Choice { .. } => None,
             };
             let wide = grid.margin > 0.;
             let route = |target: String| {

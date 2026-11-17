@@ -69,9 +69,10 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         // the five segments carries a decorative focus-ring container, the document one inert
         // container that a modal surface disables, and each beat row the sidebar's scrolling beat
         // list builds (those in view and one past them) the container that turns its
-        // double-click into an in-place rename.
+        // double-click into an in-place rename, with the stack that lays the list's scroll thumb
+        // over it and the thumb's two boxes.
         assert!(
-            nodes <= 255,
+            nodes <= 259,
             "bounded Map mounted {nodes} accessibility nodes: {roles:?}; {names:?}"
         );
         assert!(scene.mounted_indices().count() <= 4);

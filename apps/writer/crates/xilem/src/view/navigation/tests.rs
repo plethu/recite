@@ -233,3 +233,15 @@ fn a_long_scene_scrolls_its_beats_in_a_list_that_keeps_the_selected_beat_in_view
     );
     assert!(mounted.is_selected("Beat 28"));
 }
+
+#[test]
+fn the_beat_list_thumb_spans_the_track_from_the_first_beat_to_the_last() {
+    let height = 6.5 * 33.;
+    let (length, top) = super::outline::thumb_place(40, 0..7, height);
+    assert_eq!(top, 2.);
+    assert!(length >= 45., "{length}");
+    let (_, bottom) = super::outline::thumb_place(40, 33..40, height);
+    assert!((bottom + length - (height - 2.)).abs() < 1e-9, "{bottom}");
+    // A list that shows every beat fills its track.
+    assert_eq!(super::outline::thumb_place(5, 0..5, height).0, height - 4.);
+}

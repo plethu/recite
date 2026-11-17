@@ -8,7 +8,10 @@ use crate::presentation::marks::{GLYPH, wedge_glyph};
 use crate::presentation::tokens::size;
 use crate::workspaces::rename::inline::{self as rename, Place, Target};
 use recite_compiler::authoring::BlockDefinitionSummary;
-use xilem::view::virtual_scroll;
+use xilem::core::MessageResult;
+use xilem::masonry::layout::UnitPoint;
+use xilem::style::Padding;
+use xilem::view::{virtual_scroll, zstack};
 
 /// What every beat row shares.
 struct Rows<'a> {
@@ -22,7 +25,7 @@ struct Rows<'a> {
 /// The most beats a scene lists in place; a longer scene's beats scroll in a list of their own.
 const ALL_BEATS: usize = 12;
 /// How many rows a scrolling beat list shows: a half row past the last whole one shows there are
-/// more, since the list has no scroll bar.
+/// more, beside its scroll thumb.
 const LIST_ROWS: f64 = 6.5;
 /// How far past its view a scrolling beat list keeps rows built, in view lengths: one row each
 /// way, so Tab and Shift+Tab reach the next beat, which then scrolls into view.
@@ -82,18 +85,73 @@ pub(super) fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .position(|block| Some(block.id().as_str()) == rows.selected);
     let height = LIST_ROWS * size::ROW * f64::from(state.ui_scale());
     Either::B(
-        virtual_scroll(count, |state: &mut Writer, position| {
-            let state = &*state;
-            listed_row(state, &shared_rows(state), position)
-        })
-        // Each beat is a Tab stop; the list itself is not.
-        .accessible_label(BEATS)
-        .focusable(false)
-        .overscan(OVERSCAN, OVERSCAN)
-        .reveal(selected)
-        .dims(((sidebar_width(state) - sidebar::COLUMN).px(), height.px()))
-        .padding(inset),
+        zstack((
+            virtual_scroll(count, |state: &mut Writer, position| {
+                let state = &*state;
+                listed_row(state, &shared_rows(state), position)
+            })
+            // Each beat is a Tab stop; the list itself is not.
+            .accessible_label(BEATS)
+            .focusable(false)
+            .overscan(OVERSCAN, OVERSCAN)
+            .reveal(selected)
+            .on_scroll(|state: &mut Writer, range| {
+                state.attention.show_beats(range);
+                MessageResult::Action(())
+            })
+            .dims(((sidebar_width(state) - sidebar::COLUMN).px(), height.px())),
+            thumb(state, count, selected, height),
+        ))
+        .alignment(UnitPoint::TOP_RIGHT)
+        // A gap under the scene's row, so no beat is cut off flush against it.
+        .padding(Padding {
+            top: space::TEXT.px(),
+            ..inset
+        }),
     )
+}
+
+/// The scrolling beat list's thumb, drawn as every other scroll region's: where the beats in
+/// view sit among all of them. Pointer and keys scroll the list itself.
+fn thumb(
+    state: &Writer,
+    count: usize,
+    selected: Option<usize>,
+    height: f64,
+) -> impl WidgetView<Writer> + use<> {
+    let range = state.attention.beats_in_view().unwrap_or_else(|| {
+        let start = selected.unwrap_or(0);
+        start..start + LIST_ROWS.ceil() as usize
+    });
+    let (length, top) = thumb_place(count, range, height);
+    sized_box(
+        sized_box(flex_col(()))
+            .dims((THUMB.px(), length.px()))
+            .background_color(state.palette.boundary)
+            .corner_radius((THUMB / 2.).px()),
+    )
+    .padding(Padding {
+        top: top.px(),
+        right: THUMB_PAD.px(),
+        ..Padding::all(0.px())
+    })
+}
+
+/// A scroll thumb's width and its inset from the list's edge, as Masonry draws its own.
+const THUMB: f64 = 8.;
+const THUMB_PAD: f64 = 2.;
+/// The shortest a thumb is drawn, as Masonry draws its own.
+const THUMB_MIN: f64 = 45.;
+
+/// The thumb's length and offset in a track `height` long, for `range` of `count` rows in view.
+pub(super) fn thumb_place(count: usize, range: std::ops::Range<usize>, height: f64) -> (f64, f64) {
+    let count = count.max(1) as f64;
+    let track = height - 2. * THUMB_PAD;
+    let shown = (LIST_ROWS / count).min(1.);
+    let length = (track * shown).max(THUMB_MIN.min(track));
+    let scrolled = range.start as f64 / (count - range.len() as f64).max(1.);
+    let top = THUMB_PAD + (track - length) * scrolled.clamp(0., 1.);
+    (length, top)
 }
 /// The scrolling beat list's name.
 pub(super) const BEATS: &str = "Beats";

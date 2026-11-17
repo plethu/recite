@@ -1,7 +1,6 @@
 use super::surface::Surface;
 use super::*;
 use crate::WriterLayout;
-use crate::app::keyboard::PickerAnchor;
 use crate::app::picker::Search;
 use crate::keyed::column;
 use crate::presentation::Icon;
@@ -56,6 +55,8 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
     let range = state.reading.window.range(rows.len());
     let at_end = range.end == rows.len();
     let entries = range
+        // A continuation set on its line's row takes no row of its own.
+        .filter(|&index| !passage::absorbed(rows, index))
         .map(|index| {
             let key = match &rows[index].content {
                 Content::Passage { passage, .. } => RowIdentity::Passage(
@@ -67,7 +68,10 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
                     index,
                 ),
             };
-            (key, row(state, id, &rows[index]))
+            (
+                key,
+                row(state, id, &rows[index], passage::joined(rows, index)),
+            )
         })
         .collect();
     let _ = id;
@@ -103,7 +107,12 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
     .gap(space::TEXT.px());
     galley::galley(state, body)
 }
-fn row(state: &Writer, beat: &str, row: &Row) -> impl WidgetView<Writer> + use<> {
+fn row(
+    state: &Writer,
+    beat: &str,
+    row: &Row,
+    joined: Option<&str>,
+) -> impl WidgetView<Writer> + use<> {
     let inset = row.groups.len().min(3) as f64 * 24.;
     let width = state.script_width() - inset;
     flex_col((
@@ -117,17 +126,27 @@ fn row(state: &Writer, beat: &str, row: &Row) -> impl WidgetView<Writer> + use<>
             )
             .width(width.px())
         }),
-        content(state, beat, row, width),
+        content(state, beat, row, (width, joined)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
     .padding(Padding::left(inset.px()))
 }
-fn content(state: &Writer, beat: &str, row: &Row, width: f64) -> Box<AnyWidgetView<Writer>> {
+fn content(
+    state: &Writer,
+    beat: &str,
+    row: &Row,
+    (width, joined): (f64, Option<&str>),
+) -> Box<AnyWidgetView<Writer>> {
     match &row.content {
-        Content::Passage { passage, number } => {
-            passage::row(state, *number, passage, row.reply, width).boxed()
-        }
+        Content::Passage { passage, number } => passage::row(
+            state,
+            *number,
+            passage,
+            row.reply,
+            (width, joined.map(|target| (beat, target))),
+        )
+        .boxed(),
         Content::Heading(text) => sized_box(
             prose(state.ui_scale(), text.clone())
                 .text_size(Sheet::Dialogue.size(Page::of(state)))
@@ -168,9 +187,10 @@ pub(super) fn reply_actions(state: &Writer, id: &str) -> impl WidgetView<Writer>
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
 }
-/// A beat's continuation: the end mark in the text column, or its destination in the
-/// destination column like a reply's (under the text where destinations wrap), with the change
-/// action in the margin. Read-only beats set it in the same place.
+/// A beat's continuation on a row of its own, where it follows no line: the end mark in the text
+/// column, or its route in the destination column like a reply's (under the text where
+/// destinations wrap). The route is the control that changes it; inside a group it only shows
+/// where the group leads. Read-only beats set it in the same place.
 fn continuation(
     state: &Writer,
     target: &str,
@@ -184,29 +204,27 @@ fn continuation(
                 .padding(Padding::left(grid.text().px())),
         );
     }
-    let change = beat.map(|id| {
-        let owner = RouteOwner::Beat(id.to_owned());
-        print::icon_action(
-            state.ui_scale(),
-            "Change continuation…",
-            Icon::Rename,
-            &state.palette,
-            state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy(),
-            move |state: &mut Writer| state.choose_destination(owner.clone()),
-        )
-        // Its choice hangs from it as a slip.
-        .prop(PickerAnchor(true))
-    });
+    let route = match beat {
+        Some(id) => Either::A(passage::route_choice(
+            state,
+            (RouteOwner::Beat(id.to_owned()), "continuation"),
+            Some(target),
+            route_width(&grid),
+        )),
+        None => Either::B(passage::route_to(state, target, route_width(&grid))),
+    };
     Either::B(
         flex_col((
             passage::continuation_row(
                 state,
                 &grid,
-                change,
-                passage::route_to(state, target, route_width(&grid)),
+                None::<xilem::view::Label>,
+                route,
                 passage::RouteFace::Button,
             ),
-            super::reference::destination(state, target, width),
+            beat.is_none()
+                .then(|| super::reference::destination(state, target, width))
+                .flatten(),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(space::SIBLINGS.px()),
