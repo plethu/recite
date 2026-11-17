@@ -37,7 +37,7 @@ pub(crate) enum ControlStyle {
     Entry,
     /// A list row at rest.
     Row,
-    /// The selected list row: the second-ink plate, with its ink bar painted above.
+    /// The selected list row: the second-ink plate, with its words' ink underscore painted above.
     RowSelected,
     /// A compact icon face with even padding.
     Icon,

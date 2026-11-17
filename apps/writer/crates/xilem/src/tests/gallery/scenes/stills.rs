@@ -182,7 +182,7 @@ pub(in crate::tests::gallery) fn stills(record: &mut Recorder, variant: Variant)
             id: "script.marks",
             group: "Script",
             title: "Script, margin marks",
-            intent: "Unsaved work and a problem in the margin, repeated in the scene list: the halftone bar, the error wedge, the current bar.",
+            intent: "Unsaved work and a problem beside the beat, repeated in the scene list: the halftone dot, the error wedge, the crop marks.",
         },
         |record| {
             let directory = sample();

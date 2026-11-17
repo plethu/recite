@@ -8,8 +8,11 @@ use std::fs;
 const EXTREMES: &[&str] = &[
     "start.welcome",
     "script.sample",
+    "script.empty-beat",
+    "script.galley",
     "script.draft",
     "script.small-type",
+    "map.sample",
     "map.split",
     "localise.beat",
     "overlay.settings",

@@ -79,7 +79,7 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
     let body = flex_col((
         // 12px between rows, and each row's 4px source-label clearance below it.
         column(entries).gap(space::TEXT.px()),
-        // In the text column, clear of the current beat's margin bar.
+        // In the text column, where the beat's lines would start.
         rows.is_empty().then(|| {
             sized_box(prose(
                 scale,
