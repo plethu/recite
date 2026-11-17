@@ -1,8 +1,9 @@
-//! Keep a newly focused control's focus ring inside the scroll region that holds it, as when a
-//! slip opens with its first control at the visible edge of its scrolling content.
+//! Keep a newly focused control's focus ring inside the slip or dialog scroll region that holds
+//! it, as when a slip opens with its first control at the visible edge of its scrolling content.
+//! Elsewhere focus alone never scrolls.
 use super::*;
+use crate::app::keyboard::ModalSurface;
 use crate::presentation::tokens::size;
-use crate::view::ReadingViewport;
 use xilem::masonry::{
     core::WidgetRef,
     kurbo::{Rect, Vec2},
@@ -40,11 +41,11 @@ impl RingInView {
     }
 }
 
-/// The innermost scroll region holding `target`, other than the manuscript, which keeps its own
-/// place, and how far it must pan to show `target`'s ring.
+/// The innermost scroll region inside a slip or dialog holding `target`, and how far it must pan to
+/// show `target`'s ring.
 fn pan_for(root: &RenderRoot, target: WidgetId) -> Option<(WidgetId, f64)> {
     let mut portals = Vec::new();
-    let found = portals_above(root.get_layer_root(0), target, &mut portals);
+    let found = portals_above(root.get_layer_root(0), target, false, &mut portals);
     let portal = root.get_widget(*portals.last().filter(|_| found)?)?;
     let bounds = |widget: &WidgetRef<'_, dyn Widget>| {
         widget
@@ -57,10 +58,12 @@ fn pan_for(root: &RenderRoot, target: WidgetId) -> Option<(WidgetId, f64)> {
     (pan != 0.).then_some((portal.id(), pan))
 }
 
-/// Collects the scroll regions on the way from `widget` to `target`, true once it is found.
+/// Collects the scroll regions inside a modal surface on the way from `widget` to `target`, true
+/// once it is found.
 fn portals_above(
     widget: WidgetRef<'_, dyn Widget>,
     target: WidgetId,
+    modal: bool,
     portals: &mut Vec<WidgetId>,
 ) -> bool {
     if widget.id() == target {
@@ -69,16 +72,15 @@ fn portals_above(
     if widget.ctx().is_stashed() {
         return false;
     }
-    let portal = widget
-        .downcast::<Portal<Flex>>()
-        .is_some_and(|portal| !portal.get_prop::<ReadingViewport>().is_manuscript());
+    let modal = modal || widget.get_prop::<ModalSurface>().0;
+    let portal = modal && widget.downcast::<Portal<Flex>>().is_some();
     if portal {
         portals.push(widget.id());
     }
     if widget
         .children()
         .into_iter()
-        .any(|child| portals_above(child, target, portals))
+        .any(|child| portals_above(child, target, modal, portals))
     {
         return true;
     }
