@@ -211,22 +211,18 @@ fn contents<T: WidgetView<Writer>>(
     let width = f64::from(scene.node(index).width);
     let excerpt = excerpt(synopsis.prose.clone(), zoom);
     let lines = flex_col((
-        flex_col((
-            label(1., synopsis.speaker.clone())
-                .text_size(13_f32.max(11. / zoom))
-                .color(state.palette.muted),
-            if renaming { excerpt.shorter() } else { excerpt }.width((width - 24.).px()),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(space::UNIT.px()),
-        (!synopsis.annotations.is_empty()).then(|| {
-            label(1., synopsis.annotations.join(" · "))
-                .text_size(13_f32.max(11. / zoom))
-                .color(state.palette.muted)
-        }),
+        label(1., synopsis.speaker.clone())
+            .text_size(13_f32.max(11. / zoom))
+            .color(state.palette.muted),
+        if renaming { excerpt.shorter() } else { excerpt }.width((width - 24.).px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(space::SIBLINGS.px());
+    .gap(space::UNIT.px());
+    let annotations = (!synopsis.annotations.is_empty()).then(|| {
+        label(1., synopsis.annotations.join(" · "))
+            .text_size(13_f32.max(11. / zoom))
+            .color(state.palette.muted)
+    });
     flex_col((
         title,
         if renaming {
@@ -234,6 +230,13 @@ fn contents<T: WidgetView<Writer>>(
         } else {
             Either::B(lines)
         },
+        annotations.map(|annotations| {
+            if renaming {
+                Either::A(group::decorative(annotations))
+            } else {
+                Either::B(annotations)
+            }
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(space::SIBLINGS.px())
