@@ -122,4 +122,65 @@ These predate the gallery and come from #256 and `assets/identity/README.md`.
 
 ## Log
 
-No council pass has been signed off yet. The first sign-off creates `baseline/`.
+### 2026-11-17 · v1 polish pass (council rounds 1–9)
+
+- **Request.** A final GUI cleanup and polish for v1:
+  - better use of space and a stronger type hierarchy in Script;
+  - inline mutations instead of forms;
+  - modern controls;
+  - one spacing scale that is neither cramped nor loose;
+  - a dimmed backdrop with print texture.
+
+  After round 8, the maintainer rejected the leading-edge bar used for the current beat,
+  unsaved work, selected rows and banners. They called it out of style with the product and a
+  lazy substitute for better design.
+- **Direction.**
+  - Script is one continuous galley. The 32px Fraunces scene title is the only display heading;
+    beats are 22px Literata semibold.
+  - Only the line being written is a field. Read-only lines keep identical metrics, so nothing
+    moves on selection, and ids sit in the margin.
+  - Rename, insertion, speaker and destination choice happen in place. Build, preview
+    configuration and disk changes settle in slips and banners rather than pages.
+  - Settings is a modal side sheet that the toolbar's Workspace control toggles.
+  - Interface scale zooms the manuscript.
+  - The leading-edge bar is gone. The replacement is one family of printer's marks:
+    - crop-mark ticks outside the current beat and the selected map card;
+    - an 8px plum dot for unsaved work, in the sheet pad and in a slot reserved on every scene
+      row;
+    - an ink underscore under a selected row's words;
+    - errata-slip banners with a plum caps lead-in.
+  - `material::Bar` draws only along the bottom.
+- **Patterns relied on.**
+  - Stable placement, direct manipulation, and progressive disclosure.
+  - Undo over confirmation, and visible system status in the status line.
+  - Recognition over recall in pickers.
+  - Print conventions: galley proofs, crop marks, editor's margin marks, errata slips, tint plates.
+- **Rejected.**
+  - Scaling only headings and labels at 200%.
+  - A hatch backdrop.
+  - Reserving an id line under every row.
+  - A disclosure for raw effect syntax.
+  - 32px Accept / Keep chips, which stop centring their labels.
+  - 20px beat headings.
+  - The band banner, and the slip without its stock offset.
+  - Keeping "+ Line" words on the text edge with a wider gap.
+- **Dissent recorded.** One member preferred a 10px outlined square for unsaved work and no ": END
+  :" in empty beats. Another preferred the banner without its offset. The maintainer saw each
+  alternative rendered side by side and chose the built option.
+- **Maintainer feedback.**
+  - Round 4: poor use of space, forms, dated controls, and spacing both cramped and loose.
+  - Round 9: replace the left-hand border everywhere.
+  - Sign-off: the recommended option on all fifteen decisions, including keeping
+    `PoDocument::refreshed_keeping` and merging as one pull request.
+- **Accessibility evidence.**
+  - Gallery comparisons against the pre-pass capture show no accessibility regressions at 1x or
+    2x.
+  - New palette contrast rows cover the crop ticks, unsaved dot, underscore, banner edge and
+    lead-in in light, dark and mono.
+  - Marks tests check geometry, no overlap, no hit-testing, identical row bounds when selected,
+    and that mono luminance tells current, unsaved and plain apart.
+  - A Tab walk was run. Mono, minimum-window and 200% frames were checked.
+  - The beat heading is the only text made smaller on purpose, from 32px to 22px; it stays above
+    the 20px reading size.
+  - The AT-SPI probes in `tests/writer-native` were updated but not run here, because the
+    container has no Wayland host.

@@ -1,0 +1,4963 @@
+{
+  "format": 1,
+  "settings": {
+    "scale": 1.0,
+    "motion_ms": [],
+    "only": []
+  },
+  "entries": [
+    {
+      "id": "start.welcome--light",
+      "group": "Start",
+      "title": "Welcome, no project",
+      "intent": "First launch: the only surface before any project exists. Judge invitation, hierarchy and the print identity.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.welcome--light--00",
+          "caption": "Welcome",
+          "file": "frames/start.welcome--light--00.webp",
+          "a11y": "a11y/start.welcome--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.create--light",
+      "group": "Start",
+      "title": "Welcome, creating a project",
+      "intent": "The create form with nothing typed yet: field labels, guidance and the disabled primary action.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.create--light--00",
+          "caption": "Create form, empty",
+          "file": "frames/start.create--light--00.webp",
+          "a11y": "a11y/start.create--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.starter--light",
+      "group": "Script",
+      "title": "Script, new starter project",
+      "intent": "Empty state a new writer meets right after creating a project.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.starter--light--00",
+          "caption": "Starter scene",
+          "file": "frames/script.starter--light--00.webp",
+          "a11y": "a11y/script.starter--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.empty-beat--light",
+      "group": "Script",
+      "title": "Script, beat with nothing written",
+      "intent": "Empty beat placeholder and the invitation to write the first line.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.empty-beat--light--00",
+          "caption": "Empty beat",
+          "file": "frames/script.empty-beat--light--00.webp",
+          "a11y": "a11y/script.empty-beat--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.blank-scene--light",
+      "group": "Script",
+      "title": "Script, scene with no beats",
+      "intent": "A scene that is not valid yet: how the problem and its fix are presented.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.blank-scene--light--00",
+          "caption": "Blank scene",
+          "file": "frames/script.blank-scene--light--00.webp",
+          "a11y": "a11y/script.blank-scene--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.sample--light",
+      "group": "Script",
+      "title": "Script, representative scene",
+      "intent": "Everyday reading and writing in a branching hub: speakers, replies, destinations, effects.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.sample--light--00",
+          "caption": "Relay hub beat",
+          "file": "frames/script.sample--light--00.webp",
+          "a11y": "a11y/script.sample--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.draft--light",
+      "group": "Script",
+      "title": "Script, unapplied draft",
+      "intent": "Dirty state: how pending, unsaved work is signalled without alarm.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.draft--light--00",
+          "caption": "Draft pending",
+          "file": "frames/script.draft--light--00.webp",
+          "a11y": "a11y/script.draft--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.focus--light",
+      "group": "Script",
+      "title": "Script, focus mode",
+      "intent": "Long-session writing with chrome reduced.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.focus--light--00",
+          "caption": "Focus mode",
+          "file": "frames/script.focus--light--00.webp",
+          "a11y": "a11y/script.focus--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.galley--light",
+      "group": "Script",
+      "title": "Script, galley at a later beat",
+      "intent": "The continuous scene: a later beat brought to the top under the running head, read-only beats around it, and a focused beat heading.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/script.galley--light.webp",
+      "frames": [
+        {
+          "name": "script.galley--light--00",
+          "caption": "Station history under the running head",
+          "file": "frames/script.galley--light--00.webp",
+          "a11y": "a11y/script.galley--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--light--01",
+          "caption": "Next beat heading focused",
+          "file": "frames/script.galley--light--01.webp",
+          "a11y": "a11y/script.galley--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--light--02",
+          "caption": "Pump House continues to Courier Route",
+          "file": "frames/script.galley--light--02.webp",
+          "a11y": "a11y/script.galley--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.long-scene--light",
+      "group": "Script",
+      "title": "Script, a long scene's beat list",
+      "intent": "A scene of forty beats lists them in a scrolling list under its row, a half row showing there are more, kept on the selected later beat; then a beat row focused.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/script.long-scene--light.webp",
+      "frames": [
+        {
+          "name": "script.long-scene--light--00",
+          "caption": "Watch 24 kept in view",
+          "file": "frames/script.long-scene--light--00.webp",
+          "a11y": "a11y/script.long-scene--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.long-scene--light--01",
+          "caption": "A beat row focused",
+          "file": "frames/script.long-scene--light--01.webp",
+          "a11y": "a11y/script.long-scene--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.marks--light",
+      "group": "Script",
+      "title": "Script, margin marks",
+      "intent": "Unsaved work and a problem beside the beat, repeated in the scene list: the halftone dot, the error wedge, the crop marks.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.marks--light--00",
+          "caption": "Unsaved line beside a problem wedge",
+          "file": "frames/script.marks--light--00.webp",
+          "a11y": "a11y/script.marks--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.small-type--light",
+      "group": "Script",
+      "title": "Script, smallest reading size",
+      "intent": "The galley grid at the smallest reading size: margin, measure and destination columns keep their proportions and floors.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.small-type--light--00",
+          "caption": "Relay hub at 14px",
+          "file": "frames/script.small-type--light--00.webp",
+          "a11y": "a11y/script.small-type--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.sample--light",
+      "group": "Map",
+      "title": "Map, branching scene",
+      "intent": "How beats branch and return; card legibility and connection clarity.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.sample--light--00",
+          "caption": "Floodgate map",
+          "file": "frames/map.sample--light--00.webp",
+          "a11y": "a11y/map.sample--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.split--light",
+      "group": "Map",
+      "title": "Split, script beside map",
+      "intent": "Two panes sharing the window: balance, divider and which pane leads.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.split--light--00",
+          "caption": "Split workspace",
+          "file": "frames/map.split--light--00.webp",
+          "a11y": "a11y/map.split--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "source.repair--light",
+      "group": "Script",
+      "title": "Source needing repair",
+      "intent": "Malformed source: Writer hands repair to the external editor. Judge clarity and calm.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "source.repair--light--00",
+          "caption": "Repair in your editor",
+          "file": "frames/source.repair--light--00.webp",
+          "a11y": "a11y/source.repair--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "preview.start--light",
+      "group": "Workspaces",
+      "title": "Preview, before a run",
+      "intent": "A trial of the scene that never runs game effects.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "preview.start--light--00",
+          "caption": "Preview, before a run",
+          "file": "frames/preview.start--light--00.webp",
+          "a11y": "a11y/preview.start--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.beat--light",
+      "group": "Workspaces",
+      "title": "Localise, beat with a catalogue",
+      "intent": "Side-by-side translation with translated, variant and missing entries.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.beat--light--00",
+          "caption": "Localise, beat with a catalogue",
+          "file": "frames/localise.beat--light--00.webp",
+          "a11y": "a11y/localise.beat--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.queue--light",
+      "group": "Workspaces",
+      "title": "Translations queue",
+      "intent": "The catalogue work queue and its filters.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.queue--light--00",
+          "caption": "Translations queue",
+          "file": "frames/localise.queue--light--00.webp",
+          "a11y": "a11y/localise.queue--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.build--light",
+      "group": "Workspaces",
+      "title": "Build",
+      "intent": "Producing game data and reporting the result.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.build--light--00",
+          "caption": "Build",
+          "file": "frames/tools.build--light--00.webp",
+          "a11y": "a11y/tools.build--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.rename--light",
+      "group": "Workspaces",
+      "title": "Rename",
+      "intent": "The fallback after a refused rename: the beat is fixed text, its new id prefilled, and the report says why.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.rename--light--00",
+          "caption": "Rename",
+          "file": "frames/tools.rename--light--00.webp",
+          "a11y": "a11y/tools.rename--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.declarations--light",
+      "group": "Workspaces",
+      "title": "Declarations",
+      "intent": "Schema speakers, effects and variables.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.declarations--light--00",
+          "caption": "Declarations",
+          "file": "frames/tools.declarations--light--00.webp",
+          "a11y": "a11y/tools.declarations--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.disk--light",
+      "group": "Workspaces",
+      "title": "Disk changes",
+      "intent": "Changes made outside Writer, offered for explicit comparison.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.disk--light--00",
+          "caption": "Disk changes",
+          "file": "frames/tools.disk--light--00.webp",
+          "a11y": "a11y/tools.disk--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.updates--light",
+      "group": "Workspaces",
+      "title": "Source updates",
+      "intent": "Catalogue entries whose source text changed.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.updates--light--00",
+          "caption": "Source updates",
+          "file": "frames/tools.updates--light--00.webp",
+          "a11y": "a11y/tools.updates--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.none--light",
+      "group": "Workspaces",
+      "title": "Localise, no catalogue yet",
+      "intent": "Empty state: a project with nothing to translate into yet.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.none--light--00",
+          "caption": "No catalogue",
+          "file": "frames/localise.none--light--00.webp",
+          "a11y": "a11y/localise.none--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.settings--light",
+      "group": "Overlays",
+      "title": "Preferences",
+      "intent": "Personal preferences: appearance, text, motion and shortcuts.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.settings--light--00",
+          "caption": "Preferences",
+          "file": "frames/overlay.settings--light--00.webp",
+          "a11y": "a11y/overlay.settings--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.commands--light",
+      "group": "Overlays",
+      "title": "Command picker",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.commands--light--00",
+          "caption": "Command picker",
+          "file": "frames/overlay.commands--light--00.webp",
+          "a11y": "a11y/overlay.commands--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.goto--light",
+      "group": "Overlays",
+      "title": "Go to beat",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.goto--light--00",
+          "caption": "Go to beat",
+          "file": "frames/overlay.goto--light--00.webp",
+          "a11y": "a11y/overlay.goto--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.find--light",
+      "group": "Overlays",
+      "title": "Find in project",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.find--light--00",
+          "caption": "Find in project",
+          "file": "frames/overlay.find--light--00.webp",
+          "a11y": "a11y/overlay.find--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.passages--light",
+      "group": "Overlays",
+      "title": "Passage lookup",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.passages--light--00",
+          "caption": "Passage lookup",
+          "file": "frames/overlay.passages--light--00.webp",
+          "a11y": "a11y/overlay.passages--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.backdrop-hatch--light",
+      "group": "Overlays",
+      "title": "Command picker over the hatch backdrop",
+      "intent": "The maintainer's comparison: the modal dim under a 45° paper hatch instead of the shipped dot screen.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.backdrop-hatch--light--00",
+          "caption": "Command picker, hatch backdrop",
+          "file": "frames/overlay.backdrop-hatch--light--00.webp",
+          "a11y": "a11y/overlay.backdrop-hatch--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.close--light",
+      "group": "Overlays",
+      "title": "Close with unsaved work",
+      "intent": "A consequential decision: wording, safe default and button weight.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.close--light--00",
+          "caption": "Close decision",
+          "file": "frames/overlay.close--light--00.webp",
+          "a11y": "a11y/overlay.close--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "preview.configure--light",
+      "group": "Workspaces",
+      "title": "Configure preview slip",
+      "intent": "The next run's inputs on an anchored slip over the running preview, which stays in place beneath it.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "preview.configure--light--00",
+          "caption": "Configure preview",
+          "file": "frames/preview.configure--light--00.webp",
+          "a11y": "a11y/preview.configure--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.disk-changed--light",
+      "group": "Workspaces",
+      "title": "Disk change banner",
+      "intent": "A change made outside Writer, as a banner at the top of the sheet with Compare, Keep mine and Use disk version.",
+      "variant": "light",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.disk-changed--light--00",
+          "caption": "Changed on disk",
+          "file": "frames/script.disk-changed--light--00.webp",
+          "a11y": "a11y/script.disk-changed--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.build-result--light",
+      "group": "Workspaces",
+      "title": "Build result slip",
+      "intent": "Build as a command: the writing view stays, and the result waits on a slip above the status line; a failure offers its report.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/script.build-result--light.webp",
+      "frames": [
+        {
+          "name": "script.build-result--light--00",
+          "caption": "Built",
+          "file": "frames/script.build-result--light--00.webp",
+          "a11y": "a11y/script.build-result--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--light--01",
+          "caption": "Build did not complete",
+          "file": "frames/script.build-result--light--01.webp",
+          "a11y": "a11y/script.build-result--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--light--02",
+          "caption": "Build options",
+          "file": "frames/script.build-result--light--02.webp",
+          "a11y": "a11y/script.build-result--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.rename--light",
+      "group": "Script",
+      "title": "Inline rename",
+      "intent": "F2 turns the selected beat's heading, or a double-click its sidebar row, into a field, and Rename beat in Commands asks which beat first; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/script.rename--light.webp",
+      "frames": [
+        {
+          "name": "script.rename--light--00",
+          "caption": "Renaming in place",
+          "file": "frames/script.rename--light--00.webp",
+          "a11y": "a11y/script.rename--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--light--01",
+          "caption": "What the rename changes",
+          "file": "frames/script.rename--light--01.webp",
+          "a11y": "a11y/script.rename--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--light--02",
+          "caption": "Renaming in the sidebar",
+          "file": "frames/script.rename--light--02.webp",
+          "a11y": "a11y/script.rename--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--light--03",
+          "caption": "What the rename changes, from the sidebar",
+          "file": "frames/script.rename--light--03.webp",
+          "a11y": "a11y/script.rename--light--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--light--04",
+          "caption": "Rename beat from Commands: which beat",
+          "file": "frames/script.rename--light--04.webp",
+          "a11y": "a11y/script.rename--light--04.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.rename--light",
+      "group": "Map",
+      "title": "Inline rename on a card",
+      "intent": "F2 or a double-click turns a card's title into a field; the consequence slip hangs under the card, inside the map.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/map.rename--light.webp",
+      "frames": [
+        {
+          "name": "map.rename--light--00",
+          "caption": "Renaming a card",
+          "file": "frames/map.rename--light--00.webp",
+          "a11y": "a11y/map.rename--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "map.rename--light--01",
+          "caption": "What the rename changes",
+          "file": "frames/map.rename--light--01.webp",
+          "a11y": "a11y/map.rename--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.choices--light",
+      "group": "Script",
+      "title": "Insertion, speaker and destination slips",
+      "intent": "After the beat, + Line and + Reply insert after the passage being written; its speaker label or destination is the control whose choice opens as a slip hanging from it, on the current value.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/script.choices--light.webp",
+      "frames": [
+        {
+          "name": "script.choices--light--00",
+          "caption": "Speaker",
+          "file": "frames/script.choices--light--00.webp",
+          "a11y": "a11y/script.choices--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.choices--light--01",
+          "caption": "Destination",
+          "file": "frames/script.choices--light--01.webp",
+          "a11y": "a11y/script.choices--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.examples--light",
+      "group": "Transitions",
+      "title": "Welcome to examples",
+      "intent": "Arrival: from the welcome screen into temporary examples.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/flow.examples--light.webp",
+      "frames": [
+        {
+          "name": "flow.examples--light--00",
+          "caption": "Welcome",
+          "file": "frames/flow.examples--light--00.webp",
+          "a11y": "a11y/flow.examples--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.examples--light--01",
+          "caption": "Hovering the examples action",
+          "file": "frames/flow.examples--light--01.webp",
+          "a11y": "a11y/flow.examples--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.examples--light--02",
+          "caption": "Examples open",
+          "file": "frames/flow.examples--light--02.webp",
+          "a11y": "a11y/flow.examples--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.workspaces--light",
+      "group": "Transitions",
+      "title": "Switching workspaces",
+      "intent": "Script to Map to Split and back: continuity of place and orientation.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/flow.workspaces--light.webp",
+      "frames": [
+        {
+          "name": "flow.workspaces--light--00",
+          "caption": "Script",
+          "file": "frames/flow.workspaces--light--00.webp",
+          "a11y": "a11y/flow.workspaces--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.workspaces--light--01",
+          "caption": "Map",
+          "file": "frames/flow.workspaces--light--01.webp",
+          "a11y": "a11y/flow.workspaces--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.workspaces--light--02",
+          "caption": "Split",
+          "file": "frames/flow.workspaces--light--02.webp",
+          "a11y": "a11y/flow.workspaces--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.workspaces--light--03",
+          "caption": "Back to script",
+          "file": "frames/flow.workspaces--light--03.webp",
+          "a11y": "a11y/flow.workspaces--light--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.commands--light",
+      "group": "Transitions",
+      "title": "Running a command",
+      "intent": "Open the command picker, filter it, and return: feedback at each step.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/flow.commands--light.webp",
+      "frames": [
+        {
+          "name": "flow.commands--light--00",
+          "caption": "Before",
+          "file": "frames/flow.commands--light--00.webp",
+          "a11y": "a11y/flow.commands--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.commands--light--01",
+          "caption": "Picker open",
+          "file": "frames/flow.commands--light--01.webp",
+          "a11y": "a11y/flow.commands--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.commands--light--02",
+          "caption": "Typed \"map\"",
+          "file": "frames/flow.commands--light--02.webp",
+          "a11y": "a11y/flow.commands--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.commands--light--03",
+          "caption": "Command ran",
+          "file": "frames/flow.commands--light--03.webp",
+          "a11y": "a11y/flow.commands--light--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.close--light",
+      "group": "Transitions",
+      "title": "Closing with unsaved work",
+      "intent": "Request close, see the decision, keep editing: focus lands safely.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/flow.close--light.webp",
+      "frames": [
+        {
+          "name": "flow.close--light--00",
+          "caption": "Editing",
+          "file": "frames/flow.close--light--00.webp",
+          "a11y": "a11y/flow.close--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.close--light--01",
+          "caption": "Close requested",
+          "file": "frames/flow.close--light--01.webp",
+          "a11y": "a11y/flow.close--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.close--light--02",
+          "caption": "Kept editing",
+          "file": "frames/flow.close--light--02.webp",
+          "a11y": "a11y/flow.close--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.controls--light",
+      "group": "Transitions",
+      "title": "Control states",
+      "intent": "Rest, hover, pressed and keyboard focus on app-bar controls: tactility and focus visibility.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/flow.controls--light.webp",
+      "frames": [
+        {
+          "name": "flow.controls--light--00",
+          "caption": "Rest",
+          "file": "frames/flow.controls--light--00.webp",
+          "a11y": "a11y/flow.controls--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.controls--light--01",
+          "caption": "Hover",
+          "file": "frames/flow.controls--light--01.webp",
+          "a11y": "a11y/flow.controls--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.controls--light--02",
+          "caption": "Pressed",
+          "file": "frames/flow.controls--light--02.webp",
+          "a11y": "a11y/flow.controls--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.controls--light--03",
+          "caption": "Keyboard focus",
+          "file": "frames/flow.controls--light--03.webp",
+          "a11y": "a11y/flow.controls--light--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.tab-walk--light",
+      "group": "Transitions",
+      "title": "Keyboard traversal",
+      "intent": "The first Tab stops from the manuscript: order, visibility and focus ring contrast.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/flow.tab-walk--light.webp",
+      "frames": [
+        {
+          "name": "flow.tab-walk--light--00",
+          "caption": "Tab 1",
+          "file": "frames/flow.tab-walk--light--00.webp",
+          "a11y": "a11y/flow.tab-walk--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--light--01",
+          "caption": "Tab 2",
+          "file": "frames/flow.tab-walk--light--01.webp",
+          "a11y": "a11y/flow.tab-walk--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--light--02",
+          "caption": "Tab 3",
+          "file": "frames/flow.tab-walk--light--02.webp",
+          "a11y": "a11y/flow.tab-walk--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--light--03",
+          "caption": "Tab 4",
+          "file": "frames/flow.tab-walk--light--03.webp",
+          "a11y": "a11y/flow.tab-walk--light--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--light--04",
+          "caption": "Tab 5",
+          "file": "frames/flow.tab-walk--light--04.webp",
+          "a11y": "a11y/flow.tab-walk--light--04.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--light--05",
+          "caption": "Tab 6",
+          "file": "frames/flow.tab-walk--light--05.webp",
+          "a11y": "a11y/flow.tab-walk--light--05.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--light--06",
+          "caption": "Tab 7",
+          "file": "frames/flow.tab-walk--light--06.webp",
+          "a11y": "a11y/flow.tab-walk--light--06.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--light--07",
+          "caption": "Tab 8",
+          "file": "frames/flow.tab-walk--light--07.webp",
+          "a11y": "a11y/flow.tab-walk--light--07.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.preview--light",
+      "group": "Transitions",
+      "title": "Previewing a scene",
+      "intent": "Start a trial and take the first reply: pacing and clarity of choice.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/flow.preview--light.webp",
+      "frames": [
+        {
+          "name": "flow.preview--light--00",
+          "caption": "Script",
+          "file": "frames/flow.preview--light--00.webp",
+          "a11y": "a11y/flow.preview--light--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.preview--light--01",
+          "caption": "Preview open",
+          "file": "frames/flow.preview--light--01.webp",
+          "a11y": "a11y/flow.preview--light--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.preview--light--02",
+          "caption": "Replies offered",
+          "file": "frames/flow.preview--light--02.webp",
+          "a11y": "a11y/flow.preview--light--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.preview--light--03",
+          "caption": "First reply taken",
+          "file": "frames/flow.preview--light--03.webp",
+          "a11y": "a11y/flow.preview--light--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "specimen.controls--light",
+      "group": "Specimen",
+      "title": "Component specimen",
+      "intent": "Every production control and type style on one page: the design system in isolation.",
+      "variant": "light",
+      "kind": "sequence",
+      "strip": "strips/specimen.controls--light.webp",
+      "frames": [
+        {
+          "name": "specimen.controls--light--00",
+          "caption": "At rest",
+          "file": "frames/specimen.controls--light--00.webp",
+          "a11y": "a11y/specimen.controls--light--00.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--01",
+          "caption": "Try scene: hover",
+          "file": "frames/specimen.controls--light--01.webp",
+          "a11y": "a11y/specimen.controls--light--01.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--02",
+          "caption": "Try scene: pressed",
+          "file": "frames/specimen.controls--light--02.webp",
+          "a11y": "a11y/specimen.controls--light--02.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--03",
+          "caption": "Add beat: hover",
+          "file": "frames/specimen.controls--light--03.webp",
+          "a11y": "a11y/specimen.controls--light--03.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--04",
+          "caption": "Add beat: pressed",
+          "file": "frames/specimen.controls--light--04.webp",
+          "a11y": "a11y/specimen.controls--light--04.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--05",
+          "caption": "Arrange automatically: hover",
+          "file": "frames/specimen.controls--light--05.webp",
+          "a11y": "a11y/specimen.controls--light--05.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--06",
+          "caption": "Arrange automatically: pressed",
+          "file": "frames/specimen.controls--light--06.webp",
+          "a11y": "a11y/specimen.controls--light--06.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--07",
+          "caption": "Search field focused",
+          "file": "frames/specimen.controls--light--07.webp",
+          "a11y": "a11y/specimen.controls--light--07.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--08",
+          "caption": "Primary action focused and hovered",
+          "file": "frames/specimen.controls--light--08.webp",
+          "a11y": "a11y/specimen.controls--light--08.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--light--09",
+          "caption": "Selected segment focused",
+          "file": "frames/specimen.controls--light--09.webp",
+          "a11y": "a11y/specimen.controls--light--09.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.welcome--dark",
+      "group": "Start",
+      "title": "Welcome, no project",
+      "intent": "First launch: the only surface before any project exists. Judge invitation, hierarchy and the print identity.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.welcome--dark--00",
+          "caption": "Welcome",
+          "file": "frames/start.welcome--dark--00.webp",
+          "a11y": "a11y/start.welcome--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.create--dark",
+      "group": "Start",
+      "title": "Welcome, creating a project",
+      "intent": "The create form with nothing typed yet: field labels, guidance and the disabled primary action.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.create--dark--00",
+          "caption": "Create form, empty",
+          "file": "frames/start.create--dark--00.webp",
+          "a11y": "a11y/start.create--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.starter--dark",
+      "group": "Script",
+      "title": "Script, new starter project",
+      "intent": "Empty state a new writer meets right after creating a project.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.starter--dark--00",
+          "caption": "Starter scene",
+          "file": "frames/script.starter--dark--00.webp",
+          "a11y": "a11y/script.starter--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.empty-beat--dark",
+      "group": "Script",
+      "title": "Script, beat with nothing written",
+      "intent": "Empty beat placeholder and the invitation to write the first line.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.empty-beat--dark--00",
+          "caption": "Empty beat",
+          "file": "frames/script.empty-beat--dark--00.webp",
+          "a11y": "a11y/script.empty-beat--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.blank-scene--dark",
+      "group": "Script",
+      "title": "Script, scene with no beats",
+      "intent": "A scene that is not valid yet: how the problem and its fix are presented.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.blank-scene--dark--00",
+          "caption": "Blank scene",
+          "file": "frames/script.blank-scene--dark--00.webp",
+          "a11y": "a11y/script.blank-scene--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.sample--dark",
+      "group": "Script",
+      "title": "Script, representative scene",
+      "intent": "Everyday reading and writing in a branching hub: speakers, replies, destinations, effects.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.sample--dark--00",
+          "caption": "Relay hub beat",
+          "file": "frames/script.sample--dark--00.webp",
+          "a11y": "a11y/script.sample--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.draft--dark",
+      "group": "Script",
+      "title": "Script, unapplied draft",
+      "intent": "Dirty state: how pending, unsaved work is signalled without alarm.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.draft--dark--00",
+          "caption": "Draft pending",
+          "file": "frames/script.draft--dark--00.webp",
+          "a11y": "a11y/script.draft--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.focus--dark",
+      "group": "Script",
+      "title": "Script, focus mode",
+      "intent": "Long-session writing with chrome reduced.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.focus--dark--00",
+          "caption": "Focus mode",
+          "file": "frames/script.focus--dark--00.webp",
+          "a11y": "a11y/script.focus--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.galley--dark",
+      "group": "Script",
+      "title": "Script, galley at a later beat",
+      "intent": "The continuous scene: a later beat brought to the top under the running head, read-only beats around it, and a focused beat heading.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/script.galley--dark.webp",
+      "frames": [
+        {
+          "name": "script.galley--dark--00",
+          "caption": "Station history under the running head",
+          "file": "frames/script.galley--dark--00.webp",
+          "a11y": "a11y/script.galley--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--dark--01",
+          "caption": "Next beat heading focused",
+          "file": "frames/script.galley--dark--01.webp",
+          "a11y": "a11y/script.galley--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--dark--02",
+          "caption": "Pump House continues to Courier Route",
+          "file": "frames/script.galley--dark--02.webp",
+          "a11y": "a11y/script.galley--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.long-scene--dark",
+      "group": "Script",
+      "title": "Script, a long scene's beat list",
+      "intent": "A scene of forty beats lists them in a scrolling list under its row, a half row showing there are more, kept on the selected later beat; then a beat row focused.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/script.long-scene--dark.webp",
+      "frames": [
+        {
+          "name": "script.long-scene--dark--00",
+          "caption": "Watch 24 kept in view",
+          "file": "frames/script.long-scene--dark--00.webp",
+          "a11y": "a11y/script.long-scene--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.long-scene--dark--01",
+          "caption": "A beat row focused",
+          "file": "frames/script.long-scene--dark--01.webp",
+          "a11y": "a11y/script.long-scene--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.marks--dark",
+      "group": "Script",
+      "title": "Script, margin marks",
+      "intent": "Unsaved work and a problem beside the beat, repeated in the scene list: the halftone dot, the error wedge, the crop marks.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.marks--dark--00",
+          "caption": "Unsaved line beside a problem wedge",
+          "file": "frames/script.marks--dark--00.webp",
+          "a11y": "a11y/script.marks--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.small-type--dark",
+      "group": "Script",
+      "title": "Script, smallest reading size",
+      "intent": "The galley grid at the smallest reading size: margin, measure and destination columns keep their proportions and floors.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.small-type--dark--00",
+          "caption": "Relay hub at 14px",
+          "file": "frames/script.small-type--dark--00.webp",
+          "a11y": "a11y/script.small-type--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.sample--dark",
+      "group": "Map",
+      "title": "Map, branching scene",
+      "intent": "How beats branch and return; card legibility and connection clarity.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.sample--dark--00",
+          "caption": "Floodgate map",
+          "file": "frames/map.sample--dark--00.webp",
+          "a11y": "a11y/map.sample--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.split--dark",
+      "group": "Map",
+      "title": "Split, script beside map",
+      "intent": "Two panes sharing the window: balance, divider and which pane leads.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.split--dark--00",
+          "caption": "Split workspace",
+          "file": "frames/map.split--dark--00.webp",
+          "a11y": "a11y/map.split--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "source.repair--dark",
+      "group": "Script",
+      "title": "Source needing repair",
+      "intent": "Malformed source: Writer hands repair to the external editor. Judge clarity and calm.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "source.repair--dark--00",
+          "caption": "Repair in your editor",
+          "file": "frames/source.repair--dark--00.webp",
+          "a11y": "a11y/source.repair--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "preview.start--dark",
+      "group": "Workspaces",
+      "title": "Preview, before a run",
+      "intent": "A trial of the scene that never runs game effects.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "preview.start--dark--00",
+          "caption": "Preview, before a run",
+          "file": "frames/preview.start--dark--00.webp",
+          "a11y": "a11y/preview.start--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.beat--dark",
+      "group": "Workspaces",
+      "title": "Localise, beat with a catalogue",
+      "intent": "Side-by-side translation with translated, variant and missing entries.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.beat--dark--00",
+          "caption": "Localise, beat with a catalogue",
+          "file": "frames/localise.beat--dark--00.webp",
+          "a11y": "a11y/localise.beat--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.queue--dark",
+      "group": "Workspaces",
+      "title": "Translations queue",
+      "intent": "The catalogue work queue and its filters.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.queue--dark--00",
+          "caption": "Translations queue",
+          "file": "frames/localise.queue--dark--00.webp",
+          "a11y": "a11y/localise.queue--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.build--dark",
+      "group": "Workspaces",
+      "title": "Build",
+      "intent": "Producing game data and reporting the result.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.build--dark--00",
+          "caption": "Build",
+          "file": "frames/tools.build--dark--00.webp",
+          "a11y": "a11y/tools.build--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.rename--dark",
+      "group": "Workspaces",
+      "title": "Rename",
+      "intent": "The fallback after a refused rename: the beat is fixed text, its new id prefilled, and the report says why.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.rename--dark--00",
+          "caption": "Rename",
+          "file": "frames/tools.rename--dark--00.webp",
+          "a11y": "a11y/tools.rename--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.declarations--dark",
+      "group": "Workspaces",
+      "title": "Declarations",
+      "intent": "Schema speakers, effects and variables.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.declarations--dark--00",
+          "caption": "Declarations",
+          "file": "frames/tools.declarations--dark--00.webp",
+          "a11y": "a11y/tools.declarations--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.disk--dark",
+      "group": "Workspaces",
+      "title": "Disk changes",
+      "intent": "Changes made outside Writer, offered for explicit comparison.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.disk--dark--00",
+          "caption": "Disk changes",
+          "file": "frames/tools.disk--dark--00.webp",
+          "a11y": "a11y/tools.disk--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.updates--dark",
+      "group": "Workspaces",
+      "title": "Source updates",
+      "intent": "Catalogue entries whose source text changed.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.updates--dark--00",
+          "caption": "Source updates",
+          "file": "frames/tools.updates--dark--00.webp",
+          "a11y": "a11y/tools.updates--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.none--dark",
+      "group": "Workspaces",
+      "title": "Localise, no catalogue yet",
+      "intent": "Empty state: a project with nothing to translate into yet.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.none--dark--00",
+          "caption": "No catalogue",
+          "file": "frames/localise.none--dark--00.webp",
+          "a11y": "a11y/localise.none--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.settings--dark",
+      "group": "Overlays",
+      "title": "Preferences",
+      "intent": "Personal preferences: appearance, text, motion and shortcuts.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.settings--dark--00",
+          "caption": "Preferences",
+          "file": "frames/overlay.settings--dark--00.webp",
+          "a11y": "a11y/overlay.settings--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.commands--dark",
+      "group": "Overlays",
+      "title": "Command picker",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.commands--dark--00",
+          "caption": "Command picker",
+          "file": "frames/overlay.commands--dark--00.webp",
+          "a11y": "a11y/overlay.commands--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.goto--dark",
+      "group": "Overlays",
+      "title": "Go to beat",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.goto--dark--00",
+          "caption": "Go to beat",
+          "file": "frames/overlay.goto--dark--00.webp",
+          "a11y": "a11y/overlay.goto--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.find--dark",
+      "group": "Overlays",
+      "title": "Find in project",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.find--dark--00",
+          "caption": "Find in project",
+          "file": "frames/overlay.find--dark--00.webp",
+          "a11y": "a11y/overlay.find--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.passages--dark",
+      "group": "Overlays",
+      "title": "Passage lookup",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.passages--dark--00",
+          "caption": "Passage lookup",
+          "file": "frames/overlay.passages--dark--00.webp",
+          "a11y": "a11y/overlay.passages--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.backdrop-hatch--dark",
+      "group": "Overlays",
+      "title": "Command picker over the hatch backdrop",
+      "intent": "The maintainer's comparison: the modal dim under a 45° paper hatch instead of the shipped dot screen.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.backdrop-hatch--dark--00",
+          "caption": "Command picker, hatch backdrop",
+          "file": "frames/overlay.backdrop-hatch--dark--00.webp",
+          "a11y": "a11y/overlay.backdrop-hatch--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.close--dark",
+      "group": "Overlays",
+      "title": "Close with unsaved work",
+      "intent": "A consequential decision: wording, safe default and button weight.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.close--dark--00",
+          "caption": "Close decision",
+          "file": "frames/overlay.close--dark--00.webp",
+          "a11y": "a11y/overlay.close--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "preview.configure--dark",
+      "group": "Workspaces",
+      "title": "Configure preview slip",
+      "intent": "The next run's inputs on an anchored slip over the running preview, which stays in place beneath it.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "preview.configure--dark--00",
+          "caption": "Configure preview",
+          "file": "frames/preview.configure--dark--00.webp",
+          "a11y": "a11y/preview.configure--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.disk-changed--dark",
+      "group": "Workspaces",
+      "title": "Disk change banner",
+      "intent": "A change made outside Writer, as a banner at the top of the sheet with Compare, Keep mine and Use disk version.",
+      "variant": "dark",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.disk-changed--dark--00",
+          "caption": "Changed on disk",
+          "file": "frames/script.disk-changed--dark--00.webp",
+          "a11y": "a11y/script.disk-changed--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.build-result--dark",
+      "group": "Workspaces",
+      "title": "Build result slip",
+      "intent": "Build as a command: the writing view stays, and the result waits on a slip above the status line; a failure offers its report.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/script.build-result--dark.webp",
+      "frames": [
+        {
+          "name": "script.build-result--dark--00",
+          "caption": "Built",
+          "file": "frames/script.build-result--dark--00.webp",
+          "a11y": "a11y/script.build-result--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--dark--01",
+          "caption": "Build did not complete",
+          "file": "frames/script.build-result--dark--01.webp",
+          "a11y": "a11y/script.build-result--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--dark--02",
+          "caption": "Build options",
+          "file": "frames/script.build-result--dark--02.webp",
+          "a11y": "a11y/script.build-result--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.rename--dark",
+      "group": "Script",
+      "title": "Inline rename",
+      "intent": "F2 turns the selected beat's heading, or a double-click its sidebar row, into a field, and Rename beat in Commands asks which beat first; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/script.rename--dark.webp",
+      "frames": [
+        {
+          "name": "script.rename--dark--00",
+          "caption": "Renaming in place",
+          "file": "frames/script.rename--dark--00.webp",
+          "a11y": "a11y/script.rename--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--dark--01",
+          "caption": "What the rename changes",
+          "file": "frames/script.rename--dark--01.webp",
+          "a11y": "a11y/script.rename--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--dark--02",
+          "caption": "Renaming in the sidebar",
+          "file": "frames/script.rename--dark--02.webp",
+          "a11y": "a11y/script.rename--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--dark--03",
+          "caption": "What the rename changes, from the sidebar",
+          "file": "frames/script.rename--dark--03.webp",
+          "a11y": "a11y/script.rename--dark--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--dark--04",
+          "caption": "Rename beat from Commands: which beat",
+          "file": "frames/script.rename--dark--04.webp",
+          "a11y": "a11y/script.rename--dark--04.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.rename--dark",
+      "group": "Map",
+      "title": "Inline rename on a card",
+      "intent": "F2 or a double-click turns a card's title into a field; the consequence slip hangs under the card, inside the map.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/map.rename--dark.webp",
+      "frames": [
+        {
+          "name": "map.rename--dark--00",
+          "caption": "Renaming a card",
+          "file": "frames/map.rename--dark--00.webp",
+          "a11y": "a11y/map.rename--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "map.rename--dark--01",
+          "caption": "What the rename changes",
+          "file": "frames/map.rename--dark--01.webp",
+          "a11y": "a11y/map.rename--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.choices--dark",
+      "group": "Script",
+      "title": "Insertion, speaker and destination slips",
+      "intent": "After the beat, + Line and + Reply insert after the passage being written; its speaker label or destination is the control whose choice opens as a slip hanging from it, on the current value.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/script.choices--dark.webp",
+      "frames": [
+        {
+          "name": "script.choices--dark--00",
+          "caption": "Speaker",
+          "file": "frames/script.choices--dark--00.webp",
+          "a11y": "a11y/script.choices--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.choices--dark--01",
+          "caption": "Destination",
+          "file": "frames/script.choices--dark--01.webp",
+          "a11y": "a11y/script.choices--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.examples--dark",
+      "group": "Transitions",
+      "title": "Welcome to examples",
+      "intent": "Arrival: from the welcome screen into temporary examples.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/flow.examples--dark.webp",
+      "frames": [
+        {
+          "name": "flow.examples--dark--00",
+          "caption": "Welcome",
+          "file": "frames/flow.examples--dark--00.webp",
+          "a11y": "a11y/flow.examples--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.examples--dark--01",
+          "caption": "Hovering the examples action",
+          "file": "frames/flow.examples--dark--01.webp",
+          "a11y": "a11y/flow.examples--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.examples--dark--02",
+          "caption": "Examples open",
+          "file": "frames/flow.examples--dark--02.webp",
+          "a11y": "a11y/flow.examples--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.workspaces--dark",
+      "group": "Transitions",
+      "title": "Switching workspaces",
+      "intent": "Script to Map to Split and back: continuity of place and orientation.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/flow.workspaces--dark.webp",
+      "frames": [
+        {
+          "name": "flow.workspaces--dark--00",
+          "caption": "Script",
+          "file": "frames/flow.workspaces--dark--00.webp",
+          "a11y": "a11y/flow.workspaces--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.workspaces--dark--01",
+          "caption": "Map",
+          "file": "frames/flow.workspaces--dark--01.webp",
+          "a11y": "a11y/flow.workspaces--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.workspaces--dark--02",
+          "caption": "Split",
+          "file": "frames/flow.workspaces--dark--02.webp",
+          "a11y": "a11y/flow.workspaces--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.workspaces--dark--03",
+          "caption": "Back to script",
+          "file": "frames/flow.workspaces--dark--03.webp",
+          "a11y": "a11y/flow.workspaces--dark--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.commands--dark",
+      "group": "Transitions",
+      "title": "Running a command",
+      "intent": "Open the command picker, filter it, and return: feedback at each step.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/flow.commands--dark.webp",
+      "frames": [
+        {
+          "name": "flow.commands--dark--00",
+          "caption": "Before",
+          "file": "frames/flow.commands--dark--00.webp",
+          "a11y": "a11y/flow.commands--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.commands--dark--01",
+          "caption": "Picker open",
+          "file": "frames/flow.commands--dark--01.webp",
+          "a11y": "a11y/flow.commands--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.commands--dark--02",
+          "caption": "Typed \"map\"",
+          "file": "frames/flow.commands--dark--02.webp",
+          "a11y": "a11y/flow.commands--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.commands--dark--03",
+          "caption": "Command ran",
+          "file": "frames/flow.commands--dark--03.webp",
+          "a11y": "a11y/flow.commands--dark--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.close--dark",
+      "group": "Transitions",
+      "title": "Closing with unsaved work",
+      "intent": "Request close, see the decision, keep editing: focus lands safely.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/flow.close--dark.webp",
+      "frames": [
+        {
+          "name": "flow.close--dark--00",
+          "caption": "Editing",
+          "file": "frames/flow.close--dark--00.webp",
+          "a11y": "a11y/flow.close--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.close--dark--01",
+          "caption": "Close requested",
+          "file": "frames/flow.close--dark--01.webp",
+          "a11y": "a11y/flow.close--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.close--dark--02",
+          "caption": "Kept editing",
+          "file": "frames/flow.close--dark--02.webp",
+          "a11y": "a11y/flow.close--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.controls--dark",
+      "group": "Transitions",
+      "title": "Control states",
+      "intent": "Rest, hover, pressed and keyboard focus on app-bar controls: tactility and focus visibility.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/flow.controls--dark.webp",
+      "frames": [
+        {
+          "name": "flow.controls--dark--00",
+          "caption": "Rest",
+          "file": "frames/flow.controls--dark--00.webp",
+          "a11y": "a11y/flow.controls--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.controls--dark--01",
+          "caption": "Hover",
+          "file": "frames/flow.controls--dark--01.webp",
+          "a11y": "a11y/flow.controls--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.controls--dark--02",
+          "caption": "Pressed",
+          "file": "frames/flow.controls--dark--02.webp",
+          "a11y": "a11y/flow.controls--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.controls--dark--03",
+          "caption": "Keyboard focus",
+          "file": "frames/flow.controls--dark--03.webp",
+          "a11y": "a11y/flow.controls--dark--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.tab-walk--dark",
+      "group": "Transitions",
+      "title": "Keyboard traversal",
+      "intent": "The first Tab stops from the manuscript: order, visibility and focus ring contrast.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/flow.tab-walk--dark.webp",
+      "frames": [
+        {
+          "name": "flow.tab-walk--dark--00",
+          "caption": "Tab 1",
+          "file": "frames/flow.tab-walk--dark--00.webp",
+          "a11y": "a11y/flow.tab-walk--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--dark--01",
+          "caption": "Tab 2",
+          "file": "frames/flow.tab-walk--dark--01.webp",
+          "a11y": "a11y/flow.tab-walk--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--dark--02",
+          "caption": "Tab 3",
+          "file": "frames/flow.tab-walk--dark--02.webp",
+          "a11y": "a11y/flow.tab-walk--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--dark--03",
+          "caption": "Tab 4",
+          "file": "frames/flow.tab-walk--dark--03.webp",
+          "a11y": "a11y/flow.tab-walk--dark--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--dark--04",
+          "caption": "Tab 5",
+          "file": "frames/flow.tab-walk--dark--04.webp",
+          "a11y": "a11y/flow.tab-walk--dark--04.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--dark--05",
+          "caption": "Tab 6",
+          "file": "frames/flow.tab-walk--dark--05.webp",
+          "a11y": "a11y/flow.tab-walk--dark--05.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--dark--06",
+          "caption": "Tab 7",
+          "file": "frames/flow.tab-walk--dark--06.webp",
+          "a11y": "a11y/flow.tab-walk--dark--06.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--dark--07",
+          "caption": "Tab 8",
+          "file": "frames/flow.tab-walk--dark--07.webp",
+          "a11y": "a11y/flow.tab-walk--dark--07.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.preview--dark",
+      "group": "Transitions",
+      "title": "Previewing a scene",
+      "intent": "Start a trial and take the first reply: pacing and clarity of choice.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/flow.preview--dark.webp",
+      "frames": [
+        {
+          "name": "flow.preview--dark--00",
+          "caption": "Script",
+          "file": "frames/flow.preview--dark--00.webp",
+          "a11y": "a11y/flow.preview--dark--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.preview--dark--01",
+          "caption": "Preview open",
+          "file": "frames/flow.preview--dark--01.webp",
+          "a11y": "a11y/flow.preview--dark--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.preview--dark--02",
+          "caption": "Replies offered",
+          "file": "frames/flow.preview--dark--02.webp",
+          "a11y": "a11y/flow.preview--dark--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.preview--dark--03",
+          "caption": "First reply taken",
+          "file": "frames/flow.preview--dark--03.webp",
+          "a11y": "a11y/flow.preview--dark--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "specimen.controls--dark",
+      "group": "Specimen",
+      "title": "Component specimen",
+      "intent": "Every production control and type style on one page: the design system in isolation.",
+      "variant": "dark",
+      "kind": "sequence",
+      "strip": "strips/specimen.controls--dark.webp",
+      "frames": [
+        {
+          "name": "specimen.controls--dark--00",
+          "caption": "At rest",
+          "file": "frames/specimen.controls--dark--00.webp",
+          "a11y": "a11y/specimen.controls--dark--00.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--01",
+          "caption": "Try scene: hover",
+          "file": "frames/specimen.controls--dark--01.webp",
+          "a11y": "a11y/specimen.controls--dark--01.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--02",
+          "caption": "Try scene: pressed",
+          "file": "frames/specimen.controls--dark--02.webp",
+          "a11y": "a11y/specimen.controls--dark--02.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--03",
+          "caption": "Add beat: hover",
+          "file": "frames/specimen.controls--dark--03.webp",
+          "a11y": "a11y/specimen.controls--dark--03.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--04",
+          "caption": "Add beat: pressed",
+          "file": "frames/specimen.controls--dark--04.webp",
+          "a11y": "a11y/specimen.controls--dark--04.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--05",
+          "caption": "Arrange automatically: hover",
+          "file": "frames/specimen.controls--dark--05.webp",
+          "a11y": "a11y/specimen.controls--dark--05.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--06",
+          "caption": "Arrange automatically: pressed",
+          "file": "frames/specimen.controls--dark--06.webp",
+          "a11y": "a11y/specimen.controls--dark--06.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--07",
+          "caption": "Search field focused",
+          "file": "frames/specimen.controls--dark--07.webp",
+          "a11y": "a11y/specimen.controls--dark--07.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--08",
+          "caption": "Primary action focused and hovered",
+          "file": "frames/specimen.controls--dark--08.webp",
+          "a11y": "a11y/specimen.controls--dark--08.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--dark--09",
+          "caption": "Selected segment focused",
+          "file": "frames/specimen.controls--dark--09.webp",
+          "a11y": "a11y/specimen.controls--dark--09.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.welcome--mono",
+      "group": "Start",
+      "title": "Welcome, no project",
+      "intent": "First launch: the only surface before any project exists. Judge invitation, hierarchy and the print identity.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.welcome--mono--00",
+          "caption": "Welcome",
+          "file": "frames/start.welcome--mono--00.webp",
+          "a11y": "a11y/start.welcome--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.create--mono",
+      "group": "Start",
+      "title": "Welcome, creating a project",
+      "intent": "The create form with nothing typed yet: field labels, guidance and the disabled primary action.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.create--mono--00",
+          "caption": "Create form, empty",
+          "file": "frames/start.create--mono--00.webp",
+          "a11y": "a11y/start.create--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.empty-beat--mono",
+      "group": "Script",
+      "title": "Script, beat with nothing written",
+      "intent": "Empty beat placeholder and the invitation to write the first line.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.empty-beat--mono--00",
+          "caption": "Empty beat",
+          "file": "frames/script.empty-beat--mono--00.webp",
+          "a11y": "a11y/script.empty-beat--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.sample--mono",
+      "group": "Script",
+      "title": "Script, representative scene",
+      "intent": "Everyday reading and writing in a branching hub: speakers, replies, destinations, effects.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.sample--mono--00",
+          "caption": "Relay hub beat",
+          "file": "frames/script.sample--mono--00.webp",
+          "a11y": "a11y/script.sample--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.draft--mono",
+      "group": "Script",
+      "title": "Script, unapplied draft",
+      "intent": "Dirty state: how pending, unsaved work is signalled without alarm.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.draft--mono--00",
+          "caption": "Draft pending",
+          "file": "frames/script.draft--mono--00.webp",
+          "a11y": "a11y/script.draft--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.galley--mono",
+      "group": "Script",
+      "title": "Script, galley at a later beat",
+      "intent": "The continuous scene: a later beat brought to the top under the running head, read-only beats around it, and a focused beat heading.",
+      "variant": "mono",
+      "kind": "sequence",
+      "strip": "strips/script.galley--mono.webp",
+      "frames": [
+        {
+          "name": "script.galley--mono--00",
+          "caption": "Station history under the running head",
+          "file": "frames/script.galley--mono--00.webp",
+          "a11y": "a11y/script.galley--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--mono--01",
+          "caption": "Next beat heading focused",
+          "file": "frames/script.galley--mono--01.webp",
+          "a11y": "a11y/script.galley--mono--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--mono--02",
+          "caption": "Pump House continues to Courier Route",
+          "file": "frames/script.galley--mono--02.webp",
+          "a11y": "a11y/script.galley--mono--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.small-type--mono",
+      "group": "Script",
+      "title": "Script, smallest reading size",
+      "intent": "The galley grid at the smallest reading size: margin, measure and destination columns keep their proportions and floors.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.small-type--mono--00",
+          "caption": "Relay hub at 14px",
+          "file": "frames/script.small-type--mono--00.webp",
+          "a11y": "a11y/script.small-type--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.sample--mono",
+      "group": "Map",
+      "title": "Map, branching scene",
+      "intent": "How beats branch and return; card legibility and connection clarity.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.sample--mono--00",
+          "caption": "Floodgate map",
+          "file": "frames/map.sample--mono--00.webp",
+          "a11y": "a11y/map.sample--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.split--mono",
+      "group": "Map",
+      "title": "Split, script beside map",
+      "intent": "Two panes sharing the window: balance, divider and which pane leads.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.split--mono--00",
+          "caption": "Split workspace",
+          "file": "frames/map.split--mono--00.webp",
+          "a11y": "a11y/map.split--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "source.repair--mono",
+      "group": "Script",
+      "title": "Source needing repair",
+      "intent": "Malformed source: Writer hands repair to the external editor. Judge clarity and calm.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "source.repair--mono--00",
+          "caption": "Repair in your editor",
+          "file": "frames/source.repair--mono--00.webp",
+          "a11y": "a11y/source.repair--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.beat--mono",
+      "group": "Workspaces",
+      "title": "Localise, beat with a catalogue",
+      "intent": "Side-by-side translation with translated, variant and missing entries.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.beat--mono--00",
+          "caption": "Localise, beat with a catalogue",
+          "file": "frames/localise.beat--mono--00.webp",
+          "a11y": "a11y/localise.beat--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.queue--mono",
+      "group": "Workspaces",
+      "title": "Translations queue",
+      "intent": "The catalogue work queue and its filters.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.queue--mono--00",
+          "caption": "Translations queue",
+          "file": "frames/localise.queue--mono--00.webp",
+          "a11y": "a11y/localise.queue--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.build--mono",
+      "group": "Workspaces",
+      "title": "Build",
+      "intent": "Producing game data and reporting the result.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.build--mono--00",
+          "caption": "Build",
+          "file": "frames/tools.build--mono--00.webp",
+          "a11y": "a11y/tools.build--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.rename--mono",
+      "group": "Workspaces",
+      "title": "Rename",
+      "intent": "The fallback after a refused rename: the beat is fixed text, its new id prefilled, and the report says why.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.rename--mono--00",
+          "caption": "Rename",
+          "file": "frames/tools.rename--mono--00.webp",
+          "a11y": "a11y/tools.rename--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.declarations--mono",
+      "group": "Workspaces",
+      "title": "Declarations",
+      "intent": "Schema speakers, effects and variables.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.declarations--mono--00",
+          "caption": "Declarations",
+          "file": "frames/tools.declarations--mono--00.webp",
+          "a11y": "a11y/tools.declarations--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.disk--mono",
+      "group": "Workspaces",
+      "title": "Disk changes",
+      "intent": "Changes made outside Writer, offered for explicit comparison.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.disk--mono--00",
+          "caption": "Disk changes",
+          "file": "frames/tools.disk--mono--00.webp",
+          "a11y": "a11y/tools.disk--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.updates--mono",
+      "group": "Workspaces",
+      "title": "Source updates",
+      "intent": "Catalogue entries whose source text changed.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.updates--mono--00",
+          "caption": "Source updates",
+          "file": "frames/tools.updates--mono--00.webp",
+          "a11y": "a11y/tools.updates--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.none--mono",
+      "group": "Workspaces",
+      "title": "Localise, no catalogue yet",
+      "intent": "Empty state: a project with nothing to translate into yet.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.none--mono--00",
+          "caption": "No catalogue",
+          "file": "frames/localise.none--mono--00.webp",
+          "a11y": "a11y/localise.none--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.settings--mono",
+      "group": "Overlays",
+      "title": "Preferences",
+      "intent": "Personal preferences: appearance, text, motion and shortcuts.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.settings--mono--00",
+          "caption": "Preferences",
+          "file": "frames/overlay.settings--mono--00.webp",
+          "a11y": "a11y/overlay.settings--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.commands--mono",
+      "group": "Overlays",
+      "title": "Command picker",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.commands--mono--00",
+          "caption": "Command picker",
+          "file": "frames/overlay.commands--mono--00.webp",
+          "a11y": "a11y/overlay.commands--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.close--mono",
+      "group": "Overlays",
+      "title": "Close with unsaved work",
+      "intent": "A consequential decision: wording, safe default and button weight.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.close--mono--00",
+          "caption": "Close decision",
+          "file": "frames/overlay.close--mono--00.webp",
+          "a11y": "a11y/overlay.close--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "preview.configure--mono",
+      "group": "Workspaces",
+      "title": "Configure preview slip",
+      "intent": "The next run's inputs on an anchored slip over the running preview, which stays in place beneath it.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "preview.configure--mono--00",
+          "caption": "Configure preview",
+          "file": "frames/preview.configure--mono--00.webp",
+          "a11y": "a11y/preview.configure--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.disk-changed--mono",
+      "group": "Workspaces",
+      "title": "Disk change banner",
+      "intent": "A change made outside Writer, as a banner at the top of the sheet with Compare, Keep mine and Use disk version.",
+      "variant": "mono",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.disk-changed--mono--00",
+          "caption": "Changed on disk",
+          "file": "frames/script.disk-changed--mono--00.webp",
+          "a11y": "a11y/script.disk-changed--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.build-result--mono",
+      "group": "Workspaces",
+      "title": "Build result slip",
+      "intent": "Build as a command: the writing view stays, and the result waits on a slip above the status line; a failure offers its report.",
+      "variant": "mono",
+      "kind": "sequence",
+      "strip": "strips/script.build-result--mono.webp",
+      "frames": [
+        {
+          "name": "script.build-result--mono--00",
+          "caption": "Built",
+          "file": "frames/script.build-result--mono--00.webp",
+          "a11y": "a11y/script.build-result--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--mono--01",
+          "caption": "Build did not complete",
+          "file": "frames/script.build-result--mono--01.webp",
+          "a11y": "a11y/script.build-result--mono--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--mono--02",
+          "caption": "Build options",
+          "file": "frames/script.build-result--mono--02.webp",
+          "a11y": "a11y/script.build-result--mono--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.rename--mono",
+      "group": "Script",
+      "title": "Inline rename",
+      "intent": "F2 turns the selected beat's heading, or a double-click its sidebar row, into a field, and Rename beat in Commands asks which beat first; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
+      "variant": "mono",
+      "kind": "sequence",
+      "strip": "strips/script.rename--mono.webp",
+      "frames": [
+        {
+          "name": "script.rename--mono--00",
+          "caption": "Renaming in place",
+          "file": "frames/script.rename--mono--00.webp",
+          "a11y": "a11y/script.rename--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--mono--01",
+          "caption": "What the rename changes",
+          "file": "frames/script.rename--mono--01.webp",
+          "a11y": "a11y/script.rename--mono--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--mono--02",
+          "caption": "Renaming in the sidebar",
+          "file": "frames/script.rename--mono--02.webp",
+          "a11y": "a11y/script.rename--mono--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--mono--03",
+          "caption": "What the rename changes, from the sidebar",
+          "file": "frames/script.rename--mono--03.webp",
+          "a11y": "a11y/script.rename--mono--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--mono--04",
+          "caption": "Rename beat from Commands: which beat",
+          "file": "frames/script.rename--mono--04.webp",
+          "a11y": "a11y/script.rename--mono--04.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.rename--mono",
+      "group": "Map",
+      "title": "Inline rename on a card",
+      "intent": "F2 or a double-click turns a card's title into a field; the consequence slip hangs under the card, inside the map.",
+      "variant": "mono",
+      "kind": "sequence",
+      "strip": "strips/map.rename--mono.webp",
+      "frames": [
+        {
+          "name": "map.rename--mono--00",
+          "caption": "Renaming a card",
+          "file": "frames/map.rename--mono--00.webp",
+          "a11y": "a11y/map.rename--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "map.rename--mono--01",
+          "caption": "What the rename changes",
+          "file": "frames/map.rename--mono--01.webp",
+          "a11y": "a11y/map.rename--mono--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.choices--mono",
+      "group": "Script",
+      "title": "Insertion, speaker and destination slips",
+      "intent": "After the beat, + Line and + Reply insert after the passage being written; its speaker label or destination is the control whose choice opens as a slip hanging from it, on the current value.",
+      "variant": "mono",
+      "kind": "sequence",
+      "strip": "strips/script.choices--mono.webp",
+      "frames": [
+        {
+          "name": "script.choices--mono--00",
+          "caption": "Speaker",
+          "file": "frames/script.choices--mono--00.webp",
+          "a11y": "a11y/script.choices--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.choices--mono--01",
+          "caption": "Destination",
+          "file": "frames/script.choices--mono--01.webp",
+          "a11y": "a11y/script.choices--mono--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "flow.tab-walk--mono",
+      "group": "Transitions",
+      "title": "Keyboard traversal",
+      "intent": "The first Tab stops from the manuscript: order, visibility and focus ring contrast.",
+      "variant": "mono",
+      "kind": "sequence",
+      "strip": "strips/flow.tab-walk--mono.webp",
+      "frames": [
+        {
+          "name": "flow.tab-walk--mono--00",
+          "caption": "Tab 1",
+          "file": "frames/flow.tab-walk--mono--00.webp",
+          "a11y": "a11y/flow.tab-walk--mono--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--mono--01",
+          "caption": "Tab 2",
+          "file": "frames/flow.tab-walk--mono--01.webp",
+          "a11y": "a11y/flow.tab-walk--mono--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--mono--02",
+          "caption": "Tab 3",
+          "file": "frames/flow.tab-walk--mono--02.webp",
+          "a11y": "a11y/flow.tab-walk--mono--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--mono--03",
+          "caption": "Tab 4",
+          "file": "frames/flow.tab-walk--mono--03.webp",
+          "a11y": "a11y/flow.tab-walk--mono--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--mono--04",
+          "caption": "Tab 5",
+          "file": "frames/flow.tab-walk--mono--04.webp",
+          "a11y": "a11y/flow.tab-walk--mono--04.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--mono--05",
+          "caption": "Tab 6",
+          "file": "frames/flow.tab-walk--mono--05.webp",
+          "a11y": "a11y/flow.tab-walk--mono--05.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--mono--06",
+          "caption": "Tab 7",
+          "file": "frames/flow.tab-walk--mono--06.webp",
+          "a11y": "a11y/flow.tab-walk--mono--06.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "flow.tab-walk--mono--07",
+          "caption": "Tab 8",
+          "file": "frames/flow.tab-walk--mono--07.webp",
+          "a11y": "a11y/flow.tab-walk--mono--07.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "specimen.controls--mono",
+      "group": "Specimen",
+      "title": "Component specimen",
+      "intent": "Every production control and type style on one page: the design system in isolation.",
+      "variant": "mono",
+      "kind": "sequence",
+      "strip": "strips/specimen.controls--mono.webp",
+      "frames": [
+        {
+          "name": "specimen.controls--mono--00",
+          "caption": "At rest",
+          "file": "frames/specimen.controls--mono--00.webp",
+          "a11y": "a11y/specimen.controls--mono--00.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--01",
+          "caption": "Try scene: hover",
+          "file": "frames/specimen.controls--mono--01.webp",
+          "a11y": "a11y/specimen.controls--mono--01.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--02",
+          "caption": "Try scene: pressed",
+          "file": "frames/specimen.controls--mono--02.webp",
+          "a11y": "a11y/specimen.controls--mono--02.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--03",
+          "caption": "Add beat: hover",
+          "file": "frames/specimen.controls--mono--03.webp",
+          "a11y": "a11y/specimen.controls--mono--03.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--04",
+          "caption": "Add beat: pressed",
+          "file": "frames/specimen.controls--mono--04.webp",
+          "a11y": "a11y/specimen.controls--mono--04.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--05",
+          "caption": "Arrange automatically: hover",
+          "file": "frames/specimen.controls--mono--05.webp",
+          "a11y": "a11y/specimen.controls--mono--05.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--06",
+          "caption": "Arrange automatically: pressed",
+          "file": "frames/specimen.controls--mono--06.webp",
+          "a11y": "a11y/specimen.controls--mono--06.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--07",
+          "caption": "Search field focused",
+          "file": "frames/specimen.controls--mono--07.webp",
+          "a11y": "a11y/specimen.controls--mono--07.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--08",
+          "caption": "Primary action focused and hovered",
+          "file": "frames/specimen.controls--mono--08.webp",
+          "a11y": "a11y/specimen.controls--mono--08.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "specimen.controls--mono--09",
+          "caption": "Selected segment focused",
+          "file": "frames/specimen.controls--mono--09.webp",
+          "a11y": "a11y/specimen.controls--mono--09.json",
+          "size": "1200x2200",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.welcome--min",
+      "group": "Start",
+      "title": "Welcome, no project",
+      "intent": "First launch: the only surface before any project exists. Judge invitation, hierarchy and the print identity.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.welcome--min--00",
+          "caption": "Welcome",
+          "file": "frames/start.welcome--min--00.webp",
+          "a11y": "a11y/start.welcome--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.create--min",
+      "group": "Start",
+      "title": "Welcome, creating a project",
+      "intent": "The create form with nothing typed yet: field labels, guidance and the disabled primary action.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.create--min--00",
+          "caption": "Create form, empty",
+          "file": "frames/start.create--min--00.webp",
+          "a11y": "a11y/start.create--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.empty-beat--min",
+      "group": "Script",
+      "title": "Script, beat with nothing written",
+      "intent": "Empty beat placeholder and the invitation to write the first line.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.empty-beat--min--00",
+          "caption": "Empty beat",
+          "file": "frames/script.empty-beat--min--00.webp",
+          "a11y": "a11y/script.empty-beat--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.sample--min",
+      "group": "Script",
+      "title": "Script, representative scene",
+      "intent": "Everyday reading and writing in a branching hub: speakers, replies, destinations, effects.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.sample--min--00",
+          "caption": "Relay hub beat",
+          "file": "frames/script.sample--min--00.webp",
+          "a11y": "a11y/script.sample--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.draft--min",
+      "group": "Script",
+      "title": "Script, unapplied draft",
+      "intent": "Dirty state: how pending, unsaved work is signalled without alarm.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.draft--min--00",
+          "caption": "Draft pending",
+          "file": "frames/script.draft--min--00.webp",
+          "a11y": "a11y/script.draft--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.galley--min",
+      "group": "Script",
+      "title": "Script, galley at a later beat",
+      "intent": "The continuous scene: a later beat brought to the top under the running head, read-only beats around it, and a focused beat heading.",
+      "variant": "min",
+      "kind": "sequence",
+      "strip": "strips/script.galley--min.webp",
+      "frames": [
+        {
+          "name": "script.galley--min--00",
+          "caption": "Station history under the running head",
+          "file": "frames/script.galley--min--00.webp",
+          "a11y": "a11y/script.galley--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--min--01",
+          "caption": "Next beat heading focused",
+          "file": "frames/script.galley--min--01.webp",
+          "a11y": "a11y/script.galley--min--01.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--min--02",
+          "caption": "Pump House continues to Courier Route",
+          "file": "frames/script.galley--min--02.webp",
+          "a11y": "a11y/script.galley--min--02.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.small-type--min",
+      "group": "Script",
+      "title": "Script, smallest reading size",
+      "intent": "The galley grid at the smallest reading size: margin, measure and destination columns keep their proportions and floors.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.small-type--min--00",
+          "caption": "Relay hub at 14px",
+          "file": "frames/script.small-type--min--00.webp",
+          "a11y": "a11y/script.small-type--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.sample--min",
+      "group": "Map",
+      "title": "Map, branching scene",
+      "intent": "How beats branch and return; card legibility and connection clarity.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.sample--min--00",
+          "caption": "Floodgate map",
+          "file": "frames/map.sample--min--00.webp",
+          "a11y": "a11y/map.sample--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.split--min",
+      "group": "Map",
+      "title": "Split, script beside map",
+      "intent": "Two panes sharing the window: balance, divider and which pane leads.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.split--min--00",
+          "caption": "Split workspace",
+          "file": "frames/map.split--min--00.webp",
+          "a11y": "a11y/map.split--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "source.repair--min",
+      "group": "Script",
+      "title": "Source needing repair",
+      "intent": "Malformed source: Writer hands repair to the external editor. Judge clarity and calm.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "source.repair--min--00",
+          "caption": "Repair in your editor",
+          "file": "frames/source.repair--min--00.webp",
+          "a11y": "a11y/source.repair--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.beat--min",
+      "group": "Workspaces",
+      "title": "Localise, beat with a catalogue",
+      "intent": "Side-by-side translation with translated, variant and missing entries.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.beat--min--00",
+          "caption": "Localise, beat with a catalogue",
+          "file": "frames/localise.beat--min--00.webp",
+          "a11y": "a11y/localise.beat--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.queue--min",
+      "group": "Workspaces",
+      "title": "Translations queue",
+      "intent": "The catalogue work queue and its filters.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.queue--min--00",
+          "caption": "Translations queue",
+          "file": "frames/localise.queue--min--00.webp",
+          "a11y": "a11y/localise.queue--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.build--min",
+      "group": "Workspaces",
+      "title": "Build",
+      "intent": "Producing game data and reporting the result.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.build--min--00",
+          "caption": "Build",
+          "file": "frames/tools.build--min--00.webp",
+          "a11y": "a11y/tools.build--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.rename--min",
+      "group": "Workspaces",
+      "title": "Rename",
+      "intent": "The fallback after a refused rename: the beat is fixed text, its new id prefilled, and the report says why.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.rename--min--00",
+          "caption": "Rename",
+          "file": "frames/tools.rename--min--00.webp",
+          "a11y": "a11y/tools.rename--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.declarations--min",
+      "group": "Workspaces",
+      "title": "Declarations",
+      "intent": "Schema speakers, effects and variables.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.declarations--min--00",
+          "caption": "Declarations",
+          "file": "frames/tools.declarations--min--00.webp",
+          "a11y": "a11y/tools.declarations--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.disk--min",
+      "group": "Workspaces",
+      "title": "Disk changes",
+      "intent": "Changes made outside Writer, offered for explicit comparison.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.disk--min--00",
+          "caption": "Disk changes",
+          "file": "frames/tools.disk--min--00.webp",
+          "a11y": "a11y/tools.disk--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.updates--min",
+      "group": "Workspaces",
+      "title": "Source updates",
+      "intent": "Catalogue entries whose source text changed.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.updates--min--00",
+          "caption": "Source updates",
+          "file": "frames/tools.updates--min--00.webp",
+          "a11y": "a11y/tools.updates--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.none--min",
+      "group": "Workspaces",
+      "title": "Localise, no catalogue yet",
+      "intent": "Empty state: a project with nothing to translate into yet.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.none--min--00",
+          "caption": "No catalogue",
+          "file": "frames/localise.none--min--00.webp",
+          "a11y": "a11y/localise.none--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.settings--min",
+      "group": "Overlays",
+      "title": "Preferences",
+      "intent": "Personal preferences: appearance, text, motion and shortcuts.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.settings--min--00",
+          "caption": "Preferences",
+          "file": "frames/overlay.settings--min--00.webp",
+          "a11y": "a11y/overlay.settings--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.commands--min",
+      "group": "Overlays",
+      "title": "Command picker",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.commands--min--00",
+          "caption": "Command picker",
+          "file": "frames/overlay.commands--min--00.webp",
+          "a11y": "a11y/overlay.commands--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.close--min",
+      "group": "Overlays",
+      "title": "Close with unsaved work",
+      "intent": "A consequential decision: wording, safe default and button weight.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.close--min--00",
+          "caption": "Close decision",
+          "file": "frames/overlay.close--min--00.webp",
+          "a11y": "a11y/overlay.close--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "preview.configure--min",
+      "group": "Workspaces",
+      "title": "Configure preview slip",
+      "intent": "The next run's inputs on an anchored slip over the running preview, which stays in place beneath it.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "preview.configure--min--00",
+          "caption": "Configure preview",
+          "file": "frames/preview.configure--min--00.webp",
+          "a11y": "a11y/preview.configure--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.disk-changed--min",
+      "group": "Workspaces",
+      "title": "Disk change banner",
+      "intent": "A change made outside Writer, as a banner at the top of the sheet with Compare, Keep mine and Use disk version.",
+      "variant": "min",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.disk-changed--min--00",
+          "caption": "Changed on disk",
+          "file": "frames/script.disk-changed--min--00.webp",
+          "a11y": "a11y/script.disk-changed--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.build-result--min",
+      "group": "Workspaces",
+      "title": "Build result slip",
+      "intent": "Build as a command: the writing view stays, and the result waits on a slip above the status line; a failure offers its report.",
+      "variant": "min",
+      "kind": "sequence",
+      "strip": "strips/script.build-result--min.webp",
+      "frames": [
+        {
+          "name": "script.build-result--min--00",
+          "caption": "Built",
+          "file": "frames/script.build-result--min--00.webp",
+          "a11y": "a11y/script.build-result--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--min--01",
+          "caption": "Build did not complete",
+          "file": "frames/script.build-result--min--01.webp",
+          "a11y": "a11y/script.build-result--min--01.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--min--02",
+          "caption": "Build options",
+          "file": "frames/script.build-result--min--02.webp",
+          "a11y": "a11y/script.build-result--min--02.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.rename--min",
+      "group": "Script",
+      "title": "Inline rename",
+      "intent": "F2 turns the selected beat's heading, or a double-click its sidebar row, into a field, and Rename beat in Commands asks which beat first; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
+      "variant": "min",
+      "kind": "sequence",
+      "strip": "strips/script.rename--min.webp",
+      "frames": [
+        {
+          "name": "script.rename--min--00",
+          "caption": "Renaming in place",
+          "file": "frames/script.rename--min--00.webp",
+          "a11y": "a11y/script.rename--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--min--01",
+          "caption": "What the rename changes",
+          "file": "frames/script.rename--min--01.webp",
+          "a11y": "a11y/script.rename--min--01.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--min--02",
+          "caption": "Renaming in the sidebar",
+          "file": "frames/script.rename--min--02.webp",
+          "a11y": "a11y/script.rename--min--02.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--min--03",
+          "caption": "What the rename changes, from the sidebar",
+          "file": "frames/script.rename--min--03.webp",
+          "a11y": "a11y/script.rename--min--03.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--min--04",
+          "caption": "Rename beat from Commands: which beat",
+          "file": "frames/script.rename--min--04.webp",
+          "a11y": "a11y/script.rename--min--04.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.rename--min",
+      "group": "Map",
+      "title": "Inline rename on a card",
+      "intent": "F2 or a double-click turns a card's title into a field; the consequence slip hangs under the card, inside the map.",
+      "variant": "min",
+      "kind": "sequence",
+      "strip": "strips/map.rename--min.webp",
+      "frames": [
+        {
+          "name": "map.rename--min--00",
+          "caption": "Renaming a card",
+          "file": "frames/map.rename--min--00.webp",
+          "a11y": "a11y/map.rename--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "map.rename--min--01",
+          "caption": "What the rename changes",
+          "file": "frames/map.rename--min--01.webp",
+          "a11y": "a11y/map.rename--min--01.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.choices--min",
+      "group": "Script",
+      "title": "Insertion, speaker and destination slips",
+      "intent": "After the beat, + Line and + Reply insert after the passage being written; its speaker label or destination is the control whose choice opens as a slip hanging from it, on the current value.",
+      "variant": "min",
+      "kind": "sequence",
+      "strip": "strips/script.choices--min.webp",
+      "frames": [
+        {
+          "name": "script.choices--min--00",
+          "caption": "Speaker",
+          "file": "frames/script.choices--min--00.webp",
+          "a11y": "a11y/script.choices--min--00.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.choices--min--01",
+          "caption": "Destination",
+          "file": "frames/script.choices--min--01.webp",
+          "a11y": "a11y/script.choices--min--01.json",
+          "size": "900x650",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.welcome--ui200",
+      "group": "Start",
+      "title": "Welcome, no project",
+      "intent": "First launch: the only surface before any project exists. Judge invitation, hierarchy and the print identity.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.welcome--ui200--00",
+          "caption": "Welcome",
+          "file": "frames/start.welcome--ui200--00.webp",
+          "a11y": "a11y/start.welcome--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "start.create--ui200",
+      "group": "Start",
+      "title": "Welcome, creating a project",
+      "intent": "The create form with nothing typed yet: field labels, guidance and the disabled primary action.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "start.create--ui200--00",
+          "caption": "Create form, empty",
+          "file": "frames/start.create--ui200--00.webp",
+          "a11y": "a11y/start.create--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.empty-beat--ui200",
+      "group": "Script",
+      "title": "Script, beat with nothing written",
+      "intent": "Empty beat placeholder and the invitation to write the first line.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.empty-beat--ui200--00",
+          "caption": "Empty beat",
+          "file": "frames/script.empty-beat--ui200--00.webp",
+          "a11y": "a11y/script.empty-beat--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.sample--ui200",
+      "group": "Script",
+      "title": "Script, representative scene",
+      "intent": "Everyday reading and writing in a branching hub: speakers, replies, destinations, effects.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.sample--ui200--00",
+          "caption": "Relay hub beat",
+          "file": "frames/script.sample--ui200--00.webp",
+          "a11y": "a11y/script.sample--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.draft--ui200",
+      "group": "Script",
+      "title": "Script, unapplied draft",
+      "intent": "Dirty state: how pending, unsaved work is signalled without alarm.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.draft--ui200--00",
+          "caption": "Draft pending",
+          "file": "frames/script.draft--ui200--00.webp",
+          "a11y": "a11y/script.draft--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.galley--ui200",
+      "group": "Script",
+      "title": "Script, galley at a later beat",
+      "intent": "The continuous scene: a later beat brought to the top under the running head, read-only beats around it, and a focused beat heading.",
+      "variant": "ui200",
+      "kind": "sequence",
+      "strip": "strips/script.galley--ui200.webp",
+      "frames": [
+        {
+          "name": "script.galley--ui200--00",
+          "caption": "Station history under the running head",
+          "file": "frames/script.galley--ui200--00.webp",
+          "a11y": "a11y/script.galley--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--ui200--01",
+          "caption": "Next beat heading focused",
+          "file": "frames/script.galley--ui200--01.webp",
+          "a11y": "a11y/script.galley--ui200--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.galley--ui200--02",
+          "caption": "Pump House continues to Courier Route",
+          "file": "frames/script.galley--ui200--02.webp",
+          "a11y": "a11y/script.galley--ui200--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.small-type--ui200",
+      "group": "Script",
+      "title": "Script, smallest reading size",
+      "intent": "The galley grid at the smallest reading size: margin, measure and destination columns keep their proportions and floors.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.small-type--ui200--00",
+          "caption": "Relay hub at 14px",
+          "file": "frames/script.small-type--ui200--00.webp",
+          "a11y": "a11y/script.small-type--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.sample--ui200",
+      "group": "Map",
+      "title": "Map, branching scene",
+      "intent": "How beats branch and return; card legibility and connection clarity.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.sample--ui200--00",
+          "caption": "Floodgate map",
+          "file": "frames/map.sample--ui200--00.webp",
+          "a11y": "a11y/map.sample--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.split--ui200",
+      "group": "Map",
+      "title": "Split, script beside map",
+      "intent": "Two panes sharing the window: balance, divider and which pane leads.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "map.split--ui200--00",
+          "caption": "Split workspace",
+          "file": "frames/map.split--ui200--00.webp",
+          "a11y": "a11y/map.split--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "source.repair--ui200",
+      "group": "Script",
+      "title": "Source needing repair",
+      "intent": "Malformed source: Writer hands repair to the external editor. Judge clarity and calm.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "source.repair--ui200--00",
+          "caption": "Repair in your editor",
+          "file": "frames/source.repair--ui200--00.webp",
+          "a11y": "a11y/source.repair--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.beat--ui200",
+      "group": "Workspaces",
+      "title": "Localise, beat with a catalogue",
+      "intent": "Side-by-side translation with translated, variant and missing entries.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.beat--ui200--00",
+          "caption": "Localise, beat with a catalogue",
+          "file": "frames/localise.beat--ui200--00.webp",
+          "a11y": "a11y/localise.beat--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.queue--ui200",
+      "group": "Workspaces",
+      "title": "Translations queue",
+      "intent": "The catalogue work queue and its filters.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.queue--ui200--00",
+          "caption": "Translations queue",
+          "file": "frames/localise.queue--ui200--00.webp",
+          "a11y": "a11y/localise.queue--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.build--ui200",
+      "group": "Workspaces",
+      "title": "Build",
+      "intent": "Producing game data and reporting the result.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.build--ui200--00",
+          "caption": "Build",
+          "file": "frames/tools.build--ui200--00.webp",
+          "a11y": "a11y/tools.build--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.rename--ui200",
+      "group": "Workspaces",
+      "title": "Rename",
+      "intent": "The fallback after a refused rename: the beat is fixed text, its new id prefilled, and the report says why.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.rename--ui200--00",
+          "caption": "Rename",
+          "file": "frames/tools.rename--ui200--00.webp",
+          "a11y": "a11y/tools.rename--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.declarations--ui200",
+      "group": "Workspaces",
+      "title": "Declarations",
+      "intent": "Schema speakers, effects and variables.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.declarations--ui200--00",
+          "caption": "Declarations",
+          "file": "frames/tools.declarations--ui200--00.webp",
+          "a11y": "a11y/tools.declarations--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.disk--ui200",
+      "group": "Workspaces",
+      "title": "Disk changes",
+      "intent": "Changes made outside Writer, offered for explicit comparison.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.disk--ui200--00",
+          "caption": "Disk changes",
+          "file": "frames/tools.disk--ui200--00.webp",
+          "a11y": "a11y/tools.disk--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "tools.updates--ui200",
+      "group": "Workspaces",
+      "title": "Source updates",
+      "intent": "Catalogue entries whose source text changed.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "tools.updates--ui200--00",
+          "caption": "Source updates",
+          "file": "frames/tools.updates--ui200--00.webp",
+          "a11y": "a11y/tools.updates--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "localise.none--ui200",
+      "group": "Workspaces",
+      "title": "Localise, no catalogue yet",
+      "intent": "Empty state: a project with nothing to translate into yet.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "localise.none--ui200--00",
+          "caption": "No catalogue",
+          "file": "frames/localise.none--ui200--00.webp",
+          "a11y": "a11y/localise.none--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.settings--ui200",
+      "group": "Overlays",
+      "title": "Preferences",
+      "intent": "Personal preferences: appearance, text, motion and shortcuts.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.settings--ui200--00",
+          "caption": "Preferences",
+          "file": "frames/overlay.settings--ui200--00.webp",
+          "a11y": "a11y/overlay.settings--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.commands--ui200",
+      "group": "Overlays",
+      "title": "Command picker",
+      "intent": "Keyboard-first search over the open project, before anything is typed.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.commands--ui200--00",
+          "caption": "Command picker",
+          "file": "frames/overlay.commands--ui200--00.webp",
+          "a11y": "a11y/overlay.commands--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "overlay.close--ui200",
+      "group": "Overlays",
+      "title": "Close with unsaved work",
+      "intent": "A consequential decision: wording, safe default and button weight.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "overlay.close--ui200--00",
+          "caption": "Close decision",
+          "file": "frames/overlay.close--ui200--00.webp",
+          "a11y": "a11y/overlay.close--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "preview.configure--ui200",
+      "group": "Workspaces",
+      "title": "Configure preview slip",
+      "intent": "The next run's inputs on an anchored slip over the running preview, which stays in place beneath it.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "preview.configure--ui200--00",
+          "caption": "Configure preview",
+          "file": "frames/preview.configure--ui200--00.webp",
+          "a11y": "a11y/preview.configure--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.disk-changed--ui200",
+      "group": "Workspaces",
+      "title": "Disk change banner",
+      "intent": "A change made outside Writer, as a banner at the top of the sheet with Compare, Keep mine and Use disk version.",
+      "variant": "ui200",
+      "kind": "still",
+      "strip": null,
+      "frames": [
+        {
+          "name": "script.disk-changed--ui200--00",
+          "caption": "Changed on disk",
+          "file": "frames/script.disk-changed--ui200--00.webp",
+          "a11y": "a11y/script.disk-changed--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.build-result--ui200",
+      "group": "Workspaces",
+      "title": "Build result slip",
+      "intent": "Build as a command: the writing view stays, and the result waits on a slip above the status line; a failure offers its report.",
+      "variant": "ui200",
+      "kind": "sequence",
+      "strip": "strips/script.build-result--ui200.webp",
+      "frames": [
+        {
+          "name": "script.build-result--ui200--00",
+          "caption": "Built",
+          "file": "frames/script.build-result--ui200--00.webp",
+          "a11y": "a11y/script.build-result--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--ui200--01",
+          "caption": "Build did not complete",
+          "file": "frames/script.build-result--ui200--01.webp",
+          "a11y": "a11y/script.build-result--ui200--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.build-result--ui200--02",
+          "caption": "Build options",
+          "file": "frames/script.build-result--ui200--02.webp",
+          "a11y": "a11y/script.build-result--ui200--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.rename--ui200",
+      "group": "Script",
+      "title": "Inline rename",
+      "intent": "F2 turns the selected beat's heading, or a double-click its sidebar row, into a field, and Rename beat in Commands asks which beat first; Enter reviews the rename, and a slip under the field says what it changes before Rename stages it.",
+      "variant": "ui200",
+      "kind": "sequence",
+      "strip": "strips/script.rename--ui200.webp",
+      "frames": [
+        {
+          "name": "script.rename--ui200--00",
+          "caption": "Renaming in place",
+          "file": "frames/script.rename--ui200--00.webp",
+          "a11y": "a11y/script.rename--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--ui200--01",
+          "caption": "What the rename changes",
+          "file": "frames/script.rename--ui200--01.webp",
+          "a11y": "a11y/script.rename--ui200--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--ui200--02",
+          "caption": "Renaming in the sidebar",
+          "file": "frames/script.rename--ui200--02.webp",
+          "a11y": "a11y/script.rename--ui200--02.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--ui200--03",
+          "caption": "What the rename changes, from the sidebar",
+          "file": "frames/script.rename--ui200--03.webp",
+          "a11y": "a11y/script.rename--ui200--03.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.rename--ui200--04",
+          "caption": "Rename beat from Commands: which beat",
+          "file": "frames/script.rename--ui200--04.webp",
+          "a11y": "a11y/script.rename--ui200--04.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "map.rename--ui200",
+      "group": "Map",
+      "title": "Inline rename on a card",
+      "intent": "F2 or a double-click turns a card's title into a field; the consequence slip hangs under the card, inside the map.",
+      "variant": "ui200",
+      "kind": "sequence",
+      "strip": "strips/map.rename--ui200.webp",
+      "frames": [
+        {
+          "name": "map.rename--ui200--00",
+          "caption": "Renaming a card",
+          "file": "frames/map.rename--ui200--00.webp",
+          "a11y": "a11y/map.rename--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "map.rename--ui200--01",
+          "caption": "What the rename changes",
+          "file": "frames/map.rename--ui200--01.webp",
+          "a11y": "a11y/map.rename--ui200--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    },
+    {
+      "id": "script.choices--ui200",
+      "group": "Script",
+      "title": "Insertion, speaker and destination slips",
+      "intent": "After the beat, + Line and + Reply insert after the passage being written; its speaker label or destination is the control whose choice opens as a slip hanging from it, on the current value.",
+      "variant": "ui200",
+      "kind": "sequence",
+      "strip": "strips/script.choices--ui200.webp",
+      "frames": [
+        {
+          "name": "script.choices--ui200--00",
+          "caption": "Speaker",
+          "file": "frames/script.choices--ui200--00.webp",
+          "a11y": "a11y/script.choices--ui200--00.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        },
+        {
+          "name": "script.choices--ui200--01",
+          "caption": "Destination",
+          "file": "frames/script.choices--ui200--01.webp",
+          "a11y": "a11y/script.choices--ui200--01.json",
+          "size": "1200x800",
+          "scale": 1.0,
+          "warnings": [],
+          "lint": []
+        }
+      ]
+    }
+  ]
+}
