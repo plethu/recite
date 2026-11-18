@@ -5,6 +5,7 @@
 use super::passage::{grid, margin, margin_label};
 use super::*;
 use crate::app::keyboard::SlipAnchor;
+use crate::keyed::column;
 use crate::presentation::control_inset;
 use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER, Grid};
 use crate::presentation::group::heading as heading_role;
@@ -59,16 +60,16 @@ pub(super) fn galley<V: WidgetView<Writer>>(
     let before = range
         .clone()
         .filter(|index| selected.is_some_and(|selected| *index < selected))
-        .map(|index| read_only(state, &grid, index, total, &problems).boxed())
+        .map(|index| keyed_beat(state, &grid, index, total, &problems))
         .collect::<Vec<_>>();
     let after = range
         .filter(|index| selected.is_none_or(|selected| *index > selected))
-        .map(|index| read_only(state, &grid, index, total, &problems).boxed())
+        .map(|index| keyed_beat(state, &grid, index, total, &problems))
         .collect::<Vec<_>>();
     let first = before.is_empty();
     flex_col((
         scene_title(state, &grid),
-        flex_col(before).gap(0.px()),
+        column(before).gap(0.px()),
         selected.filter(|_| !first).map(|_| rule(state, &grid)),
         // The selected beat carries crop marks at the corners of its heading and its rows.
         marked(
@@ -80,10 +81,25 @@ pub(super) fn galley<V: WidgetView<Writer>>(
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(0.px()),
         ),
-        flex_col(after).gap(0.px()),
+        column(after).gap(0.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(0.px())
+}
+
+/// A read-only beat keyed by its id, so stepping between beats rebuilds only the two whose role
+/// changes rather than every beat after a shifted position.
+fn keyed_beat(
+    state: &Writer,
+    grid: &Grid,
+    index: usize,
+    total: usize,
+    problems: &[(String, String)],
+) -> (String, Box<AnyWidgetView<Writer>>) {
+    (
+        beat_id(state, index),
+        read_only(state, grid, index, total, problems).boxed(),
+    )
 }
 
 /// The current beat's crop marks, kept within the clear paper around the beat: the sheet's pad
