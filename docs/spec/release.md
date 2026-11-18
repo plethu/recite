@@ -42,7 +42,7 @@ v1 excludes:
 ## 22. Recommended Milestones
 
 GitHub owns scheduling and completion state. Each outcome requires its exit evidence; §23 governs
-the final release.
+the final release. Milestones 5 and 6 gate Writer's own stable release, not serious v1.
 
 ### Milestone 1: Product Foundation and Maintainability
 
@@ -96,6 +96,16 @@ Numbered SemVer previews do not imply serious-v1 acceptance. The
 [release workflow](../../CONTRIBUTING.md#preparing-and-publishing-releases) owns immutable candidate
 identity, preparation, tags and publication; stable promotion requires fresh validation.
 
+Serious v1 covers the compiler, runtime, CLI, LSP, editor integrations and engine companions. Writer
+ships beside it as a preview on its own version line until its criteria below pass; a v1 candidate
+records Writer's current limits rather than waiting for them.
+
+Published previews make one promise before 1.0: dialogue source and author-visible IDs written for
+a published preview keep compiling, or the release that changes them ships an automated migration.
+Compiled assets, snapshots, the Rust API, the C ABI and Writer may change between minor versions;
+readers refuse unsupported versions under the
+[serialization policy](../serialization-compatibility.md).
+
 A serious-v1 candidate requires all of the following:
 
 - The complete gate and
@@ -113,6 +123,25 @@ A serious-v1 candidate requires all of the following:
 - CLI, LSP, text editors, Writer and preview use the shared authoring kernel rather than competing
   semantic models. VS Code/VSCodium, Neovim and Zed have tested setup and parity for declared
   capabilities.
+- Linux, Windows and macOS are supported for the CLI, LSP and editors. Engine companions may declare
+  narrower engine/platform matrices. Shared configuration resolves explicit
+  `$RECITE_CONFIG` or its platform location consistently and stays separate from project content and
+  generated files.
+- Authors can follow a documented edit → diagnostics → explicit ID insertion → watch rebuild →
+  engine import/refresh → restart loop, including each adapter's active-session policy.
+- Narrative-scale fixtures exercise compilation, validation, traversal, traces, extraction and
+  snapshot restore. Authoring, preview and runtime performance and memory are measured on named
+  profiles and protected by regression smoke checks under
+  [§19](quality.md#19-performance-and-benchmarks).
+- Godot, Bevy and Unity pass applicable conformance through their real hosts: assets, identities,
+  conditions, effect requests, saves, localisation, errors and refresh. The adapter contract
+  supports additional engines without changing core traversal semantics.
+- Public examples demonstrate headless CLI and real engine workflows. Adoption/migration guidance
+  supports evaluation against established dialogue tools and distinguishes conversion from manual
+  work; Clyde remains guidance-only.
+
+Writer's stable release additionally requires all of the following:
+
 - The complete [workbench contract](tooling.md#154-gui-workbench) works through source editing,
   guarded ID actions, diagnostics, standalone schema source editing, producer-backed navigation and
   regeneration, lossless gettext PO editing and preview. Generated manifests and unsupported
@@ -122,24 +151,10 @@ A serious-v1 candidate requires all of the following:
   progress/status, failure/retry, focus restoration, external-file/save conflicts and reduced
   motion. The GUI strategy decision, fallback and maintenance limits are recorded; automation does
   not replace hands-on acceptance (#237).
-- Linux, Windows and macOS are supported for the CLI, LSP, editors and workbench. Engine companions
-  may declare narrower engine/platform matrices. Shared configuration resolves explicit
-  `$RECITE_CONFIG` or its platform location consistently and stays separate from project content and
-  generated files.
-- Authors can follow a documented edit → diagnostics → explicit ID insertion → watch rebuild →
-  engine import/refresh → restart loop, including each adapter's active-session policy.
-- Narrative-scale fixtures exercise compilation, validation, traversal, traces, extraction and
-  snapshot restore. Authoring, preview, GUI startup/editing and runtime performance and memory are
-  measured on named profiles and protected by regression smoke checks under
-  [§19](quality.md#19-performance-and-benchmarks).
-- Godot, Bevy and Unity pass applicable conformance through their real hosts: assets, identities,
-  conditions, effect requests, saves, localisation, errors and refresh. The adapter contract
-  supports additional engines without changing core traversal semantics.
-- Public examples demonstrate headless CLI and real engine workflows. Adoption/migration guidance
-  supports evaluation against established dialogue tools and distinguishes conversion from manual
-  work; Clyde remains guidance-only.
+- Linux, Windows and macOS are supported for the workbench, with GUI startup/editing performance and
+  memory measured on named profiles.
 
 ## 24. Design Summary
 
 The [product contract](product.md) owns purpose, glossary and invariants. §23 requires the complete
-authoring-to-preview-to-engine workflow; headless runtime success alone does not establish v1.
+text-authoring-to-preview-to-engine workflow; headless runtime success alone does not establish v1.

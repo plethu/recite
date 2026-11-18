@@ -35,7 +35,9 @@ Use [Writer](apps/writer/README.md), or the
 [Zed](editors/zed/README.md). Engine integrations: [Bevy](crates/recite-bevy/README.md) ·
 [Godot](addons/recite/README.md) · [Unity](Packages/com.recite.dialogue/README.md).
 
-It's still a preview (`0.1.0`), so you'll need to build from source for now.
+It's still a preview (`0.1.0`), so you'll need to build from source for now. Scripts you write and
+their IDs will keep working from one release to the next, or come with a migration. Compiled files,
+saves and the APIs can still change before 1.0, and Writer is earlier along than the rest.
 
 [Docs](docs-site/src/content/docs/) · [Run the playground locally](docs-site/README.md). I haven't
 put the site up yet.
