@@ -1,6 +1,8 @@
 //! Every field targets one catalogue lifetime, PO entry and plural arm.
 use super::*;
+use crate::presentation::space;
 use recite_writer_session::localisation::catalogue::Draft;
+mod review;
 
 pub(super) fn translation(
     writer: &Writer,
@@ -21,11 +23,23 @@ pub(super) fn translation(
                 .map(|draft| (translation, draft))
         });
     flex_col((
-        current.as_ref().map(|(translation, draft)| fields(writer, row, translation, draft, width)),
-        current.is_none().then(|| paragraph(writer.ui_scale(), if writer.localisation.has_catalogue() {
-            "No matching entry for this source wording. Review source updates in the translation queue."
-        } else { "No catalogue selected." }, width)),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+        current
+            .as_ref()
+            .map(|(translation, draft)| fields(writer, row, translation, draft, width)),
+        current.is_none().then(|| {
+            print::meta(
+                writer.ui_scale(),
+                if writer.localisation.has_catalogue() {
+                    "No catalogue entry yet"
+                } else {
+                    "No catalogue selected"
+                },
+            )
+            .color(writer.palette.muted)
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
 }
 fn fields(
     writer: &Writer,
@@ -36,10 +50,20 @@ fn fields(
 ) -> impl WidgetView<Writer> + use<> {
     let key = &translation.key;
     let blocked = writer.localisation.slot.read_only() || writer.phase() != Phase::Writing;
-    let status = writer.localisation.slot.owner().map_or_else(
-        || "Catalogue action in progress".into(),
-        |owner| TranslationStatus::entry_label(&owner.catalogue, key.id),
-    );
+    // The language heads the field as the speaker heads the source; the margin toggle carries
+    // the review state, so only what it cannot say joins the caption.
+    let note = match writer.localisation.slot.owner() {
+        None => Some("Catalogue action in progress".to_owned()),
+        Some(owner) => match TranslationStatus::for_entry(&owner.catalogue, key.id) {
+            status @ TranslationStatus::SourceChanged => Some(status.label()),
+            _ => None,
+        },
+    };
+    let caption = [writer.localisation.language_name(), note]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" · ");
     let forms = draft
         .forms
         .iter()
@@ -74,53 +98,28 @@ fn fields(
                     }),
                     sized_box(keyed((key.clone(), arm), input)).dims((width.px(), height.px())),
                 ))
-                .gap(6.px()),
+                .gap(space::SIBLINGS.px()),
             )
         })
         .collect();
-    let reviewed = key.clone();
     let save = key.clone();
     let discard = key.clone();
-    let inspect = key.clone();
     let changed = writer
         .localisation
         .slot
         .owner()
         .is_some_and(|owner| owner.catalogue.changed(key.id));
     flex_col((
-        paragraph(writer.ui_scale(), status, width),
+        (!caption.is_empty()).then(|| {
+            print::caps(writer.ui_scale(), caption)
+                .color(writer.palette.muted)
+                .prop(LineBreaking::WordWrap)
+                .width(width.px())
+        }),
         column(forms),
         form_pages(writer, row, draft, blocked),
-        flex_row((
-            draft
-                .forms
-                .iter()
-                .any(|form| !form.trim().is_empty())
-                .then(|| {
-                    checkbox(
-                        "Reviewed translation",
-                        draft.reviewed,
-                        move |writer: &mut Writer, value| {
-                            writer.review_translation(&reviewed, value)
-                        },
-                    )
-                    .text_size(14. * writer.ui_scale())
-                    .disabled(blocked)
-                }),
-            text_button(
-                writer.ui_scale(),
-                "Translation details",
-                move |writer: &mut Writer| writer.inspect_translation(&inspect),
-            )
-            .disabled(blocked || writer.project_action_blocked()),
-        ))
-        .direction(if width < 360. * f64::from(writer.ui_scale()) {
-            Axis::Vertical
-        } else {
-            Axis::Horizontal
-        })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        review::margin(writer, row, (translation, draft), blocked, width),
+        review::details(writer, row, translation, blocked, width),
         changed.then(|| {
             flex_row((
                 text_button(
@@ -144,11 +143,11 @@ fn fields(
                 Axis::Horizontal
             })
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn form_pages(
     writer: &Writer,
@@ -182,7 +181,7 @@ fn form_pages(
             )
             .disabled(blocked || (row.form_page + 1) * 4 >= draft.forms.len()),
         ))
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }
 

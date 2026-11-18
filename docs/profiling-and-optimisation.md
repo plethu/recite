@@ -183,11 +183,12 @@ names the choice; set `MASONRY_IMAGING_BACKEND` to `vello`, `vello_cpu` (Vello C
 `softbuffer` to compare them on one host. Any other backend needs its own compatible
 feature/integration experiment and equivalent output, accessibility and timing checks.
 
-`just writer probe target/writer-native/frame-timing.json frame-timing` reproduces the Writer lane's
-software-rendering check on an owned compositor. Its receipt records the selected backend, typed key
-presses, edit-to-paint and frame-interval percentiles against the §19.8 budgets, and its log keeps
-the client's `WAYLAND_DEBUG` protocol trace. Run it again with `MASONRY_IMAGING_BACKEND=vello` to
-see the llvmpipe path fail those budgets.
+`just writer probe target/writer-native/frame-timing.json frame-timing` builds the optimized Writer
+and reproduces the Writer lane's software-rendering check on an owned compositor. Its receipt
+records the selected backend, typed key presses, edit-to-paint and step-to-paint percentiles against
+the §19.8 budgets, and the interval between presented frames for reference; its log keeps the
+client's `WAYLAND_DEBUG` protocol trace. Run it again with `MASONRY_IMAGING_BACKEND=vello` to see
+the llvmpipe path fail those budgets.
 
 `just writer probe target/writer-native/large-project.json large-project` builds `recite-fixturegen`
 and an optimized Writer, generates the `large` synthetic profile (`RECITE_LARGE_PROFILE=medium`

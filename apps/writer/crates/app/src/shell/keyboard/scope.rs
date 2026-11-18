@@ -22,6 +22,14 @@ pub(super) struct DocumentScope {
     pub(super) editing: Option<EditingTarget>,
     pub(super) field_restoration: Option<FieldRestoration>,
     pub(super) writing: bool,
+    /// The close decision is open over the document.
+    pub(super) confirming: bool,
+    /// The Configure preview slip is open.
+    pub(super) configuring: bool,
+    /// A beat is being renamed in place.
+    pub(super) renaming: bool,
+    /// The preview's current replies, which digit keys choose.
+    pub(super) preview_choices: usize,
     pub(super) screen: crate::workspaces::Screen,
     pub(super) document_menu: DocumentMenu,
 }
@@ -44,6 +52,10 @@ impl DocumentScope {
             && self.attention.same_command_scope(&other.attention)
             && self.editing == other.editing
             && self.writing == other.writing
+            && self.confirming == other.confirming
+            && self.configuring == other.configuring
+            && self.renaming == other.renaming
+            && self.preview_choices == other.preview_choices
             && self.screen == other.screen
             && self.document_menu == other.document_menu
     }
@@ -86,6 +98,13 @@ impl Scope {
                     editing: EditingTarget::capture(writer),
                     field_restoration: writer.field_restoration(),
                     writing: writer.phase == Phase::Writing,
+                    preview_choices: writer.preview_choices(),
+                    confirming: matches!(
+                        writer.phase,
+                        Phase::ConfirmClose | Phase::ConfirmExit | Phase::Closing
+                    ),
+                    configuring: writer.configuring_trial(),
+                    renaming: writer.inline_rename().is_some(),
                     screen: writer.workspaces.screen,
                     document_menu: writer.document_menu,
                 }

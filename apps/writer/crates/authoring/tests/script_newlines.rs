@@ -16,7 +16,7 @@ fn bare_cr_and_mixed_terminators_preserve_script_headings_across_prose_edits()
         let mut document = Document::new(source)?;
         let initial = document.script_snapshot()?;
         assert!(
-            matches!(&initial[1].entries[1], ScriptEntry::Effect(heading) if heading == "! immediate mark_done()")
+            matches!(&initial[1].entries[1], ScriptEntry::Effect(effect) if effect.source == "! immediate mark_done()" && effect.reading == "Marks done now")
         );
         assert!(
             matches!(&initial[1].entries[2], ScriptEntry::Group { heading, .. } if heading == ":if ready()")

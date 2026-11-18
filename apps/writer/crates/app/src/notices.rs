@@ -1,4 +1,5 @@
-//! Advisory disk changes never apply drafts or adopt a file without explicit comparison.
+//! Advisory disk changes never apply drafts or adopt a file without an explicit decision.
+mod decision;
 pub mod listener;
 mod observation;
 mod worker;
@@ -8,7 +9,7 @@ pub use crate::{
 };
 use recite_writer_session::{
     external::{Affected, Changes},
-    project::{ExternalCheck, ExternalObservation},
+    project::{ExternalCheck, ExternalDecision, ExternalObservation},
 };
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc, watch};
@@ -209,38 +210,3 @@ impl Writer {
 
 #[cfg(any(test, feature = "test-support"))]
 pub mod tests;
-impl Writer {
-    pub fn compare_noticed_change(&mut self) {
-        if self.phase != Phase::Writing || self.project_action_blocked() {
-            return;
-        }
-        match self.notices.selected() {
-            Some((Target::Source(path), Evidence::Source(observation)))
-                if self
-                    .session
-                    .project()
-                    .is_some_and(|project| observation.is_current(project.files())) =>
-            {
-                let path = path.clone();
-                if self
-                    .session
-                    .project()
-                    .is_some_and(|project| project.current().path() == path)
-                {
-                    self.compare_disk_changes();
-                } else if let Err(error) =
-                    self.begin_navigation(crate::navigation::Target::CompareFile(path))
-                {
-                    self.status = error;
-                }
-            }
-            Some((_, Evidence::Catalogue(observation)))
-                if observation.is_current(&self.localisation) =>
-            {
-                let scope = observation.scope().clone();
-                self.compare_noticed_catalogue(&scope);
-            }
-            _ => (),
-        }
-    }
-}

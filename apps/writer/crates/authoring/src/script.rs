@@ -7,6 +7,9 @@ use recite_core::{
 use recite_parser::parse;
 use std::cell::OnceCell;
 
+mod effect;
+pub use effect::EffectEntry;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ScriptBlock {
     pub id: String,
@@ -18,7 +21,7 @@ pub struct ScriptBlock {
 pub enum ScriptEntry {
     Passage(Passage),
     Jump(String),
-    Effect(String),
+    Effect(EffectEntry),
     Group {
         heading: String,
         entries: Vec<ScriptEntry>,
@@ -117,9 +120,10 @@ fn entries(
             Statement::Divert(divert) => {
                 result.push(ScriptEntry::Jump(destination(&divert.target)))
             }
-            Statement::Effect(effect) => {
-                result.push(ScriptEntry::Effect(heading(effect.span.start.line())))
-            }
+            Statement::Effect(effect) => result.push(ScriptEntry::Effect(EffectEntry {
+                source: heading(effect.span.start.line()),
+                reading: effect::reading(effect),
+            })),
             Statement::If(branch) => {
                 result.push(ScriptEntry::Group {
                     heading: heading(branch.span.start.line()),

@@ -1,11 +1,17 @@
 use super::*;
-use crate::WriterLayout;
 use crate::attention::{EntryContext, PaneEntry};
+use crate::presentation::print::section_heading;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::trial::VALUE_PAGE;
 use recite_core::ast::{InterpolationBinding, InterpolationType};
 use recite_writer_session::preview::parse_value;
 
-pub(super) fn values(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
+pub(super) fn values(
+    state: &Writer,
+    disabled: bool,
+    width: f64,
+) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let settings = &state.trial.settings;
     let bindings = state.session.model().document().preview_bindings();
@@ -18,7 +24,7 @@ pub(super) fn values(state: &Writer, disabled: bool) -> impl WidgetView<Writer> 
         .map(|binding| {
             keyed(
                 (binding.value.clone(), binding.value_type),
-                flex_col((field(state, binding, disabled),))
+                flex_col((field(state, binding, disabled, width),))
                     .prop(PaneEntry(
                         state.configuring_trial() && settings.review.targets(binding),
                     ))
@@ -27,10 +33,10 @@ pub(super) fn values(state: &Writer, disabled: bool) -> impl WidgetView<Writer> 
         })
         .collect::<Vec<_>>();
     flex_col((
-        (!bindings.is_empty()).then(|| label(scale, "Interpolation values").text_size(20. * scale)),
+        (!bindings.is_empty()).then(|| section_heading(scale, "Interpolation values")),
         flex_col(fields)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(10.px()),
+            .gap(space::TEXT.px()),
         (pages > 1).then(|| {
             flex_col((
                 label(scale, format!("Value page {} of {pages}", page + 1)),
@@ -48,17 +54,18 @@ pub(super) fn values(state: &Writer, disabled: bool) -> impl WidgetView<Writer> 
                 .disabled(disabled || page + 1 >= pages),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn field(
     state: &Writer,
     binding: &InterpolationBinding,
     disabled: bool,
+    width: f64,
 ) -> impl WidgetView<Writer> + use<> {
     let name = binding.value.trim_start_matches('$').to_owned();
     let value = state
@@ -81,7 +88,7 @@ fn field(
                         .insert(name.clone(), value.to_string());
                 },
             )
-            .text_size(14. * state.ui_scale())
+            .typeset(Type::Body, state.ui_scale())
             .disabled(disabled),
         )
     } else {
@@ -98,17 +105,17 @@ fn field(
         let input = text_input(value, move |state: &mut Writer, value| {
             state.trial.settings.values.insert(name.clone(), value);
         })
-        .text_size(16. * state.ui_scale())
+        .typeset(Type::Body, state.ui_scale())
         .disabled(disabled)
         .prop(properties::TextAreaLabel::new(caption));
         Either::B(
             flex_col((
                 label(state.ui_scale(), format!("{} · {kind}", binding.value)),
-                sized_box(input).width(state.script_width().px()),
+                sized_box(input).width(width.px()),
                 invalid.then(|| label(state.ui_scale(), format!("Enter a {kind}."))),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
         )
     }
 }

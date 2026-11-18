@@ -234,13 +234,14 @@ fn pointer_capture_survives_a_card_leaving_the_viewport_and_returning() {
 }
 
 #[test]
-fn only_a_successful_primary_double_click_opens_the_clicked_card() {
+fn only_a_successful_primary_double_click_renames_the_clicked_card_in_place() {
+    use crate::workspaces::rename::inline::Place;
     use xilem::masonry::{
         core::{PointerButtonEvent, PointerEvent, PointerState},
         dpi::PhysicalPosition,
     };
     use xilem::view::PointerButton;
-    for (button, count, inside, opens) in [
+    for (button, count, inside, renames) in [
         (PointerButton::Primary, 1, true, false),
         (PointerButton::Primary, 2, true, true),
         (PointerButton::Secondary, 2, true, false),
@@ -310,19 +311,24 @@ fn only_a_successful_primary_double_click_opens_the_clicked_card() {
             &mut local,
             surface,
         );
+        let renaming = writer
+            .inline_rename()
+            .map(|inline| (inline.beat.clone(), inline.place));
         assert_eq!(
-            writer.map.workspace == Workspace::Split,
-            opens,
+            renaming,
+            renames.then(|| ("later".to_owned(), Place::Card)),
             "{button:?}, count={count}, inside={inside}"
         );
-        if opens {
-            support::finish_navigation(writer, &mut fixture.jobs).unwrap();
-            assert_eq!(
-                writer.session.model().selected_block().unwrap().as_deref(),
-                Some("later")
-            );
-        } else {
-            assert!(fixture.jobs.try_recv().is_err());
+        // A double-click no longer opens the script; Enter and Open script do.
+        assert_ne!(writer.map.workspace, Workspace::Split);
+        let tree = harness.access_tree();
+        let mut pending = vec![tree.state().root()];
+        let mut field = false;
+        while let Some(node) = pending.pop() {
+            field |= node.label().as_deref() == Some("New beat id");
+            pending.extend(node.children());
         }
+        assert_eq!(field, renames, "the card's title becomes the field");
+        assert!(fixture.jobs.try_recv().is_err());
     }
 }

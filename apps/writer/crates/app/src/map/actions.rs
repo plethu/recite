@@ -22,10 +22,9 @@ impl Writer {
         if let Some(beat) = found {
             // Keep typing focus in the search field while revealing the result.
             if scene.detail() == Detail::Overview {
-                scene.camera.zoom_to(1., scene.viewport);
+                scene.camera.zoom_to(scene.camera.scale, scene.viewport);
             }
             scene.select(Some(beat));
-            self.reveal_rail();
         }
     }
     pub(crate) fn invalidate_map(&mut self) {
@@ -152,14 +151,13 @@ impl Writer {
         if let Some(scene) = self.map_scene_mut() {
             scene.select(Some(beat));
         }
-        self.reveal_rail();
     }
     pub fn focus_map_beat(&mut self, beat: String) {
         if let Some(scene) = self.map_scene_mut()
             && scene.projection.graph.ids.contains_key(&beat)
         {
             if scene.detail() == Detail::Overview {
-                scene.camera.zoom_to(1., scene.viewport);
+                scene.camera.zoom_to(scene.camera.scale, scene.viewport);
             }
             scene.select(Some(beat.clone()));
             scene.reveal_selected();
@@ -168,7 +166,6 @@ impl Writer {
                 token: input::FocusToken::new(),
             });
         }
-        self.reveal_rail();
     }
     pub fn press_map_beat(&mut self, beat: String, press: Press) {
         match press {
@@ -191,7 +188,9 @@ impl Writer {
         }
     }
     pub fn resize_map(&mut self, size: kurbo::Size) {
+        let scale = self.ui_scale();
         if let Some(scene) = self.map_scene_mut() {
+            scene.camera.rescale(scale);
             let viewport = (size.width as f32, size.height as f32);
             let resized = scene.viewport != viewport;
             scene.viewport = viewport;
@@ -212,7 +211,7 @@ impl Writer {
     pub fn reset_map_zoom(&mut self) {
         self.cancel_map_gesture();
         if let Some(scene) = self.map_scene_mut() {
-            scene.camera.zoom_to(1., scene.viewport);
+            scene.camera.zoom_to(scene.camera.scale, scene.viewport);
         }
     }
     pub fn arrange_map(&mut self) {

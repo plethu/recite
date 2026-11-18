@@ -1,0 +1,23 @@
+{"frame":"flow.examples--dark--01","nodes":[
+{"role":"Button","label":"Workspace","value":null,"interactive":true,"focusable":true,"focused":false,"disabled":false,"bounds":[1087.0,0.0,1184.0,33.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Workspace","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[1100.0,7.0,1171.0,27.0],"text":[14.0,20.0]},
+{"role":"Group","label":"Writer workspace","value":null,"interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[0.0,33.0,1200.0,800.0],"text":[32.0,39.0]},
+{"role":"ScrollView","label":"Welcome","value":null,"interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[0.0,202.0,1200.0,555.0],"text":[32.0,39.0]},
+{"role":"Heading","label":"Projects","value":null,"interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[320.0,349.0,439.0,385.0],"text":[32.0,39.0]},
+{"role":"Label","label":null,"value":"Projects","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[320.0,349.0,439.0,385.0],"text":[32.0,39.0]},
+{"role":"Document","label":null,"value":"Open a project or create one to start writing.","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[320.0,397.0,880.0,414.0],"text":[14.0,18.0]},
+{"role":"TabList","label":"Project","value":null,"interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[320.0,426.0,665.0,459.0],"text":[14.0,20.0]},
+{"role":"Tab","label":"Open an existing project","value":null,"interactive":true,"focusable":true,"focused":true,"disabled":false,"bounds":[320.0,426.0,503.0,459.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Open an existing project","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[333.0,433.0,490.0,453.0],"text":[14.0,20.0]},
+{"role":"Tab","label":"Create a new project","value":null,"interactive":true,"focusable":true,"focused":false,"disabled":false,"bounds":[507.0,426.0,665.0,459.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Create a new project","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[520.0,433.0,652.0,453.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Project folder","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[320.0,471.0,405.0,491.0],"text":[14.0,20.0]},
+{"role":"TextInput","label":"Project folder","value":"","interactive":true,"focusable":true,"focused":false,"disabled":false,"bounds":[333.0,502.0,699.0,522.0],"text":[14.0,20.0]},
+{"role":"Button","label":"Browse folders","value":null,"interactive":true,"focusable":true,"focused":false,"disabled":false,"bounds":[720.0,495.0,880.0,528.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Browse folders","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[752.0,502.0,848.0,522.0],"text":[14.0,20.0]},
+{"role":"Button","label":"Open selected project","value":null,"interactive":true,"focusable":false,"focused":false,"disabled":true,"bounds":[320.0,555.0,488.0,588.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Open selected project","interactive":false,"focusable":false,"focused":false,"disabled":true,"bounds":[333.0,562.0,475.0,582.0],"text":[14.0,20.0]},
+{"role":"Button","label":"Try temporary examples","value":null,"interactive":true,"focusable":true,"focused":false,"disabled":false,"bounds":[496.0,555.0,678.0,588.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Try temporary examples","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[509.0,562.0,665.0,582.0],"text":[14.0,20.0]},
+{"role":"Label","label":null,"value":"Choose a project folder first.","interactive":false,"focusable":false,"focused":false,"disabled":false,"bounds":[320.0,596.0,497.0,616.0],"text":[14.0,20.0]}
+]}

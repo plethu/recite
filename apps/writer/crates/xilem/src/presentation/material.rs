@@ -3,7 +3,6 @@ use xilem::{
     WidgetView,
     core::memoize,
     masonry::{
-        core::Property,
         imaging::Painter,
         kurbo::{BezPath, Circle, Rect, Shape},
         layout::AsUnit,
@@ -13,50 +12,29 @@ use xilem::{
     view::{canvas, sized_box},
 };
 
-#[cfg(test)]
-mod tests;
+mod backdrop;
+mod decor;
+pub(crate) use backdrop::{Texture, backdrop, cover, screen};
+mod grain;
+pub(crate) use decor::{Bar, Decorated, Decoration};
+pub(crate) use grain::{desk, grain};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct DotScreen {
-    pub ink: Color,
-    bounds: Option<Rect>,
+/// Filled controls show keyboard focus as a ring of `color` inside their edge.
+pub(crate) fn focus_ring<V>(color: Option<Color>, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Ring(color), child)
 }
-impl DotScreen {
-    pub fn new(ink: Color, bounds: Option<Rect>) -> Self {
-        Self { ink, bounds }
-    }
+
+/// A 2px focus outline `offset` pixels outside `child`, painted over its surroundings without
+/// changing its metrics.
+pub(crate) fn focus_outline<V>(color: Color, offset: f64, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Outline(Some(color), offset), child)
 }
-impl Property for DotScreen {
-    fn static_default() -> &'static Self {
-        static NONE: DotScreen = DotScreen {
-            ink: Color::TRANSPARENT,
-            bounds: None,
-        };
-        &NONE
-    }
+
+/// A 2px bar along the bottom of `child`, or nothing while `bar` is `None`.
+pub(crate) fn bar<V>(bar: Option<Bar>, child: V) -> Decorated<V> {
+    Decorated::new(Decoration::Bar(bar), child)
 }
-impl Default for DotScreen {
-    fn default() -> Self {
-        *Self::static_default()
-    }
-}
-#[derive(Default)]
-pub(crate) struct ScreenCache {
-    bounds: Option<Rect>,
-    path: BezPath,
-}
-impl ScreenCache {
-    pub fn paint(&mut self, screen: &DotScreen, painter: &mut Painter<'_>) {
-        let Some(bounds) = screen.bounds else {
-            return;
-        };
-        if self.bounds != Some(bounds) {
-            self.path = dots(bounds);
-            self.bounds = Some(bounds);
-        }
-        painter.fill(&self.path, screen.ink.with_alpha(0.35)).draw();
-    }
-}
+
 fn dots(bounds: Rect) -> BezPath {
     let mut dots = BezPath::new();
     let mut y = bounds.y0 + 2.5;

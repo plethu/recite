@@ -32,6 +32,15 @@ impl Shell {
                     item: Item::Destination(choice.value.clone()),
                 })
                 .collect(),
+            Request::Speaker(request) => request
+                .choices
+                .iter()
+                .map(|choice| Entry {
+                    title: choice.title.clone(),
+                    detail: choice.detail.clone(),
+                    item: Item::Speaker(choice.value.clone()),
+                })
+                .collect(),
             Request::Rename(request) => request
                 .choices
                 .iter()
@@ -42,9 +51,28 @@ impl Shell {
                 })
                 .collect(),
         };
-        self.picker = Some(Picker::new(Purpose::Editor(Box::new(request)), entries));
+        let current = request.current().map(str::to_owned);
+        writer.choosing = request.opener();
+        let mut picker = Picker::new(Purpose::Editor(Box::new(request)), entries);
+        // The slip opens on the value the label holds now.
+        if let Some(index) = current.and_then(|current| {
+            picker.entries.iter().position(|entry| match &entry.item {
+                Item::Destination(value) | Item::Speaker(value) => value == &current,
+                _ => false,
+            })
+        }) {
+            picker.select(index);
+        }
+        self.picker = Some(picker);
+    }
+    /// The choice slip closed, so its label is no longer expanded.
+    pub(super) fn forget_choice(&mut self) {
+        if let Some(writer) = &mut self.writer {
+            writer.choosing = None;
+        }
     }
     pub(super) fn activate_editor_choice(&mut self, item: Item) {
+        self.forget_choice();
         let Some(picker) = self.picker.take() else {
             return;
         };
@@ -62,6 +90,7 @@ impl Shell {
             (Request::Destination(request), Item::Destination(destination)) => {
                 request.apply(writer, destination);
             }
+            (Request::Speaker(request), Item::Speaker(speaker)) => request.apply(writer, speaker),
             (Request::Rename(request), Item::RenameBeat(beat)) => request.apply(writer, beat),
             _ => writer.status = "Reopen the editor choice to continue.".into(),
         }

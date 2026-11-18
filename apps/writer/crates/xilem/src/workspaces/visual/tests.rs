@@ -10,9 +10,8 @@ fn capture_detail<W: Widget>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut pending = vec![harness.root_widget().as_dyn()];
     let target = loop {
-        let widget = pending.pop().ok_or("declaration detail pager")?;
-        if support::native_label(harness, widget.id()).as_deref() == Some("More declaration detail")
-        {
+        let widget = pending.pop().ok_or("declaration detail")?;
+        if support::native_label(harness, widget.id()).as_deref() == Some("Declaration detail") {
             break widget.id();
         }
         pending.extend(widget.children());
@@ -25,7 +24,7 @@ fn capture_detail<W: Widget>(
 }
 
 #[test]
-fn thousand_declarations_mount_only_one_page_and_project_screens_render_at_personal_scales()
+fn thousand_declarations_mount_only_the_rows_in_view_and_project_screens_render_at_personal_scales()
 -> Result<(), Box<dyn std::error::Error>> {
     for scale in [100, 200] {
         for action in [Open::Declarations, Open::Build] {
@@ -90,15 +89,14 @@ fn thousand_declarations_mount_only_one_page_and_project_screens_render_at_perso
                 if node.role() == Role::Button
                     && let Some(label) = node.label()
                 {
-                    rows += usize::from(
-                        label.starts_with("Declaration · ")
-                            || label.starts_with("Selected · speaker_"),
-                    );
+                    rows +=
+                        usize::from(label.starts_with("speaker_") && label.ends_with(" · Speaker"));
                 }
                 pending.extend(node.children());
             }
+            // One scrolling list mounts at most the rows in view.
             if matches!(action, Open::Declarations) {
-                assert_eq!(rows, 5);
+                assert!(rows <= 16, "{rows} rows");
             }
             assert!(
                 nodes <= 128,

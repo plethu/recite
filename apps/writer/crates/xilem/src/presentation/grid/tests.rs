@@ -1,0 +1,80 @@
+use super::*;
+use crate::presentation::tokens::size;
+
+#[test]
+fn at_1200_by_800_the_sheet_takes_the_pane_less_24px_of_desk_and_keeps_every_column() {
+    // 1200 less the 224px scene list and the workspace's 16px padding either side.
+    let grid = Grid::resolve(1200. - 224. - 32., Page::new(20., 1.), true);
+    assert!(grid.sheet);
+    assert_eq!(grid.width, 928.);
+    assert_eq!((grid.margin, grid.destination), (96., 160.));
+    assert_eq!(grid.measure, 928. - 64. - 96. - 16. - 24. - 160.);
+    assert_eq!(grid.pad, 32.);
+    assert!((grid.pad * 2. + grid.row() - grid.width).abs() < 1e-9);
+}
+
+#[test]
+fn at_900_by_650_the_paper_goes_full_bleed_and_destinations_wrap_under_a_short_measure() {
+    let grid = Grid::resolve(900. - 192. - 32., Page::new(20., 1.), true);
+    assert!(!grid.sheet);
+    assert_eq!(grid.margin, 72.);
+    assert!(grid.measure >= DESTINATION_MEASURE || grid.destination == 0.);
+    // Beside a destination column the measure would be 372px, so destinations wrap.
+    assert_eq!(grid.destination, 0.);
+    assert_eq!(grid.measure, 676. - 32. - 72. - 16.);
+}
+
+#[test]
+fn the_measure_never_exceeds_68_characters_and_the_desk_shows_either_side_of_the_sheet() {
+    let grid = Grid::resolve(2400., Page::new(20., 1.), true);
+    assert!(grid.sheet);
+    assert!((grid.measure - 68. * 0.46 * 20.).abs() < 1e-9);
+    // About 32em, inside the 640px measure interface prose keeps.
+    assert!(grid.measure <= size::MEASURE);
+    // The sheet holds its columns and pad; the rest of the pane is desk, centred around it.
+    assert_eq!(grid.pad, 32.);
+    assert!((grid.pad * 2. + grid.row() - grid.width).abs() < 1e-9);
+    assert!(grid.width < 2400. - 2. * DESK_SIDE);
+    // At 200% the sheet zooms: its columns and measure double, and the destination column
+    // keeps room for its button's padding.
+    let doubled = Grid::resolve(2400., Page::new(20., 2.), true);
+    assert!((doubled.measure - 2. * grid.measure).abs() < 1e-9);
+    assert!((doubled.margin - 2. * grid.margin).abs() < 1e-9);
+    assert!((doubled.destination - (2. * DESTINATION + 2. * control_inset(2.))).abs() < 1e-9);
+    assert!(doubled.destination > grid.destination + 2. * size::CONTROL_PAD);
+    // A larger reading size widens every sheet column with it.
+    let larger = Grid::resolve(2400., Page::new(28., 1.), true);
+    assert!(larger.margin > grid.margin && larger.measure > grid.measure);
+    // At the smallest reading size destinations hold their 13px floor, and so does their column.
+    let smallest = Grid::resolve(2400., Page::new(14., 1.), true);
+    assert!((smallest.destination - (134. * 13. / 14.4 + 26.)).abs() < 1e-3);
+    assert!(smallest.margin < grid.margin);
+}
+
+#[test]
+fn without_room_for_a_480px_measure_or_beside_the_map_the_paper_is_full_bleed() {
+    assert!(
+        !Grid::resolve(1000., Page::new(20., 1.), false).sheet,
+        "Split is full-bleed"
+    );
+    let narrow = Grid::resolve(800., Page::new(20., 1.), true);
+    assert!(!narrow.sheet);
+    let tiny = Grid::resolve(300., Page::new(20., 1.), true);
+    assert_eq!((tiny.margin, tiny.gutter()), (0., 0.));
+    assert!(tiny.measure > 0.);
+}
+
+#[test]
+fn under_45_characters_beside_them_destinations_wrap_under_their_replies() {
+    // At 200% in a 1200px window the scene list hides; beside a destination column the line
+    // column would hold about 34 characters, so destinations wrap and the line takes the room.
+    let page = Page::new(20., 2.);
+    let zoomed = Grid::resolve(1200. - 32., page, true);
+    assert_eq!(zoomed.destination, 0.);
+    assert!(zoomed.measure >= 45. * 0.46 * f64::from(Sheet::Dialogue.size(page)));
+    // A larger reading size on a sheet keeps the sheet and wraps its destinations instead.
+    let larger = Grid::resolve(1200. - 224. - 32., Page::new(26., 1.), true);
+    assert!(larger.sheet);
+    assert_eq!(larger.destination, 0.);
+    assert!((larger.pad * 2. + larger.row() - larger.width).abs() < 1e-9);
+}

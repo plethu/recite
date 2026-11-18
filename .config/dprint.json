@@ -30,6 +30,7 @@
     "../editors/vscode/package.nls.json",
     "../editors/recite-neovim/lua/recite_messages.lua",
     "../editors/recite-neovim/lua/recite_diagnostics.lua",
+    "../apps/writer/design/baseline/**",
     "../apps/writer/packaging/flatpak/cargo-sources.json",
     "../apps/writer/packaging/flatpak/last_commit_position.h",
     "../include/recite.h"

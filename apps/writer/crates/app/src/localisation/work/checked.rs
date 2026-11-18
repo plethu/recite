@@ -240,7 +240,6 @@ impl Writer {
             }
             Ok(Completion::Show(presentation)) => {
                 self.localisation.queue = std::mem::take(&mut presentation.queue);
-                self.localisation.query.page = self.localisation.queue.page;
                 std::mem::swap(&mut self.localisation.entry, &mut presentation.entry);
                 self.localisation.destination = if self.localisation.entry.is_some() {
                     Destination::Entry

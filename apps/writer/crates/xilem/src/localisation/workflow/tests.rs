@@ -78,7 +78,8 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     mounted.settle();
     mounted.activate("More source passage");
     mounted.activate("Previous source part");
-    mounted.activate("Translation details");
+    mounted.activate("Translation details · line_1");
+    mounted.activate("Open translation entry");
     driver.finish(&mut mounted.state);
     mounted.settle();
     assert_eq!(
@@ -91,8 +92,8 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     mounted.activate("Open translation queue");
     driver.finish(&mut mounted.state);
     mounted.settle();
+    // The queue filters as the text is typed.
     mounted.type_text("Search translations", "Selected source");
-    mounted.activate("Search translations");
     driver.finish(&mut mounted.state);
     mounted.settle();
     mounted.activate_prefix("Open translation · ");
@@ -126,6 +127,8 @@ fn mounted_unsaved_translation_reentry_and_paged_report_keep_close_recoverable()
         model.set_draft("Retain source recovery.".into());
         Ok(())
     });
+    // Close lives in the Workspace menu on every screen.
+    mounted.activate("Workspace");
     mounted.activate("Close");
     assert!(mounted.state.phase() == Phase::ConfirmClose);
     mounted.activate("Open unsaved translations");
@@ -148,6 +151,8 @@ fn mounted_unsaved_translation_reentry_and_paged_report_keep_close_recoverable()
     assert!(mounted.contains_text("Report end"));
     mounted.activate("Previous catalogue report part");
     assert!(!mounted.contains_text("Report end"));
+    // Close lives in the Workspace menu on every screen.
+    mounted.activate("Workspace");
     mounted.activate("Close");
     mounted.activate("Discard translations and close");
     driver.finish(&mut mounted.state);

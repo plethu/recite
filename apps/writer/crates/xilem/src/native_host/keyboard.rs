@@ -1,21 +1,32 @@
+mod bindings;
 mod document_menu;
-mod focus;
+pub(crate) mod focus;
+pub(crate) mod galley;
 mod held;
 mod history;
+mod in_view;
+mod keys;
+use keys::{Keystroke, Stroke, key, physical};
 mod manuscript;
 mod panes;
 mod picker;
 mod project;
+mod radio;
 mod reading;
-mod tab;
+mod ring;
+pub(crate) mod tab;
 mod vim;
-use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
+use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, Modal, TAG};
 use crate::app::picker::Search;
 use recite_config::WriterCommand;
 use recite_writer_session::commands::keybindings::{self, Input, Key, Modifiers, PhysicalKey};
 use xilem::winit::keyboard;
 use xilem::{
-    masonry::{app::RenderRoot, core::WidgetId, widgets::TextInput},
+    masonry::{
+        app::RenderRoot,
+        core::{Widget, WidgetId},
+        widgets::TextInput,
+    },
     winit::{
         event::{ElementState, Ime, KeyEvent, WindowEvent},
         keyboard::{ModifiersState, NamedKey},
@@ -32,7 +43,7 @@ enum Composition {
     },
 }
 #[derive(Default)]
-pub(super) struct Keyboard {
+pub(crate) struct Keyboard {
     modifiers: ModifiersState,
     composition: Composition,
     focus: focus::Focus,
@@ -42,7 +53,11 @@ pub(super) struct Keyboard {
     manuscript: manuscript::Fields,
     document_menu: document_menu::Focus,
     tab: tab::Reveal,
+    radio: radio::Arrows,
+    galley: galley::Galley,
     reading: reading::Position,
+    in_view: in_view::InView,
+    ring: ring::RingInView,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
@@ -51,6 +66,7 @@ impl Keyboard {
         self.vim = vim::Vim::default();
         self.held = held::HeldKeys::default();
         self.tab = tab::Reveal::default();
+        self.radio = radio::Arrows::default();
     }
     pub fn blur(&mut self, root: &mut RenderRoot) {
         if let Some(context) = root
@@ -120,6 +136,13 @@ impl Keyboard {
         if is_synthetic {
             return false;
         }
+        if event.state == ElementState::Pressed
+            && self.modifiers.is_empty()
+            && self.radio.request(root, event.logical_key)
+        {
+            self.held.press(event.physical_key);
+            return true;
+        }
         let Some(context) = root
             .get_widget_with_tag(TAG)
             .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone())
@@ -128,22 +151,12 @@ impl Keyboard {
         };
         let enter = *event.logical_key == keyboard::Key::Named(NamedKey::Enter);
         let kind = self.focus.kind(root, context.generation);
-        let action = picker::action(
+        let action = bindings::mounted(
             &context,
-            kind.clone(),
+            &kind,
             event.logical_key,
             self.normalized_modifiers(),
-        )
-        .or_else(|| {
-            project::submit(
-                &context,
-                &kind,
-                event.logical_key,
-                self.normalized_modifiers(),
-            )
-        })
-        .or_else(|| document_menu::escape(&context, event.logical_key, self.normalized_modifiers()))
-        .or_else(|| history::key(&context, event.logical_key, self.normalized_modifiers()));
+        );
         let consumed = self.dispatch(
             &context,
             root.focused_widget(),
@@ -157,6 +170,7 @@ impl Keyboard {
                 enter,
                 action,
                 first_press: event.state == ElementState::Pressed && !event.repeat,
+                renames: focus::renames(root),
             },
         );
         if consumed && event.state == ElementState::Pressed {
@@ -176,7 +190,10 @@ impl Keyboard {
                 .modifiers
                 .intersects(ModifiersState::CONTROL | ModifiersState::ALT | ModifiersState::SUPER)
         {
-            self.tab.request(root.focused_widget());
+            self.tab.request(
+                root.focused_widget(),
+                self.modifiers.contains(ModifiersState::SHIFT),
+            );
         }
         consumed
     }
@@ -193,51 +210,15 @@ impl Keyboard {
         if !matches!(self.composition, Composition::Idle) {
             return false;
         }
-        let apply = context.writer_active
-            && kind == focus::Kind::Manuscript
-            && stroke.enter
-            && stroke.input.modifiers
-                == Modifiers {
-                    primary: true,
-                    ..Modifiers::default()
-                };
-        let action = if let Some(action) = stroke.action {
-            Some(action)
-        } else if apply {
-            Some(Action::Command(WriterCommand::Apply))
-        } else if context.writer_active
-            && !context.picker_open
-            && stroke.input.key == Key::Function(6)
-            && !stroke.input.modifiers.primary
-            && !stroke.input.modifiers.alt
-            && !stroke.input.modifiers.other
-        {
-            Some(Action::CyclePane {
-                forward: !stroke.input.modifiers.shift,
-            })
-        } else {
-            keybindings::command(&context.shortcuts, stroke.input).map(|command| {
-                match (&kind, command) {
-                    (focus::Kind::Translation(target), WriterCommand::Save) => {
-                        Action::SaveTranslation(target.clone())
-                    }
-                    _ => Action::Command(command),
-                }
-            })
-        };
-        let Some(action) = action else {
+        let Some(action) =
+            bindings::resolve(context, &kind, stroke.input, stroke.enter, stroke.action)
+        else {
             return false;
         };
-        let action = match action {
-            Action::Command(WriterCommand::Commands) => Action::OpenPicker {
-                search: Search::Commands,
-                generation: context.picker_opening_generation,
-            },
-            Action::Command(WriterCommand::GoTo | WriterCommand::Find) => Action::OpenPicker {
-                search: Search::GoTo,
-                generation: context.picker_opening_generation,
-            },
-            other => other,
+        // Rename beat on a sidebar row or map card renames that beat there.
+        let action = match (action, stroke.renames) {
+            (Action::Command(WriterCommand::Rename), Some(target)) => Action::RenameBeat(target),
+            (action, _) => action,
         };
         // Clear the hint before a command can retire this keyboard scope.
         self.vim.cancel(context);
@@ -251,6 +232,7 @@ impl Keyboard {
     }
     pub fn synchronize(&mut self, root: &mut RenderRoot) {
         self.tab.synchronize(root);
+        self.radio.synchronize(root);
         let context = root
             .get_widget_with_tag(TAG)
             .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone());
@@ -274,6 +256,14 @@ impl Keyboard {
                 .synchronize(root, &context, &self.composition);
             self.document_menu.synchronize(root, &context);
             self.reading.capture(root);
+            self.in_view.synchronize(
+                root,
+                context.editing.as_ref().filter(|_| context.writer_active),
+            );
+            self.galley.synchronize(root);
+            self.focus.hold_modal(root, &context);
+            self.focus.settle(root);
+            self.ring.synchronize(root);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {
@@ -290,71 +280,6 @@ impl Keyboard {
             } else {
                 self.modifiers.super_key()
             },
-        }
-    }
-}
-
-fn key(key: &keyboard::Key) -> Key<'_> {
-    match key {
-        keyboard::Key::Character(value) => Key::Character(value),
-        keyboard::Key::Named(named) => match named {
-            NamedKey::F1 => Key::Function(1),
-            NamedKey::F2 => Key::Function(2),
-            NamedKey::F3 => Key::Function(3),
-            NamedKey::F4 => Key::Function(4),
-            NamedKey::F5 => Key::Function(5),
-            NamedKey::F6 => Key::Function(6),
-            NamedKey::F7 => Key::Function(7),
-            NamedKey::F8 => Key::Function(8),
-            NamedKey::F9 => Key::Function(9),
-            NamedKey::F10 => Key::Function(10),
-            NamedKey::F11 => Key::Function(11),
-            NamedKey::F12 => Key::Function(12),
-            _ => Key::Other,
-        },
-        _ => Key::Other,
-    }
-}
-fn physical(key: keyboard::PhysicalKey) -> PhysicalKey {
-    use xilem::winit::keyboard::{KeyCode, PhysicalKey as NativePhysical};
-    match key {
-        NativePhysical::Code(KeyCode::Digit0) => PhysicalKey::Digit(0),
-        NativePhysical::Code(KeyCode::Digit1) => PhysicalKey::Digit(1),
-        NativePhysical::Code(KeyCode::Digit2) => PhysicalKey::Digit(2),
-        NativePhysical::Code(KeyCode::Digit3) => PhysicalKey::Digit(3),
-        NativePhysical::Code(KeyCode::Digit4) => PhysicalKey::Digit(4),
-        NativePhysical::Code(KeyCode::Digit5) => PhysicalKey::Digit(5),
-        NativePhysical::Code(KeyCode::Digit6) => PhysicalKey::Digit(6),
-        NativePhysical::Code(KeyCode::Digit7) => PhysicalKey::Digit(7),
-        NativePhysical::Code(KeyCode::Digit8) => PhysicalKey::Digit(8),
-        NativePhysical::Code(KeyCode::Digit9) => PhysicalKey::Digit(9),
-        NativePhysical::Code(KeyCode::Comma) => PhysicalKey::Comma,
-        _ => PhysicalKey::Other,
-    }
-}
-
-struct Stroke<'a> {
-    input: Input<'a>,
-    enter: bool,
-    action: Option<Action>,
-    first_press: bool,
-}
-
-/// The window event keeps ownership of text and platform data while policy borrows its keys.
-#[derive(Clone, Copy)]
-struct Keystroke<'a> {
-    logical_key: &'a keyboard::Key,
-    physical_key: keyboard::PhysicalKey,
-    state: ElementState,
-    repeat: bool,
-}
-impl<'a> From<&'a KeyEvent> for Keystroke<'a> {
-    fn from(event: &'a KeyEvent) -> Self {
-        Self {
-            logical_key: &event.logical_key,
-            physical_key: event.physical_key,
-            state: event.state,
-            repeat: event.repeat,
         }
     }
 }

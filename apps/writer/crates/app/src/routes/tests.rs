@@ -124,3 +124,42 @@ fn cancelled_or_newer_typing_structural_jobs_preserve_source_selection_and_histo
         );
     }
 }
+
+#[test]
+fn speaker_choice_offers_the_scene_speakers_and_changes_one_line() {
+    let directory = support::project(
+        ":: start default\n> speaker=mara @a1\n  First.\n\n> speaker=ivo @a2\n  Second.\n-> END\n",
+    )
+    .unwrap();
+    let mut writer = support::open(&directory).unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let (sender, mut jobs) = async_mpsc::unbounded_channel();
+    writer.navigation.sender = Some(sender);
+    writer.navigation.runtime = Some(runtime.handle().clone());
+    writer.choose_speaker("a1".into());
+    let crate::choices::Request::Speaker(request) = writer.pending_choice.take().unwrap() else {
+        panic!("speaker request")
+    };
+    let offered = request
+        .choices
+        .iter()
+        .map(|choice| choice.value.as_str())
+        .collect::<Vec<_>>();
+    assert!(
+        offered.contains(&"mara") && offered.contains(&"ivo"),
+        "{offered:?}"
+    );
+    request.apply(&mut writer, "ivo".into());
+    support::finish_navigation(&mut writer, &mut jobs).unwrap();
+    let source = writer.session.model().document().source().to_owned();
+    assert!(source.contains("> speaker=ivo @a1"), "{source}");
+    assert!(source.contains("> speaker=ivo @a2"), "{source}");
+    // A speaker the choice did not offer changes nothing.
+    writer.choose_speaker("a2".into());
+    let crate::choices::Request::Speaker(request) = writer.pending_choice.take().unwrap() else {
+        panic!("speaker request")
+    };
+    request.apply(&mut writer, "nobody".into());
+    assert!(!writer.navigation.busy());
+    assert_eq!(writer.session.model().document().source(), source);
+}

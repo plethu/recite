@@ -1,49 +1,58 @@
 //! Bounded, accessible incident-link lists compose below the map canvas.
 use super::*;
 use crate::map::connections::Direction;
-use crate::presentation::print;
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::disclosure;
+use crate::presentation::pane;
+use crate::presentation::space;
 use recite_writer_session::choices::display_name;
-use xilem::view::portal;
+use xilem::view::button;
 
 pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        print::action(
-            state.ui_scale(),
-            format!(
-                "{} Connections · {}",
-                if scene.connections.expanded {
-                    "▾"
-                } else {
-                    "▸"
+        styled(
+            ControlStyle::Action,
+            button(
+                disclosure(
+                    state.ui_scale(),
+                    scene.connections.expanded,
+                    state.palette.ink,
+                    label(
+                        state.ui_scale(),
+                        format!(
+                            "Connections · {}",
+                            scene
+                                .selected
+                                .as_deref()
+                                .map(display_name)
+                                .unwrap_or_default()
+                        ),
+                    ),
+                ),
+                |state: &mut Writer| {
+                    if let Some(scene) = state.map_scene_mut() {
+                        scene.connections.expanded = !scene.connections.expanded;
+                    }
                 },
-                scene
-                    .selected
-                    .as_deref()
-                    .map(display_name)
-                    .unwrap_or_default()
-            ),
-            false,
-            |state: &mut Writer| {
-                if let Some(scene) = state.map_scene_mut() {
-                    scene.connections.expanded = !scene.connections.expanded;
-                }
-            },
+            )
+            .expanded(scene.connections.expanded),
         ),
         scene.connections.expanded.then(|| {
-            portal(
+            pane(
+                "Connections",
                 flex_col((
                     connection_list(state, scene, Direction::Outgoing),
                     connection_list(state, scene, Direction::Incoming),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
+                .gap(space::TEXT.px()),
             )
             .constrain_horizontal(true)
             .height((120. * f64::from(state.ui_scale())).px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(4.px())
+    .gap(space::UNIT.px())
 }
 fn connection_list(
     state: &Writer,
@@ -105,7 +114,7 @@ fn connection_list(
         label(state.ui_scale(), format!("{heading} · {}", indices.len())),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         indices.is_empty().then(|| label(state.ui_scale(), "None")),
         (pages > 1).then(|| {
             flex_row((
@@ -130,9 +139,9 @@ fn connection_list(
                 )
                 .disabled(page + 1 >= pages),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

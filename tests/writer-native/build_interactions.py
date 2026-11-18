@@ -44,8 +44,17 @@ def run(api, bus, registry, binary, output):
                 key("End", control=True)
                 type_text("x")
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "pending prose")
+                # Build is a command: it builds every output at once and reports on a slip.
                 command(window, "Build scenes")
-                window.wait(lambda: window.find("Build saved"), "build workspace")
+                first = project / "build/first.recitec"
+                second = project / "build/second.recitec"
+                window.wait(lambda: window.find("Build options"), "build result slip")
+                assert first.is_file() and second.is_file()
+                assert window.text(node) == "The last tram waits.x", "the command keeps writing"
+                first.unlink()
+                second.unlink()
+                window.act("Build options")
+                window.wait(lambda: window.find("Build saved files"), "build options slip")
                 target = window.find_action("opening")
                 assert window.call(target, "Accessible", "GetRole")[0] == int(
                     api.Atspi.Role.RADIO_BUTTON
@@ -56,9 +65,7 @@ def run(api, bus, registry, binary, output):
                     lambda: window.call(target, "Accessible", "GetState")[0][0] & checked,
                     "selected build radio",
                 )
-                window.act("Build saved")
-                first = project / "build/first.recitec"
-                second = project / "build/second.recitec"
+                window.act("Build saved files")
                 window.wait(first.is_file, "selected output published")
                 window.wait(lambda: not window.find("Cancel build"), "selected build finished")
                 assert not second.exists()
@@ -66,7 +73,6 @@ def run(api, bus, registry, binary, output):
                 before = first.read_bytes()
                 capture_settled(window, output, "-selected")
                 results["selected_target_limits_outputs_and_build_saved_keeps_pending_prose"] = True
-                window.act("Return to writing")
                 assert manuscript(window) == node
                 window.focus(node)
                 key("z", control=True)
@@ -75,6 +81,8 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "retained redo")
                 results["build_workspace_preserves_native_field_and_history"] = True
                 command(window, "Build scenes")
+                window.wait(lambda: window.find("Build options"), "selected build result slip")
+                window.act("Build options")
                 window.wait(lambda: window.find("All outputs"), "retained build target")
                 window.act("All outputs")
                 window.act("Save all and build")

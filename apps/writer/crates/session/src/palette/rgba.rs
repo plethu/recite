@@ -25,7 +25,8 @@ impl Rgba {
             mix(start.b, end.b),
         )
     }
-    pub fn monochrome(self) -> Self {
+    /// WCAG relative luminance of the opaque colour.
+    pub fn luminance(self) -> f64 {
         let linear = |channel: u8| {
             let v = f64::from(channel) / 255.;
             if v <= 0.04045 {
@@ -34,7 +35,15 @@ impl Rgba {
                 ((v + 0.055) / 1.055).powf(2.4)
             }
         };
-        let luminance = 0.2126 * linear(self.r) + 0.7152 * linear(self.g) + 0.0722 * linear(self.b);
+        0.2126 * linear(self.r) + 0.7152 * linear(self.g) + 0.0722 * linear(self.b)
+    }
+    /// WCAG contrast ratio between two opaque colours.
+    pub fn contrast(a: Self, b: Self) -> f64 {
+        let (a, b) = (a.luminance(), b.luminance());
+        (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    }
+    pub fn monochrome(self) -> Self {
+        let luminance = self.luminance();
         let value = if luminance <= 0.0031308 {
             luminance * 12.92
         } else {

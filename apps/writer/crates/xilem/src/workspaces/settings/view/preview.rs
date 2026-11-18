@@ -1,5 +1,7 @@
 use super::*;
+use crate::WriterLayout;
 use crate::presentation::source_text;
+use crate::presentation::space;
 
 pub(super) fn preview(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.settings;
@@ -28,7 +30,7 @@ pub(super) fn preview(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                                 paragraph(
                                     scale,
                                     format!("Reviewed from: {}", path.display()),
-                                    writer.content_width() - 24.,
+                                    writer.page_width() - 24.,
                                 )
                             }),
                         label(
@@ -55,15 +57,15 @@ pub(super) fn preview(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                             .disabled(panel.page + 1 >= panel.preview.len()),
                         )),
                         flex_row((sized_box(source_text(14. * scale, page.clone()))
-                            .width((writer.content_width() - 24.).min(960.).px()),)),
+                            .width((writer.page_width() - 24.).min(960.).px()),)),
                     ))
                     .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(8.px()),
+                    .gap(space::SIBLINGS.px()),
                 )
-                .padding(12.px())
+                .padding(space::KINDS.px())
                 .background_color(writer.palette.inset)
             }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

@@ -1,67 +1,67 @@
+//! A reviewed rename's references as rows: where each one is (file, beat and line) over its
+//! change, drawn side by side. The list scrolls with the sheet; nothing pages.
 use super::*;
-use crate::presentation::source_comparison;
+use crate::WriterLayout;
+use crate::presentation::diff::{Side, Text, side_by_side};
+use crate::presentation::print::section_heading;
+use crate::presentation::space;
+use xilem::masonry::parley::style::FontWeight;
 
 pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.rename;
-    let change = panel.changes.get(panel.page)?;
+    if panel.changes.is_empty() {
+        return None;
+    }
     let scale = writer.ui_scale();
+    let width = writer.page_width().min(960. * f64::from(scale));
+    let rows = panel
+        .changes
+        .iter()
+        .map(|change| {
+            flex_col((
+                Type::Control
+                    .label(scale, change.caption.clone())
+                    .weight(FontWeight::SEMI_BOLD),
+                side_by_side(
+                    &writer.palette,
+                    scale,
+                    (width, 640. * f64::from(scale)),
+                    (
+                        Side {
+                            caption: "Before",
+                            text: change.before.as_deref(),
+                        },
+                        Side {
+                            caption: "After",
+                            text: change.after.as_deref(),
+                        },
+                    ),
+                    Text::Source(14. * scale),
+                ),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::SIBLINGS.px())
+        })
+        .collect::<Vec<_>>();
     Some(
         flex_col((
-            label(
+            section_heading(
                 scale,
                 format!(
-                    "Review · {} · {} of {}",
-                    change.caption,
-                    panel.page + 1,
-                    panel.changes.len()
+                    "{} {}",
+                    panel.changes.len(),
+                    if panel.changes.len() == 1 {
+                        "changed reference"
+                    } else {
+                        "changed references"
+                    }
                 ),
             ),
-            flex_row((
-                text_button(scale, "Previous rename change", |writer: &mut Writer| {
-                    writer.workspaces.rename.page = writer.workspaces.rename.page.saturating_sub(1)
-                })
-                .disabled(panel.page == 0),
-                text_button(scale, "More rename changes", |writer: &mut Writer| {
-                    writer.workspaces.rename.page += 1
-                })
-                .disabled(panel.page + 1 >= panel.changes.len()),
-            )),
-            change.before.as_ref().map(|text| {
-                sized_box(
-                    flex_col((
-                        label(scale, "Before"),
-                        flex_row((sized_box(source_comparison(
-                            14. * scale,
-                            text.clone(),
-                            change.after.clone().unwrap_or_default(),
-                        ))
-                        .width((writer.content_width() - 24.).min(960.).px()),)),
-                    ))
-                    .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(8.px()),
-                )
-                .padding(12.px())
-                .background_color(writer.palette.inset)
-            }),
-            change.after.as_ref().map(|text| {
-                sized_box(
-                    flex_col((
-                        label(scale, "After"),
-                        flex_row((sized_box(source_comparison(
-                            14. * scale,
-                            text.clone(),
-                            change.before.clone().unwrap_or_default(),
-                        ))
-                        .width((writer.content_width() - 24.).min(960.).px()),)),
-                    ))
-                    .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(8.px()),
-                )
-                .padding(12.px())
-                .background_color(writer.palette.surface)
-            }),
+            flex_col(rows)
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(space::KINDS.px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px()),
+        .gap(space::TEXT.px()),
     )
 }

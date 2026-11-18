@@ -17,6 +17,7 @@ fn mounted_catalogue_notice_compares_without_applying_drafts_and_retires_with_it
     let mut tools = ToolDriver::new(&mut mounted.state);
     mounted.state.open_localisation();
     mounted.settle();
+    mounted.activate("Open a catalogue…");
     mounted.type_text("Catalogue path", po.to_str().unwrap());
     mounted.activate("Open catalogue");
     tools.finish(&mut mounted.state);

@@ -21,6 +21,9 @@ outlines; the assets share the repository's MIT OR Apache-2.0 license.
 - `grain.png`: a 256-pixel tile of paper grain for canvas and sidebar surfaces. Keep it off the
   reading surface and out from behind prose and code. Chrome text at 13 to 14 pixels may sit on
   grained canvas, because the grain peaks at 7% alpha.
+- `grain-dark.png`: the same fibre in warm paper at a 4.7% peak, for the desk in dark mode. Paper
+  fibre lifts dark paper slightly where the light tile's ink would vanish into it; the same rules
+  keep it off reading surfaces.
 
 ## Letterforms
 
@@ -60,6 +63,13 @@ it only in identity assets and hero or empty states, never on controls.
 magick -seed 7 -size 256x256 xc:gray50 +noise Random -colorspace Gray -virtual-pixel tile \
   -blur 0x0.6 -auto-level \( -size 256x256 xc:'#402e33' \) +swap -alpha off \
   -compose CopyOpacity -composite -channel A -evaluate multiply 0.07 +channel -strip PNG32:grain.png
+```
+
+`grain-dark.png` is derived from it, so the two tiles share one fibre:
+
+```sh
+magick grain.png -channel A -evaluate multiply 0.643 +channel -fill '#f3e9df' -colorize 100 \
+  -strip PNG32:grain-dark.png
 ```
 
 ## Desktop icon

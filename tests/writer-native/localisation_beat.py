@@ -78,8 +78,10 @@ def exercise(window, po, output, results, scale):
     capture(output, f"-{scale}-destination")
     reveal_destination_body(window)
     capture(output, f"-{scale}-destination-body")
-    reveal(window, "▾ Later")
-    window.act("▾ Later")
+    assert window.expanded("→ Later"), "destination toggle reports EXPANDED"
+    reveal(window, "→ Later")
+    window.act("→ Later")
+    window.wait(lambda: not window.expanded("→ Later"), "destination toggle collapsed")
     reveal_field(window, FIRST)
     fill(window, FIRST, "Premier brouillon indépendant.")
     fill(window, SECOND, "Deuxième brouillon publié.")
@@ -125,9 +127,7 @@ def exercise(window, po, output, results, scale):
     window.wait(
         lambda: window.find_text("A passage without a catalogue entry."), "next beat source"
     )
-    window.wait(
-        lambda: window.find_text("No matching entry", prefix=True), "explicit missing entry"
-    )
+    window.wait(lambda: window.find_text("No catalogue entry yet"), "explicit missing entry")
     command(window, "Localise")
     window.wait(
         lambda: window.find_text("A passage without a catalogue entry."),
@@ -137,7 +137,7 @@ def exercise(window, po, output, results, scale):
     if window.find("Scenes…"):
         window.act("Scenes…")
     else:
-        window.act("Find scene or beat…")
+        window.act("Find scene, beat or text…")
     fill(window, "Search query", "opening")
     key("Return")
     reveal_field(window, FIRST)

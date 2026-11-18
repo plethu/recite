@@ -1,4 +1,5 @@
 //! Rename composes an explicit proposal, bounded review and exclusive project actions.
+pub mod inline;
 pub mod selection;
 #[cfg(test)]
 mod tests;
@@ -9,10 +10,17 @@ pub(crate) use selection::BeatChoice;
 pub struct Panel {
     pub block: String,
     pub name: String,
+    /// The reviewed rename's changed references, one row each.
     pub changes: Vec<Change>,
-    pub page: usize,
     pub report: Option<Report>,
-    pub report_page: usize,
+    /// A beat renamed in place, from its field to the staged change.
+    pub inline: Option<inline::Inline>,
+    /// The row or card a finished inline rename returns focus to.
+    pub returning: Option<inline::Target>,
+    /// The status sentence of the last inline rename, while the status line can still undo it.
+    pub undo_offer: Option<String>,
+    /// The beat chosen from Commands to rename, renamed in place once Script has selected it.
+    pub chosen: Option<String>,
 }
 pub enum Report {
     Information(Vec<String>),
@@ -33,15 +41,12 @@ impl Panel {
     }
     pub(super) fn replace(&mut self, pages: Vec<Change>) {
         self.changes = pages;
-        self.page = 0;
     }
     pub(super) fn report(&mut self, report: Option<&str>) {
         self.report = report.map(|report| Report::Problem(text::pages(report)));
-        self.report_page = 0;
     }
     pub(super) fn inform(&mut self, report: &str) {
         self.report = Some(Report::Information(text::pages(report)));
-        self.report_page = 0;
     }
 }
 impl Writer {
@@ -72,6 +77,21 @@ impl Writer {
                 recite_writer_model::EditOperation::Undo
             }));
         }
+    }
+    /// The clash a review would refuse, known before asking: a beat in the open file already has
+    /// the proposal's new id. Said in the writer's words, for the field it concerns.
+    pub fn rename_clash(&self) -> Option<String> {
+        let panel = &self.workspaces.rename;
+        let name = panel.name.trim();
+        if name.is_empty() || name == panel.block.trim() {
+            return None;
+        }
+        let document = self.session.model().document();
+        document
+            .block_summaries()
+            .iter()
+            .any(|block| block.id().as_str() == name)
+            .then(|| format!("A beat named {name} already exists in {}.", document.key()))
     }
     pub fn review_project_rename(&mut self) {
         let panel = &self.workspaces.rename;

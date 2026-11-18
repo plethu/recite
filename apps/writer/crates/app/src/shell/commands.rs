@@ -40,22 +40,24 @@ impl Shell {
             (_, WriterCommand::Settings) => self.show_settings(),
             (_, WriterCommand::OpenProject) => {
                 self.show_welcome = true;
-                self.settings_open = false;
+                self.set_settings_open(false);
             }
             (_, WriterCommand::Close) => self.request_close(),
-            (_, _) if self.settings_open || self.show_welcome => {
+            (_, _) if self.show_welcome => {
                 self.status = "Return to your document to run this command.".into()
             }
             (Some(writer), WriterCommand::Script) => writer.show_workspace(Workspace::Script),
             (Some(writer), WriterCommand::Map) => writer.show_workspace(Workspace::Map),
             (Some(writer), WriterCommand::Split) => writer.show_workspace(Workspace::Split),
             (Some(writer), WriterCommand::Focus) => writer.toggle_focus(),
+            (Some(writer), WriterCommand::Sidebar) => writer.toggle_sidebar(),
+            (Some(writer), WriterCommand::CopyLink) => writer.copy_link(),
             (Some(writer), WriterCommand::Localise) => writer.open_localisation(),
             (Some(writer), WriterCommand::Declarations) => {
                 writer.open_project_workspace(Open::Declarations)
             }
-            (Some(writer), WriterCommand::Build) => writer.open_project_workspace(Open::Build),
-            (Some(writer), WriterCommand::Rename) => writer.open_project_workspace(Open::Rename),
+            (Some(writer), WriterCommand::Build) => writer.build_scenes(),
+            (Some(writer), WriterCommand::Rename) => writer.rename_beat(),
             (Some(writer), WriterCommand::NextMatch | WriterCommand::PreviousMatch) => {
                 writer.repeat_lookup(command == WriterCommand::NextMatch)
             }

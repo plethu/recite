@@ -5,7 +5,7 @@ use recite_writer_session::map::topology;
 
 impl Scene {
     pub fn detail(&self) -> Detail {
-        if self.camera.zoom < recite_writer_session::map::DIALOGUE_ZOOM {
+        if self.camera.relative() < recite_writer_session::map::DIALOGUE_ZOOM {
             Detail::Overview
         } else {
             Detail::Dialogue

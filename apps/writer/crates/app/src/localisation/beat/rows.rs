@@ -17,6 +17,8 @@ pub struct PassageRow {
     pub pages: Vec<String>,
     pub source_page: usize,
     pub form_page: usize,
+    /// Whether the translation's details are disclosed under the row.
+    pub details: bool,
     pub translation: Option<Translation>,
 }
 pub struct Translation {
@@ -28,6 +30,8 @@ pub struct Context {
     pub groups: Arc<[String]>,
     pub pages: Vec<String>,
     pub page: usize,
+    /// A continuation line, which the frontend sets in interface type so its arrow renders.
+    pub continuation: bool,
 }
 #[derive(Clone, PartialEq)]
 pub enum RowIdentity {
@@ -45,6 +49,7 @@ impl Row {
                 pages: text::reading_pages(&passage.text),
                 source_page: 0,
                 form_page: 0,
+                details: false,
                 translation: owner.and_then(|owner| {
                     let id = owner.catalogue.entry_for(&passage.id, &passage.text)?;
                     Some(Translation {
@@ -57,8 +62,15 @@ impl Row {
                 }),
             }),
             Content::Heading(text) | Content::Note(text) => Self::context(row, index, text),
+            Content::Effect { reading, .. } => {
+                Self::context(row, index, &format!("Effect · {reading}"))
+            }
             Content::Continuation(target) => {
-                Self::context(row, index, &format!("Continue → {target}"))
+                let mut context = Self::context(row, index, &format!("Continue → {target}"));
+                if let Self::Context(context) = &mut context {
+                    context.continuation = true;
+                }
+                context
             }
         }
     }
@@ -68,6 +80,7 @@ impl Row {
             groups: row.groups.clone(),
             pages: text::reading_pages(text),
             page: 0,
+            continuation: false,
         })
     }
     pub fn passage(&self) -> Option<&PassageRow> {

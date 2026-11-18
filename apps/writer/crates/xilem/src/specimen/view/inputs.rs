@@ -1,24 +1,26 @@
-//! Native text, radio and checkbox controls retain their ordinary keyboard behavior.
+//! Native text, radio and toggle controls retain their ordinary keyboard behavior.
 use super::*;
-use crate::presentation::radio_button;
-use xilem::{
-    InsertNewline,
-    masonry::properties::TextAreaLabel,
-    view::{radio_group, text_input},
-};
+use crate::presentation::segments::{segment, segments};
+use crate::presentation::space;
+use crate::presentation::tokens::size;
+use crate::presentation::{Type, Typeset, search_field};
+use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
 
 pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     let scale = state.scale();
+    let palette = &state.theme.palette;
     let choices = [Workspace::Script, Workspace::Map, Workspace::Split].map(|workspace| {
         let caption = match workspace {
             Workspace::Script => "Script",
             Workspace::Map => "Map",
             Workspace::Split => "Split",
         };
-        radio_button(
+        segment(
             scale,
+            palette,
             caption,
             state.workspace == workspace,
+            false,
             move |state: &mut Specimen| state.workspace = workspace,
         )
     });
@@ -33,22 +35,25 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         })
         .collect::<Vec<_>>();
     flex_col((
-        label(scale, "Fields and selection").text_size(22. * scale),
-        radio_group(flex_row(choices).gap(12.px())),
+        label(scale, "Fields and selection").typeset(Type::Section, scale),
+        segments(palette, choices),
         label(scale, "Find a destination"),
-        flex_row((
+        flex_row((search_field(
+            scale,
+            palette.muted,
+            false,
+            Some(size::MEASURE),
             text_input(state.query.clone(), |state: &mut Specimen, text| {
                 state.query = text
             })
-            .placeholder("Search scene titles…")
-            .text_size(16. * scale)
-            .prop(TextAreaLabel::new("Find a destination"))
-            .width(640.px()),
-        )),
+            .placeholder("Scene title")
+            .typeset(Type::Body, scale)
+            .prop(TextAreaLabel::new("Find a destination")),
+        ),)),
         label(scale, format!("Destination: {}", state.destination)),
         flex_col(destinations)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         label(scale, "Manuscript"),
         sized_box(
             text_input(state.manuscript.clone(), |state: &mut Specimen, text| {
@@ -59,14 +64,15 @@ pub(super) fn inputs(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             .text_size(20.)
             .prop(TextAreaLabel::new("Specimen manuscript")),
         )
-        .dims((640.px(), 180.px())),
-        checkbox(
-            "Reviewed translation",
-            state.reviewed,
-            |state: &mut Specimen, checked| state.reviewed = checked,
-        )
-        .text_size(14. * scale),
+        .dims((size::MEASURE.px(), 180.px())),
+        print::text_toggle(
+            scale,
+            ("Reviewed translation", "Reviewed"),
+            palette,
+            (state.reviewed, false),
+            |state: &mut Specimen| state.reviewed = !state.reviewed,
+        ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

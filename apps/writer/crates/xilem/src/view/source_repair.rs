@@ -1,39 +1,217 @@
-//! Source drafts are repaired in a real editor, then imported through checked Apply.
+//! Source drafts are repaired in a real editor, then imported through checked Apply. The page is a
+//! banner that says what needs repair, with Reload and the import row it opens, over a head whose
+//! one Primary opens the source in the editor, or applies a staged draft.
 use super::*;
 use crate::WriterLayout;
-use xilem::masonry::properties::TextAreaLabel;
+use crate::presentation::banner::banner;
+use crate::presentation::group::heading;
+use crate::presentation::print;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
+use recite_writer_model::EditOperation;
+use xilem::masonry::properties::{LineBreaking, TextAreaLabel};
+use xilem::view::FlexSequence;
 
-pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
+/// The repair page: `importing` when a recovered draft waits for its repaired text, otherwise the
+/// accepted source has a syntax `error` to repair in the editor. One muted caption says what to
+/// do; a staged draft's Apply and Discard join the head, and Apply is then its one Primary.
+pub(super) fn panel(
+    state: &Writer,
+    importing: bool,
+    error: Option<&str>,
+) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let busy = state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy();
+    let width = state.script_width();
+    // The banner says the source needs repair; the head names what the page holds and the
+    // caption counts it, so neither says so again.
+    let problems = state.session.model().document().diagnostic_snapshot().len();
+    let caption = error.map_or_else(
+        || {
+            if importing {
+                "Export opens the recovered draft in your editor; Import checks the repaired \
+                 text, and Save writes it."
+            } else {
+                "Repair the source in your editor, then Reload. Writer keeps a recovery copy."
+            }
+            .to_owned()
+        },
+        |_| {
+            format!(
+                "{problems} syntax {} · fix them in your editor, then Reload",
+                if problems == 1 { "problem" } else { "problems" }
+            )
+        },
+    );
+    let staged = state.session.model().has_draft();
+    flex_col((
+        repair_banner(state, importing),
+        flex_row((
+            flex_col((
+                {
+                    let title = if importing && error.is_none() {
+                        "Recovered draft"
+                    } else {
+                        "Syntax problems"
+                    };
+                    heading(
+                        1,
+                        title,
+                        Type::Display
+                            .label(scale, title)
+                            .prop(LineBreaking::WordWrap),
+                    )
+                },
+                print::caption(scale, caption)
+                    .color(state.palette.muted)
+                    .prop(LineBreaking::WordWrap),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::UNIT.px())
+            .flex(1.),
+            open(state, importing, !staged),
+            staged.then(|| draft(state)),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(space::SIBLINGS.px())
+        .width(width.px()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::TEXT.px())
+}
+
+/// A staged draft's Discard, quiet, and Apply, the head's one Primary while the draft exists.
+fn draft(state: &Writer) -> impl FlexSequence<Writer> + use<> {
+    let scale = state.ui_scale();
+    let closing = state.phase() != Phase::Writing || state.session.read_only();
+    (
+        print::action(scale, "Discard draft", closing, |state: &mut Writer| {
+            state.change(|model| {
+                model.discard();
+                Ok(())
+            })
+        }),
+        print::primary_action(
+            scale,
+            "Apply draft",
+            &state.palette,
+            closing || state.navigation.busy(),
+            |state: &mut Writer| {
+                state.navigate(crate::navigation::Target::Edit(EditOperation::Apply))
+            },
+        ),
+    )
+}
+
+/// Open in editor: export the recovered draft and open it, open the exported draft again, or
+/// open the accepted source. It is the head's Primary unless a staged draft's Apply is.
+fn open(state: &Writer, importing: bool, primary: bool) -> impl WidgetView<Writer> + use<> {
+    let busy = repair_busy(state);
     let project = state.session.project();
     let exported = state.repair.artifact.as_ref().is_some_and(|artifact| {
         project.is_some_and(|project| project.current().path() == artifact.document)
     });
-    flex_col((
-            label(scale, "Repair source draft").text_size(22. * scale),
-            label(scale, if state.source_repair_pending() {
-                "Import is required before Save"
-            } else if state.session.current_dirty() {
-                "Repaired source accepted · Unsaved"
-            } else { "Accepted source · Saved" }),
-            paragraph(scale, "Export the staged draft and its recovery backup, then repair the text in your editor. Import validates the result before accepting it. Save file writes accepted source to the project.", state.script_width()),
-            text_button(scale, "Export draft and open editor", Writer::export_source_repair)
-                .disabled(busy || project.is_none() || state.external.busy()),
-            exported.then(|| text_button(scale, "Open exported source", Writer::open_exported_source)
-                .disabled(busy || state.external.busy())),
-            label(scale, "Repaired source file"),
-            sized_box(keyed(
-                state.session.model().document().key().clone(),
-                text_input(state.repair_path().to_owned(), Writer::edit_repair_path)
-                .text_size(14. * scale).placeholder("Choose the text file repaired in your editor")
+    let action: fn(&mut Writer) = match (importing, exported) {
+        (true, false) => Writer::export_source_repair,
+        (true, true) => Writer::open_exported_source,
+        (false, _) => Writer::open_editor,
+    };
+    let disabled = busy || project.is_none() || state.external.busy();
+    if primary {
+        Either::A(print::primary_action(
+            state.ui_scale(),
+            "Open in editor",
+            &state.palette,
+            disabled,
+            action,
+        ))
+    } else {
+        Either::B(print::action(
+            state.ui_scale(),
+            "Open in editor",
+            disabled,
+            action,
+        ))
+    }
+}
+
+fn repair_busy(state: &Writer) -> bool {
+    state.phase() != Phase::Writing || state.navigation.busy() || state.work.busy()
+}
+
+/// What needs repair, with Reload and, for a recovered draft, the import row it opens.
+fn repair_banner(state: &Writer, importing: bool) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let busy = repair_busy(state);
+    let width = state.script_width();
+    let status = if !importing {
+        "The accepted source has syntax problems"
+    } else if state.source_repair_pending() {
+        "Import is required before Save"
+    } else if state.session.current_dirty() {
+        "Repaired source accepted · Unsaved"
+    } else {
+        "Accepted source · Saved"
+    };
+    let open = importing && state.repair.importing;
+    // The lead-in says the source needs repair; the message says where the repair stands. A
+    // closed import row adds no gap, so the message stays centred on the actions.
+    let caption = print::caption(scale, status).color(state.palette.muted);
+    let message = if open {
+        Either::A(
+            flex_col((caption, import_row(state, busy)))
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(space::SIBLINGS.px()),
+        )
+    } else {
+        Either::B(caption)
+    };
+    let actions = flex_row((
+        text_button(scale, "Reload", Writer::reload)
+            .accessible_label("Reload (keep recovery copy)")
+            .disabled(busy || state.session.project().is_none()),
+        importing.then(|| {
+            text_button(
+                scale,
+                "Import repaired source…",
+                Writer::toggle_source_repair_import,
+            )
+            .expanded(open)
+            .disabled(busy)
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(space::SIBLINGS.px());
+    banner(
+        &state.palette,
+        (scale, "Source needs repair"),
+        (message, actions),
+        open || width < 560. * f64::from(scale),
+        width,
+    )
+}
+
+/// The repaired file's path, Browse and Import on one line inside the banner.
+fn import_row(state: &Writer, busy: bool) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    flex_row((
+        keyed(
+            state.session.model().document().key().clone(),
+            text_input(state.repair_path().to_owned(), Writer::edit_repair_path)
+                .typeset(Type::Body, scale)
+                .placeholder("Repaired source file")
                 .on_enter(|state: &mut Writer, _| state.import_source_repair())
-                .disabled(busy).prop(TextAreaLabel::new("Repaired source file")),
-            )).width(state.script_width().px()),
-            flex_row((
-                text_button(scale, "Choose file…", Writer::choose_source_repair).disabled(busy),
-                text_button(scale, "Import repaired source", Writer::import_source_repair)
-                    .disabled(busy || state.repair_path().trim().is_empty()),
-            )).gap(8.px()),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
+                .disabled(busy)
+                .prop(TextAreaLabel::new("Repaired source file")),
+        )
+        .flex(1.),
+        text_button(scale, "Browse…", Writer::choose_source_repair).disabled(busy),
+        text_button(
+            scale,
+            "Import repaired source",
+            Writer::import_source_repair,
+        )
+        .disabled(busy || state.repair_path().trim().is_empty()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(space::SIBLINGS.px())
 }

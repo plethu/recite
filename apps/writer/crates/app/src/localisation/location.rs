@@ -127,7 +127,6 @@ impl Plan {
                 } else {
                     Filter::All
                 },
-                page: location.page,
             },
         })
     }
@@ -201,7 +200,6 @@ impl Prepared {
             Projection::Hidden => return Ok(()),
             Projection::Queue(presentation) | Projection::Entry(presentation) => {
                 state.queue = std::mem::take(&mut presentation.queue);
-                state.query.page = state.queue.page;
                 std::mem::swap(&mut state.entry, &mut presentation.entry);
                 state.destination = if state.entry.is_some() {
                     Destination::Entry

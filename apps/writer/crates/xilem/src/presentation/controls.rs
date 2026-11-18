@@ -3,19 +3,39 @@ use xilem::{
     WidgetView,
     core::MessageResult,
     masonry::core::ArcStr,
-    view::{self, Button, Label, PointerButton, Prose},
+    view::{self, Button, Label, PointerButton, Portal, Prose},
 };
-use xilem::{masonry::layout::AsUnit, style::Style};
+use xilem::{
+    masonry::{layout::AsUnit, parley::LineHeight},
+    style::Style,
+};
 
+/// A named scroll area that is not itself a Tab stop: Tab reaches the controls inside, whose
+/// unhandled page and arrow keys still scroll it, and its scrollbars stay focusable.
+pub(crate) fn pane<State: 'static, Action, V: WidgetView<State, Action>>(
+    name: &'static str,
+    content: V,
+) -> Portal<V, State, Action> {
+    view::portal(content)
+        .accessible_label(name)
+        .focusable(false)
+}
+
+/// Body text: Plex Sans 14/20. A size override keeps the same proportional leading.
 pub(crate) fn label(scale: f32, text: impl Into<ArcStr>) -> Label {
+    let (size, line) = super::tokens::Type::Body.metrics();
     view::label(text)
         .font(super::print::font(
             recite_writer_session::typography::FONT_UI,
         ))
-        .text_size(14. * scale)
+        .text_size(size * scale)
+        .line_height(LineHeight::FontSizeRelative(line / size))
 }
 pub(crate) fn prose<State, Action>(scale: f32, text: impl Into<ArcStr>) -> Prose<State, Action> {
-    view::prose(text).text_size(14. * scale)
+    let body = super::tokens::Type::Body;
+    view::prose(text)
+        .font(super::print::font(body.families()))
+        .text_size(body.size(scale))
 }
 pub(crate) fn paragraph<State: 'static, Action: 'static>(
     scale: f32,
@@ -36,5 +56,8 @@ pub(crate) fn text_button<State: 'static>(
     impl Fn(&mut State, Option<PointerButton>) -> MessageResult<()> + Send + Sync + 'static,
     Label,
 > {
-    view::button(label(scale, text), callback)
+    view::button(super::tokens::Type::Control.label(scale, text), callback)
 }
+
+#[cfg(test)]
+mod tests;

@@ -8,7 +8,7 @@ use crate::{
     keyed::keyed,
     map::Workspace,
     tests::support::{self, mounted::Mounted},
-    workspaces::Screen,
+    workspaces::{Screen, tests::finish_build},
 };
 use recite_config::WriterCommand;
 use recite_writer_session::commands;
@@ -36,7 +36,7 @@ fn command<V: WidgetView<App, Widget = Passthrough>>(
     let caption = commands::label(command, focused);
     mounted.activate("Commands");
     mounted.replace_text("Search query", &caption);
-    mounted.activate(&format!("Selected · {caption}"));
+    mounted.activate_selected(&caption);
     assert!(mounted.state.picker.is_none(), "{caption} must execute");
 }
 
@@ -170,19 +170,56 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
         fs::read_to_string(directory.path().join("scene.recite")).unwrap(),
         structured.as_ref()
     );
-    for (command_id, screen) in [
-        (WriterCommand::Declarations, Screen::Declarations),
-        (WriterCommand::Build, Screen::Build),
-        (WriterCommand::Rename, Screen::Rename),
-    ] {
-        command(&mut mounted, command_id);
-        support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation)
-            .unwrap();
-        mounted.settle();
-        assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == screen);
-        mounted.state.writer.as_mut().unwrap().return_to_writing();
-        mounted.settle();
-    }
+    command(&mut mounted, WriterCommand::Declarations);
+    support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
+    mounted.settle();
+    assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Declarations);
+    mounted.state.writer.as_mut().unwrap().return_to_writing();
+    mounted.settle();
+    // Rename beat in Commands asks which beat, then edits its heading in place; the writing
+    // view stays.
+    let caption = commands::label(WriterCommand::Rename, false);
+    mounted.activate("Commands");
+    mounted.replace_text("Search query", &caption);
+    mounted.activate_selected(&caption);
+    assert_eq!(
+        mounted.state.picker.as_ref().map(|picker| picker.mode()),
+        Some(picker::Mode::RenameBeat)
+    );
+    // The scene's one beat, `start`, is the picker's first.
+    mounted.state.activate_picker(0);
+    // Script selects the chosen beat first where it was not selected.
+    support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
+    mounted.settle();
+    let writer = mounted.state.writer.as_ref().unwrap();
+    assert!(writer.workspaces.screen == Screen::Write);
+    assert!(writer.inline_rename().is_some());
+    mounted.find("New beat id");
+    mounted
+        .state
+        .writer
+        .as_mut()
+        .unwrap()
+        .cancel_inline_rename();
+    mounted.settle();
+    // Build is a command: it runs from the writing view, which stays, and reports on a slip.
+    command(&mut mounted, WriterCommand::Build);
+    let writer = mounted.state.writer.as_mut().unwrap();
+    assert!(writer.workspaces.screen == Screen::Write);
+    finish_build(writer);
+    mounted.settle();
+    // The build options open on the result slip; the writing view stays.
+    mounted.activate("Build options");
+    mounted.settle();
+    assert!(mounted.state.writer.as_ref().unwrap().workspaces.screen == Screen::Write);
+    mounted.find("Build saved files");
+    mounted
+        .state
+        .writer
+        .as_mut()
+        .unwrap()
+        .dismiss_build_result();
+    mounted.settle();
     mounted.activate("Workspace");
     mounted.activate("Projects");
     assert!(mounted.state.show_welcome());
@@ -231,8 +268,6 @@ fn mounted_project_text_pages_load_all_matches_and_apply_the_field_only_on_navig
     mounted.activate("Workspace");
     mounted.activate("Find project text");
     mounted.type_text("Search query", "Shared");
-    mounted.activate("Next results");
-    mounted.activate("Previous results");
     mounted.activate("Load more matches");
     assert!(
         mounted
@@ -246,7 +281,7 @@ fn mounted_project_text_pages_load_all_matches_and_apply_the_field_only_on_navig
     );
     assert!(!mounted.state.writer.as_ref().unwrap().navigation.busy());
     mounted.replace_text("Search query", "needle129");
-    mounted.activate_prefix("Selected · scene.recite · ");
+    mounted.activate_selected_prefix("scene.recite · ");
     assert!(mounted.state.picker.is_none());
     support::finish_navigation(mounted.state.writer.as_mut().unwrap(), &mut navigation).unwrap();
     let model = mounted.state.writer.as_ref().unwrap().session.model();

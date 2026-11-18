@@ -1,8 +1,11 @@
 //! Source and translation compose as one retained bilingual manuscript.
+use crate::WriterLayout;
+use crate::presentation::space;
 mod context;
 mod incoming;
 mod source;
 mod translation;
+mod updates;
 use super::*;
 use crate::{attention::PaneEntry, keyed::column, presentation::print};
 use recite_writer_session::choices::display_name;
@@ -40,41 +43,27 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
                         Axis::Vertical
                     })
                     .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .gap(24.px()),
+                    .gap(space::GROUPS.px()),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(8.px())
+                .gap(space::SIBLINGS.px())
                 .boxed(),
                 beat::Row::Context(row) => context::context(writer, row, width).boxed(),
             };
             (
                 row.identity(&beat.source),
-                flex_col((content,)).padding(xilem::style::Padding::from_vh(12.px(), 0.px())),
+                flex_col((content,))
+                    .padding(xilem::style::Padding::from_vh(space::KINDS.px(), 0.px())),
             )
         })
         .collect();
     Some(
         flex_col((
-            print::title(writer.ui_scale(), display_name(&beat.name)),
-            print::meta(
-                writer.ui_scale(),
-                format!(
-                    "{} :: {}",
-                    writer.session.model().document().key(),
-                    beat.name
-                ),
-            )
-            .color(writer.palette.muted),
-            actions(writer),
+            crate::view::tool_head(writer, display_name(&beat.name), actions(writer))
+                .prop(PaneEntry(true)),
+            running_head(writer),
+            updates::updates(writer, beat, width),
             incoming::incoming(writer, beat),
-            paragraph(
-                writer.ui_scale(),
-                format!(
-                    "Source, read only · Translation: {}",
-                    writer.localisation.catalogue_caption()
-                ),
-                width,
-            ),
             (!writer.localisation.has_catalogue()).then(|| {
                 paragraph(
                     writer.ui_scale(),
@@ -93,34 +82,45 @@ pub(super) fn passage(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
             pages(writer, beat),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
+/// The sheet's own actions: back to the source, the queue, and Save all drafts, the sheet's one
+/// primary, shown only while drafts wait, as in the queue.
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = writer.ui_scale();
     let blocked = writer.project_action_blocked() || writer.localisation.slot.read_only();
+    let drafts = writer.localisation.needs_save();
     flex_row((
-        text_button(writer.ui_scale(), "Edit source", Writer::return_to_writing).disabled(blocked),
-        text_button(
-            writer.ui_scale(),
-            "Open translation queue",
-            |writer: &mut Writer| writer.catalogue_action(work::Action::Query),
-        )
+        text_button(scale, "Edit source", Writer::return_to_writing).disabled(blocked),
+        text_button(scale, "Open translation queue", |writer: &mut Writer| {
+            writer.catalogue_action(work::Action::Query)
+        })
         .disabled(blocked),
-        text_button(
-            writer.ui_scale(),
-            "Save all translation drafts",
-            Writer::save_translation_drafts,
-        )
-        .disabled(blocked || !writer.localisation.needs_save()),
+        drafts.then(|| {
+            print::primary_action(
+                scale,
+                "Save all translation drafts",
+                &writer.palette,
+                blocked,
+                Writer::save_translation_drafts,
+            )
+        }),
     ))
-    .direction(if width(writer) < 580. * f64::from(writer.ui_scale()) {
-        Axis::Vertical
-    } else {
-        Axis::Horizontal
-    })
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
-    .prop(PaneEntry(true))
+    .gap(space::SIBLINGS.px())
+}
+/// The running head under the title: the source file, then the catalogue's language and file.
+fn running_head(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let source = writer.session.model().document().key().to_string();
+    print::meta(
+        writer.ui_scale(),
+        if writer.localisation.has_catalogue() {
+            format!("{source} · {}", writer.localisation.catalogue_caption())
+        } else {
+            source
+        },
+    )
+    .color(writer.palette.muted)
 }
 fn pages(writer: &Writer, beat: &beat::Beat) -> Option<impl WidgetView<Writer> + use<>> {
     (beat.total > beat::PAGE).then(|| {
@@ -150,13 +150,13 @@ fn pages(writer: &Writer, beat: &beat::Beat) -> Option<impl WidgetView<Writer> +
                 )
                 .disabled(blocked || (page + 1) * beat::PAGE >= beat.total),
             ))
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ))
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }
 fn width(writer: &Writer) -> f64 {
     writer
-        .content_width()
+        .page_width()
         .min(1320. * f64::from(writer.ui_scale()))
 }

@@ -130,7 +130,7 @@ fn comparison_pages_are_bounded_and_render_pending_draft_and_merge_actions_at_bo
                     "draft",
                     "Unapplied manuscript text remains separate from the accepted source.",
                 ),
-                ("source", "Inspected disk version"),
+                ("source", "Disk version"),
                 ("merge", "Import reviewed merge"),
             ] {
                 reveal(&mut harness, caption);
@@ -157,13 +157,14 @@ fn a_large_changed_line_does_not_grow_the_mounted_comparison() {
         writer.compare_disk_changes();
         finish(&mut writer, &mut jobs);
         let inspection = writer.workspaces.external.inspection().unwrap();
-        assert_eq!(inspection.changes.len(), (length + 3).div_ceil(1_000));
+        // One changed line is one row, each side cut to a row's worth with an ellipsis.
+        assert_eq!(inspection.changes.len(), 1);
         assert!(
             inspection
                 .changes
                 .iter()
-                .all(|row| row.before.as_ref().unwrap().chars().count() <= 1_000
-                    && row.after.as_ref().unwrap().chars().count() <= 1_000)
+                .all(|row| row.before.as_ref().unwrap().chars().count() <= 1_001
+                    && row.after.as_ref().unwrap().chars().count() <= 1_001)
         );
         let labels = support::labels(&mut writer).unwrap();
         costs.push((
@@ -175,6 +176,6 @@ fn a_large_changed_line_does_not_grow_the_mounted_comparison() {
         ));
     }
     assert_eq!(costs[1].0, costs[0].0, "{costs:?}");
-    // Only the displayed total-page count gains digits; mounted text stays at one page.
+    // Mounted text stays at one row's worth however long the line is.
     assert!(costs[1].1 <= costs[0].1 + 8, "{costs:?}");
 }

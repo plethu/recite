@@ -2,6 +2,8 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::PaneEntry;
 use crate::navigation::Target;
+use crate::presentation::print;
+use crate::presentation::space;
 use recite_writer_session::localisation::catalogue::Draft;
 use recite_writer_session::location::Screen as LinkedScreen;
 use xilem::view::{GridExt, GridTrackSize, grid};
@@ -29,21 +31,21 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 vec![GridTrackSize::Fixed(entry_width(writer).px())]
             })
             .rows(vec![GridTrackSize::Auto; if wide(writer) { 1 } else { 2 }])
-            .gap(24.px()),
+            .gap(space::GROUPS.px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(10.px()),
+        .gap(space::TEXT.px()),
     )
 }
 
 fn wide(writer: &Writer) -> bool {
-    writer.content_width() >= 800. * f64::from(writer.ui_scale())
+    writer.page_width() >= 800. * f64::from(writer.ui_scale())
 }
 fn entry_width(writer: &Writer) -> f64 {
     writer.script_width().min(if wide(writer) {
-        (writer.content_width() - 24.) / 2.
+        (writer.page_width() - 24.) / 2.
     } else {
-        writer.content_width()
+        writer.page_width()
     })
 }
 fn editor(
@@ -55,6 +57,7 @@ fn editor(
     let state = &writer.localisation;
     let scale = writer.ui_scale();
     let reviewed_key = entry.key.clone();
+    let reviewed = draft.reviewed;
     let discard_key = entry.key.clone();
     let changed = state
         .slot
@@ -65,15 +68,13 @@ fn editor(
         plural::guide(writer, entry, blocked),
         forms::forms(writer, entry, draft, blocked),
         flex_row((
-            checkbox(
-                "Reviewed translation",
-                draft.reviewed,
-                move |writer: &mut Writer, reviewed| {
-                    writer.review_translation(&reviewed_key, reviewed)
-                },
-            )
-            .text_size(14. * scale)
-            .disabled(blocked),
+            print::text_toggle(
+                scale,
+                ("Reviewed translation", "Reviewed"),
+                &writer.palette,
+                (draft.reviewed, blocked),
+                move |writer: &mut Writer| writer.review_translation(&reviewed_key, !reviewed),
+            ),
             text_button(scale, "Save translation", Writer::save_translation_entry).disabled(
                 blocked || writer.project_jobs_busy() || !changed || !entry.details.plural.valid(),
             ),
@@ -84,7 +85,7 @@ fn editor(
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         text_button(
             scale,
             "Discard translation draft",
@@ -93,7 +94,7 @@ fn editor(
         .disabled(blocked || state.saving() || !changed),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn navigation(writer: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
@@ -125,6 +126,6 @@ fn navigation(writer: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<>
         .disabled(writer.project_action_blocked()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(true))
 }

@@ -11,6 +11,11 @@ pub fn caption(tag: &str) -> Option<String> {
     Some(format!("{} · {}", choice.title, choice.value))
 }
 
+/// The language's English name, such as "French" for `fr`.
+pub fn name(tag: &str) -> Option<String> {
+    locale_option(tag).map(|choice| choice.title)
+}
+
 fn locale_option(tag: &str) -> Option<PickerOption> {
     let locale = create::language(tag).ok()?;
     let value = locale.to_string();

@@ -131,6 +131,14 @@ def run(api, bus, registry, binary, output):
                 process, window, node = launch(api, bus, registry, arguments, log)
                 assert api.property_value(bus, node, api.ACCESSIBLE, "Name") == "Manuscript"
                 results["manuscript_accessible_name"] = True
+                # The scene title and the beat heading are headings a screen reader can jump to.
+                heading = int(api.Atspi.Role.HEADING)
+                for title in ("Scene", "Opening"):
+                    assert any(
+                        name == title and window.call(node, "Accessible", "GetRole")[0] == heading
+                        for node, name in window.nodes()
+                    ), title + " is a heading"
+                results["galley_headings"] = True
                 window.focus(node)
                 original = window.text(node)
                 key("End", control=True)
@@ -263,8 +271,8 @@ def run(api, bus, registry, binary, output):
                 source.write_text(malformed)
                 process, window, _ = launch(api, bus, registry, arguments, log, manuscript=False)
                 assert window.find("Manuscript") is None
-                window.reveal_end("Export draft and open editor")
-                assert window.enabled("Export draft and open editor")
+                window.reveal_end("Open in editor")
+                assert window.enabled("Open in editor")
                 assert source.read_text() == malformed
                 assert not window.enabled("Add beat")
                 window.document_action("Configure preview")

@@ -6,20 +6,80 @@ use xilem::{
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ControlStyle {
+    /// The one solid plum action on a view.
     Primary,
+    /// A secondary action on a sheet, panel or dialog: ink at 8% over its host, no border. The
+    /// unclassed default looks the same; the class lets an action change emphasis in place.
+    Tonal,
+    /// A quiet action on the desk: no fill until hovered.
     Action,
     Navigation,
+    /// An unchosen segment: quiet on its tonal track.
     Segment,
+    /// The chosen segment: the reading surface on the track, with its ink bar painted above.
+    Chosen,
+    /// A text tab; the chosen one carries an underline painted above it.
+    Tab,
     Manuscript,
+    /// A field on paper: the default well, named so a field can move between hosts in place.
+    Field,
+    /// A field on the grained desk, where the paper rule would fall under 3:1.
+    DeskField,
+    /// A search field, padded for its leading icon.
+    SearchField,
+    /// A field set in a title's place, such as a beat's heading while it is renamed: the paper
+    /// well and its rule with only the focus border's room above and below the text, so it keeps
+    /// the title's line.
+    TitleField,
+    /// A field on paper whose value is refused: its border and rule take the error ink.
+    InvalidField,
+    /// A button shaped like a search field on the desk: it opens a search.
+    Entry,
+    /// A list row at rest.
+    Row,
+    /// The selected list row: the second-ink plate, with its words' ink underscore painted above.
+    RowSelected,
+    /// A compact icon face with even padding.
+    Icon,
+    /// An icon toggle that is on: the pressed sink held, with its ink edge, so the state shows by
+    /// shape as well as fill.
+    IconOn,
+    /// A text toggle that is on: the icon toggle's pressed sink and ink edge with text padding.
+    ToggleOn,
+    /// A checkbox row whose box sits on its row's leading edge, in line with labelled rows.
+    Flush,
+    /// A label that opens its choice, such as a line's speaker in the margin: quiet and borderless,
+    /// with only its focus ring's room either side of its words, so it keeps the label's face and
+    /// place.
+    Label,
+    /// An action on the status bar: quiet on the overprint, with a mint focus border.
+    Status,
 }
 impl ControlStyle {
     pub fn class(self) -> &'static str {
         match self {
             Self::Primary => "writer-primary",
+            Self::Tonal => "writer-tonal",
             Self::Action => "writer-action",
             Self::Navigation => "writer-navigation",
             Self::Segment => "writer-segment",
+            Self::Chosen => "writer-chosen",
+            Self::Tab => "writer-tab",
             Self::Manuscript => "writer-manuscript",
+            Self::Field => "writer-field",
+            Self::DeskField => "writer-desk-field",
+            Self::SearchField => "writer-search-field",
+            Self::TitleField => "writer-title-field",
+            Self::InvalidField => "writer-invalid-field",
+            Self::Icon => "writer-icon",
+            Self::IconOn => "writer-icon-on",
+            Self::ToggleOn => "writer-toggle-on",
+            Self::Entry => "writer-entry",
+            Self::Row => "writer-row",
+            Self::RowSelected => "writer-row-selected",
+            Self::Flush => "writer-flush",
+            Self::Label => "writer-label",
+            Self::Status => "writer-status",
         }
     }
 }

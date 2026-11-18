@@ -2,8 +2,10 @@
 use super::*;
 pub use crate::attention::{DocumentMenu, EditingTarget, FieldRestoration, PaneMotion};
 pub use crate::localisation::TranslationTarget;
+use crate::workspaces::rename::inline::Target as RenameTarget;
 use recite_config::{WriterCommand, WriterShortcuts};
 
+mod invoke;
 mod scope;
 pub use scope::Scope;
 
@@ -38,7 +40,23 @@ pub struct Context<P> {
     pub editing: Option<EditingTarget>,
     pub field_restoration: Option<FieldRestoration>,
     pub keymap: recite_config::Keymap,
+    /// A modal surface over the document: focus moves into it and Esc dismisses it.
+    pub modal: Option<Modal>,
+    /// The preview's current replies: 1 to 9 choose among the first nine.
+    pub preview_choices: usize,
     pub proxy: P,
+}
+/// A surface that takes focus from the document until it is dismissed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Modal {
+    /// The Settings side sheet.
+    Settings,
+    /// The decision to keep, save or discard work before closing.
+    CloseDecision,
+    /// The Configure preview slip: the next run's inputs.
+    PreviewInputs,
+    /// A beat renamed in place, and its consequence slip.
+    Rename,
 }
 pub struct Invocation {
     pub action: Action,
@@ -60,6 +78,30 @@ pub enum Action {
     },
     FieldFocus(Option<EditingTarget>),
     DismissDocumentMenu,
+    /// Esc on a modal surface: close Settings, or keep editing rather than close.
+    DismissModal(Modal),
+    /// A digit key: the preview's numbered reply.
+    ChoosePreview(usize),
+    /// F2 on a sidebar beat row or a map card: rename that beat in place there.
+    RenameBeat(RenameTarget),
+    /// Ctrl+Down and Ctrl+Up: the next or previous beat of the scene.
+    StepBeat {
+        forward: bool,
+    },
+    /// The open picker hangs from the control that opened it, at this window point.
+    PlacePicker {
+        x: u32,
+        y: u32,
+    },
+    /// An inline rename's slip hangs from the heading or row being renamed, at this window point.
+    PlaceRenameSlip {
+        x: u32,
+        y: u32,
+    },
+    /// The Configure preview slip hangs under its action, this far right of the transcript.
+    PlaceInputsSlip {
+        x: u32,
+    },
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -116,6 +158,30 @@ impl Scope {
                 })
                 .and_then(|writer| writer.editing.clone()),
             keymap: self.keymap,
+            preview_choices: self
+                .writer
+                .as_ref()
+                .filter(|writer| writer.writing && !self.welcome && !self.settings)
+                .map_or(0, |writer| writer.preview_choices),
+            modal: if self.writer.as_ref().is_some_and(|writer| writer.confirming) {
+                Some(Modal::CloseDecision)
+            } else if self.settings {
+                Some(Modal::Settings)
+            } else if self
+                .writer
+                .as_ref()
+                .is_some_and(|writer| writer.configuring && !self.welcome)
+            {
+                Some(Modal::PreviewInputs)
+            } else if self
+                .writer
+                .as_ref()
+                .is_some_and(|writer| writer.renaming && !self.welcome && !self.settings)
+            {
+                Some(Modal::Rename)
+            } else {
+                None
+            },
             field_restoration: self
                 .writer
                 .as_ref()
@@ -144,68 +210,5 @@ impl Generations {
         if !current.0.same_picker_opening_scope(previous.0) || current.1 != previous.1 {
             self.picker_opening.advance();
         }
-    }
-}
-
-impl Shell {
-    /// Apply an invocation captured under `captured`; returns false when it is stale.
-    pub fn invoke(
-        &mut self,
-        captured: &Scope,
-        shortcuts: &WriterShortcuts,
-        generations: Generations,
-        invocation: Invocation,
-    ) -> bool {
-        let current = Scope::capture(self);
-        let current_scope = match &invocation.action {
-            Action::OpenPicker { generation, .. } => {
-                *generation == generations.picker_opening
-                    && captured.same_picker_opening_scope(&current)
-            }
-            _ => {
-                invocation.generation == generations.command
-                    && captured.same_command_scope(&current)
-            }
-        };
-        if !current_scope || shortcuts != &self.preferences.config.writer.shortcuts {
-            return false;
-        }
-        match invocation.action {
-            Action::OpenPicker { search, .. } => {
-                if let Some(writer) = &mut self.writer {
-                    writer.document_menu = DocumentMenu::Closed;
-                }
-                self.open_picker(search);
-            }
-            Action::FieldFocus(target) => {
-                if let Some(writer) = &mut self.writer {
-                    writer.native_field_focus(target);
-                }
-            }
-            Action::Command(command) => self.run_command(command),
-            Action::SaveTranslation(target) => {
-                if let Some(writer) = &mut self.writer {
-                    writer.save_focused_translation(&target);
-                }
-            }
-            Action::SubmitPicker => self.submit_picker(),
-            Action::SubmitProject => self.open_selected(),
-            Action::DismissDocumentMenu => {
-                if let Some(writer) = &mut self.writer {
-                    writer.document_menu = DocumentMenu::Dismissed;
-                }
-            }
-            Action::PaneHint(pending) => self.pane_hint = pending,
-            Action::CyclePane { forward } => {
-                if let Some(writer) = &mut self.writer {
-                    writer.focus_pane(if forward {
-                        PaneMotion::Next
-                    } else {
-                        PaneMotion::Previous
-                    });
-                }
-            }
-        }
-        true
     }
 }

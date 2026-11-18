@@ -103,6 +103,9 @@ impl Writer {
                 self.schema_feedback(message);
             }
         }
+        if completed.request.kind == ToolKind::Catalogue {
+            self.resume_catalogue_query();
+        }
         Retirement::Drop(completed.result.ok())
     }
 }

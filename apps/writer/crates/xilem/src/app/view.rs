@@ -1,12 +1,23 @@
 mod chrome;
 use super::*;
-use crate::presentation::group::named;
+use crate::presentation::{
+    Type,
+    group::named,
+    lowered,
+    material::{backdrop, cover, desk},
+    space,
+    tokens::size,
+};
+use crate::workspaces::rename::inline as rename;
 use chrome::app_bar;
 use xilem::{
     WidgetView,
-    masonry::layout::{AsUnit, UnitPoint},
-    style::Style,
-    view::{CrossAxisAlignment, FlexExt, flex_col, indexed_stack, sized_box, zstack},
+    masonry::layout::{AsUnit, Dim, UnitPoint},
+    style::{Padding, Style},
+    view::{
+        CrossAxisAlignment, FlexExt, FlexSpacer, flex_col, flex_row, indexed_stack, sized_box,
+        zstack,
+    },
 };
 pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     let width = app.viewport.width;
@@ -14,38 +25,177 @@ pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
         writer.viewport.width = width;
     }
     let slot = slot::writer_slot(app);
+    let scale = f64::from(crate::presentation::scale(&app.preferences.config.writer));
+    let writing = app.writer.is_some() && !app.show_welcome();
+    // Settings hangs below the toolbar, whose Workspace control is its toggle; the tab row and
+    // toolbar stay clear and inert around it.
+    let below_toolbar = (size::PICKER_TOP - size::ROW) * scale;
+    // The status bar's height: its vertical padding and one Meta line.
+    let status_bar = if writing {
+        2. * space::UNIT
+            + f64::from(Type::Meta.metrics().1)
+                * f64::from(crate::presentation::scale(&app.preferences.config.writer))
+    } else {
+        0.
+    };
     keyboard::host(
         app,
         xilem::core::fork(
             xilem::view::resize_observer(
                 |app: &mut App, size| app.viewport = size,
-                flex_col((
-                    app_bar(app),
+                desk(
+                    app.theme.grain.clone(),
                     zstack((
-                        named(
-                            "Writer workspace",
-                            indexed_stack((welcome::panel(app), slot, settings::settings(app)))
-                                .active(if app.settings_open() {
-                                    2
-                                } else {
-                                    usize::from(!app.show_welcome())
-                                }),
-                        )
-                        .disabled(app.picker.is_some()),
-                        indexed_stack((
-                            picker::view::picker(app),
-                            sized_box(flex_col(())).dims((0.px(), 0.px())),
+                        flex_col((
+                            // The close decision dims the document within the writer; the tab
+                            // row above it dims with it.
+                            zstack((
+                                app_bar(app),
+                                app.writer
+                                    .as_ref()
+                                    .is_some_and(|writer| {
+                                        matches!(
+                                            writer.phase(),
+                                            crate::Phase::ConfirmClose
+                                                | crate::Phase::ConfirmExit
+                                                | crate::Phase::Closing
+                                        )
+                                    })
+                                    .then(|| {
+                                        backdrop(
+                                            app.theme.palette.backdrop,
+                                            app.theme.screen.clone(),
+                                            sized_box(flex_col(())).dims(Dim::Stretch),
+                                        )
+                                    }),
+                            )),
+                            zstack((
+                                named(
+                                    "Writer workspace",
+                                    // While writing, the Writer dims and holds what Settings
+                                    // covers itself, around its toolbar.
+                                    cover(
+                                        (app.settings_open() && !writing).then(|| {
+                                            (app.theme.palette.backdrop, app.theme.screen.clone())
+                                        }),
+                                        indexed_stack((welcome::panel(app), slot))
+                                            .active(usize::from(!app.show_welcome())),
+                                    ),
+                                )
+                                // Behind a picker, Settings or a rename's decision the
+                                // workspace is inert; while writing, Settings leaves that to the
+                                // Writer, as its toolbar holds the sheet's toggle.
+                                .disabled(
+                                    app.picker.is_some()
+                                        || (app.settings_open() && !writing)
+                                        || app.writer.as_ref().is_some_and(rename::modal),
+                                ),
+                                // Settings is a modal side sheet over the dimmed workspace, which
+                                // still shows each change; the status bar stays clear. The layer
+                                // is moved down rather than padded, so the band above it leaves
+                                // the toolbar its pointer. A stack keeps the layer in place while
+                                // it is closed, so the layers above it keep theirs.
+                                lowered(
+                                    below_toolbar,
+                                    indexed_stack((
+                                        sized_box(
+                                            flex_row((
+                                                FlexSpacer::Flex(1.),
+                                                settings::settings(app),
+                                            ))
+                                            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                                            .dims(Dim::Stretch),
+                                        )
+                                        .dims(Dim::Stretch)
+                                        .padding(Padding {
+                                            bottom: (status_bar + below_toolbar).px(),
+                                            ..Padding::all(0.px())
+                                        }),
+                                        sized_box(flex_col(())).dims((0.px(), 0.px())),
+                                    ))
+                                    .active(usize::from(!app.settings_open()))
+                                    .dims(
+                                        if app.settings_open() {
+                                            Dim::Stretch
+                                        } else {
+                                            Dim::Auto
+                                        },
+                                    ),
+                                ),
+                            ))
+                            .alignment(UnitPoint::CENTER)
+                            .flex(1.),
                         ))
-                        .active(usize::from(app.picker.is_none())),
+                        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                        .gap(0.px())
+                        .dims(Dim::Stretch),
+                        // A picker's or rename slip's backdrop dims the window above the status
+                        // bar, the tab row included; the bar carries state, so its words keep their
+                        // contrast. The layer is empty and takes no pointer events otherwise.
+                        modal_layer(app.picker.is_some(), status_bar, picker_layer(app, scale)),
+                        modal_layer(
+                            app.writer.as_ref().is_some_and(rename::floats),
+                            status_bar,
+                            slot::rename_slot(app),
+                        ),
                     ))
                     .alignment(UnitPoint::CENTER)
-                    .flex(1.),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(0.px())
+                    .dims(Dim::Stretch),
+                )
                 .background_color(app.theme.palette.canvas),
             ),
             opening::worker(),
         ),
     )
 }
+
+/// A layer over the window above its `status_bar` that fills it while `open` and is an empty
+/// corner otherwise, so it never takes the pointer events of the window beneath.
+fn modal_layer<V: WidgetView<App>>(
+    open: bool,
+    status_bar: f64,
+    layer: V,
+) -> impl WidgetView<App> + use<V> {
+    indexed_stack((
+        sized_box(sized_box(layer).dims(Dim::Stretch))
+            .dims(Dim::Stretch)
+            .padding(Padding {
+                bottom: status_bar.px(),
+                ..Padding::all(0.px())
+            }),
+        sized_box(flex_col(())).dims((0.px(), 0.px())),
+    ))
+    .active(usize::from(!open))
+    .dims(if open { Dim::Stretch } else { Dim::Auto })
+}
+
+/// An open picker over the backdrop: below the tab row at a fixed height from the window's top
+/// edge, or hanging from the combobox that opened it; its layer ends above the status bar.
+fn picker_layer(app: &App, scale: f64) -> impl WidgetView<App> + use<> {
+    let placement = picker::view::placement(app);
+    backdrop(
+        app.theme.palette.backdrop,
+        app.theme.screen.clone(),
+        // A stack bounds the picker by the layer, so it scrolls its results rather than overflow
+        // at 200%.
+        zstack((
+            sized_box(picker::view::picker(app)).padding(placement.map_or(
+                Padding::top((size::PICKER_TOP * scale).px()),
+                |(left, top)| Padding {
+                    left: left.px(),
+                    top: top.px(),
+                    ..Padding::all(0.px())
+                },
+            )),
+        ))
+        .alignment(if placement.is_some() {
+            UnitPoint::TOP_LEFT
+        } else {
+            UnitPoint::TOP
+        })
+        .dims(Dim::Stretch),
+    )
+}
+
+#[cfg(test)]
+mod tests;

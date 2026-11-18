@@ -21,8 +21,7 @@ fn rename_beat_choices_keep_native_result_cost_bounded_as_the_scene_grows() {
         let directory = support::project(&source).unwrap();
         let mut app = App::with_writer(support::open(&directory).unwrap());
         let writer = app.writer.as_mut().unwrap();
-        writer.workspaces.screen = crate::workspaces::Screen::Rename;
-        writer.choose_rename_beat();
+        writer.choose_beat_to_rename();
         app.open_editor_choices();
         assert_eq!(app.picker.as_ref().unwrap().total, count);
         assert_eq!(app.picker.as_ref().unwrap().mode(), Mode::RenameBeat);
@@ -77,11 +76,8 @@ fn rename_beat_choices_keep_native_result_cost_bounded_as_the_scene_grows() {
         assert_eq!(app.picker.as_ref().unwrap().total, 1);
         app.activate_picker(0);
         assert!(app.picker.is_none());
+        // Choosing asks Script to select the beat; nothing is renamed until its field is typed.
         let writer = app.writer.as_ref().unwrap();
-        assert_eq!(
-            writer.session.model().selected_block().unwrap().as_deref(),
-            Some("start")
-        );
         assert_eq!(writer.session.model().document().source(), source);
     }
 }

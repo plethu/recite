@@ -234,7 +234,7 @@ fn recovered_source_never_offers_manuscript_apply_or_enqueues_preview() {
 }
 
 #[test]
-fn current_request_precedes_expanded_next_run_settings_without_replacing_either() {
+fn next_run_settings_open_on_a_slip_without_replacing_the_current_request() {
     let directory =
         project(":: start default\n:if trusts(player)\n  > @ffee6p8\n    Hello.\n-> END\n")
             .unwrap();
@@ -243,18 +243,12 @@ fn current_request_precedes_expanded_next_run_settings_without_replacing_either(
     writer.configure_trial();
     let mut mounted = Mounted::new(writer, surface);
     let answer = mounted.find("Answer true");
-    let settings = mounted.find("Preview wording");
-    let bounds = |id| {
-        let widget = mounted.harness.get_widget_with_id(id);
-        widget
-            .ctx()
-            .window_transform()
-            .transform_rect_bbox(widget.ctx().border_box())
-    };
-    assert!(bounds(answer).y0 < bounds(settings).y0);
-    mounted.activate("Hide preview inputs");
+    mounted.find("Preview wording");
+    // The next run's settings open on their own slip; the current request stays mounted.
+    mounted.activate("Done with preview inputs");
+    assert!(!mounted.state.configuring_trial());
     mounted.activate("Configure preview");
-    assert_eq!(mounted.find("Preview wording"), settings);
+    assert_ne!(mounted.find("Preview wording"), answer);
     assert_eq!(mounted.find("Answer true"), answer);
 }
 

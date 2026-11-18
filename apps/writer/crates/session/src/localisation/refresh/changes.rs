@@ -21,10 +21,15 @@ impl Kind {
 }
 pub struct Change {
     pub kind: Kind,
+    /// The record's context: what a refresh keeps the record by.
+    pub context: String,
     pub old: Option<String>,
     pub new: Option<String>,
     pub translation: String,
     pub caption: String,
+    /// The source file the entry comes from, and its beat and speaker, from its metadata.
+    pub file: String,
+    pub beat: String,
     pub nearby: Vec<String>,
     pub notes: Vec<String>,
     pub destination: Option<Destination>,
@@ -90,6 +95,7 @@ fn describe(
     let nearby = context.for_entry(entry);
     Change {
         kind,
+        context: entry.context().unwrap_or_default().to_owned(),
         old: old.map(source),
         new: new.map(source),
         translation: old.map_or_else(String::new, |e| {
@@ -113,6 +119,12 @@ fn describe(
         .flatten()
         .collect::<Vec<_>>()
         .join(" · "),
+        file: metadata(entry, "file:").unwrap_or_default(),
+        beat: [metadata(entry, "block:"), metadata(entry, "speaker:")]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" · "),
         nearby,
         notes: old
             .into_iter()

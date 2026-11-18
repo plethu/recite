@@ -54,8 +54,8 @@ def run(api, bus, registry, binary, output):
                 assert source.read_text() == disk
                 window.reveal_start("Return to writing")
                 capture_settled(window, output, "-comparison")
-                window.reveal_start("Keep Writer version")
-                window.act("Keep Writer version")
+                window.reveal_start("Keep mine")
+                window.act("Keep mine")
                 window.wait(
                     lambda: window.find_text("Kept Writer's document", prefix=True),
                     "keep Writer adoption",

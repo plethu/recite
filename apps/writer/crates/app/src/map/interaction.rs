@@ -1,5 +1,6 @@
 //! Gestures carry their origin; cancellation restores it before any layout commit.
 use super::*;
+use crate::workspaces::rename::inline::{Place, Target};
 pub use input::Input;
 use kurbo::Vec2;
 use recite_writer_session::map::placement::card_key;
@@ -45,6 +46,15 @@ impl Writer {
                     self.select_map_beat(id);
                 }
                 self.open_map_beat();
+            }
+            Input::Rename => {
+                if let Source::Card(beat) = source {
+                    self.select_map_beat(beat.clone());
+                    self.rename_beat_in(Target {
+                        beat,
+                        place: Place::Card,
+                    });
+                }
             }
             Input::Search => {
                 self.app_request = Some(crate::shell::Request::Search(crate::shell::Search::GoTo))

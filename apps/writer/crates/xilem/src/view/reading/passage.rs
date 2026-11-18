@@ -1,116 +1,243 @@
 //! A passage occupies the same manuscript row while its single draft is edited.
 use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::presentation::print;
+use crate::presentation::grid::Grid;
+use crate::presentation::grid::{DESTINATION_GUTTER, GUTTER};
+use crate::presentation::marks::{Dot, Marks, marked};
+use crate::presentation::space;
+use crate::presentation::{Page, Sheet, disclosure_width, overhang, route_name, route_toggle};
+use crate::presentation::{control_inset, label_inset};
 use crate::reading::PassageNumber;
+use crate::view::workspace::Layout;
 use recite_core::STABLE_ID_FIELD_PREFIX;
-use recite_writer_model::{Passage, PassageKind};
-use xilem::TextAlign;
+use recite_writer_model::{Passage, PassageKind, RouteOwner};
 use xilem::masonry::kurbo::Axis;
 use xilem::masonry::properties::LineBreaking;
-use xilem::view::button;
+use xilem::view::{FlexSpacer, button};
+mod choice;
+mod continuation;
+mod metadata;
 #[cfg(test)]
 mod tests;
+pub(super) use choice::route_choice;
+pub(super) use continuation::{RouteFace, absorbed, continuation_row, ends, joined};
+pub(super) use metadata::route_to;
+use metadata::{route, routes, with_id};
+
+/// Space a row keeps under its text before the row gap.
+const CAPTION_CLEARANCE: f64 = 4.;
+/// The spacing between reply rows: the row's clearance and the text rhythm.
+const ROUTE_REACH: f64 = CAPTION_CLEARANCE + space::TEXT;
+
+/// The grid every manuscript row is set on.
+pub(in crate::view) fn grid(state: &Writer) -> Grid {
+    Layout::resolve(state).grid
+}
+
+/// Where the margin column ends in a row: the margin labels' right edge, where a hanging plus
+/// ends too.
+pub(in crate::view) fn margin_end(state: &Writer) -> f64 {
+    grid(state).margin
+}
+
+/// What a row's margin column holds: a speaker, or a reply's number with "REPLIES" beside the
+/// first. Labels sit right-aligned against the gutter; marks sit at the column's left edge.
+pub(in crate::view) fn margin_label(
+    passage: &Passage,
+    reply: Option<usize>,
+) -> (String, Option<usize>) {
+    match &passage.kind {
+        PassageKind::Dialogue { speaker } => {
+            (speaker.as_deref().unwrap_or("").to_uppercase(), None)
+        }
+        PassageKind::Choice { .. } => (
+            if reply == Some(1) {
+                "REPLIES".into()
+            } else {
+                String::new()
+            },
+            reply,
+        ),
+    }
+}
+
+/// The margin column's content for a row: right-aligned and baseline-aligned to the first line.
+pub(in crate::view) fn margin<S: 'static>(
+    state: &Writer,
+    grid: &Grid,
+    label: String,
+    number: Option<usize>,
+) -> impl WidgetView<S> + use<S> {
+    let page = Page::of(state);
+    let width = if grid.margin > 0. {
+        grid.margin
+    } else {
+        grid.measure
+    };
+    // An empty margin still sets a baseline, at its top, so it never lowers a speakerless line.
+    let empty = label.is_empty() && number.is_none();
+    flex_row((
+        FlexSpacer::Flex(if grid.margin > 0. { 1. } else { 0. }),
+        empty.then(|| sized_box(flex_col(())).dims((0.px(), 0.px()))),
+        (!label.is_empty()).then(|| {
+            Sheet::Label
+                .label(page, label)
+                .color(state.palette.accent)
+                .prop(LineBreaking::Clip)
+        }),
+        number.map(|number| {
+            Sheet::Number
+                .label(page, number.to_string())
+                .color(state.palette.muted)
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+    // Zoomed with the sheet, so "REPLIES" and its first number stay apart at 200%.
+    .gap((space::UNIT * f64::from(page.zoom)).px())
+    .width(width.px())
+}
+
+/// The marks a passage's row carries: the unsaved dot in the sheet's pad while its line holds the
+/// draft. The line's own field shows which line is current, so a clean line carries no mark. Rows
+/// nested `inset` into groups keep the dot beside the beat's own edge.
+fn passage_marks(state: &Writer, grid: &Grid, active: bool, inset: f64) -> Marks {
+    Marks::default().unsaved(
+        &state.palette,
+        active && state.session.model().has_draft(),
+        Dot::galley(f64::from(Page::of(state).control()), grid.pad, inset, true),
+    )
+}
 
 pub(super) fn row(
     state: &Writer,
     number: PassageNumber,
     passage: &Passage,
     reply: Option<usize>,
-    width: f64,
+    (width, continuation): (f64, Option<(&str, &str)>),
 ) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    let caption_size = 0.6 * state.reading_size();
-    let wide = width >= 560. * f64::from(scale);
-    let margin = if wide {
-        (96. * f64::from(scale)).min(width * 0.15)
+    let page = Page::of(state);
+    let grid = grid(state);
+    // The beat's continuation, when it follows this line, is a route on the line's own row: the
+    // control that changes it, even where it ends the conversation under its end mark.
+    let continuation = continuation.map(|(beat, target)| {
+        (
+            (RouteOwner::Beat(beat.to_owned()), "continuation"),
+            target.to_owned(),
+        )
+    });
+    let wide = grid.margin > 0.;
+    // Nested groups indent the row; the margin column and the gutters keep their widths.
+    let destination = if reply.is_some() {
+        grid.destination
     } else {
         0.
     };
-    let destination = if reply.is_some() && wide {
-        (148. * f64::from(scale)).min(width * 0.25)
-    } else {
-        0.
-    };
-    let number_width = if reply.is_some() {
-        16. * f64::from(scale)
-    } else {
-        0.
-    };
-    let number_gap = if reply.is_some() { 8. } else { 0. };
-    let measure =
-        (width - margin - destination - if wide { 16. } else { 0. } - number_width - number_gap)
-            .max(120.);
-    let speaker = match &passage.kind {
-        PassageKind::Dialogue { speaker } => speaker.as_deref().unwrap_or("").to_uppercase(),
-        PassageKind::Choice { .. } => {
-            if reply == Some(1) {
-                "REPLIES".into()
-            } else {
-                String::new()
-            }
-        }
-    };
-    let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
-    let stacked_reply = !wide
-        && matches!(&passage.kind, PassageKind::Choice { destination: Some(target) } if target != "END");
-    let content_gap = if !wide && speaker.is_empty() { 0. } else { 8. };
-    flex_col((
-        flex_row((
-            indexed_stack((
-                print::caps(scale, speaker.clone())
-                    .text_size(caption_size)
-                    .letter_spacing(0.066 * state.reading_size())
-                    .text_alignment(if wide {
-                        TextAlign::End
-                    } else {
-                        TextAlign::Start
-                    })
-                    .color(state.palette.accent)
-                    .width(if wide { margin } else { width }.px()),
-                flex_col(()).dims((0.px(), 0.px())),
-            ))
-            .active(usize::from(!wide && speaker.is_empty())),
-            flex_row((
-                reply.map(|number| {
-                    print::meta(scale, number.to_string())
-                        .text_size(caption_size)
-                        .width(number_width.px())
-                        .color(state.palette.muted)
-                }),
-                super::super::manuscript::passage_editor(state, passage, number, measure),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(number_gap.px()),
-            (!stacked_reply)
-                .then(|| route(state, passage, if wide { destination } else { width }))
-                .flatten(),
-        ))
-        .direction(if wide {
-            Axis::Horizontal
+    let column = destination > 0.;
+    let measure = (width
+        - grid.text()
+        - if grid.destination > 0. {
+            DESTINATION_GUTTER + grid.destination
         } else {
-            Axis::Vertical
+            0.
         })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(content_gap.px()),
-        metadata(
-            state,
-            passage,
-            active,
-            if stacked_reply {
-                CaptionPlacement::BesideDestination { width }
+    .max(120.);
+    let (label, numbered) = margin_label(passage, reply);
+    let size = Sheet::text(reply).size(page);
+    let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
+    let speaking = active && matches!(passage.kind, PassageKind::Dialogue { .. });
+    // A written reply always shows its destination control; a resting one only a route.
+    let stacked_reply = !column
+        && match &passage.kind {
+            PassageKind::Choice { destination } => {
+                active || destination.as_deref().is_some_and(|target| target != "END")
+            }
+            PassageKind::Dialogue { .. } => false,
+        };
+    flex_col((
+        sized_box(marked(
+            passage_marks(state, &grid, active, state.script_width() - width),
+            flex_row((
+                // Options, not one Either, so each keeps its own baselines in the row.
+                speaking.then(|| {
+                    with_id(
+                        state,
+                        &grid,
+                        (passage, active),
+                        choice::speaker(state, &grid, passage),
+                    )
+                }),
+                (!speaking && (wide || !label.is_empty() || numbered.is_some())).then(|| {
+                    with_id(
+                        state,
+                        &grid,
+                        (passage, active),
+                        margin(state, &grid, label, numbered),
+                    )
+                }),
+                super::super::manuscript::passage_editor(state, passage, number, measure, size),
+                column
+                    .then(|| route(state, passage, active, destination))
+                    .flatten()
+                    .map(|route| hang_route(state, route)),
+                column
+                    .then(|| metadata::choice(state, passage, active, destination))
+                    .flatten()
+                    .map(|choice| hang_route(state, choice)),
+                (grid.destination > 0.)
+                    .then(|| continuation.clone())
+                    .flatten()
+                    .map(|(owner, target)| {
+                        // Beside a speaker control the row's gutter is narrower by its inset.
+                        sized_box(hang_route(
+                            state,
+                            route_choice(state, owner, Some(&target), grid.destination),
+                        ))
+                        .padding(Padding::left(
+                            if speaking { label_inset() } else { 0. }.px(),
+                        ))
+                    }),
+            ))
+            .direction(if wide {
+                Axis::Horizontal
             } else {
-                CaptionPlacement::Under { margin }
-            },
-        ),
+                Axis::Vertical
+            })
+            .cross_axis_alignment(if wide {
+                CrossAxisAlignment::FirstBaseline
+            } else {
+                CrossAxisAlignment::Start
+            })
+            .gap(
+                if wide && speaking {
+                    GUTTER - label_inset()
+                } else if wide {
+                    GUTTER
+                } else {
+                    space::UNIT
+                }
+                .px(),
+            ),
+        ))
+        // The row's clearance under its text, which a stacked reply's route takes instead.
+        .padding(Padding::bottom(
+            if stacked_reply { 0. } else { CAPTION_CLEARANCE }.px(),
+        )),
+        stacked_reply.then(|| {
+            sized_box(routes(state, passage, active, width - grid.text()))
+                .padding(Padding::left(grid.text().px()))
+        }),
+        // Where destinations wrap, the continuation sits under the line, where its words start.
+        (grid.destination <= 0.)
+            .then_some(continuation)
+            .flatten()
+            .map(|(owner, target)| {
+                sized_box(route_choice(state, owner, Some(&target), grid.measure))
+                    .padding(Padding::left(grid.text().px()))
+            }),
         active
             .then(|| super::refusal::panel(state, measure))
             .flatten()
-            .map(|notice| {
-                sized_box(notice).padding(Padding::left(
-                    (margin + if wide { 8. } else { 0. } + number_width + number_gap).px(),
-                ))
-            }),
+            .map(|notice| sized_box(notice).padding(Padding::left(grid.text().px()))),
         match &passage.kind {
             PassageKind::Choice {
                 destination: Some(target),
@@ -119,96 +246,23 @@ pub(super) fn row(
         },
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(4.px())
+    .gap(space::UNIT.px())
+    // Replies open as a group 24px below the dialogue; each further reply keeps the 12px rhythm.
+    .padding(Padding::top(
+        if reply == Some(1) { space::TEXT } else { 0. }.px(),
+    ))
 }
 
-/// Source labels either reserve their own line or share a stacked destination's target height.
-enum CaptionPlacement {
-    Under { margin: f64 },
-    BesideDestination { width: f64 },
-}
-
-fn metadata(
-    state: &Writer,
-    passage: &Passage,
-    active: bool,
-    placement: CaptionPlacement,
-) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    let caption_size = 0.6 * state.reading_size();
-    let metadata =
-        if active && (state.editing_passage(&passage.id) || state.session.model().has_draft()) {
-            format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id)
-        } else {
-            String::new()
-        };
-    match placement {
-        CaptionPlacement::BesideDestination { width } => {
-            let caption_width = width * 0.25;
-            Either::A(
-                flex_row((
-                    route(state, passage, (width - caption_width - 8.).max(80.)),
-                    print::meta(scale, metadata)
-                        .text_size(caption_size)
-                        .prop(LineBreaking::Clip)
-                        .color(state.palette.muted)
-                        .width(caption_width.px()),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .gap(8.px())
-                .width(width.px()),
-            )
-        }
-        CaptionPlacement::Under { margin } => Either::B(
-            sized_box(
-                flex_row((
-                    flex_col(()).dims((margin.px(), 0.px())),
-                    print::meta(scale, metadata)
-                        .text_size(caption_size)
-                        .color(state.palette.muted),
-                ))
-                .gap(8.px()),
-            )
-            .height((0.9 * f64::from(state.reading_size())).px()),
-        ),
-    }
-}
-
-fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetView<Writer> + use<>> {
-    let PassageKind::Choice {
-        destination: Some(destination),
-    } = &passage.kind
-    else {
-        return None;
-    };
-    if destination == "END" {
-        return None;
-    }
-    let target = destination.clone();
-    Some(
-        sized_box(styled(
-            ControlStyle::Action,
-            button(
-                label(
-                    state.ui_scale(),
-                    format!(
-                        "{} {}",
-                        if state.destination_expanded(destination) {
-                            "▾"
-                        } else {
-                            "→"
-                        },
-                        display_name(destination)
-                    ),
-                )
-                .color(state.palette.teal_text),
-                move |state: &mut Writer| state.toggle_destination_preview(target.clone()),
-            )
-            .disabled(
-                state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy(),
-            )
-            .background_color(state.palette.surface),
-        ))
-        .width(width.px()),
+/// A route in the destination column: the button's own padding takes the rest of the gutter.
+/// Its target reaches into the spacing between reply rows, so a target taller than the reply's
+/// line sets the row no taller than the line; neighbouring targets meet but never overlap.
+fn hang_route<V: WidgetView<Writer>>(state: &Writer, route: V) -> impl WidgetView<Writer> + use<V> {
+    overhang(
+        sized_box(route).padding(Padding::left(
+            (DESTINATION_GUTTER - GUTTER - control_inset(state.ui_scale()))
+                .max(0.)
+                .px(),
+        )),
+        ROUTE_REACH,
     )
 }

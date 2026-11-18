@@ -28,7 +28,7 @@ impl Inspection {
             )
             .into_iter()
             .filter(|row| row.before != row.after)
-            .flat_map(text::change_pages)
+            .map(text::shown_row)
             .collect(),
             pending: comparison
                 .pending_draft()
@@ -41,10 +41,7 @@ impl Inspection {
 #[derive(Default)]
 pub struct Panel {
     state: State,
-    pub page: usize,
-    pub draft_page: usize,
     pub report: Vec<String>,
-    pub report_page: usize,
 }
 #[derive(Default)]
 enum State {
@@ -74,13 +71,9 @@ impl Panel {
             State::Reviewing(inspection) => Some(inspection),
             _ => None,
         };
-        self.page = 0;
-        self.draft_page = 0;
     }
     pub(super) fn replace(&mut self, inspection: Option<Inspection>) {
         self.state = inspection.map(State::Reviewing).unwrap_or_default();
-        self.page = 0;
-        self.draft_page = 0;
     }
     pub fn inspection(&self) -> Option<&Inspection> {
         match &self.state {
@@ -110,7 +103,6 @@ impl Panel {
     }
     pub(super) fn report(&mut self, report: Option<&str>) {
         self.report = report.map(text::pages).unwrap_or_default();
-        self.report_page = 0;
     }
 }
 impl Writer {
@@ -138,6 +130,20 @@ impl Writer {
     }
     pub fn use_inspected_disk(&mut self) {
         self.external_action(ExternalAction::Resolve(ExternalDecision::UseInspectedDisk));
+    }
+    /// Settle the open document's disk change without the comparison page: Keep mine or Use disk
+    /// version from its banner. The comparison page stays one Compare away.
+    pub fn settle_disk_changes(&mut self, decision: ExternalDecision) {
+        if self.project_action_blocked() {
+            return;
+        }
+        let Some(project) = self.session.project() else {
+            return;
+        };
+        self.workspaces
+            .external
+            .start_comparison(project.current().path());
+        self.external_action(ExternalAction::Settle(decision));
     }
     pub fn export_merge_draft(&mut self) {
         self.external_action(ExternalAction::ExportMerge);

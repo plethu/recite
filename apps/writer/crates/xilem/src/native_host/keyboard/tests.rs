@@ -37,6 +37,8 @@ pub(super) fn context() -> (Context, mpsc::Receiver<SendMessage>) {
             editing: None,
             field_restoration: None,
             keymap: recite_config::Keymap::default(),
+            modal: None,
+            preview_choices: 0,
             proxy: MessageProxy::new(Arc::new(Recorder(sender)), Arc::from([])),
         },
         receiver,
@@ -55,6 +57,7 @@ fn stroke(key: Key<'_>) -> Stroke<'_> {
         enter: false,
         action: None,
         first_press: true,
+        renames: None,
     }
 }
 

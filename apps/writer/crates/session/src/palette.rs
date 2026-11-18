@@ -2,8 +2,28 @@
 mod rgba;
 pub use rgba::Rgba;
 
-pub const STAMP_HOVER: f32 = 0.12;
-pub const STAMP_PRESSED: f32 = 0.22;
+/// Hovered controls lay this much ink over whatever surface they sit on, desk or sheet. At 10%
+/// ink text keeps 9:1 even over the grain's darkest point.
+pub const INK_HOVER: f32 = 0.10;
+/// A tonal action on a sheet, panel or dialog: this much ink over its host, with no border.
+pub const TONAL: f32 = 0.08;
+/// A hovered tonal action: half again the rest tint; more would drop accent text under 4.5:1 on
+/// dark floating panels.
+pub const TONAL_HOVER: f32 = 0.12;
+/// A hovered selected row: ink over the plate, lighter than other hovers so accent text keeps
+/// 4.5:1 on dark mint plates.
+pub const PLATE_HOVER: f32 = 0.06;
+/// A field's well: this much ink over its host, closed by a bottom rule.
+pub const WELL: f32 = 0.06;
+/// A disabled tonal action keeps its shape at half the rest tint; its text turns muted.
+pub const TONAL_DISABLED: f32 = 0.04;
+/// The primary action's fill alpha while hovered and pressed, over whatever hosts it.
+pub const PRIMARY_HOVER: f32 = 0.9;
+pub const PRIMARY_PRESSED: f32 = 0.8;
+/// The grain tile's peak alpha; `assets/identity/grain.png` never exceeds it.
+pub const GRAIN_PEAK: f32 = 0.07;
+/// The dark grain tile's peak alpha; `assets/identity/grain-dark.png` never exceeds it.
+pub const GRAIN_PEAK_DARK: f32 = 0.047;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Palette<C = Rgba> {
@@ -15,13 +35,15 @@ pub struct Palette<C = Rgba> {
     pub boundary: C,
     pub ink: C,
     pub muted: C,
-    pub placeholder: C,
     pub accent: C,
     pub on_accent: C,
     pub selection: C,
     pub hover: C,
     pub pressed: C,
+    /// The modal dim: overprint navy at 45% on paper, black at 55% on dark paper.
     pub backdrop: C,
+    /// The paper-coloured dot screen printed over the dim, at its own alpha.
+    pub screen: C,
     pub shadow: C,
     pub error: C,
     /// Riso second ink: plates, rules and decoration only, never text in light mode.
@@ -30,11 +52,16 @@ pub struct Palette<C = Rgba> {
     pub teal_text: C,
     /// Second-ink selection plate; carries ink or accent text, not `teal_text` when pressed.
     pub plate: C,
+    /// The current beat's crop marks: the second ink, and ink in monochrome.
+    pub crop: C,
+    /// The unsaved halftone dot: plum, and ink in monochrome, where only its shape tells it from
+    /// the crop marks.
+    pub unsaved: C,
     /// Wordmark letters: plum on paper, warm paper on dark surfaces.
     pub wordmark: C,
-    /// Filled ink for the primary action and the active segment; text on it is `on_stamp`.
-    pub stamp: C,
-    pub on_stamp: C,
+    /// The bottom rule of a field's well on paper, and on the grained desk; see `field_rule`.
+    pub well_rule: C,
+    pub desk_well_rule: C,
     /// Plum multiplied by teal: the darkest ink, used where two inks meet.
     pub overprint: C,
     /// Overprint navy in light mode; on dark paper it would not separate, so dark uses `floating`.
@@ -44,6 +71,12 @@ pub struct Palette<C = Rgba> {
     pub status_text: C,
     /// Mint on the status bar in both modes, for a clean diagnostics state.
     pub status_signal: C,
+    /// The hard shadow under the Script sheet: decorative, never a control boundary.
+    pub stock: C,
+    /// Paper-grain ink, painted at the tile's own alpha on desk surfaces only.
+    pub grain: C,
+    /// The grain tile's peak alpha in this mode.
+    pub grain_peak: f32,
 }
 impl Palette<Rgba> {
     pub fn with_mode(dark: bool, monochrome: bool) -> Self {
@@ -58,16 +91,15 @@ impl Palette<Rgba> {
                 &mut p.boundary,
                 &mut p.ink,
                 &mut p.muted,
-                &mut p.placeholder,
                 &mut p.accent,
                 &mut p.on_accent,
                 &mut p.selection,
                 &mut p.hover,
                 &mut p.pressed,
+                &mut p.backdrop,
+                &mut p.screen,
                 &mut p.error,
                 &mut p.wordmark,
-                &mut p.stamp,
-                &mut p.on_stamp,
                 &mut p.teal,
                 &mut p.teal_text,
                 &mut p.plate,
@@ -76,23 +108,36 @@ impl Palette<Rgba> {
                 &mut p.status_edge,
                 &mut p.status_text,
                 &mut p.status_signal,
+                &mut p.stock,
+                &mut p.grain,
             ] {
                 *c = c.monochrome();
             }
+            // Without hue the marks keep the darkest ink, and differ by shape alone.
+            p.crop = p.ink;
+            p.unsaved = p.ink;
         }
-        p
+        p.with_rules()
+    }
+    /// Choose the field rules for this palette's own inks and hosts.
+    fn with_rules(mut self) -> Self {
+        self.well_rule = self.field_rule(&self.papers());
+        self.desk_well_rule = self.field_rule(&[self.grained_desk()]);
+        self
     }
     pub fn new(dark: bool) -> Self {
         let surface = color(dark, (250, 246, 239), (42, 38, 46));
         let ink = color(dark, (48, 36, 49), (243, 233, 223));
+        let accent = color(dark, (104, 62, 98), (212, 174, 204));
         // Mint replaces riso teal on dark paper, where it is also text-safe.
         let second_ink = color(dark, (0, 131, 138), (130, 216, 213));
         let floating = color(dark, (255, 251, 245), (54, 48, 57));
         let muted = color(dark, (83, 69, 81), (207, 192, 203));
         let rule = Rgba::mix(surface, ink, 0.14);
         let overprint = Rgba::from_rgb(0, 32, 53);
+        let canvas = color(dark, (239, 233, 225), (27, 24, 30));
         Self {
-            canvas: color(dark, (239, 233, 225), (27, 24, 30)),
+            canvas,
             surface,
             inset: color(dark, (243, 237, 229), (29, 26, 33)),
             floating,
@@ -102,13 +147,23 @@ impl Palette<Rgba> {
             boundary: color(dark, (127, 116, 119), (153, 139, 154)),
             ink,
             muted,
-            placeholder: color(dark, (113, 98, 109), (175, 157, 172)),
-            accent: color(dark, (104, 62, 98), (212, 174, 204)),
+            accent,
             on_accent: color(dark, (255, 251, 245), (40, 25, 39)),
             selection: color(dark, (234, 221, 232), (72, 54, 72)),
             hover: color(dark, (238, 229, 231), (58, 51, 61)),
             pressed: color(dark, (218, 203, 215), (82, 66, 82)),
-            backdrop: Rgba::from_argb(110, 0, 0, 0),
+            backdrop: if dark {
+                Rgba::from_argb(140, 0, 0, 0)
+            } else {
+                Rgba {
+                    a: 115,
+                    ..overprint
+                }
+            },
+            screen: Rgba {
+                a: if dark { 15 } else { 26 },
+                ..Rgba::from_rgb(243, 233, 223)
+            },
             // Soft blurred shadows are gone; elevation is a hard offset plate (`material::offset`).
             shadow: Rgba::TRANSPARENT,
             error: color(dark, (137, 51, 48), (246, 191, 178)),
@@ -117,12 +172,14 @@ impl Palette<Rgba> {
             } else {
                 Rgba::from_rgb(104, 62, 98)
             },
-            stamp: ink,
-            on_stamp: surface,
             teal: second_ink,
             teal_text: color(dark, (15, 107, 111), (130, 216, 213)),
             // 12% second ink on paper; on dark paper, 14% mint over the surface.
             plate: color(dark, (214, 221, 213), (54, 63, 69)),
+            crop: second_ink,
+            unsaved: accent,
+            well_rule: ink,
+            desk_well_rule: ink,
             overprint,
             status_bar: if dark { floating } else { overprint },
             status_edge: if dark { rule } else { overprint },
@@ -132,17 +189,73 @@ impl Palette<Rgba> {
                 Rgba::from_rgb(243, 233, 223)
             },
             status_signal: Rgba::from_rgb(130, 216, 213),
+            stock: Rgba::mix(canvas, ink, 0.20),
+            // The identity print recipe's grain ink; dark paper takes a paper-toned tile instead.
+            grain: if dark {
+                Rgba::from_rgb(243, 233, 223)
+            } else {
+                Rgba::from_rgb(64, 46, 51)
+            },
+            grain_peak: if dark { GRAIN_PEAK_DARK } else { GRAIN_PEAK },
         }
+        .with_rules()
+    }
+
+    /// A hovered control's fill: ink laid over `base`.
+    pub fn hover_over(&self, base: Rgba) -> Rgba {
+        Rgba::mix(base, self.ink, INK_HOVER)
+    }
+
+    /// `amount` of ink laid over `base`: a tonal fill, as the eye sees it on that host.
+    pub fn tint(&self, base: Rgba, amount: f32) -> Rgba {
+        Rgba::mix(base, self.ink, amount)
+    }
+
+    /// The bottom rule that identifies a field's well on every one of `hosts`: `boundary` where it
+    /// holds 3:1 against both the host and the well, otherwise `ink`.
+    pub fn field_rule(&self, hosts: &[Rgba]) -> Rgba {
+        let holds = |host: &Rgba| {
+            Rgba::contrast(self.boundary, *host) >= 3.
+                && Rgba::contrast(self.boundary, self.tint(*host, WELL)) >= 3.
+        };
+        if hosts.iter().all(holds) {
+            self.boundary
+        } else {
+            self.ink
+        }
+    }
+
+    /// The paper hosts a field can sit on away from the desk.
+    pub fn papers(&self) -> [Rgba; 4] {
+        [self.canvas, self.surface, self.inset, self.floating]
+    }
+
+    /// The primary fill at `alpha` over `base`.
+    pub fn primary_over(&self, base: Rgba, alpha: f32) -> Rgba {
+        Rgba::mix(base, self.accent, alpha)
+    }
+
+    /// `base` under the modal dim, and under the dim with the screen's paper dots.
+    pub fn dimmed(&self, base: Rgba) -> [Rgba; 2] {
+        let opaque = |color: Rgba| Rgba { a: 255, ..color };
+        let dim = Rgba::mix(
+            base,
+            opaque(self.backdrop),
+            f32::from(self.backdrop.a) / 255.,
+        );
+        let dotted = Rgba::mix(dim, opaque(self.screen), f32::from(self.screen.a) / 255.);
+        [dim, dotted]
+    }
+
+    /// The grained desk's extreme point, where text on the desk is checked: its darkest in light
+    /// mode and, under the paper-toned dark grain, its lightest.
+    pub fn grained_desk(&self) -> Rgba {
+        Rgba::mix(self.canvas, self.grain, self.grain_peak)
     }
 
     /// Reply destinations use text-safe teal, except on a pressed fill where it fails contrast.
     pub fn destination(&self, pressed: bool) -> Rgba {
         if pressed { self.ink } else { self.teal_text }
-    }
-
-    /// Hover and press lift a filled stamp toward its text colour, keeping text readable.
-    pub fn stamp_state(&self, amount: f32) -> Rgba {
-        Rgba::mix(self.stamp, self.on_stamp, amount)
     }
 }
 
@@ -157,26 +270,31 @@ impl<C> Palette<C> {
             boundary: convert(self.boundary),
             ink: convert(self.ink),
             muted: convert(self.muted),
-            placeholder: convert(self.placeholder),
             accent: convert(self.accent),
             on_accent: convert(self.on_accent),
             selection: convert(self.selection),
             hover: convert(self.hover),
             pressed: convert(self.pressed),
             backdrop: convert(self.backdrop),
+            screen: convert(self.screen),
             shadow: convert(self.shadow),
             error: convert(self.error),
             teal: convert(self.teal),
             teal_text: convert(self.teal_text),
             plate: convert(self.plate),
+            crop: convert(self.crop),
+            unsaved: convert(self.unsaved),
             wordmark: convert(self.wordmark),
-            stamp: convert(self.stamp),
-            on_stamp: convert(self.on_stamp),
+            well_rule: convert(self.well_rule),
+            desk_well_rule: convert(self.desk_well_rule),
             overprint: convert(self.overprint),
             status_bar: convert(self.status_bar),
             status_edge: convert(self.status_edge),
             status_text: convert(self.status_text),
             status_signal: convert(self.status_signal),
+            stock: convert(self.stock),
+            grain: convert(self.grain),
+            grain_peak: self.grain_peak,
         }
     }
 }

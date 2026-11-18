@@ -1,4 +1,8 @@
 use super::*;
+use crate::presentation::print::section_heading;
+use crate::presentation::space;
+use crate::presentation::tokens::size;
+use crate::presentation::{Type, Typeset};
 use recite_writer_session::localisation::{create, setup::languages};
 
 pub(super) fn creation(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -13,23 +17,74 @@ pub(super) fn creation(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
         .project_root()
         .zip(create::language(&state.selected).ok())
         .map(|(root, locale)| create::suggested_path(root, &locale.to_string()));
-    Some(flex_col((
-        label(scale, "Add a language").text_size(20. * scale),
-        paragraph(scale, "Creates a new PO catalogue from this project's current sources. Apply manuscript fields first. Accepted unsaved source edits are included; source files stay unchanged.", 640.),
-        label(scale, "Language name or tag"),
-        text_input(state.query.clone(), |writer: &mut Writer, value| writer.localisation.creation.query = value).text_size(16. * scale).disabled(blocked).prop(TextAreaLabel::new("Language name or tag")),
-        text_button(scale, "Search languages", Writer::search_catalogue_languages).disabled(blocked),
-        state.selected.is_empty().then(|| choices(writer)),
-        (!state.query.trim().is_empty() && state.choices.is_empty()).then(|| paragraph(scale, "Search by language name, native name or a tag such as fr-CA.", 640.)),
-        languages::caption(&state.selected).map(|caption| paragraph(scale, format!("Selected language: {caption}"), 640.)),
-        (!state.selected.is_empty()).then(|| text_button(scale, "Choose another language", |writer: &mut Writer| writer.localisation.creation.selected.clear()).disabled(blocked)),
-        path.as_ref().map(|path| {
-            let display = writer.session.project_root().and_then(|root| path.strip_prefix(root).ok()).unwrap_or(path);
-            paragraph(scale, format!("New catalogue: {}", display.display()), 640.)
-        }),
-        text_button(scale, "Create catalogue", Writer::create_catalogue).disabled(blocked || path.is_none()),
-        text_button(scale, "Return to translation queue", Writer::return_to_translation_queue).disabled(blocked),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(10.px()))
+    Some(
+        flex_col((
+            section_heading(scale, "Add a language"),
+            paragraph(
+                scale,
+                "Creates a new PO catalogue from this project's current \
+                 sources. Apply manuscript fields first. Accepted unsaved \
+                 source edits are included; source files stay unchanged.",
+                size::MEASURE,
+            ),
+            label(scale, "Language name or tag"),
+            text_input(state.query.clone(), |writer: &mut Writer, value| {
+                writer.localisation.creation.query = value
+            })
+            .typeset(Type::Body, scale)
+            .disabled(blocked)
+            .prop(TextAreaLabel::new("Language name or tag")),
+            text_button(
+                scale,
+                "Search languages",
+                Writer::search_catalogue_languages,
+            )
+            .disabled(blocked),
+            state.selected.is_empty().then(|| choices(writer)),
+            (!state.query.trim().is_empty() && state.choices.is_empty()).then(|| {
+                paragraph(
+                    scale,
+                    "Search by language name, native name or a tag such as fr-CA.",
+                    size::MEASURE,
+                )
+            }),
+            languages::caption(&state.selected).map(|caption| {
+                paragraph(
+                    scale,
+                    format!("Selected language: {caption}"),
+                    size::MEASURE,
+                )
+            }),
+            (!state.selected.is_empty()).then(|| {
+                text_button(scale, "Choose another language", |writer: &mut Writer| {
+                    writer.localisation.creation.selected.clear()
+                })
+                .disabled(blocked)
+            }),
+            path.as_ref().map(|path| {
+                let display = writer
+                    .session
+                    .project_root()
+                    .and_then(|root| path.strip_prefix(root).ok())
+                    .unwrap_or(path);
+                paragraph(
+                    scale,
+                    format!("New catalogue: {}", display.display()),
+                    size::MEASURE,
+                )
+            }),
+            text_button(scale, "Create catalogue", Writer::create_catalogue)
+                .disabled(blocked || path.is_none()),
+            text_button(
+                scale,
+                "Return to translation queue",
+                Writer::return_to_translation_queue,
+            )
+            .disabled(blocked),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::TEXT.px()),
+    )
 }
 fn choices(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let state = &writer.localisation.creation;
@@ -52,7 +107,7 @@ fn choices(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         flex_col(choices)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
         (state.choices.len() > 8).then(|| {
             flex_col((
                 label(
@@ -77,9 +132,9 @@ fn choices(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

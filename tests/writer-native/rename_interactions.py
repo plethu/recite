@@ -67,59 +67,53 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == prose + "x", "native draft")
                 key("z", control=True)
                 window.wait(lambda: window.text(node) == prose, "native undo")
+                # Rename beat in Commands asks which beat, then edits its heading in place; Enter
+                # reviews it and the consequence slip reaches the full page.
                 command(window, "Rename beat")
-                fill(window, "New beat name", "new")
-                proposal = field(window, "New beat name")
-                window.act("Choose existing beat")
                 fill(window, "Search query", "old")
                 capture_settled(window, output, "-beat-choice")
-                key("Escape")
-                window.wait(lambda: not window.find("Search query"), "cancelled beat choice")
-                assert field(window, "New beat name") == proposal
-                assert window.text(proposal) == "new"
-                window.act("Choose existing beat")
-                fill(window, "Search query", "old")
                 key("Return")
-                window.wait(lambda: not window.find("Search query"), "chosen beat proposal")
-                assert window.text(field(window, "Original beat name")) == "old"
-                assert field(window, "New beat name") == proposal
-                assert window.text(proposal) == "new"
-                assert source.read_text() == before
-                results["beat_choice_changes_only_the_proposal_and_cancel_keeps_native_field"] = (
-                    True
+                window.wait(lambda: not window.find("Search query"), "chosen beat")
+                fill(window, "New beat id", "new")
+                key("Return")
+                window.wait(
+                    lambda: window.find("Review all changes") or window.find("New beat name"),
+                    "rename consequence slip or refused rename page",
                 )
+                if window.find("Review all changes"):
+                    capture_settled(window, output, "-inline")
+                    # The reviewed slip is a decision: a dialog named for the beat it renames.
+                    slip = window.find("Rename old")
+                    assert slip and window.call(slip, "Accessible", "GetRole")[0] == int(
+                        window.api.Atspi.Role.DIALOG
+                    )
+                    results["inline_rename_review_is_a_named_dialog"] = True
+                    window.act("Review all changes")
+                    window.wait(lambda: window.find("Cancel rename"), "reviewed rename page")
+                    window.act("Cancel rename")
+                window.wait(lambda: window.find("New beat name"), "rename proposal")
+                results["inline_rename_reaches_the_rename_page"] = True
+                # The page's proposal keeps the beat as text and the new id already typed.
+                assert window.find_text("old")
+                assert window.text(field(window, "New beat name")) == "new"
+                assert source.read_text() == before
+                results["rename_page_keeps_the_chosen_beat_and_the_typed_id"] = True
                 window.act("Review project rename")
                 window.wait(
                     lambda: window.find_text("Rename reviewed.", prefix=True), "reviewed rename"
                 )
-                window.reveal_end("More rename changes")
+                # The review lists every changed reference as a row: file, beat and line.
+                window.wait(
+                    lambda: window.find_text("zz-other.recite · ", prefix=True),
+                    "reference row in another file",
+                )
                 capture_settled(window, output, "-review")
-                visited = set()
-                for _ in range(30):
-                    caption = window.wait(
-                        lambda: window.find_text("Review ·", prefix=True), "review caption"
-                    )
-                    visited.add(window.text(caption))
-                    if not window.enabled("More rename changes"):
-                        break
-                    previous = window.text(caption)
-                    window.act("More rename changes")
-                    window.wait(
-                        lambda: (
-                            window.find_text("Review ·", prefix=True)
-                            and window.text(window.find_text("Review ·", prefix=True)) != previous
-                        ),
-                        "next rename change",
-                    )
-                else:
-                    raise AssertionError("rename review did not finish")
-                assert any("zz-other.recite" in caption for caption in visited)
-                assert any("recite.project.toml" in caption for caption in visited)
+                assert window.find_text("recite.project.toml · line ", prefix=True)
                 assert source.read_text() == before and other.read_text() == reference
                 assert manifest.read_text() == original
                 results["review_covers_references_and_manifest_without_writing_sources"] = True
-                window.reveal_start("Apply project rename")
-                window.act("Apply project rename")
+                window.reveal_start("Rename")
+                window.act("Rename")
                 window.wait(
                     lambda: window.find_text("Project rename staged.", prefix=True),
                     "grouped rename",
@@ -165,6 +159,17 @@ def run(api, bus, registry, binary, output):
                 )
                 results["save_all_publishes_manuscript_references_and_manifest"] = True
                 command(window, "Rename beat")
+                fill(window, "Search query", "new")
+                key("Return")
+                window.wait(lambda: not window.find("Search query"), "chosen renamed beat")
+                fill(window, "New beat id", "newer")
+                key("Return")
+                window.wait(
+                    lambda: window.find("Review all changes") or window.find("New beat name"),
+                    "rename consequence slip or refused rename page",
+                )
+                if window.find("Review all changes"):
+                    window.act("Review all changes")
                 window.wait(lambda: window.find("Undo project rename"), "saved grouped Undo")
                 assert not window.find_text("Project rename staged.", prefix=True)
                 capture_settled(window, output, "-saved")

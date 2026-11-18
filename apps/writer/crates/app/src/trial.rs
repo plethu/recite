@@ -222,6 +222,21 @@ impl Default for Trial {
 }
 
 impl Writer {
+    /// The preview's current choices, while the preview shows them.
+    pub fn preview_choices(&self) -> usize {
+        self.session
+            .model()
+            .preview_page()
+            .filter(|_| self.trial.visible)
+            .map_or(0, |page| page.choices.len())
+    }
+    /// Choose the preview's `index`th reply, as its numbered row or digit key does.
+    pub fn choose_preview(&mut self, index: usize) {
+        if index < self.preview_choices() {
+            let result = self.session.advance_preview(Some(index));
+            self.report_trial_step(result);
+        }
+    }
     /// Reset preview paging and show the outcome of a playback step.
     pub fn report_trial_step(&mut self, result: Result<(), recite_writer_session::FileError>) {
         self.trial.choice_page = 0;

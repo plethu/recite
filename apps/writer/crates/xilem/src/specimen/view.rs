@@ -1,44 +1,50 @@
 //! The specimen composes the same buttons, fields, palette and manuscript text as Writer.
+use crate::presentation::pane;
+use crate::presentation::space;
+use crate::presentation::tokens::size;
+use crate::presentation::{Type, Typeset};
 mod inputs;
 mod samples;
 use super::*;
-use crate::presentation::{label, paragraph, text_button};
+use crate::presentation::{label, material::desk, paragraph, print, text_button};
 use xilem::masonry::properties::LineBreaking;
 use xilem::{
     WidgetView,
     masonry::layout::AsUnit,
     style::Style,
-    view::{CrossAxisAlignment, checkbox, flex_col, flex_row, portal, sized_box},
+    view::{CrossAxisAlignment, checkbox, flex_col, flex_row, sized_box},
 };
 
 pub(super) fn specimen(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
-    portal(
+    let page = pane(
+        "Specimen",
         sized_box(
             flex_col((
                 header(state),
-                paragraph(state.scale(), state.message.clone(), 640.),
+                paragraph(state.scale(), state.message.clone(), size::MEASURE),
                 actions(state),
                 inputs::inputs(state),
                 samples::samples(state),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(24.px()),
+            .gap(space::GROUPS.px()),
         )
-        .padding(24.px())
-        .background_color(state.theme.palette.canvas),
+        .padding(space::GROUPS.px()),
     )
-    .constrain_horizontal(true)
+    .constrain_horizontal(true);
+    // The specimen sits on the same grained desk as Writer, so hover is judged against grain.
+    desk(state.theme.grain.clone(), page).background_color(state.theme.palette.canvas)
 }
 fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     flex_col((
         flex_row((label(state.scale(), "Recite · native component specimen")
-            .text_size(28. * state.scale())
+            .typeset(Type::Display, state.scale())
             .prop(LineBreaking::WordWrap)
-            .width(640.px()),)),
+            .width(size::MEASURE.px()),)),
         paragraph(
             state.scale(),
             "Production controls and typography. Changes here last only for this window.",
-            640.,
+            size::MEASURE,
         ),
         flex_row((
             text_button(
@@ -52,7 +58,7 @@ fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
             ),
             text_button(state.scale(), "Monochrome", Specimen::monochrome),
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_row((
             text_button(
                 state.scale(),
@@ -67,37 +73,42 @@ fn header(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
                 state.closed = true
             }),
         ))
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         checkbox(
             "Reduced motion",
             state.config.reduced_motion,
             |state: &mut Specimen, checked| state.config.reduced_motion = checked,
         )
-        .text_size(14. * state.scale()),
+        .typeset(Type::Body, state.scale()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 fn actions(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     flex_col((
-        label(state.scale(), "Actions and navigation").text_size(22. * state.scale()),
+        label(state.scale(), "Actions and navigation").typeset(Type::Section, state.scale()),
         flex_col((
-            text_button(state.scale(), "Try scene", |state: &mut Specimen| {
-                state.message = "Primary action activated.".into()
-            }),
+            print::primary_action(
+                state.scale(),
+                "Try scene",
+                &state.theme.palette,
+                false,
+                |state: &mut Specimen| state.message = "Primary action activated.".into(),
+            ),
             text_button(state.scale(), "Add beat", |state: &mut Specimen| {
                 state.message = "Secondary action activated.".into()
             }),
-            text_button(
+            print::action(
                 state.scale(),
                 "Arrange automatically",
+                false,
                 |state: &mut Specimen| state.message = "Quiet action activated.".into(),
             ),
             text_button(state.scale(), "Save changes", |_: &mut Specimen| {}).disabled(true),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }

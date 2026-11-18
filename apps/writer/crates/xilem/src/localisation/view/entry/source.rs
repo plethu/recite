@@ -1,5 +1,7 @@
 //! Source prose and navigation are one composed section of a translation entry.
 use super::*;
+use crate::presentation::print::section_heading;
+use crate::presentation::space;
 use crate::{localisation::source_navigation::SourceAction, presentation::manuscript_text};
 
 pub(super) fn source(
@@ -15,7 +17,7 @@ pub(super) fn source(
         || writer.localisation.saving()
         || entry.source_location.is_none();
     flex_col((
-        label(scale, "Source passage").text_size(20. * scale),
+        section_heading(scale, "Source passage"),
         entry.source_location.as_ref().map(|caption| {
             paragraph(
                 scale,
@@ -48,7 +50,7 @@ pub(super) fn source(
                 })
                 .disabled(entry.source_page + 1 >= entry.source.len()),
             ))
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         entry.context.get(entry.context_page).map(|context| {
             paragraph(
@@ -81,7 +83,7 @@ pub(super) fn source(
                 .disabled(entry.context_page + 1 >= entry.context.len()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
         text_button(scale, "Show source passage", move |writer: &mut Writer| {
             writer.open_translation_source(&show_key, SourceAction::Show)
@@ -93,5 +95,5 @@ pub(super) fn source(
         .disabled(blocked),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }

@@ -61,7 +61,8 @@ def run(api, bus, registry, binary, output):
                     replace(source, disk)
                     window.reveal_start("Compare changed file")
                     window.wait(
-                        lambda: window.find_text("Changed on disk · 1 file"), "source notice"
+                        lambda: window.find_text("CHANGED ON DISK") and window.find_text("1 file"),
+                        "source notice",
                     )
                     capture(output, f"-source-{scale}")
                     action(window, "Compare changed file")
@@ -89,7 +90,8 @@ def run(api, bus, registry, binary, output):
                     replace(po, po_disk)
                     window.reveal_start("Compare changed file")
                     window.wait(
-                        lambda: window.find_text("Changed on disk · 1 file"), "catalogue notice"
+                        lambda: window.find_text("CHANGED ON DISK") and window.find_text("1 file"),
+                        "catalogue notice",
                     )
                     capture(output, f"-catalogue-{scale}")
                     action(window, "Compare changed file")

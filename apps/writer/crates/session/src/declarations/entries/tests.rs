@@ -15,15 +15,16 @@ fn declaration_browser_preserves_all_families_and_sorts_names() -> Result<(), St
         rows.windows(2)
             .all(|pair| (&pair[0].0, &pair[0].1) <= (&pair[1].0, &pair[1].1))
     );
+    let item = || Detail::Parameters(vec![("item".into(), "item".into())]);
     for (name, kind, detail) in [
-        ("can_open", "Condition", "item: item"),
-        ("open", "Effect request", "item: item"),
-        ("rhea", "Speaker", "rhea"),
-        ("item", "Registry", "brass_key"),
+        ("can_open", "Condition", item()),
+        ("open", "Effect request", item()),
+        ("rhea", "Speaker", Detail::Text("rhea".into())),
+        ("item", "Registry", Detail::Text("brass_key".into())),
     ] {
         assert!(
             rows.iter()
-                .any(|row| row == &(name.into(), kind.into(), detail.into())),
+                .any(|row| row == &(name.into(), kind.into(), detail.clone())),
             "{name}: {rows:?}"
         );
     }
@@ -69,9 +70,19 @@ fn parameter_signatures_use_author_facing_types_and_nested_list_names() {
     });
     assert_eq!(
         signature(&params),
-        "text: Text\nsymbol: Symbol\ninteger: Integer\nnumber: Number\nflag: True or false\nactor: Speaker\nmood: mood\nitems: List of item"
+        [
+            ("text", "Text"),
+            ("symbol", "Symbol"),
+            ("integer", "Integer"),
+            ("number", "Number"),
+            ("flag", "True or false"),
+            ("actor", "Speaker"),
+            ("mood", "mood"),
+            ("items", "List of item"),
+        ]
+        .map(|(name, kind)| (name.to_owned(), kind.to_owned()))
     );
-    assert_eq!(signature(&[]), "");
+    assert!(signature(&[]).is_empty());
     assert_eq!(kind_label("condition"), "Condition");
     assert_eq!(kind_label("effect"), "Effect request");
     assert_eq!(kind_label("speaker"), "Speaker");

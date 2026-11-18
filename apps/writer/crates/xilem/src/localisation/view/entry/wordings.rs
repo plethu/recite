@@ -1,4 +1,6 @@
 use super::*;
+use crate::presentation::print::section_heading;
+use crate::presentation::space;
 
 pub(super) fn wordings(
     writer: &Writer,
@@ -42,10 +44,10 @@ pub(super) fn wordings(
         .collect::<Vec<_>>();
     Some(
         flex_col((
-            label(scale, "Wording").text_size(20. * scale),
+            section_heading(scale, "Wording"),
             flex_col(choices)
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(6.px()),
+                .gap(space::SIBLINGS.px()),
             (pages > 1).then(|| {
                 flex_col((
                     label(scale, format!("Wording page {} of {pages}", page + 1)),
@@ -63,11 +65,11 @@ pub(super) fn wordings(
                     .disabled(blocked || page + 1 >= pages),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(6.px())
+                .gap(space::SIBLINGS.px())
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 

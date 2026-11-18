@@ -1,18 +1,26 @@
 //! Stable pane slots change placement without replacing mounted editor state.
 use super::*;
 use crate::map::Workspace;
-use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::group::named;
+use crate::presentation::pane;
+use crate::presentation::segments::{segment, segments};
+use crate::presentation::{Page, space};
 use recite_config::{WriterPaneSide, WriterPresentationField};
-use xilem::masonry::{layout::Dim, properties::CheckmarkSize};
-use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
+use xilem::masonry::layout::Dim;
+use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack};
+pub(crate) mod sheet;
+use crate::presentation::grid::Grid;
+use recite_writer_app::COMPACT_WINDOW;
 
 pub(crate) struct Layout {
     pub map: f64,
+    /// The width of the manuscript's columns: margin, measure and any destination column.
     pub script: f64,
     script_pane: f64,
     pub compact_split: bool,
     pub split_available: bool,
+    /// Script's paper: a sheet on the desk or full-bleed, and its columns.
+    pub grid: Grid,
     available: f64,
 }
 impl Layout {
@@ -33,23 +41,29 @@ impl Layout {
         let split_available = available >= minimum_script + minimum_map + 20.;
         let compact_split = workspace == Workspace::Split && !split_available;
         let full_script = workspace == Workspace::Script || compact_split;
-        let script = if full_script {
-            preferred + 144.
+        let script_pane = if full_script {
+            available
         } else {
-            minimum_script
-        }
-        .min(available);
+            minimum_script.min(available)
+        };
         let map = if workspace == Workspace::Split && !compact_split {
-            available - script - 20.
+            available - script_pane - 20.
         } else {
             available
         };
+        // Script alone may rest a sheet on the desk; beside the map the paper is full-bleed.
+        let grid = Grid::resolve(
+            script_pane,
+            Page::of(state),
+            workspace == Workspace::Script && state.viewport.width >= COMPACT_WINDOW,
+        );
         Self {
             map,
-            script,
-            script_pane: if full_script { available } else { script },
+            script: grid.row(),
+            script_pane,
             compact_split,
             split_available,
+            grid,
             available,
         }
     }
@@ -73,22 +87,27 @@ pub(super) fn workspace(
             super::reading::page_controls(state, surface),
             named(
                 "Script pane",
-                super::reading::viewport::follow_reading(
+                sheet::frame(
                     state,
-                    portal(
-                        flex_row((manuscript(state, surface),))
-                            .main_axis_alignment(xilem::view::MainAxisAlignment::Center)
-                            .cross_axis_alignment(CrossAxisAlignment::Start)
-                            .width(layout.script_pane.px()),
-                    )
-                    .constrain_horizontal(true)
-                    .prop(ReadingViewport::capture(state)),
+                    &layout,
+                    super::reading::viewport::follow_reading(
+                        state,
+                        // The scroll area is the whole paper, so its scrollbar runs down the
+                        // paper's edge, clear of the columns and their pad.
+                        pane(
+                            "Script",
+                            sheet::columns(&layout.grid, manuscript(state, surface)),
+                        )
+                        .constrain_horizontal(true)
+                        .width(Dim::Stretch)
+                        .prop(ReadingViewport::capture(state)),
+                    ),
                 ),
             )
             .flex(1.),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_col(()).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!script));
@@ -125,110 +144,37 @@ pub(super) fn workspace(
     .width(layout.available.px())
 }
 pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let split_available = Layout::resolve(state).split_available;
-    let modes = xilem::view::radio_group(
-        flex_row(
-            [
-                ("Script", Workspace::Script),
-                ("Map", Workspace::Map),
-                (
-                    if split_available {
-                        "Split"
-                    } else {
-                        "Split unavailable"
-                    },
-                    Workspace::Split,
-                ),
-            ]
-            .map(|(title, workspace)| {
-                styled(
-                    ControlStyle::Segment,
-                    crate::presentation::radio_button(
-                        state.ui_scale(),
-                        title,
-                        state.map.workspace == workspace,
-                        move |state: &mut Writer| state.show_workspace(workspace),
-                    )
-                    .label_color(if state.map.workspace == workspace {
-                        state.palette.on_stamp
-                    } else {
-                        state.palette.ink
-                    })
-                    .disabled(
-                        state.phase() != Phase::Writing
-                            || (workspace == Workspace::Split && !split_available)
-                            || (workspace != Workspace::Script
-                                && (state.navigation.busy() || state.work.busy())),
-                    )
-                    .prop(CheckmarkSize {
-                        side: 0.px(),
-                        gap: 0.px(),
-                    })
-                    .background_color(if state.map.workspace == workspace {
-                        state.palette.stamp
-                    } else {
-                        state.palette.surface
-                    }),
-                )
-            }),
-        )
-        .gap(2.px()),
+    let layout = Layout::resolve(state);
+    let split_available = layout.split_available;
+    // A Split that cannot be honoured shows the Script it falls back to; the status line says why.
+    let honoured = if layout.compact_split {
+        Workspace::Script
+    } else {
+        state.map.workspace
+    };
+    let modes = segments(
+        &state.palette,
+        [
+            ("Script", Workspace::Script),
+            ("Map", Workspace::Map),
+            // Disabled when the window is too narrow; the status line gives the reason.
+            ("Split", Workspace::Split),
+        ]
+        .map(|(title, workspace)| {
+            segment(
+                state.ui_scale(),
+                &state.palette,
+                title,
+                // While Preview fills the pane no workspace is showing, so none is chosen.
+                honoured == workspace && !state.trial.visible,
+                state.phase() != Phase::Writing
+                    || state.settings_sheet()
+                    || (workspace == Workspace::Split && !split_available)
+                    || (workspace != Workspace::Script
+                        && (state.navigation.busy() || state.work.busy())),
+                move |state: &mut Writer| state.show_workspace(workspace),
+            )
+        }),
     );
-    flex_row((
-        sized_box(modes)
-            .width(Dim::MaxContent)
-            .padding(2.px())
-            .border_color(state.palette.muted)
-            .border_width(1.px()),
-        flex_col(()).flex(1.),
-    ))
-    .gap(0.px())
-}
-
-pub(super) fn authoring_modes(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let localise = state.workspaces.screen == crate::workspaces::Screen::Localisation;
-    sized_box(xilem::view::radio_group(
-        flex_row(
-            [("Write", false), ("Localize", true)].map(|(title, selected)| {
-                let active = selected == localise;
-                styled(
-                    ControlStyle::Segment,
-                    crate::presentation::radio_button(
-                        state.ui_scale(),
-                        title,
-                        active,
-                        move |state: &mut Writer| {
-                            if selected {
-                                state.open_localisation();
-                            } else {
-                                state.return_to_writing();
-                            }
-                        },
-                    )
-                    .disabled(
-                        state.project_action_blocked()
-                            || (selected && state.session.project().is_none()),
-                    )
-                    .label_color(if active {
-                        state.palette.on_stamp
-                    } else {
-                        state.palette.ink
-                    })
-                    .prop(CheckmarkSize {
-                        side: 0.px(),
-                        gap: 0.px(),
-                    })
-                    .background_color(if active {
-                        state.palette.stamp
-                    } else {
-                        state.palette.surface
-                    }),
-                )
-            }),
-        )
-        .gap(2.px()),
-    ))
-    .padding(2.px())
-    .border_color(state.palette.muted)
-    .border_width(1.px())
+    flex_row((modes, flex_col(()).flex(1.))).gap(0.px())
 }

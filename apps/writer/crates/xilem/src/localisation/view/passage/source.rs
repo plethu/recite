@@ -1,8 +1,10 @@
 use super::*;
+use crate::presentation::space;
 use crate::presentation::{
     control_style::{ControlStyle, styled},
     manuscript_text,
 };
+use crate::presentation::{disclosure_width, route_name, route_toggle};
 use crate::view::reference;
 use recite_writer_model::PassageKind;
 
@@ -61,13 +63,13 @@ pub(super) fn source(
                     )
                     .disabled(row.source_page + 1 >= row.pages.len()),
                 ))
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
             ))
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn destination(
@@ -85,30 +87,31 @@ fn destination(
     let terminal = destination == "END";
     Some(
         flex_col((
-            terminal.then(|| print::meta(writer.ui_scale(), "◆ END ◆")),
+            terminal.then(|| print::end_mark(writer.ui_scale(), &writer.palette)),
             (!terminal).then(|| {
                 styled(
                     ControlStyle::Action,
                     button(
-                        label(
-                            writer.ui_scale(),
-                            format!(
-                                "{} {}",
-                                if writer.destination_expanded(destination) {
-                                    "▾"
-                                } else {
-                                    "→"
-                                },
-                                display_name(destination)
-                            ),
-                        )
-                        .color(writer.palette.teal_text)
-                        .prop(LineBreaking::WordWrap)
-                        .width((width - 24.).max(80.).px()),
+                        route_toggle(
+                            (writer.ui_scale(), writer.ui_scale()),
+                            writer.destination_expanded(destination),
+                            writer.palette.teal_text,
+                            14. * writer.ui_scale(),
+                            label(writer.ui_scale(), display_name(destination))
+                                .color(writer.palette.teal_text)
+                                .prop(LineBreaking::WordWrap)
+                                .width(
+                                    (width - 24. - disclosure_width(writer.ui_scale()))
+                                        .max(80.)
+                                        .px(),
+                                ),
+                        ),
                         move |writer: &mut Writer| {
                             writer.toggle_destination_preview(target.clone())
                         },
                     )
+                    .expanded(writer.destination_expanded(destination))
+                    .accessible_label(route_name(&display_name(destination)))
                     .disabled(writer.project_action_blocked())
                     .background_color(writer.palette.surface),
                 )
@@ -116,6 +119,6 @@ fn destination(
             (!terminal).then(|| reference::destination(writer, destination, width)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

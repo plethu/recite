@@ -8,10 +8,11 @@ run *args:
     cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer -- "$@"
 
 # Probe AT-SPI on an owned headless Wayland host; needs Cage, wtype, grim, wl-clipboard, python3-gi and D-Bus.
-# The large-project scenario times an optimized build on a generated project against its budgets (#109).
+# The timing scenarios run an optimized build: large-project on a generated project against its
+# budgets (#109), frame-timing for typing and beat steps on a software renderer (#283).
 probe output="target/writer-native/result.json" scenario="all":
-    if [[ "$2" == large-project ]]; then \
-      cargo build --locked --release -p recite-fixturegen; \
+    if [[ "$2" == large-project || "$2" == frame-timing ]]; then \
+      if [[ "$2" == large-project ]]; then cargo build --locked --release -p recite-fixturegen; fi; \
       cargo build --locked --profile bench --manifest-path apps/writer/Cargo.toml -p recite-writer; \
       binary=apps/writer/target/release/recite-writer; \
     else \
@@ -19,6 +20,17 @@ probe output="target/writer-native/result.json" scenario="all":
       binary=apps/writer/target/debug/recite-writer; \
     fi; \
     /usr/bin/python3 tests/writer-native/check.py "$binary" "$1" --scenario "$2"
+
+# Render every Writer surface with accessibility snapshots, then compare with design/baseline.
+gallery output="target/writer-gallery" only="" scale="1":
+    RECITE_WRITER_GALLERY="$(realpath -m "$1")" RECITE_WRITER_GALLERY_ONLY="$2" RECITE_WRITER_GALLERY_SCALE="$3" cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib tests::gallery::tests::capture_gallery -- --ignored --exact --nocapture
+
+# Replace design/baseline with a complete 1x capture; only after the maintainer signs off.
+gallery-bless output="target/writer-gallery":
+    python3 -c 'import json, sys; s = json.load(open(sys.argv[1]))["settings"]; sys.exit("bless needs a complete 1x capture without motion frames" if s["scale"] != 1 or s["only"] or s["motion_ms"] else 0)' "$1/manifest.json"
+    rm -rf apps/writer/design/baseline
+    mkdir -p apps/writer/design/baseline
+    cp -R "$1/manifest.json" "$1/frames" "$1/a11y" apps/writer/design/baseline/
 
 # Verify the maintained writer and its source-editing model.
 check:

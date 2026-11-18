@@ -1,6 +1,7 @@
 //! Recovery stays beside the exact rejected draft; details do not enlarge fixed chrome.
 use super::*;
 use crate::presentation::group::status;
+use crate::presentation::space;
 
 pub(super) fn panel(state: &Writer, width: f64) -> Option<impl WidgetView<Writer> + use<>> {
     let refusal = state.reading_refusal()?;
@@ -32,13 +33,13 @@ pub(super) fn panel(state: &Writer, width: f64) -> Option<impl WidgetView<Writer
             } else {
                 Axis::Vertical
             })
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
             refusal
                 .reason()
                 .map(|reason| paragraph(scale, reason.to_owned(), width)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(6.px())
+        .gap(space::SIBLINGS.px())
         .width(width.px()),
     ))
 }

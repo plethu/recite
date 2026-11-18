@@ -1,14 +1,37 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::control_inset;
+use crate::presentation::segments::{segment, segments_along};
+use crate::presentation::space;
+use crate::presentation::tokens::{breakpoint, size};
+use crate::presentation::{Type, Typeset, search_field};
 use crate::presentation::{manuscript_text, print};
 use xilem::masonry::kurbo::Axis;
+
+/// The most words of a source line a queue row's name carries.
+const OPENING_WORDS: usize = 6;
+
+/// A source line's opening words, ending in an ellipsis where the line goes on.
+fn opening(source: &str) -> String {
+    let words: Vec<&str> = source.split_whitespace().collect();
+    if words.len() > OPENING_WORDS {
+        format!("{}…", words[..OPENING_WORDS].join(" "))
+    } else {
+        words.join(" ")
+    }
+}
 pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let state = &writer.localisation;
     let blocked = writer.project_action_blocked() || state.slot.read_only();
-    let width = writer.content_width();
-    let wide = width >= 600. * f64::from(scale);
-    let measure = if wide { (width - 24.) / 2. } else { width };
+    let width = writer.page_width();
+    let wide = width >= breakpoint::TWO_COLUMNS * f64::from(scale);
+    let inset = control_inset(scale);
+    let measure = if wide {
+        (width - space::GROUPS) / 2.
+    } else {
+        width
+    };
     let rows = state
         .queue
         .rows
@@ -20,10 +43,24 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             });
             flex_row((
                 flex_col((
-                    manuscript_text(prose_size(writer), row.source.clone()).width(measure.px()),
-                    print::action(
+                    // Set in by the action's padding, so the source line and the words of its
+                    // action start on one edge.
+                    sized_box(
+                        manuscript_text(prose_size(writer), row.source.clone())
+                            .width((measure - inset).max(0.).px()),
+                    )
+                    .padding(xilem::style::Padding::left(inset.px())),
+                    // Its name carries the line's opening words, so rows of one scene read apart.
+                    print::action_named(
                         scale,
-                        format!("Open translation · {}", row.caption),
+                        (
+                            format!("Open translation · {}", row.caption),
+                            format!(
+                                "Open translation · {} · {}",
+                                row.caption,
+                                opening(&row.source)
+                            ),
+                        ),
                         blocked,
                         move |writer: &mut Writer| {
                             if let Some(key) = &key {
@@ -33,16 +70,18 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     ),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(2.px()),
+                .gap(space::UNIT.px()),
+                // The translation sits level with its source line; its status follows it as
+                // the source's action follows the source.
                 flex_col((
-                    paragraph(scale, row.status.clone(), measure),
                     (!row.translation.is_empty()).then(|| {
                         manuscript_text(prose_size(writer), row.translation.clone())
                             .width(measure.px())
                     }),
+                    paragraph(scale, row.status.clone(), measure),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(6.px()),
+                .gap(space::SIBLINGS.px()),
             ))
             .direction(if wide {
                 Axis::Horizontal
@@ -50,95 +89,95 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 Axis::Vertical
             })
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(24.px())
-            .padding(xilem::style::Padding::from_vh(6.px(), 0.px()))
+            .gap(space::GROUPS.px())
+            .padding(xilem::style::Padding::from_vh(space::UNIT.px(), 0.px()))
         })
         .collect::<Vec<_>>();
     flex_col((
-        flex_row((
-            sized_box(
-                text_input(state.query.text.clone(), Writer::set_catalogue_query)
-                    .text_size(16. * scale)
-                    .prop(TextAreaLabel::new("Search translations")),
-            )
-            .width(
-                (writer.script_width() - 200. * f64::from(scale))
-                    .max(180.)
-                    .px(),
-            ),
-            text_button(scale, "Search translations", Writer::search_catalogue)
-                .disabled(blocked || !state.has_catalogue()),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        // The queue filters as the text is typed; there is no separate Search action.
+        search_field(
+            scale,
+            writer.palette.muted,
+            false,
+            // It runs to the page's right edge, over the rows it filters.
+            Some(width.max(size::FIELD_MIN)),
+            text_input(state.query.text.clone(), Writer::set_catalogue_query)
+                .placeholder("Search translations")
+                .typeset(Type::Body, scale)
+                .disabled(!state.has_catalogue())
+                .prop(TextAreaLabel::new("Search translations")),
+        ),
         filters(writer, wide),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(10.px()),
-        (state.queue.total > 8).then(|| {
-            flex_row((
-                text_button(scale, "Previous translations", |writer: &mut Writer| {
-                    writer.localisation.query.page =
-                        writer.localisation.query.page.saturating_sub(1);
-                    writer.catalogue_action(work::Action::Query);
-                })
-                .disabled(blocked || state.queue.page == 0),
-                text_button(scale, "More translations", |writer: &mut Writer| {
-                    writer.localisation.query.page += 1;
-                    writer.catalogue_action(work::Action::Query);
-                })
-                .disabled(blocked || (state.queue.page + 1) * 8 >= state.queue.total),
-            ))
-            .gap(8.px())
+            .gap(space::TEXT.px()),
+        (state.queue.total > state.queue.rows.len()).then(|| {
+            label(
+                scale,
+                format!(
+                    "The first {} are listed. Search to narrow the rest.",
+                    state.queue.rows.len()
+                ),
+            )
+            .typeset(Type::Meta, scale)
+            .color(writer.palette.muted)
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 fn filters(writer: &Writer, wide: bool) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let state = &writer.localisation;
     flex_row((
-        radio_group(
-            flex_row(
-                [
-                    ("All entries", Filter::All),
-                    ("Needs attention", Filter::Attention),
-                    ("Unsaved translations", Filter::Unsaved),
-                ]
-                .map(|(caption, filter)| {
-                    crate::presentation::radio_button(
-                        scale,
-                        caption,
-                        state.query.filter == filter,
-                        move |writer: &mut Writer| writer.localisation.query.filter = filter,
-                    )
-                }),
-            )
-            .direction(if wide {
+        segments_along(
+            &writer.palette,
+            if wide {
                 Axis::Horizontal
             } else {
                 Axis::Vertical
-            })
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            },
+            [
+                ("All entries", Filter::All),
+                ("Needs attention", Filter::Attention),
+                ("Unsaved translations", Filter::Unsaved),
+            ]
+            .map(|(caption, filter)| {
+                segment(
+                    scale,
+                    &writer.palette,
+                    caption,
+                    state.query.filter == filter,
+                    false,
+                    move |writer: &mut Writer| writer.localisation.query.filter = filter,
+                )
+            }),
         ),
         label(
             scale,
             format!(
-                "{} matching entries · page {}",
+                "{} matching {}",
                 state.queue.total,
-                state.queue.page + 1
+                if state.queue.total == 1 {
+                    "entry"
+                } else {
+                    "entries"
+                }
             ),
         )
-        .text_size(12. * scale),
+        .typeset(Type::Meta, scale),
     ))
     .direction(if wide {
         Axis::Horizontal
     } else {
         Axis::Vertical
     })
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    // Beside the segments, the count sits on their words' baseline.
+    .cross_axis_alignment(if wide {
+        CrossAxisAlignment::FirstBaseline
+    } else {
+        CrossAxisAlignment::Start
+    })
+    .gap(space::TEXT.px())
 }

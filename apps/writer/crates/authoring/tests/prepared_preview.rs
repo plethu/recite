@@ -1,4 +1,6 @@
-use recite_writer_model::{PreparedPreview, PreviewRequest, PreviewSetup, View, Workbench};
+use recite_writer_model::{
+    PreparedPreview, PreviewRequest, PreviewSetup, PreviewTurn, View, Workbench,
+};
 
 const SOURCE: &str =
     ":: start default\n> @w3xnt5r\n  Hello.\n-> END\n:: other\n> @rbgkhpf\n  Other.\n-> END\n";
@@ -78,5 +80,50 @@ fn no_op_save_refresh_keeps_prepared_analysis_current() -> Result<(), Box<dyn st
             .accept_preview(request.prepare(PreviewSetup::default())?)
             .is_ok()
     );
+    Ok(())
+}
+
+#[test]
+fn a_preview_keeps_a_transcript_of_shown_lines_and_chosen_replies()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut model = Workbench::new(recite_writer_model::FIXTURE)?;
+    model.start_preview()?;
+    assert!(model.preview_transcript().is_empty());
+    let mut expected = Vec::new();
+    for _ in 0..10 {
+        let page = model.preview_page().ok_or("page")?;
+        if !page.choices.is_empty() || page.ended {
+            break;
+        }
+        let text = page.text.clone();
+        let speaker = page.speaker.clone();
+        model.advance_preview(None)?;
+        if !text.is_empty() {
+            expected.push(PreviewTurn {
+                text,
+                speaker,
+                reply: None,
+            });
+        }
+    }
+    let page = model.preview_page().ok_or("page")?;
+    let reply = page.choices.first().ok_or("a reply")?.text.clone();
+    // A prompt without a line of its own leaves no heading in the transcript, only the reply.
+    expected.push(PreviewTurn {
+        text: if page.prompt {
+            String::new()
+        } else {
+            page.text.clone()
+        },
+        speaker: page.speaker.clone(),
+        reply: Some(reply),
+    });
+    model.advance_preview(Some(0))?;
+    assert_eq!(model.preview_transcript(), expected.as_slice());
+    // Each shown line keeps who spoke it, as the script names them.
+    assert_eq!(expected[0].speaker.as_deref(), Some("alice"));
+    // A new preview starts a new transcript.
+    model.start_preview()?;
+    assert!(model.preview_transcript().is_empty());
     Ok(())
 }

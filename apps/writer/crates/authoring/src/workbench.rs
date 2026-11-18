@@ -23,7 +23,10 @@ pub use source_replacement::{PreparedSourceReplacement, SourceReplacementRequest
 mod source_validation;
 pub use source_repair::{PreparedSourceRepair, SourceRepairRequest};
 mod structure;
-use crate::{Document, DraftSnapshot, EditError, PassageKind, Preview, PreviewError, PreviewPage};
+use crate::{
+    Document, DraftSnapshot, EditError, PassageKind, Preview, PreviewError, PreviewPage,
+    PreviewTurn,
+};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
 pub use source_validation::SourceValidation;
 
@@ -66,6 +69,8 @@ pub struct Workbench {
     draft_revision: DocumentVersion,
     preview: Option<Preview>,
     page: Option<PreviewPage>,
+    /// What the running preview has shown before its current page, and the replies chosen.
+    transcript: Vec<PreviewTurn>,
     script_selection: Option<String>,
     source_validation: SourceValidation,
 }
@@ -177,46 +182,6 @@ impl Workbench {
         let id = self.document.add_choice(self.document.revision(), &block)?;
         self.select(View::Passage(id))
     }
-    pub fn advance_preview(&mut self, choice_index: Option<usize>) -> Result<(), WorkbenchError> {
-        let choice = choice_index
-            .map(|index| {
-                self.page
-                    .as_ref()
-                    .and_then(|p| p.choices.get(index))
-                    .map(|c| c.id.clone())
-                    .ok_or(WorkbenchError::NoPreview)
-            })
-            .transpose()?;
-        let preview = self.preview.as_mut().ok_or(WorkbenchError::NoPreview)?;
-        self.page = Some(preview.advance(choice)?);
-        Ok(())
-    }
-    pub fn answer_preview(
-        &mut self,
-        value: recite_runtime::ConditionValue,
-    ) -> Result<(), WorkbenchError> {
-        let request = self
-            .page
-            .as_ref()
-            .and_then(|p| p.condition.clone())
-            .ok_or(WorkbenchError::NoPreview)?;
-        let preview = self.preview.as_mut().ok_or(WorkbenchError::NoPreview)?;
-        self.page = Some(preview.answer(&request, value)?);
-        Ok(())
-    }
-    pub fn acknowledge_preview(
-        &mut self,
-        ack: recite_runtime::EffectAck,
-    ) -> Result<(), WorkbenchError> {
-        let id = self
-            .page
-            .as_ref()
-            .and_then(|p| p.waiting_effect.clone())
-            .ok_or(WorkbenchError::NoPreview)?;
-        let preview = self.preview.as_mut().ok_or(WorkbenchError::NoPreview)?;
-        self.page = Some(preview.acknowledge(id, ack)?);
-        Ok(())
-    }
     pub fn preview_trace(&self) -> Option<&recite_runtime::preview::PreviewTrace> {
         self.preview.as_ref().map(Preview::trace)
     }
@@ -225,9 +190,6 @@ impl Workbench {
         self.preview.as_ref().map_or(&[], Preview::events)
     }
 
-    pub fn preview_page(&self) -> Option<&PreviewPage> {
-        self.page.as_ref()
-    }
     pub fn preview_stale(&self) -> bool {
         self.has_draft()
             || self

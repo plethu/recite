@@ -18,6 +18,25 @@ pub(crate) fn change_pages(row: ComparisonRow) -> Vec<ComparisonRow> {
         })
         .collect()
 }
+/// The most of one text a diff row shows; the file keeps all of it.
+const SHOWN_CHARS: usize = 1_000;
+/// `row` with each side cut to what one diff row shows, an ellipsis marking the cut.
+pub(crate) fn shown_row(row: ComparisonRow) -> ComparisonRow {
+    let shown = |text: String| {
+        if text.chars().count() <= SHOWN_CHARS {
+            text
+        } else {
+            let mut shown: String = text.chars().take(SHOWN_CHARS).collect();
+            shown.push('…');
+            shown
+        }
+    };
+    ComparisonRow {
+        caption: row.caption,
+        before: row.before.map(shown),
+        after: row.after.map(shown),
+    }
+}
 pub fn pages(text: &str) -> Vec<String> {
     let mut pages = Vec::new();
     let mut page = String::new();

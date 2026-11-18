@@ -134,13 +134,10 @@ def run(api, bus, registry, binary, output):
                 time.sleep(0.15)  # Allow the compositor to paint the already-published failure.
                 capture(output, "-failure")
                 window.workspace_action("Settings")
-                window.wait(lambda: window.find("Increase UI scale"), "personal scale controls")
+                window.wait(lambda: window.find_spin("UI scale"), "personal scale controls")
                 for percent in range(110, 201, 10):
-                    reveal_preference(window, "Increase UI scale")
-                    window.act("Increase UI scale")
-                    window.wait(
-                        lambda: window.find(f"UI scale: {percent}%"), "larger interface scale"
-                    )
+                    reveal_preference(window, "UI scale")
+                    window.set_spin("UI scale", percent)
                 window.act("Done with settings")
                 window.wait(
                     lambda: window.find_text(
@@ -152,12 +149,8 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-failure200")
                 window.workspace_action("Settings")
                 for percent in range(190, 99, -10):
-                    reveal_preference(window, "Decrease UI scale")
-                    window.act("Decrease UI scale")
-                    reveal_preference(window, f"UI scale: {percent}%")
-                    window.wait(
-                        lambda: window.find(f"UI scale: {percent}%"), "restored interface scale"
-                    )
+                    reveal_preference(window, "UI scale")
+                    window.set_spin("UI scale", percent)
                 window.act("Done with settings")
                 before = receipt.stat().st_mtime_ns
                 window.document_action("Use system default")

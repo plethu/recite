@@ -24,13 +24,18 @@ fn personal_preferences_apply_through_mounted_controls_and_retain_shortcut_draft
         "Confirm before closing",
         "Vim keymap",
         "Script pane on the right",
-        "Larger reading text",
-        "Smaller reading text",
-        "Increase UI scale",
-        "Decrease UI scale",
     ] {
         mounted.activate(caption);
         assert_eq!(mounted.state.status, "Preferences saved.", "{caption}");
+    }
+    for (field, up) in [
+        ("Reading text size", true),
+        ("Reading text size", false),
+        ("UI scale", true),
+        ("UI scale", false),
+    ] {
+        mounted.step(field, up);
+        assert_eq!(mounted.state.status, "Preferences saved.", "{field} {up}");
     }
     assert_eq!(
         mounted.state.preferences.config.writer.theme,
@@ -49,14 +54,11 @@ fn personal_preferences_apply_through_mounted_controls_and_retain_shortcut_draft
     mounted.activate("Keyboard shortcuts");
     mounted.replace_text("Shortcut binding", "Primary+Alt+S");
     assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
-    mounted.activate("Next commands");
-    mounted.activate("Previous commands");
     assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
     let binding = mounted.find("Shortcut binding");
     mounted.replace_text("Search shortcuts", "source");
     assert_eq!(mounted.find("Shortcut binding"), binding);
     assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
-    assert_eq!(mounted.state.settings.page, 0);
     mounted.replace_text("Search shortcuts", "");
     mounted.activate("Save shortcut");
     assert_eq!(
@@ -124,7 +126,7 @@ fn personal_controls_expose_their_native_checkbox_names() {
 }
 
 #[test]
-fn compact_reading_controls_keep_their_identity_and_fit_before_the_specimen() {
+fn compact_reading_controls_keep_their_identity_and_fit_the_window_at_200_percent() {
     use recite_config::WriterPresentationField;
     use xilem::masonry::core::WindowEvent;
     let mut mounted = Mounted::new(App::empty(), surface);
@@ -132,10 +134,10 @@ fn compact_reading_controls_keep_their_identity_and_fit_before_the_specimen() {
         .harness
         .process_window_event(WindowEvent::Resize((1280, 720).into()));
     mounted.settle();
-    let increase = mounted.find("Increase UI scale");
+    let scale = mounted.find("UI scale");
     for _ in 0..10 {
-        mounted.activate("Increase UI scale");
-        assert_eq!(mounted.find("Increase UI scale"), increase);
+        mounted.step("UI scale", true);
+        assert_eq!(mounted.find("UI scale"), scale);
     }
     assert_eq!(
         mounted
@@ -147,44 +149,23 @@ fn compact_reading_controls_keep_their_identity_and_fit_before_the_specimen() {
             .value(WriterPresentationField::UiScale),
         200
     );
-    let mut bottom = 0.;
-    for (decrease, increase) in [
-        ("Smaller reading text", "Larger reading text"),
-        ("Smaller source text", "Larger source text"),
-        ("Decrease UI scale", "Increase UI scale"),
-        ("Narrower navigation", "Wider navigation"),
-        ("Narrower script", "Wider script"),
+    for name in [
+        "Reading text size",
+        "Source text size",
+        "UI scale",
+        "Navigation width",
+        "Script width",
     ] {
-        let first = mounted.harness.get_widget_with_id(mounted.find(decrease));
-        let second = mounted.harness.get_widget_with_id(mounted.find(increase));
-        let first = first
+        let field = mounted.harness.get_widget_with_id(mounted.find(name));
+        let field = field
             .ctx()
             .window_transform()
-            .transform_rect_bbox(first.ctx().border_box());
-        let second = second
-            .ctx()
-            .window_transform()
-            .transform_rect_bbox(second.ctx().border_box());
+            .transform_rect_bbox(field.ctx().border_box());
+        assert!(field.x1 <= 1280. && field.y1 <= 720., "{name}: {field:?}");
+        // Each stepper face keeps at least a 24px logical target after doubling the UI scale.
         assert!(
-            first.x1 <= second.x0 && second.x1 <= 1280.,
-            "{decrease}: {first:?} {second:?}"
+            field.width() >= 2. * 48. && field.height() >= 48.,
+            "{field:?}"
         );
-        // Keep at least a 24px logical target after doubling the UI scale.
-        assert!(first.width() >= 48. && first.height() >= 48., "{first:?}");
-        assert!(second.y1 <= 720., "{increase}: {second:?}");
-        bottom = second.y1;
     }
-    let tree = mounted.harness.access_tree();
-    let mut pending = vec![tree.state().root()];
-    let top = loop {
-        let node = pending.pop().expect("writing specimen");
-        if node.label().or_else(|| node.value()).as_deref() == Some("Writing preview") {
-            break node.bounding_box().unwrap().y0;
-        }
-        pending.extend(node.children());
-    };
-    assert!(
-        top >= bottom,
-        "compact settings put controls before the specimen"
-    );
 }

@@ -9,23 +9,30 @@ pub struct Settings {
     pub keyboard: bool,
     pub command: WriterCommand,
     pub drafts: BTreeMap<WriterCommand, String>,
-    pub page: usize,
     pub query: String,
     pub feedback: Option<String>,
 }
+/// How far one press moves a presentation setting.
+pub fn presentation_step(field: WriterPresentationField) -> u16 {
+    match field {
+        WriterPresentationField::UiScale
+        | WriterPresentationField::DrawerWidth
+        | WriterPresentationField::ScriptWidth => 10,
+        _ => 1,
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
             keyboard: false,
             command: WriterCommand::Save,
             drafts: BTreeMap::new(),
-            page: 0,
             query: String::new(),
             feedback: None,
         }
     }
 }
-pub const COMMANDS_PER_PAGE: usize = 8;
 fn commands() -> impl Iterator<Item = WriterCommand> {
     WriterCommand::ALL
         .iter()
@@ -46,22 +53,16 @@ impl Shell {
     }
     pub fn search_shortcuts(&mut self, query: String) {
         self.settings.query = query;
-        self.settings.page = 0;
     }
     pub fn open_project_settings(&mut self) {
         if let Some(writer) = &mut self.writer {
             writer.open_project_workspace(crate::workspaces::Open::Settings);
-            self.settings_open = false;
+            self.set_settings_open(false);
             self.show_welcome = false;
         }
     }
     pub(crate) fn show_settings(&mut self) {
-        self.settings_open = true;
-        self.settings.page = self
-            .matching_shortcuts()
-            .position(|command| command == self.settings.command)
-            .unwrap_or(0)
-            / COMMANDS_PER_PAGE;
+        self.set_settings_open(true);
     }
     fn store_preference(&mut self, edit: UserConfigEdit) -> Result<(), String> {
         self.preferences.update(edit)?;
@@ -76,14 +77,25 @@ impl Shell {
             Err(error) => self.status = format!("Could not save preferences: {error}"),
         }
     }
+    /// Set a presentation setting to `target`, kept within its bounds and on its step from the
+    /// lower bound, as a number field's Home, End or assistive technology asks.
+    pub fn set_presentation(&mut self, field: WriterPresentationField, target: u16) {
+        let presentation = self.preferences.config.writer.presentation;
+        let (min, max) = field.bounds();
+        let step = presentation_step(field);
+        let target = target.clamp(min, max);
+        let target = min + (target - min) / step * step;
+        if presentation.value(field) == target {
+            return;
+        }
+        match presentation.with_value(field, target) {
+            Ok(next) => self.update_preference(UserConfigEdit::WriterPresentation(next)),
+            Err(error) => self.status = error.to_string(),
+        }
+    }
     pub fn adjust_presentation(&mut self, field: WriterPresentationField, increase: bool) {
         let presentation = self.preferences.config.writer.presentation;
-        let step = match field {
-            WriterPresentationField::UiScale
-            | WriterPresentationField::DrawerWidth
-            | WriterPresentationField::ScriptWidth => 10,
-            _ => 1,
-        };
+        let step = presentation_step(field);
         let value = if increase {
             presentation.value(field).checked_add(step)
         } else {

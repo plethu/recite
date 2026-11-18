@@ -1,5 +1,6 @@
 //! Prepared graphs publish conditionally; completed personal-state writes always reconcile.
 use super::*;
+use crate::workspaces::rename::inline::Stage;
 impl Writer {
     pub(crate) fn accept_map(
         &mut self,
@@ -50,7 +51,15 @@ impl Writer {
             self.reading.selected.clone(),
             workspace,
         );
-        self.status = "Map ready".into();
+        // A new scene's camera starts at the interface's 100%; rescaling an existing one is a no-op.
+        self.map.rescale(self.ui_scale());
+        // A rename waiting on its slip keeps saying so; the map's own readiness is no news.
+        if self
+            .inline_rename()
+            .is_none_or(|inline| inline.stage != Stage::Reviewed)
+        {
+            self.status = "Map ready".into();
+        }
         self.remember_location();
         Ok(())
     }

@@ -1,5 +1,7 @@
 //! Project problem views over `recite_writer_app::shell::welcome::feedback`.
 use super::super::App;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{group, label, paragraph, text_button};
 use xilem::{
     WidgetView,
@@ -14,7 +16,7 @@ pub(super) fn panel(app: &App, scale: f32, width: f64) -> Option<impl WidgetView
         problem.heading(),
         flex_col((
             label(scale, problem.heading())
-                .text_size(16. * scale)
+                .typeset(Type::Section, scale)
                 .color(app.theme.palette.accent),
             paragraph(scale, problem.guidance(), width),
             text_button(
@@ -32,7 +34,7 @@ pub(super) fn panel(app: &App, scale: f32, width: f64) -> Option<impl WidgetView
             ),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
 }
 
@@ -48,6 +50,6 @@ pub(super) fn details(app: &App, scale: f32, width: f64) -> Option<impl WidgetVi
             paragraph(scale, problem.diagnostic.clone(), width),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
 }

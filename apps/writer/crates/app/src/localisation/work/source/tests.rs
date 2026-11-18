@@ -124,7 +124,7 @@ fn source_review_is_observational_and_apply_writes_only_catalogue() {
     let refresh = writer.localisation.refresh.as_ref().unwrap();
     assert_eq!(refresh.preview.changes.len(), 1);
     assert!(
-        refresh.pages[0]
+        refresh.rows[0]
             .detail
             .as_ref()
             .unwrap()

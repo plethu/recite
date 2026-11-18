@@ -3,26 +3,40 @@ use super::*;
 use crate::WriterLayout;
 use crate::attention::{Pane, Region};
 use crate::presentation::print;
+use crate::presentation::space;
 use crate::rules;
 use recite_writer_model::{EditOperation, StructuralCommand};
 mod field;
-mod folio;
+pub(in crate::view) mod folio;
 mod input;
+mod insertion;
 pub(super) use field::{passage_editor, prose_editor};
 use xilem::AnyWidgetView;
 use xilem::masonry::kurbo;
 
 pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetView<Writer> + use<> {
+    // A readable source with nothing staged needs no repair page.
+    let repair = match surface {
+        Surface::SourceRepair { error, import }
+            if error.is_some() || (*import && state.session.model().has_draft()) =>
+        {
+            Some((*import, *error))
+        }
+        _ => None,
+    };
     flex_col((
-        matches!(surface, Surface::SourceRepair { import: true, .. })
-            .then(|| super::source_repair::panel(state)),
+        repair.map(|(import, error)| super::source_repair::panel(state, import, error)),
         content(state, surface),
-        retained(actions(state), !state.attention.is_focused()),
+        // The galley sets these with the selected beat; other surfaces keep them below. A source
+        // under repair has nothing to insert into, and its head holds the draft's actions.
+        (!galley(state, surface) && repair.is_none())
+            .then(|| retained(actions(state), !state.attention.is_focused())),
         diagnostics(state),
-        (!matches!(
-            surface,
-            Surface::Reply(_) | Surface::Beat { .. } | Surface::Manuscript { .. }
-        ))
+        (repair.is_none()
+            && !matches!(
+                surface,
+                Surface::Reply(_) | Surface::Beat { .. } | Surface::Manuscript { .. }
+            ))
         .then(|| {
             draft_actions(
                 state,
@@ -30,10 +44,9 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
                 action_axis(state),
             )
         }),
-        folio::footer(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Script)))
 }
 fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> {
@@ -47,13 +60,19 @@ fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> 
             } else {
                 prose_editor(state, passage, state.script_width()).boxed()
             }
-        },
+        }
         Surface::Reply(reply) => rules::view::panel(state, reply).boxed(),
         Surface::Beat { id, rows } => super::reading::block(state, id, rows).boxed(),
         Surface::Empty => super::reading::empty(state).boxed(),
-        Surface::SourceRepair { error: Some(error), .. } => super::reading::repair(state, error).boxed(),
-        Surface::SourceRepair { error: None, .. } =>
-            paragraph(state.ui_scale(), "Choose a beat in the outline to read or write it. Use your editor for source editing; source drafts remain recoverable.", state.script_width()).boxed(),
+        // The repair page above says what a broken source needs.
+        Surface::SourceRepair { error: Some(_), .. } => flex_col(()).boxed(),
+        Surface::SourceRepair { error: None, .. } => paragraph(
+            state.ui_scale(),
+            "Choose a beat in the outline to read or write it. Use your editor for source editing; \
+             source drafts remain recoverable.",
+            state.script_width(),
+        )
+        .boxed(),
     }
 }
 pub(super) fn draft_actions(
@@ -81,7 +100,7 @@ pub(super) fn draft_actions(
     ))
     .direction(axis)
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn edit_button(
     state: &Writer,
@@ -100,58 +119,26 @@ fn edit_button(
     )
     .disabled(!enabled)
 }
-fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase() != Phase::Writing
-        || state.session.read_only()
-        || state.navigation.busy()
-        || state.work.busy();
-    let repair = state.reading.script().is_err();
-    let selected = state.reading.selected.is_some() && state.reading.error.is_none() && !repair;
-    flex_row((
-        add_button(
-            state,
-            "Add beat",
-            StructuralCommand::AddBeat,
-            !closing && !repair,
-        ),
-        add_button(
-            state,
-            "Add line",
-            StructuralCommand::AddLine,
-            !closing && selected,
-        ),
-        add_button(
-            state,
-            "Add reply",
-            StructuralCommand::AddReply,
-            !closing && selected,
-        ),
-    ))
-    .direction(action_axis(state))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+/// Whether `surface` shows the scene galley, which holds the beat's actions itself.
+/// Whether the scene galley shows a selected beat, whose heading carries the beat's actions.
+pub(super) fn galley(state: &Writer, surface: &Surface<'_>) -> bool {
+    match surface {
+        Surface::Manuscript { .. } => {
+            state.reading.selected.is_some()
+                && state.reading.error.is_none()
+                && !state.reading.rows.is_empty()
+        }
+        Surface::Beat { .. } => true,
+        _ => false,
+    }
 }
+pub(super) use insertion::actions;
 fn action_axis(state: &Writer) -> kurbo::Axis {
     if state.script_width() < 560. * f64::from(state.ui_scale()) {
         kurbo::Axis::Vertical
     } else {
         kurbo::Axis::Horizontal
     }
-}
-fn add_button(
-    state: &Writer,
-    title: &'static str,
-    command: StructuralCommand,
-    enabled: bool,
-) -> impl WidgetView<Writer> + use<> {
-    print::action(
-        state.ui_scale(),
-        title,
-        !enabled,
-        move |state: &mut Writer| {
-            state.navigate(crate::navigation::Target::Structure(command.clone()))
-        },
-    )
 }
 fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let diagnostics = state.session.model().document().diagnostic_snapshot();
@@ -162,7 +149,7 @@ fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 paragraph(
                     state.ui_scale(),
                     format!(
-                        "Source diagnostics · line {} · {}",
+                        "Line {} · {}",
                         diagnostic.span.start.line(),
                         diagnostic.message
                     ),
@@ -171,5 +158,5 @@ fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
             })
             .collect::<Vec<_>>(),
     )
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }

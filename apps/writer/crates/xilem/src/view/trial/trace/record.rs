@@ -1,6 +1,7 @@
 use super::*;
 use crate::WriterLayout;
 use crate::presentation::source_text;
+use crate::presentation::space;
 
 pub(super) fn record(
     writer: &Writer,
@@ -37,7 +38,7 @@ pub(super) fn record(
         ),
         flex_col(fields)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(12.px()),
+            .gap(space::TEXT.px()),
         (pages > 1).then(|| {
             flex_col((
                 label(
@@ -64,11 +65,11 @@ pub(super) fn record(
                 .disabled(disabled || page + 1 >= pages),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 fn field(
     writer: &Writer,
@@ -105,5 +106,5 @@ fn field(
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }

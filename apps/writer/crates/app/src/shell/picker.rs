@@ -1,13 +1,17 @@
 //! Transient native lookup keeps the mounted manuscript and its input history intact.
 mod choices;
+mod commands;
 mod index;
+mod lifecycle;
 mod previews;
+mod wording;
 use super::*;
 pub use crate::rules::selection;
 use recite_config::WriterCommand;
 use recite_writer_session::commands::targets;
 use recite_writer_session::location::Location;
-pub const PAGE: usize = 5;
+use std::ops::Range;
+pub use wording::{empty_message, hint};
 /// One opening has a distinct authority even when its mode and query are identical.
 #[derive(Clone, Default)]
 pub struct PickerInstance(Arc<()>);
@@ -33,6 +37,7 @@ pub enum Mode {
     Passages,
     RulesChoices,
     Destinations,
+    Speakers,
     RenameBeat,
 }
 pub use super::Search;
@@ -50,6 +55,7 @@ impl Purpose {
             Self::Editor(request) => match request.as_ref() {
                 crate::choices::Request::Rules(_) => Mode::RulesChoices,
                 crate::choices::Request::Destination(_) => Mode::Destinations,
+                crate::choices::Request::Speaker(_) => Mode::Speakers,
                 crate::choices::Request::Rename(_) => Mode::RenameBeat,
             },
         }
@@ -66,6 +72,7 @@ pub enum Item {
     Lookup(targets::Target),
     Rule(selection::Choice),
     Destination(String),
+    Speaker(String),
     RenameBeat(String),
 }
 pub struct Entry {
@@ -84,19 +91,13 @@ pub struct Picker {
     limit: usize,
     pub total: usize,
     pub previews: previews::Previews,
-}
-impl Mode {
-    pub fn title(self) -> &'static str {
-        match self {
-            Self::Commands => "Commands",
-            Self::GoTo => "Go to scene or beat",
-            Self::ProjectText => "Find project text",
-            Self::Passages => "Find in this beat",
-            Self::RulesChoices => "Choose reply rule value",
-            Self::Destinations => "Change destination",
-            Self::RenameBeat => "Choose a beat to rename",
-        }
-    }
+    /// The results the list shows, as it last reported them.
+    visible: Range<usize>,
+    /// The first result the list shows; it moves only to keep the active result in view.
+    pub anchor: usize,
+    /// Where a combobox slip hangs from the label that opened it, in window pixels; a picker
+    /// opened any other way sits below the tab row.
+    pub placement: Option<(u32, u32)>,
 }
 impl Picker {
     pub fn new(purpose: Purpose, entries: Vec<Entry>) -> Self {
@@ -112,12 +113,23 @@ impl Picker {
             active: 0,
             limit: 100,
             previews: Default::default(),
+            visible: 0..0,
+            anchor: 0,
+            placement: None,
         };
         picker.prepare_previews();
         picker
     }
     pub fn mode(&self) -> Mode {
         self.purpose.mode()
+    }
+    /// Whether every result of a choice slip is of one kind, which then goes unsaid on each line.
+    pub fn one_kind(&self) -> bool {
+        matches!(self.purpose, Purpose::Editor(_))
+            && self
+                .entries
+                .windows(2)
+                .all(|pair| pair[0].detail == pair[1].detail)
     }
     fn step(&mut self, forward: bool) {
         let count = self.matches.len();
@@ -128,241 +140,20 @@ impl Picker {
     fn select(&mut self, active: usize) {
         self.active = active;
         self.revision.advance();
-        self.prepare_previews();
+        // Keep the active result in the list: bring it in at the edge it left by, or to the top
+        // before the list has reported what it shows.
+        if !self.visible.contains(&active) {
+            self.anchor = if self.visible.is_empty() || active < self.visible.start {
+                active
+            } else {
+                active + 1 - self.visible.len()
+            };
+        }
     }
     fn prepare_previews(&mut self) {
         if self.mode() == Mode::Passages {
             self.previews
-                .prepare(&self.entries, &self.matches, &self.query, self.active);
+                .prepare(&self.entries, &self.matches, &self.query);
         }
-    }
-}
-impl Shell {
-    pub fn switch_search(&mut self, search: Search) {
-        let Some(picker) = self
-            .picker
-            .as_ref()
-            .filter(|picker| matches!(picker.purpose, Purpose::Search(_)))
-        else {
-            return;
-        };
-        let query = picker.query.clone();
-        self.open_picker(search);
-        self.filter_picker(query);
-    }
-    pub fn open_picker(&mut self, search: Search) {
-        if self.settings_open
-            || self.show_welcome
-            || self
-                .writer
-                .as_ref()
-                .is_none_or(|writer| writer.phase != Phase::Writing)
-        {
-            return;
-        }
-        match index::entries(self, search) {
-            Ok(entries) => self.picker = Some(Picker::new(Purpose::Search(search), entries)),
-            Err(error) => self.status = error,
-        }
-    }
-    pub fn dismiss_picker(&mut self) {
-        self.picker = None;
-    }
-    pub fn step_picker(&mut self, forward: bool) {
-        if let Some(picker) = &mut self.picker {
-            picker.step(forward);
-        }
-    }
-    pub fn filter_picker(&mut self, query: String) {
-        if let Some(picker) = &mut self.picker {
-            picker.query = query;
-            picker.active = 0;
-            picker.limit = 100;
-        }
-        self.refresh_picker();
-    }
-    pub fn submit_picker(&mut self) {
-        let active = self.picker.as_ref().map_or(0, |picker| picker.active);
-        self.activate_picker(active);
-    }
-    pub fn previous_picker_page(&mut self) {
-        if let Some(picker) = &mut self.picker {
-            picker.select(picker.active.saturating_sub(PAGE));
-        }
-    }
-    pub fn next_picker_page(&mut self) {
-        if let Some(picker) = &mut self.picker {
-            picker.select(
-                ((picker.active / PAGE + 1) * PAGE).min(picker.matches.len().saturating_sub(1)),
-            );
-        }
-    }
-    pub fn load_picker_matches(&mut self) {
-        if let Some(picker) = &mut self.picker {
-            picker.limit += 100;
-        }
-        self.refresh_picker();
-    }
-    fn refresh_picker(&mut self) {
-        let search = self
-            .writer
-            .as_ref()
-            .and_then(|writer| writer.session.project())
-            .map(|project| project.files().search_index());
-        if let Some(picker) = &mut self.picker {
-            picker.refresh(self.preferences.config.ui.keymap, search.as_deref());
-        }
-    }
-    pub fn activate_picker(&mut self, index: usize) {
-        let item = self
-            .picker
-            .as_ref()
-            .and_then(|picker| {
-                picker
-                    .matches
-                    .get(index)
-                    .and_then(|index| picker.entries.get(*index))
-            })
-            .map(|entry| entry.item.clone());
-        match item {
-            Some(Item::Command(command)) if self.command_enabled(command) => {
-                self.dismiss_picker();
-                self.run_command(command);
-            }
-            Some(Item::Lookup(target)) => {
-                let query = self
-                    .picker
-                    .as_ref()
-                    .map(|picker| picker.query.clone())
-                    .unwrap_or_default();
-                if let Some(writer) = &mut self.writer {
-                    writer.lookup(query, target);
-                    if writer.navigation.busy() {
-                        self.dismiss_picker();
-                    }
-                }
-            }
-            Some(Item::Location(location) | Item::Passage { location, .. }) => {
-                if let Some(writer) = &mut self.writer {
-                    writer.navigate(crate::navigation::Target::Location(location));
-                    if writer.navigation.busy() {
-                        self.dismiss_picker();
-                    }
-                }
-            }
-            Some(item @ (Item::Rule(_) | Item::Destination(_) | Item::RenameBeat(_))) => {
-                self.activate_editor_choice(item)
-            }
-            _ => {}
-        }
-    }
-    pub fn command_enabled(&self, command: WriterCommand) -> bool {
-        use WriterCommand as C;
-        let Some(writer) = &self.writer else {
-            return matches!(command, C::OpenProject | C::Settings | C::Close);
-        };
-        if writer.phase != Phase::Writing {
-            return false;
-        }
-        let idle = !writer.work.busy() && !writer.navigation.busy() && !writer.session.read_only();
-        match command {
-            C::Commands | C::GoTo | C::Find | C::OpenProject | C::Settings | C::Close => true,
-            C::Save | C::SaveAll => {
-                idle && !writer.localisation.saving()
-                    && (command != C::SaveAll || !writer.localisation.working())
-                    && !writer.source_repair_pending()
-                    && writer.session.project().is_some()
-            }
-            C::Source => idle && !writer.external.busy() && writer.session.project().is_some(),
-            C::Apply => idle && writer.session.model().has_draft(),
-            C::Undo => {
-                idle && (writer.session.model().has_draft()
-                    || writer.session.model().document().can_undo()
-                    || writer.has_project_history(false))
-            }
-            C::Redo => {
-                idle && (writer.session.model().document().can_redo()
-                    || writer.has_project_history(true))
-            }
-            C::Script | C::Map | C::Split | C::AddBeat | C::Focus => idle,
-            C::PaneLeft | C::PaneRight | C::PaneUp | C::PaneDown => true,
-            C::NextMatch | C::PreviousMatch => idle,
-            C::AddLine | C::AddReply => {
-                idle && writer
-                    .session
-                    .model()
-                    .selected_block()
-                    .ok()
-                    .flatten()
-                    .is_some()
-            }
-            C::Preview => idle,
-            C::Declarations | C::Build | C::Rename => idle && writer.session.project().is_some(),
-            C::Localise => !writer.project_action_blocked() && writer.session.project().is_some(),
-            C::Back | C::Forward => {
-                idle && writer
-                    .navigation
-                    .history
-                    .step(command == C::Forward)
-                    .is_some()
-            }
-        }
-    }
-}
-
-impl Mode {
-    /// What this search does and how its choices are committed.
-    pub fn guidance(self) -> &'static str {
-        match self {
-            Mode::Commands => {
-                "Up/Down to choose. Enter runs the command. Esc returns to your document."
-            }
-            Mode::GoTo => {
-                "Find a scene or beat by name. Opening keeps your edits; Save writes them to disk."
-            }
-            Mode::ProjectText => "Saved text · Save to include edits.",
-            Mode::Passages => "This beat, including your text edits. Opening keeps your changes.",
-            Mode::RulesChoices => {
-                "Enter stages a value. Apply or Save commits it; Esc keeps your current draft."
-            }
-            Mode::Destinations => {
-                "Choose a beat or END. Your current draft is applied; Save writes the change to disk."
-            }
-            Mode::RenameBeat => {
-                "Choose a beat to rename. This updates the proposal; Esc keeps the current proposal."
-            }
-        }
-    }
-    /// The keys this search answers to.
-    pub fn keyboard_help(self) -> &'static str {
-        match self {
-            Mode::Commands => "Up/Down: choose · Enter: run · Esc: return",
-            Mode::RulesChoices | Mode::Destinations | Mode::RenameBeat => {
-                "Up/Down: choose · Enter: choose · Esc: return"
-            }
-            _ => "Up/Down: choose · Enter: open · Esc: return",
-        }
-    }
-}
-/// Result totals and paging for the visible matches.
-pub fn result_count(picker: Option<&Picker>, page: usize, count: usize) -> String {
-    if count <= PAGE && picker.is_none_or(|picker| picker.total <= count) {
-        return format!("{count} {}", if count == 1 { "result" } else { "results" });
-    }
-    let total = picker
-        .filter(|picker| picker.total > count)
-        .map_or_else(String::new, |picker| format!(" of {}", picker.total));
-    format!(
-        "{count}{total} results · page {} of {}",
-        page + 1,
-        count.div_ceil(PAGE).max(1)
-    )
-}
-/// The message shown when a search has no visible matches.
-pub fn empty_message(mode: Mode, picker: Option<&Picker>) -> &'static str {
-    if mode == Mode::ProjectText && picker.is_some_and(|picker| picker.query.trim().is_empty()) {
-        "Enter words to search the saved project."
-    } else {
-        "No matching results."
     }
 }

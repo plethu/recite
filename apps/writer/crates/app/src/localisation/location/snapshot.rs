@@ -16,7 +16,6 @@ impl Localisation {
         location.entry = None;
         location.query = self.query.text.clone();
         location.attention = self.query.filter == Filter::Attention;
-        location.page = self.query.page;
         if !active {
             return;
         }
@@ -36,11 +35,13 @@ impl Localisation {
             }
             Destination::Comparison => LinkedScreen::Compare,
             Destination::Refresh => {
+                // A link to the updates names the first row whose diff is open, counting from
+                // one; zero opens none.
                 location.page = self
                     .refresh
                     .as_ref()
-                    .and_then(|refresh| refresh.pages.get(refresh.page))
-                    .map_or(0, |page| page.change);
+                    .and_then(|refresh| refresh.open.first())
+                    .map_or(0, |row| row + 1);
                 LinkedScreen::Updates
             }
             Destination::Create => LinkedScreen::Localise,

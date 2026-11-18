@@ -1,3 +1,8 @@
+use crate::WriterLayout;
+use crate::presentation::print::section_heading;
+use crate::presentation::space;
+use crate::presentation::tokens::size;
+use crate::presentation::{Type, Typeset};
 mod preview;
 use super::*;
 use crate::{
@@ -19,19 +24,19 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         .project_settings()
         .is_some_and(Session::requires_reload);
     flex_col((
-        label(scale, "Project settings").text_size(24. * scale),
+        crate::view::tool_head(writer, "Project settings", ()),
         writer.project_settings().map(|session| {
             paragraph(
                 scale,
                 format!("Manifest: {}", session.path().display()),
-                writer.content_width(),
+                writer.page_width(),
             )
         }),
         (!reload).then(|| {
             paragraph(
                 scale,
                 "Edit a TOML draft in your IDE, then import a validated review before applying.",
-                writer.content_width(),
+                writer.page_width(),
             )
         }),
         state(writer),
@@ -43,7 +48,7 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         (!reload).then(|| baseline(writer)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
     .prop(Region(Some(Pane::Settings)))
 }
 fn state(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -57,11 +62,7 @@ fn state(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     } else {
         "1 · Export a separate draft to begin. The saved manifest stays unchanged until Apply."
     };
-    Some(paragraph(
-        writer.ui_scale(),
-        message,
-        writer.content_width(),
-    ))
+    Some(paragraph(writer.ui_scale(), message, writer.page_width()))
 }
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
@@ -106,13 +107,13 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     )
                 }),
         ))
-        .direction(if writer.content_width() < 600. * f64::from(scale) {
+        .direction(if writer.page_width() < 600. * f64::from(scale) {
             Axis::Vertical
         } else {
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         busy.then(|| {
             text_button(
                 scale,
@@ -134,7 +135,7 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(!reload))
 }
 fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -142,7 +143,7 @@ fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
     let session = writer.project_settings();
     flex_col((
-        label(scale, "Saved manifest and recovery").text_size(18. * scale),
+        section_heading(scale, "Saved manifest and recovery"),
         flex_row((
             text_button(
                 scale,
@@ -155,16 +156,16 @@ fn baseline(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             })
             .disabled(blocked || session.is_none()),
         ))
-        .direction(if writer.content_width() < 600. * f64::from(scale) {
+        .direction(if writer.page_width() < 600. * f64::from(scale) {
             Axis::Vertical
         } else {
             Axis::Horizontal
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
     .prop(PaneEntry(session.is_some_and(Session::requires_reload)))
 }
 fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -177,9 +178,9 @@ fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.workspaces.settings.set_import_path(path)
         })
         .placeholder("Path to the edited TOML draft")
-        .text_size(16. * scale)
+        .typeset(Type::Body, scale)
         .disabled(blocked)
-        .width(writer.content_width().px())
+        .width(writer.page_width().px())
         .prop(TextAreaLabel::new("Settings draft path")),
         text_button(
             scale,
@@ -189,7 +190,7 @@ fn import(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .disabled(blocked || panel.import_path().is_empty()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.settings;
@@ -199,7 +200,7 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             paragraph(
                 writer.ui_scale(),
                 page.clone(),
-                writer.content_width().min(640.),
+                writer.page_width().min(size::MEASURE),
             ),
             (panel.feedback.len() > 1).then(|| {
                 flex_row((
@@ -222,6 +223,6 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

@@ -39,9 +39,7 @@ fn short_enlarged_workspace_keeps_camera_controls_and_discloses_secondary_tools(
             .transform_rect_bbox(widget.ctx().border_box())
     };
     assert_eq!(
-        bounds("Split unavailable")
-            .intersect(bounds("Try scene"))
-            .area(),
+        bounds("Split").intersect(bounds("Try scene")).area(),
         0.,
         "mode and scene actions must not overlap"
     );

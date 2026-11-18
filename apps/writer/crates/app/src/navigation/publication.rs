@@ -39,6 +39,7 @@ impl Writer {
                     self.request_editing();
                 }
                 self.field_apply_completed(&request, false);
+                self.workspaces.rename.chosen = None;
                 return None;
             }
         };
@@ -126,6 +127,7 @@ impl Writer {
             self.trial.document_replaced();
         }
         self.field_apply_completed(&request, accepted);
+        self.resume_chosen_rename();
         Some(value)
     }
     fn publish_navigation_edit(

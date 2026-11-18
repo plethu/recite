@@ -70,11 +70,12 @@ def run(api, bus, registry, binary, output):
                     )
                     if scale == 200:
                         window.wait(
-                            lambda: window.find("Open map"), "direct constrained Split recovery"
+                            lambda: window.find_text("Split needs a wider window", prefix=True),
+                            "direct constrained Split recovery",
                         )
                         capture_settled(window, output, "-200-split-fallback")
                         result["frames"].append("200-split-fallback")
-                        window.act("Open map")
+                        window.act("Map")
                         window.wait(
                             lambda: window.find_action("Open script"), "map from constrained Split"
                         )
@@ -116,14 +117,17 @@ def run(api, bus, registry, binary, output):
                         lambda: window.find_action("Pin reference"), "pin the current whole beat"
                     )
                     window.focus(pin)
+                    assert not window.has_state(pin, "PRESSED"), "pin toggle starts released"
                     window.act("Pin reference")
+                    window.wait(
+                        lambda: window.has_state(window.find_action("Pin reference"), "PRESSED"),
+                        "pin toggle reports PRESSED",
+                    )
                     key("p", control=True)
                     fill(window, "Search query", "missing courier")
                     window.wait(
-                        lambda: any(
-                            name.startswith("Selected · ")
-                            and "missing courier" in name.lower().replace("_", " ")
-                            for _, name in window.nodes()
+                        lambda: window.selected(
+                            lambda name: "missing courier" in name.lower().replace("_", " ")
                         ),
                         "selected Missing Courier result",
                     )

@@ -1,4 +1,21 @@
 use super::*;
+use crate::presentation::space;
+use crate::presentation::tokens::size;
+
+/// The sheet's one primary while the declaration source is shown and valid: save it and generate.
+pub fn apply(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    let source = &writer.workspaces.declarations;
+    (source.mode == Mode::Source && !matches!(source.source.validation, Validation::Invalid(_)))
+        .then(|| {
+            print::primary_action(
+                writer.ui_scale(),
+                "Save and generate declarations",
+                &writer.palette,
+                writer.declaration_action_blocked(),
+                Writer::save_declarations,
+            )
+        })
+}
 
 pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -50,22 +67,14 @@ pub fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             )
             .disabled(blocked)
         }),
-        (!invalid).then(|| {
-            text_button(
-                scale,
-                "Save and generate declarations",
-                Writer::save_declarations,
-            )
-            .disabled(blocked)
-        }),
         if let Validation::Invalid(error) = &writer.workspaces.declarations.source.validation {
-            Some(paragraph(scale, error.clone(), 640.))
+            Some(paragraph(scale, error.clone(), size::MEASURE))
         } else {
             None
         },
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -74,7 +83,7 @@ pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .declaration_session()
         .is_some_and(|session| session.dirty());
     flex_col((
-        label(scale, "Draft recovery").text_size(18. * scale),
+        print::section_heading(scale, "Draft recovery"),
         matches!(
             writer.workspaces.declarations.source.validation,
             Validation::Invalid(_)
@@ -107,5 +116,5 @@ pub fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

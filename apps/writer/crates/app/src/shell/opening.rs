@@ -95,7 +95,7 @@ impl Shell {
                 }
                 let previous = self.writer.replace(*writer).map(Box::new);
                 self.show_welcome = false;
-                self.settings_open = false;
+                self.set_settings_open(false);
                 self.status.clear();
                 (previous, location)
             }

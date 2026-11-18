@@ -1,37 +1,49 @@
 use crate::messages::{MsgId, text};
-pub fn entries(schema: &recite_core::schema::ProjectSchema) -> Vec<(String, String, String)> {
+
+/// What the declarations sheet shows for one declaration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Detail {
+    /// A condition's or effect's parameters in declaration order, as (name, author-facing type).
+    Parameters(Vec<(String, String)>),
+    /// A speaker's display name, a registry's values one per line, or a pointer to the source.
+    Text(String),
+}
+
+pub fn entries(schema: &recite_core::schema::ProjectSchema) -> Vec<(String, String, Detail)> {
     let mut rows = Vec::new();
     for (name, condition) in &schema.conditions {
         rows.push((
             name.clone(),
             text(MsgId::WriterDeclarationCondition),
-            signature(&condition.params),
+            Detail::Parameters(signature(&condition.params)),
         ));
     }
     for (name, effect) in &schema.effects {
         rows.push((
             name.clone(),
             text(MsgId::WriterDeclarationEffect),
-            signature(&effect.params),
+            Detail::Parameters(signature(&effect.params)),
         ));
     }
     for (name, speaker) in &schema.speakers {
         rows.push((
             name.clone(),
             text(MsgId::WriterDeclarationSpeaker),
-            speaker.display_name.clone().unwrap_or_else(|| name.clone()),
+            Detail::Text(speaker.display_name.clone().unwrap_or_else(|| name.clone())),
         ));
     }
     for (name, registry) in &schema.registries {
         rows.push((
             name.clone(),
             text(MsgId::WriterDeclarationRegistry),
-            registry
-                .values
-                .iter()
-                .cloned()
-                .collect::<Vec<_>>()
-                .join("\n"),
+            Detail::Text(
+                registry
+                    .values
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            ),
         ));
     }
     for (kind, names) in [
@@ -63,19 +75,18 @@ pub fn entries(schema: &recite_core::schema::ProjectSchema) -> Vec<(String, Stri
             rows.push((
                 name,
                 kind.into(),
-                text(MsgId::WriterDeclarationSourceDetails),
+                Detail::Text(text(MsgId::WriterDeclarationSourceDetails)),
             ));
         }
     }
     rows.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
     rows
 }
-fn signature(params: &[recite_core::schema::ParameterDefinition]) -> String {
+fn signature(params: &[recite_core::schema::ParameterDefinition]) -> Vec<(String, String)> {
     params
         .iter()
-        .map(|p| format!("{}: {}", p.name, parameter_type(&p.type_ref)))
-        .collect::<Vec<_>>()
-        .join("\n")
+        .map(|p| (p.name.clone(), parameter_type(&p.type_ref)))
+        .collect()
 }
 fn parameter_type(value: &recite_core::schema::SchemaTypeRef) -> String {
     use recite_core::schema::SchemaTypeRef as T;

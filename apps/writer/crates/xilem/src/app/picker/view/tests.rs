@@ -111,3 +111,33 @@ fn current_beat_search_includes_visible_text_without_publishing_it() {
             .contains("Copper")
     );
 }
+
+#[test]
+fn a_combobox_slip_hangs_from_its_label_and_stays_in_the_window() {
+    let directory = support::project(
+        ":: start default\n> speaker=mara @a1\n  First.\n\n> speaker=ivo @a2\n  Second.\n-> END\n",
+    )
+    .unwrap();
+    let mut app = App::with_writer(support::open(&directory).unwrap());
+    app.writer.as_mut().unwrap().choose_speaker("a1".into());
+    app.open_editor_choices();
+    assert!(placement(&app).is_none(), "below the tab row until placed");
+    app.picker.as_mut().unwrap().placement = Some((300, 200));
+    assert_eq!(placement(&app), Some((300., 200.)));
+    let mut mounted = Mounted::new(app, surface);
+    mounted.settle();
+    let query = mounted.find("Search query");
+    let origin = mounted
+        .harness
+        .get_widget_with_id(query)
+        .ctx()
+        .window_transform()
+        .translation();
+    assert!(origin.x >= 300. && origin.y >= 200., "{origin:?}");
+    // From a label near the window's far corner, it moves left and up to stay whole.
+    mounted.state.picker.as_mut().unwrap().placement = Some((5_000, 5_000));
+    let (x, y) = placement(&mounted.state).unwrap();
+    assert!(
+        x + size::SLIP_WIDTH <= mounted.state.viewport.width && y < mounted.state.viewport.height
+    );
+}

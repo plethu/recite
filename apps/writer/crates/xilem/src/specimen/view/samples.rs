@@ -1,29 +1,32 @@
 //! Production manuscript/source fonts and the authored surface palette.
 use super::*;
+use crate::presentation::space;
+use crate::presentation::tokens::size;
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{manuscript_text, source_text};
 
 pub(super) fn samples(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
     let scale = state.scale();
     flex_col((
-        label(scale, "Manuscript and source").text_size(22. * scale),
+        label(scale, "Manuscript and source").typeset(Type::Section, scale),
         paragraph(
             scale,
             "Reading: 20 px · Source: 15 px. These text sizes are independent of UI scale.",
-            640.,
+            size::MEASURE,
         ),
-        flex_row((manuscript_text(20., state.manuscript.clone()).width(640.px()),)),
+        flex_row((manuscript_text(20., state.manuscript.clone()).width(size::MEASURE.px()),)),
         flex_row((source_text(
             15.,
             ":: harbour default\n> @narrator\n  The last tram waits.\n-> END",
         )
-        .width(640.px()),)),
-        label(scale, "Surfaces and selection").text_size(22. * scale),
+        .width(size::MEASURE.px()),)),
+        label(scale, "Surfaces and selection").typeset(Type::Section, scale),
         surface(state, "Reading surface", state.theme.palette.surface),
         surface(state, "Inset control surface", state.theme.palette.inset),
         surface(state, "Selected passage", state.theme.palette.selection),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 fn surface(
     state: &Specimen,
@@ -31,7 +34,7 @@ fn surface(
     color: xilem::peniko::Color,
 ) -> impl WidgetView<Specimen> + use<> {
     label(state.scale(), caption)
-        .padding(12.px())
-        .width(640.px())
+        .padding(space::KINDS.px())
+        .width(size::MEASURE.px())
         .background_color(color)
 }

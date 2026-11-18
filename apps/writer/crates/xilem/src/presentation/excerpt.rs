@@ -26,6 +26,14 @@ pub(crate) fn excerpt(text: impl Into<ArcStr>, zoom: f32) -> Excerpt {
         lines: NonZeroUsize::MIN.saturating_add(if zoom < 0.8 { 1 } else { 2 }),
     }
 }
+impl Excerpt {
+    /// One line fewer than the zoom gives, for a face whose title takes more room, such as a
+    /// card's rename field; never fewer than one.
+    pub fn shorter(mut self) -> Self {
+        self.lines = NonZeroUsize::new(self.lines.get() - 1).unwrap_or(NonZeroUsize::MIN);
+        self
+    }
+}
 impl ViewMarker for Excerpt {}
 impl<S: 'static> View<S, (), ViewCtx> for Excerpt {
     type Element = Pod<ShapedText>;

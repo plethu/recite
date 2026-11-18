@@ -108,7 +108,10 @@ impl Position {
 ///
 /// The search includes stashed panes: a Map workspace opened directly keeps Script stashed,
 /// and its viewport must still be found once. [`snapshot`] refuses a stashed viewport.
-fn manuscript(root: &RenderRoot, known: Option<WidgetId>) -> Option<WidgetRef<'_, Portal<Flex>>> {
+pub(super) fn manuscript(
+    root: &RenderRoot,
+    known: Option<WidgetId>,
+) -> Option<WidgetRef<'_, Portal<Flex>>> {
     let is_manuscript =
         |portal: &WidgetRef<'_, Portal<Flex>>| portal.get_prop::<ReadingViewport>().is_manuscript();
     if let Some(portal) = known

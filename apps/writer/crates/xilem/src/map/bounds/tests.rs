@@ -65,9 +65,16 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         );
         assert_eq!(scene.scope.as_ref().unwrap().node_indices.len(), 80);
         assert_eq!(scene.projection.graph.blocks.len(), count);
-        // Bound the visible neighbourhood together with its native navigation controls.
+        // Bound the visible neighbourhood together with its native navigation controls; each of
+        // the five segments carries a decorative focus-ring container, the document one inert
+        // container that a modal surface disables, and each beat row the sidebar's scrolling beat
+        // list builds (those in view and one past them) the container that turns its
+        // double-click into an in-place rename, with the stack that lays the list's scroll thumb
+        // over it and the thumb's two boxes, and the column that keeps the scene search above the
+        // scrolled scene list, and each mounted card the container that paints its printer's
+        // marks. Chrome costs are fixed; the mounted-card bound below scales.
         assert!(
-            nodes <= 240,
+            nodes <= 267,
             "bounded Map mounted {nodes} accessibility nodes: {roles:?}; {names:?}"
         );
         assert!(scene.mounted_indices().count() <= 4);
@@ -269,8 +276,9 @@ fn panning_across_mount_boundaries_retains_surviving_native_cards() {
             selected,
             "a surviving card must not remount when its vector slot changes"
         );
+        // A one-row toolbar leaves this 1280×1000 window room for a seventh card.
         assert!(
-            scene.mounted_indices().count() <= 6,
+            scene.mounted_indices().count() <= 7,
             "mount work stays bounded by this fixed viewport"
         );
         assert!(Arc::ptr_eq(&graph, &scene.projection.graph));

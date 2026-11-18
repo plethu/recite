@@ -6,7 +6,7 @@ use widget::NativeIcon;
 use xilem::{
     Pod, ViewCtx,
     core::{MessageCtx, MessageResult, Mut, View, ViewMarker},
-    masonry::kurbo::{Affine, BezPath},
+    masonry::kurbo::{Affine, BezPath, Circle, Shape},
     peniko::Color,
 };
 
@@ -19,8 +19,29 @@ pub(crate) enum Icon {
     Redo,
     Plus,
     Minus,
+    /// A disclosure chevron pointing right: collapsed.
+    Collapsed,
+    /// A disclosure chevron pointing down: expanded.
+    Expanded,
+    /// The identity's colon device: two squares turned on their corners, filled.
+    Colon,
+    /// A move grip: two columns of three dots, filled.
+    Grip,
+    /// A magnifier: the leading mark of a search field.
+    Search,
+    /// A pin: keep this beat as a reference beside the work.
+    Pin,
+    /// A pen nib: rename this object.
+    Rename,
+    /// Two crossed strokes: close this slip or sheet.
+    Close,
+    /// A tick: this item is marked done, such as a reviewed translation.
+    Check,
 }
 impl Icon {
+    fn filled(self) -> bool {
+        matches!(self, Self::Colon | Self::Grip)
+    }
     fn path(self) -> BezPath {
         let mut path = BezPath::new();
         match self {
@@ -33,6 +54,32 @@ impl Icon {
                 path.move_to((outside, 5.));
                 path.line_to((inside, 12.));
                 path.line_to((outside, 19.));
+            }
+            Self::Grip => {
+                for x in [9., 15.] {
+                    for y in [6., 12., 18.] {
+                        path.extend(Circle::new((x, y), 1.8).path_elements(0.1));
+                    }
+                }
+            }
+            Self::Colon => {
+                for centre in [8., 16.] {
+                    path.move_to((12., centre - 3.2));
+                    path.line_to((15.2, centre));
+                    path.line_to((12., centre + 3.2));
+                    path.line_to((8.8, centre));
+                    path.close_path();
+                }
+            }
+            Self::Collapsed => {
+                path.move_to((9., 6.));
+                path.line_to((15., 12.));
+                path.line_to((9., 18.));
+            }
+            Self::Expanded => {
+                path.move_to((6., 9.));
+                path.line_to((12., 15.));
+                path.line_to((18., 9.));
             }
             Self::Plus | Self::Minus => {
                 path.move_to((5., 12.));
@@ -53,6 +100,48 @@ impl Icon {
                 path.line_to((17., 8.));
                 path.curve_to((22.33, 8.), (22.33, 16.), (17., 16.));
                 path.line_to((14., 16.));
+            }
+            Self::Pin => {
+                // A drawing pin seen from the side: head, collar and point.
+                path.move_to((9., 4.));
+                path.line_to((15., 4.));
+                path.move_to((10., 4.));
+                path.line_to((10., 11.));
+                path.line_to((7., 14.));
+                path.line_to((17., 14.));
+                path.line_to((14., 11.));
+                path.line_to((14., 4.));
+                path.move_to((12., 14.));
+                path.line_to((12., 20.));
+            }
+            Self::Rename => {
+                // A pencil laid on a line of text.
+                path.move_to((5., 17.));
+                path.line_to((15., 7.));
+                path.line_to((17., 9.));
+                path.line_to((7., 19.));
+                path.line_to((5., 19.));
+                path.close_path();
+                path.move_to((13., 9.));
+                path.line_to((15., 11.));
+                path.move_to((11., 19.));
+                path.line_to((19., 19.));
+            }
+            Self::Close => {
+                path.move_to((7., 7.));
+                path.line_to((17., 17.));
+                path.move_to((17., 7.));
+                path.line_to((7., 17.));
+            }
+            Self::Check => {
+                path.move_to((5., 12.5));
+                path.line_to((10., 17.5));
+                path.line_to((19., 7.));
+            }
+            Self::Search => {
+                path.extend(Circle::new((10.5, 10.5), 5.5).path_elements(0.1));
+                path.move_to((14.5, 14.5));
+                path.line_to((19., 19.));
             }
             Self::Undo | Self::Redo => {
                 path.move_to((8., 5.));
@@ -76,6 +165,20 @@ pub(crate) struct Face {
     icon: Icon,
     color: Color,
 }
+/// The scale of a small mark beside a control's words, such as a search glyph or a grip.
+pub(crate) const SMALL: f32 = 0.8;
+/// An icon's face at 100%, drawn on a 24-unit grid.
+pub(crate) const FACE: f64 = 20.;
+/// The grid icon paths are drawn on, and the round-capped stroke they are drawn with.
+const GRID: f64 = 24.;
+const STROKE: f64 = 1.6;
+/// How far the plus reaches across its face, its round cap included, as a share of the face.
+pub(crate) const PLUS_END: f64 = (19. + STROKE / 2.) / GRID;
+/// A decorative face named `name`, for marks that replace a glyph inside other content.
+pub(crate) fn mark(scale: f32, name: &'static str, icon: Icon, color: Color) -> Face {
+    face(scale, name, icon, color)
+}
+
 pub(super) fn face(scale: f32, name: &'static str, icon: Icon, color: Color) -> Face {
     Face {
         scale,

@@ -1,4 +1,7 @@
 use super::*;
+use crate::presentation::disclosure;
+use crate::presentation::space;
+use xilem::view::button;
 pub(super) fn incoming(
     writer: &Writer,
     beat: &beat::Beat,
@@ -34,24 +37,28 @@ pub(super) fn incoming(
         .collect::<Vec<_>>();
     Some(
         flex_col((
-            text_button(
-                scale,
-                format!(
-                    "{} Incoming prompts ({})",
-                    if incoming.expanded { "▾" } else { "▸" },
-                    incoming.links.len()
+            button(
+                disclosure(
+                    scale,
+                    incoming.expanded,
+                    writer.palette.ink,
+                    label(
+                        scale,
+                        format!("Incoming prompts ({})", incoming.links.len()),
+                    ),
                 ),
                 |writer: &mut Writer| {
                     if let Some(beat) = &mut writer.localisation.passage {
                         beat.incoming.expanded = !beat.incoming.expanded;
                     }
                 },
-            ),
+            )
+            .expanded(incoming.expanded),
             incoming.expanded.then(|| {
                 flex_col((
                     flex_col(links)
                         .cross_axis_alignment(CrossAxisAlignment::Start)
-                        .gap(6.px()),
+                        .gap(space::SIBLINGS.px()),
                     (incoming.links.len() > 4).then(|| {
                         flex_row((
                             text_button(
@@ -72,14 +79,14 @@ pub(super) fn incoming(
                             })
                             .disabled((incoming.page + 1) * 4 >= incoming.links.len()),
                         ))
-                        .gap(8.px())
+                        .gap(space::SIBLINGS.px())
                     }),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(8.px())
+                .gap(space::SIBLINGS.px())
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

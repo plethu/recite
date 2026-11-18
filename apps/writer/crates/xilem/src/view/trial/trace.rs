@@ -1,6 +1,7 @@
 //! Bounded native components inspect the same trace as the running conversation.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::space;
 use recite_runtime::preview::PreviewTrace;
 use recite_writer_session::preview::trace::{
     FIELDS, FieldPreview, ListPage, Place, Projection, RECORDS, RecordPage, Section, ValuePage,
@@ -10,27 +11,26 @@ use xilem::{masonry::properties::LineBreaking, view::button};
 mod record;
 mod value;
 
+/// The head's toggle for the running preview's trace, once it has one.
+pub(super) fn toggle(writer: &Writer, disabled: bool) -> Option<impl WidgetView<Writer> + use<>> {
+    writer.session.model().preview_trace()?;
+    Some(print::action_disclosing(
+        writer.ui_scale(),
+        // The sheet's own head says preview; the name keeps it for assistive technology.
+        ("Trace", "Preview trace"),
+        (writer.trial.trace.open, disabled),
+        |writer: &mut Writer| writer.trial.trace.open = !writer.trial.trace.open,
+    ))
+}
+
+/// The trace under the transcript, while open.
 pub(super) fn panel(writer: &Writer, disabled: bool) -> Option<impl WidgetView<Writer> + use<>> {
     let trace = writer.session.model().preview_trace()?;
-    let browser = writer.trial.trace;
-    let scale = writer.ui_scale();
-    Some(
-        flex_col((
-            text_button(
-                scale,
-                if browser.open {
-                    "Hide preview trace"
-                } else {
-                    "Preview trace"
-                },
-                |writer: &mut Writer| writer.trial.trace.open = !writer.trial.trace.open,
-            )
-            .disabled(disabled),
-            browser.open.then(|| contents(writer, trace, disabled)),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(10.px()),
-    )
+    writer
+        .trial
+        .trace
+        .open
+        .then(|| contents(writer, trace, disabled))
 }
 fn contents(
     writer: &Writer,
@@ -43,11 +43,11 @@ fn contents(
         Projection::Value(page) => value::value(writer, page, disabled).boxed(),
     };
     flex_col((
-        label(writer.ui_scale(), "Runtime trace").text_size(20. * writer.ui_scale()),
+        print::section_heading(writer.ui_scale(), "Runtime trace"),
         paragraph(writer.ui_scale(), "These records belong to the running preview. Events retain capture order; translation and plural lookups have their own ordered lists.", writer.script_width()),
         sections(writer, disabled),
         body,
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(10.px())
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(space::TEXT.px())
 }
 fn sections(writer: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let section = writer.trial.trace.section;
@@ -67,7 +67,7 @@ fn sections(writer: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> 
         .collect::<Vec<_>>();
     flex_col(choices)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(6.px())
+        .gap(space::SIBLINGS.px())
 }
 fn list(writer: &Writer, projection: ListPage, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let ListPage {
@@ -110,7 +110,7 @@ fn list(writer: &Writer, projection: ListPage, disabled: bool) -> impl WidgetVie
         (total == 0).then(|| label(scale, "No records in this preview.")),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
+            .gap(space::SIBLINGS.px()),
         (pages > 1).then(|| {
             flex_col((
                 text_button(
@@ -129,11 +129,11 @@ fn list(writer: &Writer, projection: ListPage, disabled: bool) -> impl WidgetVie
                 .disabled(disabled || page + 1 >= pages),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
+            .gap(space::SIBLINGS.px())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    .gap(space::TEXT.px())
 }
 
 #[cfg(test)]

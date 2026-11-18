@@ -44,28 +44,24 @@ def run(api, bus, registry, binary, output):
                 )
                 dark = window.wait(lambda: window.find("Dark theme"), "updated theme controls")
                 window.focus(dark)
-                window.act("Increase UI scale")
-                window.wait(lambda: window.find("UI scale: 110%"), "live UI scale")
+                window.set_spin("UI scale", 110)
                 focused = 1 << int(api.Atspi.StateType.FOCUSED)
                 assert window.call(dark, "Accessible", "GetState")[0][0] & focused
                 results["live_theme_and_scale_preserve_native_radio_focus"] = True
                 capture_settled(window, output, "-dark")
                 for percent in range(120, 201, 10):
-                    reveal_preference(window, "Increase UI scale")
-                    window.act("Increase UI scale")
-                    window.wait(lambda: window.find(f"UI scale: {percent}%"), "increased scale")
+                    reveal_preference(window, "UI scale")
+                    window.set_spin("UI scale", percent)
                 capture_settled(window, output, "-scale200")
                 coordinates = api.GLib.Variant("(u)", (int(api.Atspi.CoordType.WINDOW),))
                 viewport = window.call(
                     window._outer_scrollbar(), "Component", "GetExtents", coordinates
                 )[0]
-                for caption in ("Narrower script", "Wider script"):
-                    control = window.wait(lambda: window.find(caption), "last layout adjustment")
-                    bounds = window.call(control, "Component", "GetExtents", coordinates)[0]
-                    assert (
-                        bounds[1] >= viewport[1]
-                        and bounds[1] + bounds[3] <= viewport[1] + viewport[3]
-                    )
+                control = window.wait(lambda: window.find_spin("Script width"), "last layout field")
+                bounds = window.call(control, "Component", "GetExtents", coordinates)[0]
+                assert (
+                    bounds[1] >= viewport[1] and bounds[1] + bounds[3] <= viewport[1] + viewport[3]
+                )
                 results["all_five_layout_adjustment_pairs_fit_at_200_percent"] = True
                 window.focus(window._outer_scrollbar())
                 key("Page_Down")
@@ -88,8 +84,8 @@ def run(api, bus, registry, binary, output):
                 capture_settled(window, output, "-behaviour200")
                 results["ui_scale_reaches_validated_200_percent"] = True
                 for percent in range(190, 99, -10):
-                    reveal_preference(window, "Decrease UI scale")
-                    window.act("Decrease UI scale")
+                    reveal_preference(window, "UI scale")
+                    window.set_spin("UI scale", percent)
                     window.wait(
                         lambda: (
                             tomllib.loads(config.read_text())
@@ -100,8 +96,8 @@ def run(api, bus, registry, binary, output):
                         ),
                         "persisted restored scale",
                     )
-                window.act("Larger reading text")
-                window.wait(lambda: window.find("Reading text size: 21 px"), "reading size")
+                reveal_preference(window, "Reading text size")
+                window.set_spin("Reading text size", 21)
                 window.act("Keyboard shortcuts")
                 fill(window, "Shortcut binding", "Primary+Shift+S")
                 window.act("Save shortcut")
@@ -174,7 +170,9 @@ def run(api, bus, registry, binary, output):
                     "recovered draft with persisted preferences",
                 )
                 window.workspace_action("Settings")
-                window.wait(lambda: window.find("Reading text size: 21 px"), "reloaded preferences")
+                window.wait(
+                    lambda: window.spin_value("Reading text size") == 21, "reloaded preferences"
+                )
                 assert tomllib.loads(config.read_text()).get("writer", {}).get("theme") == "dark"
                 results["personal_preferences_and_recovery_survive_restart"] = True
                 window.act("Done with settings")

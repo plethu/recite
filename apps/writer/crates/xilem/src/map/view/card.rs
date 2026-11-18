@@ -1,75 +1,122 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
-use crate::presentation::{excerpt, material, print};
+use crate::app::keyboard::{RenamesBeat, ReturnFocus, SlipAnchor};
+use crate::presentation::marks::{DOT, Dot, DotAt, GLYPH, Marks, Ticks, marked, wedge_glyph};
+use crate::presentation::{Icon, SMALL, Type, excerpt, mark, print};
+use crate::presentation::{group, space};
+use crate::workspaces::rename::inline::{self as rename, Place, Target};
 use recite_writer_app::map::actions::Press;
 use recite_writer_session::typography::FONT_UI;
+use xilem::core::one_of::Either;
 use xilem::masonry::{
-    kurbo::Rect,
     parley::style::FontWeight,
     properties::{self, BoxShadow},
 };
 use xilem::view::PointerButton;
 use xilem::{peniko::Color, style::Padding};
 
+/// A card title's size, and its floor on screen as the map zooms out.
+const TITLE: f32 = 16.;
+const TITLE_FLOOR: f32 = 14.;
+/// The card's hard stock offset, right and down.
+const STOCK: f64 = 4.;
+/// The grip's trailing edge in from the card's, and its middle down from the card's top.
+const GRIP_END: f64 = 30.;
+const GRIP_MIDDLE: f64 = 18.;
+
 pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetView<Writer> + use<> {
     let block = &scene.projection.graph.blocks[index];
-    let synopsis = &scene.projection.synopsis[index];
     let id = block.id.clone();
     let mut title = recite_writer_session::choices::display_name(&block.id);
     if scene.projection.graph.endings.contains(&block.id) {
         title.push_str(" · end");
     }
     let selected = scene.selected.as_deref() == Some(&block.id);
+    // The galley's marks repeat here: the reading beat's crop marks and unsaved dot, and a wedge
+    // on a beat with a problem as the error sign, which the card's name also says.
+    let reading = state.reading.selected.as_deref() == Some(block.id.as_str());
+    let problem = state
+        .beat_problems()
+        .iter()
+        .any(|(beat, _)| beat == &block.id);
+    let name = if problem {
+        format!("Error: {title}")
+    } else {
+        title.clone()
+    };
     let disabled = state.phase() != crate::Phase::Writing
         || !scene
             .projection
             .is_current(state.session.model().document());
-    let zoom = scene.camera.zoom;
+    let zoom = scene.camera.relative();
     let width = f64::from(scene.node(index).width);
-    let contents = flex_col((
-        label(1., title.clone())
-            .font(print::font(FONT_UI))
-            .weight(FontWeight::SEMI_BOLD)
-            .text_size(16_f32.max(14. / zoom)),
-        flex_col((
-            label(1., synopsis.speaker.clone())
-                .text_size(13_f32.max(11. / zoom))
-                .color(state.palette.muted),
-            excerpt(synopsis.prose.clone(), zoom).width((width - 24.).px()),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(4.px()),
-        (!synopsis.annotations.is_empty()).then(|| {
-            label(1., synopsis.annotations.join(" · "))
-                .text_size(13_f32.max(11. / zoom))
-                .color(state.palette.muted)
-        }),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
-    .dims(((width - 24.).px(), (HEIGHT - 24.).px()));
-    let focus_id = id.clone();
-    let move_id = id.clone();
-    let body = button_any_pointer(contents, move |state: &mut Writer, pointer| {
-        let press = match pointer {
-            None => Press::Keyboard,
-            Some(PointerButton::Primary) => Press::Primary,
-            Some(_) => Press::Secondary,
-        };
-        state.press_map_beat(id.clone(), press);
-    })
+    let target = Target {
+        beat: id.clone(),
+        place: Place::Card,
+    };
+    let heading = label(1., title.clone())
+        .font(print::font(FONT_UI))
+        .weight(FontWeight::SEMI_BOLD)
+        .text_size(TITLE.max(TITLE_FLOOR / zoom));
+    let heading = if problem {
+        Either::A(
+            flex_row((heading, wedge_glyph(GLYPH, state.palette.error)))
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .gap(space::UNIT.px()),
+        )
+    } else {
+        Either::B(heading)
+    };
+    let face = if selected {
+        state
+            .palette
+            .surface
+            .lerp_rect(state.palette.selection, 0.35)
+    } else {
+        state.palette.surface
+    };
+    // F2 or a double-click renames the beat in place: a face whose title is the field lies over
+    // the card, which keeps its name, state and focus beneath, and over its grip.
+    let renaming = rename::editing(state, &block.id, Place::Card).map(|inline| {
+        let field = rename::card_field(
+            state,
+            inline,
+            TITLE.max(TITLE_FLOOR / zoom) / Type::Control.metrics().0,
+        );
+        let field = sized_box(field).width((width - 2. * space::TEXT).px());
+        sized_box(renaming(state, scene, index, field))
+            .padding(Padding::all(space::TEXT.px()))
+            .dims((width.px(), HEIGHT.px()))
+            .background_color(face)
+            // The review's slip floats over the window from under the card, as it does
+            // from a heading, over the same backdrop.
+            .prop(SlipAnchor(true))
+    });
+    let returning = state.rename_return() == Some(&target);
+    let body = button_any_pointer(
+        contents(state, scene, index, heading),
+        move |state: &mut Writer, pointer| {
+            let press = match pointer {
+                None => Press::Keyboard,
+                Some(PointerButton::Primary) => Press::Primary,
+                Some(_) => Press::Secondary,
+            };
+            state.press_map_beat(id.clone(), press);
+        },
+    )
     .disabled(disabled)
-    .prop(properties::Dimensions::fixed(
-        scene.node(index).width.px(),
-        HEIGHT.px(),
-    ))
-    .padding(Padding::all(12.px()))
+    .prop(properties::Dimensions::fixed(width.px(), HEIGHT.px()))
+    .padding(Padding::all(space::TEXT.px()))
     .background_color(Color::TRANSPARENT)
     .border_color(Color::TRANSPARENT)
-    .border_width(0.px());
+    .border_width(0.px())
+    .prop(RenamesBeat(Some(target)))
+    .prop(ReturnFocus(returning));
+    let focus_id = block.id.clone();
+    let move_id = block.id.clone();
     let focus = input::input(
         input::Kind::Card {
-            title: title.clone(),
+            title: name,
             selected,
         },
         false,
@@ -84,14 +131,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             .filter(|focus| focus.beat == block.id)
             .and_then(|_| canvas::focus_request(scene)),
     )
-    .background_color(if selected {
-        state
-            .palette
-            .surface
-            .lerp_rect(state.palette.selection, 0.35)
-    } else {
-        state.palette.surface
-    })
+    .background_color(face)
     .border_color(if selected {
         state.palette.accent
     } else {
@@ -105,28 +145,22 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         } else {
             state.palette.teal
         },
-        (4., 4.),
+        (STOCK, STOCK),
     ))
     .prop(properties::Dimensions::fixed(
         scene.node(index).width.px(),
         HEIGHT.px(),
     ))
-    .prop(material::DotScreen::new(
-        state.palette.accent,
-        selected.then_some(Rect::new(
-            12.,
-            12.,
-            width - 12.,
-            12. + f64::from(16_f32.max(14. / zoom)) * 1.45,
-        )),
-    ));
+    // Selection is the plum offset and border; no dot screen sits behind the title.
+    .prop(input::CardFocus(state.palette.accent));
     let grip = (selected || scene.hovered.as_deref() == Some(&block.id)).then(|| {
         placed::placed(
-            Affine::translate((width - 30., 6.)),
+            Affine::translate((width - GRIP_END, GRIP_MIDDLE - 12.)),
             input::input(
                 input::Kind::Grip(title),
                 state.config.ui.keymap == recite_config::Keymap::Vim,
-                label(1., "⠿").text_size(16.).color(state.palette.muted),
+                // A painted grip; the image keeps the glyph's name inside the named control.
+                mark(SMALL, "⠿", Icon::Grip, state.palette.muted),
                 move |state: &mut Writer, action| {
                     state.map_input(Source::Grip(move_id.clone()), action)
                 },
@@ -142,7 +176,94 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             }),
         )
     });
-    zstack((focus, grip))
-        .alignment(UnitPoint::TOP_LEFT)
-        .dims((scene.node(index).width.px(), HEIGHT.px()))
+    // The reading beat's crop marks clear the card and its stock offset; its unsaved dot sits in
+    // the top-trailing corner, before the grip.
+    let scale = f64::from(state.ui_scale());
+    let marks = Marks::crop(
+        &state.palette,
+        reading,
+        Ticks::new(scale, space::REGIONS, true).clearing(STOCK),
+    )
+    .unsaved(
+        &state.palette,
+        reading && state.session.model().has_draft(),
+        Dot::new(
+            scale,
+            DotAt::At(width - GRIP_END - DOT * scale, GRIP_MIDDLE),
+        ),
+    );
+    // The rename face comes last: a zstack inserts a new layer only at its end.
+    marked(
+        marks,
+        zstack((focus, grip, renaming))
+            .alignment(UnitPoint::TOP_LEFT)
+            .dims((scene.node(index).width.px(), HEIGHT.px())),
+    )
+}
+
+/// A card's words under `title`: the speaker, the opening prose and its annotations.
+fn contents<T: WidgetView<Writer>>(
+    state: &Writer,
+    scene: &Scene,
+    index: usize,
+    title: T,
+) -> impl WidgetView<Writer> + use<T> {
+    let (lines, annotations) = lines(state, scene, index, false);
+    let width = f64::from(scene.node(index).width);
+    flex_col((title, lines, annotations))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::SIBLINGS.px())
+        .dims(((width - 24.).px(), (HEIGHT - 24.).px()))
+}
+
+/// A rename's face: the field over the card's lines, repeated for sight only since the card
+/// beneath reads them, with an excerpt a line shorter so the taller field's words keep clear of
+/// the card's foot.
+fn renaming<T: WidgetView<Writer>>(
+    state: &Writer,
+    scene: &Scene,
+    index: usize,
+    field: T,
+) -> impl WidgetView<Writer> + use<T> {
+    let (lines, annotations) = lines(state, scene, index, true);
+    let width = f64::from(scene.node(index).width);
+    flex_col((
+        field,
+        group::decorative(lines),
+        annotations.map(group::decorative),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
+    .dims(((width - 24.).px(), (HEIGHT - 24.).px()))
+}
+
+/// A card's speaker over its excerpt, `shorter` by a line under a rename's field, and its
+/// annotations.
+fn lines(
+    state: &Writer,
+    scene: &Scene,
+    index: usize,
+    shorter: bool,
+) -> (
+    impl WidgetView<Writer> + use<>,
+    Option<impl WidgetView<Writer> + use<>>,
+) {
+    let synopsis = &scene.projection.synopsis[index];
+    let zoom = scene.camera.relative();
+    let width = f64::from(scene.node(index).width);
+    let excerpt = excerpt(synopsis.prose.clone(), zoom);
+    let lines = flex_col((
+        label(1., synopsis.speaker.clone())
+            .text_size(13_f32.max(11. / zoom))
+            .color(state.palette.muted),
+        if shorter { excerpt.shorter() } else { excerpt }.width((width - 24.).px()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::UNIT.px());
+    let annotations = (!synopsis.annotations.is_empty()).then(|| {
+        label(1., synopsis.annotations.join(" · "))
+            .text_size(13_f32.max(11. / zoom))
+            .color(state.palette.muted)
+    });
+    (lines, annotations)
 }

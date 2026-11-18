@@ -1,6 +1,6 @@
 use crate::{
     Writer,
-    tests::support::{click, finish_navigation, labels, open, project},
+    tests::support::{click, finish_navigation, is_expanded, is_pressed, labels, open, project},
 };
 use recite_writer_model::View;
 use tokio::sync::mpsc;
@@ -47,16 +47,34 @@ fn pin_applies_outgoing_text_and_remains_a_snapshot_through_navigation() {
 }
 
 #[test]
+fn the_heading_pin_is_a_pressed_toggle_that_unpins_its_own_beat() {
+    let directory = project(SOURCE).unwrap();
+    let mut writer = open(&directory).unwrap();
+    assert!(is_pressed(&mut writer, "Pin reference", false));
+    click(&mut writer, &["Pin reference"]).unwrap();
+    assert!(writer.reading_context.pinned.is_some());
+    assert!(is_pressed(&mut writer, "Pin reference", true));
+    click(&mut writer, &["Pin reference"]).unwrap();
+    assert!(writer.reading_context.pinned.is_none());
+}
+
+#[test]
 fn invalid_and_superseded_pin_requests_preserve_the_previous_reference() {
     let directory = project(SOURCE).unwrap();
     let mut writer = open(&directory).unwrap();
     click(&mut writer, &["Pin reference"]).unwrap();
     let original = pinned_text(&writer);
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let (sender, mut jobs) = mpsc::unbounded_channel();
+    writer.navigation.sender = Some(sender);
+    writer.navigation.runtime = Some(runtime.handle().clone());
     writer.change(|model| {
         model.set_draft("-> syntax".into());
         Ok(())
     });
-    click(&mut writer, &["Pin reference"]).unwrap();
+    // A fresh capture of the pinned beat (the heading's toggle would unpin it instead).
+    writer.pin_reference();
+    finish_navigation(&mut writer, &mut jobs).unwrap();
     assert_eq!(writer.session.model().draft(), "-> syntax");
     assert_eq!(pinned_text(&writer), original);
 
@@ -64,10 +82,6 @@ fn invalid_and_superseded_pin_requests_preserve_the_previous_reference() {
         model.set_draft("Captured greeting.".into());
         Ok(())
     });
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let (sender, mut jobs) = mpsc::unbounded_channel();
-    writer.navigation.sender = Some(sender);
-    writer.navigation.runtime = Some(runtime.handle().clone());
     writer.pin_reference();
     let completed = jobs.try_recv().unwrap().execute();
     writer.change(|model| {
@@ -108,6 +122,7 @@ fn destination_preview_leaves_an_invalid_draft_open_and_edit_uses_normal_admissi
     click(&mut writer, &["Edit Second"]).unwrap();
     assert_eq!(writer.session.model().view(), &view);
     assert_eq!(writer.session.model().draft(), "-> syntax");
-    click(&mut writer, &["▾ Second"]).unwrap();
+    assert!(is_expanded(&mut writer, "→ Second"));
+    click(&mut writer, &["→ Second"]).unwrap();
     assert!(!writer.destination_expanded("second"));
 }

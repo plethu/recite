@@ -59,10 +59,12 @@ pub(super) fn validate_script(projected: ProjectedScript) {
     assert!(block.is_default);
     assert_eq!(block.entries.len(), passages * 2 + 1);
     for (id, pair) in block.entries[..passages * 2].chunks_exact(2).enumerate() {
-        assert_eq!(
-            pair[0],
-            ScriptEntry::Effect("! immediate change_disposition(mara, 1)".into())
-        );
+        let ScriptEntry::Effect(effect) = &pair[0] else {
+            panic!("pair {id} did not start with its effect");
+        };
+        // The regression harness also builds this against older controls, whose effect entry is
+        // the source line alone, so the check reads the entry's debug form rather than its fields.
+        assert!(format!("{effect:?}").contains("! immediate change_disposition(mara, 1)"));
         let ScriptEntry::Passage(passage) = &pair[1] else {
             panic!("effect {id} did not retain its following passage");
         };

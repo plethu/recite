@@ -1,4 +1,7 @@
 //! Catalogue files, bounded queue rows and entry fields are independent native components.
+use crate::WriterLayout;
+use crate::presentation::tokens::size;
+use crate::presentation::{Page, Sheet, Type, print, space};
 mod comparison;
 mod creation;
 mod entry;
@@ -24,56 +27,89 @@ use xilem::{
         properties::{LineBreaking, TextAreaLabel},
     },
     style::Style,
-    view::{
-        CrossAxisAlignment, button, checkbox, flex_col, flex_row, indexed_stack, radio_group,
-        sized_box, text_input,
-    },
+    view::{CrossAxisAlignment, button, flex_col, flex_row, indexed_stack, sized_box, text_input},
 };
 
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let compact_entry =
         writer.compact_chrome() && matches!(writer.localisation.destination, Destination::Entry);
+    // A beat being translated and the source updates review carry their own heads.
+    let own_head = matches!(
+        writer.localisation.destination,
+        Destination::Passage | Destination::Refresh
+    );
     flex_col((
-        (!compact_entry && !matches!(writer.localisation.destination, Destination::Passage)).then(|| heading(writer)),
-        (!writer.localisation.has_catalogue()).then(|| paragraph(writer.ui_scale(), "Open a PO catalogue or add a language to translate this project. Drafts stay recoverable until you Save.", 640.)),
-        (!compact_entry && !matches!(writer.localisation.destination, Destination::Passage)).then(|| files(writer)),
+        (!compact_entry && !own_head).then(|| heading(writer)),
+        empty(writer).then(|| empty_state(writer)),
+        (!compact_entry && !own_head).then(|| files(writer)),
         report(writer),
         destinations(writer),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::Localisation)))
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::TEXT.px())
+    .prop(Region(Some(Pane::Localisation)))
+}
+/// The project has no catalogue yet and the queue is showing.
+fn empty(writer: &Writer) -> bool {
+    !writer.localisation.has_catalogue()
+        && matches!(writer.localisation.destination, Destination::Queue)
+}
+/// No catalogue yet: the heading carries a halftone screen ("not yet fixed"), one sentence says
+/// what to do, and the two ways in share one row. Opening a catalogue by path stays behind its
+/// action until it is chosen.
+fn empty_state(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = writer.ui_scale();
+    let blocked = writer.project_action_blocked() || writer.localisation.slot.read_only();
+    flex_col((
+        Type::Body.label(
+            scale,
+            "Add a language to start a catalogue for this project, or open one you already have. \
+             Drafts stay recoverable until you save.",
+        )
+        .color(writer.palette.ink)
+        .prop(LineBreaking::WordWrap)
+        .width(writer.script_width().min(writer.page_width()).px()),
+        flex_row((
+            print::primary_action(
+                scale,
+                "Add a language…",
+                &writer.palette,
+                blocked || writer.localisation.dirty(),
+                Writer::new_catalogue,
+            ),
+            text_button(scale, "Open a catalogue…", |writer: &mut Writer| {
+                writer.localisation.files_open = !writer.localisation.files_open;
+            })
+            .disabled(blocked),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(space::SIBLINGS.px()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::TEXT.px())
 }
 fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let queue = matches!(writer.localisation.destination, Destination::Queue);
-    let width = writer.content_width();
-    let wide = width >= 600. * f64::from(writer.ui_scale());
-    flex_row((
-        label(
-            writer.ui_scale(),
-            if queue {
+    let catalogue = queue && writer.localisation.has_catalogue();
+    crate::view::captioned_head(
+        writer,
+        (
+            if empty(writer) {
+                "No translations yet"
+            } else if queue {
                 "Translation queue"
             } else {
                 "Translations"
             },
-        )
-        .text_size(24. * writer.ui_scale())
-        .prop(LineBreaking::WordWrap)
-        .width(if wide { width * 0.52 } else { width }.px()),
-        (queue && writer.localisation.has_catalogue()).then(|| {
-            label(writer.ui_scale(), writer.localisation.catalogue_caption())
-                .prop(LineBreaking::WordWrap)
-                .width(if wide { width * 0.45 } else { width }.px())
-                .color(writer.palette.muted)
-        }),
-    ))
-    .direction(if wide {
-        Axis::Horizontal
-    } else {
-        Axis::Vertical
-    })
-    .cross_axis_alignment(CrossAxisAlignment::Center)
-    .gap(16.px())
+            catalogue.then(|| writer.localisation.catalogue_caption().into()),
+            (catalogue.then(|| files::head_actions(writer)),),
+        ),
+        ("Return to writing", Writer::return_to_writing),
+    )
+    .prop(crate::attention::PaneEntry(catalogue))
 }
 fn prose_size(writer: &Writer) -> f32 {
-    writer.reading_size()
+    Sheet::Dialogue.size(Page::of(writer))
 }
 fn destinations(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let pages = (
@@ -116,21 +152,39 @@ pub(crate) fn close_details(writer: &Writer) -> Option<impl WidgetView<Writer> +
                     if count == 1 { "draft" } else { "drafts" },
                     path.display()
                 ),
-                640.,
+                size::MEASURE,
             ),
             paragraph(
                 scale,
                 "Reopening this project and catalogue restores these drafts.",
-                640.,
+                size::MEASURE,
             ),
-            text_button(scale, "Open unsaved translations", Writer::open_unsaved_translations)
+            text_button(
+                scale,
+                "Open unsaved translations",
+                Writer::open_unsaved_translations,
+            )
             .disabled(writer.project_jobs_busy()),
-            paragraph(scale, "Discarding translations removes all PO drafts. Unsaved source work stays in recovery.", 640.),
-            text_button(scale, "Discard translations and close", Writer::discard_translations_and_close)
-                .disabled(writer.phase() != Phase::ConfirmClose || writer.project_jobs_busy() || writer.localisation.slot.read_only() || writer.localisation.saving()),
+            paragraph(
+                scale,
+                "Discarding translations removes all PO drafts. Unsaved \
+                 source work stays in recovery.",
+                size::MEASURE,
+            ),
+            text_button(
+                scale,
+                "Discard translations and close",
+                Writer::discard_translations_and_close,
+            )
+            .disabled(
+                writer.phase() != Phase::ConfirmClose
+                    || writer.project_jobs_busy()
+                    || writer.localisation.slot.read_only()
+                    || writer.localisation.saving(),
+            ),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }
 fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -139,7 +193,7 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     Some(
         flex_col((
-            paragraph(scale, report.clone(), 640.),
+            paragraph(scale, report.clone(), size::MEASURE),
             (state.report.len() > 1).then(|| {
                 flex_col((
                     label(
@@ -165,10 +219,10 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                     .disabled(state.report_page + 1 >= state.report.len()),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(6.px())
+                .gap(space::SIBLINGS.px())
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
 }

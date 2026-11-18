@@ -1,37 +1,41 @@
 //! Window identity and workspace commands live outside the manuscript's reading measure.
-use crate::presentation::{identity, label, paragraph, print};
+use crate::presentation::material::{Bar, bar};
+use crate::presentation::segments::{tab, tabs};
+use crate::presentation::sheet_text::one_line;
+use crate::presentation::tokens::{breakpoint, size};
+use crate::presentation::{Type, space};
+use crate::presentation::{identity, paragraph, print};
+use crate::workspaces::rename::inline::modal as rename_modal;
 use crate::{
     Phase, Writer,
     app::{App, picker},
 };
 use xilem::{
     WidgetView,
-    masonry::{kurbo::Axis, layout::AsUnit, parley::style::FontWeight},
+    masonry::{
+        kurbo::Axis,
+        layout::AsUnit,
+        parley::style::FontWeight,
+        widgets::{FlexBasis, FlexParams},
+    },
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, sized_box},
+    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, sized_box},
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let searching = app.picker.is_some();
-    let blocked = searching
-        || app
-            .writer
-            .as_ref()
-            .is_some_and(|writer| writer.phase() != Phase::Writing);
-    let compact_writing = !app.show_welcome()
-        && !app.settings_open()
-        && app.writer.as_ref().is_some_and(|writer| {
-            writer.compact_chrome()
-                && writer.workspaces.screen == crate::workspaces::Screen::Write
-                && !writer.attention.is_focused()
-        });
+    // A picker, Settings or a rename's decision holds the window: the tab row behind it is inert,
+    // all but Settings' toggle, Workspace.
+    let held = app.picker.is_some() || app.writer.as_ref().is_some_and(rename_modal);
+    let searching = held || app.settings_open();
+    let deciding = app
+        .writer
+        .as_ref()
+        .is_some_and(|writer| writer.phase() != Phase::Writing);
+    let blocked = searching || deciding;
+    // The tab row stays at every window size and interface scale.
     sized_box(
         flex_col((
-            indexed_stack((
-                identity_bar(app, scale, blocked),
-                flex_col(()).dims((0.px(), 0.px())),
-            ))
-            .active(usize::from(compact_writing)),
+            identity_bar(app, scale, (blocked, held || deciding)),
             app.workspace_menu()
                 .then(|| workspace_actions(app, scale, searching)),
             (!app.status.is_empty() && (!app.show_welcome() || app.settings_open()))
@@ -45,79 +49,86 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
             }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
-    .padding(xilem::style::Padding::from_vh(4.px(), 12.px()))
-    .background_color(app.theme.palette.surface)
+    // The tab row is one control tall.
+    .padding(xilem::style::Padding::from_vh(0.px(), space::KINDS.px()))
 }
 
-fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {
-    let writing = !app.show_welcome()
-        && !app.settings_open()
-        && app.writer.as_ref().is_some_and(|writer| {
-            writer.workspaces.screen == crate::workspaces::Screen::Write
-                && !writer.attention.is_focused()
-        });
+/// The tab row's identity and commands, inert while `blocked`; Workspace waits only while `held`.
+fn identity_bar(
+    app: &App,
+    scale: f32,
+    (blocked, held): (bool, bool),
+) -> impl WidgetView<App> + use<> {
+    // Writing, focus mode and the tool screens share the toolbar's Workspace menu, so their tab
+    // row keeps only the file, the modes and Commands; Settings is a sheet over it.
+    let writing = !app.show_welcome() && app.writer.is_some();
+    // A compact row with the scene list hidden gives the wordmark's column to the file tab, so
+    // the tab keeps its 96px and the row its commands; the window title still names Recite.
+    let compact = app.viewport.width < breakpoint::TOOLBAR * f64::from(scale);
+    let column = app.writer.as_ref().map_or(220., |writer| {
+        writer
+            .navigation_width()
+            .max(size::TAB_MIN * f64::from(scale))
+    });
+    let listed = app
+        .writer
+        .as_ref()
+        .is_none_or(|writer| writer.navigation_width() > 0.);
     flex_row((
-        sized_box(flex_row((
-            identity::wordmark(&app.theme, scale),
-            xilem::view::FlexSpacer::Flex(1.),
-        )))
-        .width(app.writer.as_ref().map_or(220., Writer::drawer_width).px()),
-        app.writer
-            .as_ref()
-            .filter(|writer| writer.viewport.width >= 1100. * f64::from(scale))
-            .map(|writer| {
-                flex_col((
-                    sized_box(
-                        label(scale, writer.session.model().document().key().to_string())
-                            .weight(FontWeight::SEMI_BOLD)
-                            .color(app.theme.palette.ink),
+        (!compact || listed || app.show_welcome()).then(|| {
+            sized_box(flex_row((
+                // The welcome hero carries the wordmark while it shows.
+                (!app.show_welcome()).then(|| identity::wordmark(&app.theme, scale)),
+                xilem::view::FlexSpacer::Flex(1.),
+            )))
+            // The wordmark heads the scene list, or keeps a minimal column while it is hidden.
+            .width(column.px())
+        }),
+        // The file tab takes the row's spare width from a 96px minimum and ends in an ellipsis
+        // when that is short of its name; assistive technology reads the whole name.
+        app.writer.as_ref().map(|writer| {
+            flex_col((bar(
+                Some(Bar::under(app.theme.palette.teal, 0., 0.)),
+                sized_box(
+                    one_line(
+                        writer.session.model().document().key().to_string(),
+                        Type::Control,
+                        scale,
+                        app.theme.palette.ink,
                     )
-                    .padding(xilem::style::Padding::from_vh(4.px(), 8.px())),
-                    flex_col(())
-                        .height(1.px())
-                        .background_color(app.theme.palette.teal),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(0.px())
-            }),
-        xilem::view::FlexSpacer::Flex(1.),
-        app.writer
-            .as_ref()
-            .filter(|writer| {
-                !writing
-                    && !app.show_welcome()
-                    && !app.settings_open()
-                    && writer.session.project().is_some()
-                    && writer.viewport.width >= 1100. * f64::from(scale)
-            })
-            .map(|writer| {
-                print::action(
-                    scale,
-                    "Open in editor",
-                    blocked || writer.project_action_blocked() || writer.external.busy(),
-                    |app: &mut App| {
-                        if let Some(writer) = &mut app.writer {
-                            writer.open_editor();
-                        }
-                    },
+                    .weight(FontWeight::SEMI_BOLD),
                 )
-            }),
+                .padding(xilem::style::Padding::from_vh(
+                    space::UNIT.px(),
+                    space::SIBLINGS.px(),
+                )),
+            ),))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            // The tab keeps 96px before the row shares its spare width.
+            .flex(FlexParams::new(
+                1.,
+                FlexBasis::Length((size::TAB_MIN * f64::from(scale)).px()),
+                None,
+            ))
+        }),
+        if app.writer.is_some() {
+            xilem::view::FlexSpacer::Fixed(0.px())
+        } else {
+            xilem::view::FlexSpacer::Flex(1.)
+        },
         (app.writer.is_some() && app.show_welcome() && !app.settings_open()).then(|| {
             print::action(scale, "Return to Writer", blocked, |app: &mut App| {
                 app.return_to_document()
             })
         }),
-        app.settings_open().then(|| {
-            print::action(scale, "Done with settings", blocked, |app: &mut App| {
-                app.close_settings()
-            })
-        }),
         app.writer
             .as_ref()
             .filter(|writer| {
-                !app.show_welcome() && !app.settings_open() && writer.navigation_width() == 0.
+                !app.show_welcome()
+                    && writer.navigation_width() == 0.
+                    && !writer.attention.is_focused()
             })
             .map(|_| {
                 print::action(scale, "Scenes…", blocked, |app: &mut App| {
@@ -126,19 +137,56 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             }),
         app.writer
             .as_ref()
-            .filter(|_| !writing && !app.show_welcome() && !app.settings_open())
-            .map(|_| {
-                print::action(scale, "Commands", blocked, |app: &mut App| {
-                    app.open_picker(picker::Search::Commands)
-                })
+            .filter(|_| !app.show_welcome())
+            .map(|writer| {
+                (
+                    authoring_modes(writer, blocked),
+                    print::action(scale, "Commands", blocked, |app: &mut App| {
+                        app.open_picker(picker::Search::Commands)
+                    }),
+                )
             }),
         (!writing).then(|| {
-            print::action(scale, "Workspace", blocked, |app: &mut App| {
-                app.toggle_workspace_menu()
-            })
+            print::workspace(
+                scale,
+                (
+                    app.settings_open(),
+                    app.settings_open() || app.workspace_menu(),
+                    held,
+                ),
+                |app: &mut App| app.toggle_workspace_menu(),
+            )
         }),
     ))
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
+}
+
+/// Writing and localising are the app's two modes, chosen from the tab row.
+fn authoring_modes(writer: &Writer, searching: bool) -> impl WidgetView<App> + use<> {
+    let localise = writer.workspaces.screen == crate::workspaces::Screen::Localisation;
+    tabs(
+        "Mode",
+        [("Write", false), ("Localise", true)].map(|(title, selected)| {
+            tab(
+                writer.ui_scale(),
+                &writer.palette,
+                (title, false),
+                selected == localise,
+                searching
+                    || writer.project_action_blocked()
+                    || (selected && writer.session.project().is_none()),
+                move |app: &mut App| {
+                    if let Some(writer) = &mut app.writer {
+                        if selected {
+                            writer.open_localisation();
+                        } else {
+                            writer.return_to_writing();
+                        }
+                    }
+                },
+            )
+        }),
+    )
 }
 
 fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<App> + use<> {
@@ -168,7 +216,7 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
             .map(|writer| {
                 print::action(
                     scale,
-                    "Localize",
+                    "Localise",
                     searching
                         || writer.project_action_blocked()
                         || writer.session.project().is_none(),
@@ -191,7 +239,7 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
             Axis::Horizontal
         },
     )
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 
 fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
@@ -200,7 +248,7 @@ fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
         || app
             .writer
             .as_ref()
-            .is_none_or(|writer| writer.phase() != Phase::Writing);
+            .is_none_or(|writer| writer.phase() != Phase::Writing || rename_modal(writer));
     flex_row((
         print::action(scale, "Go to", disabled, |app: &mut App| {
             app.search_from_menu(picker::Search::GoTo)
@@ -214,5 +262,5 @@ fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
                 })
             }),
     ))
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

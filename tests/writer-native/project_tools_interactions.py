@@ -62,7 +62,7 @@ def run(api, bus, registry, binary, output):
                 )
                 type_text("speaker_0555")
                 window.wait(
-                    lambda: window.find_text("Showing 1–1 of 1 declaration"),
+                    lambda: window.find_text("1 of 1027 declarations"),
                     "filtered declaration",
                 )
                 window.wait(
@@ -74,7 +74,7 @@ def run(api, bus, registry, binary, output):
                 assert not window.find("Previous declaration detail") and not window.find(
                     "More declaration detail"
                 )
-                results["single_page_declaration_has_no_inactive_pagers"] = True
+                results["declaration_list_has_no_pagers"] = True
                 capture(output, "-declarations")
                 results["declaration_query_focus_and_selected_detail"] = True
                 window.act("Return to writing")
@@ -92,16 +92,15 @@ def run(api, bus, registry, binary, output):
                 )
                 results["project_tools_preserve_native_field_identity_and_undo"] = True
                 command(window, "Build scenes")
-                window.wait(lambda: window.find("Build saved"), "build workspace")
+                window.wait(lambda: window.find("Build options"), "build result slip")
+                window.act("Build options")
+                window.wait(lambda: window.find("Build saved files"), "build options slip")
                 window.wait(
-                    lambda: window.find_text(
-                        "recite.project.toml · 1 source file · 1 output target"
-                    ),
+                    lambda: window.find_text("1 source file · 1 output"),
                     "singular saved build input and target summary",
                 )
                 capture(output, "-build")
-                window.act("Build saved")
-                window.act("Return to writing")
+                window.act("Build saved files")
                 asset = project / "build/scene.recitec"
                 window.wait(lambda: asset.is_file(), "saved-input output", timeout=30)
                 window.wait(
@@ -113,7 +112,8 @@ def run(api, bus, registry, binary, output):
                 before = asset.read_bytes()
                 assert window.text(manuscript(window)) == "The last tram waits.x"
                 results["build_saved_preserves_unapplied_draft_and_completes_after_return"] = True
-                command(window, "Build scenes")
+                window.wait(lambda: window.find("Build options"), "hidden build result slip")
+                window.act("Build options")
                 window.wait(lambda: window.find("Save all and build"), "save-build action")
                 window.act("Save all and build")
                 window.wait(
@@ -139,7 +139,7 @@ def run(api, bus, registry, binary, output):
                 source.write_text(
                     source.read_text().replace("The last tram waits.x", "Fresh build inputs.")
                 )
-                window.act("Build saved")
+                window.act("Build saved files")
 
                 def cancel_or_complete():
                     cancel = window.find_action("Cancel build")

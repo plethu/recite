@@ -22,7 +22,7 @@ fn choose<V: WidgetView<App, Widget = Passthrough>>(
     mounted.activate(caption);
     assert!(mounted.state.picker.is_some());
     mounted.replace_text("Search query", value);
-    mounted.activate(&format!("Selected · {value}"));
+    mounted.activate_selected(value);
     assert!(mounted.state.picker.is_none());
 }
 

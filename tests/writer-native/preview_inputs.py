@@ -73,7 +73,9 @@ def configuration_focus_and_tab(window):
 
     def visible_and_focused(caption):
         node = (
-            field(window, caption) if caption == "Find preview language" else window.find(caption)
+            field(window, caption)
+            if caption in ("Find preview language", "Preview wording")
+            else window.find(caption)
         )
         return focused_in_content(window, node)
 
@@ -83,14 +85,31 @@ def configuration_focus_and_tab(window):
     )
     key("Tab")
     window.wait(
-        lambda: visible_and_focused("Search preview languages"),
-        "Tab reaches the visible language search action",
+        lambda: visible_and_focused("Preview wording"),
+        "Tab reaches the preview wording; the language list filters as it is typed",
     )
     key("Tab", shift=True)
     window.wait(
         lambda: visible_and_focused("Find preview language"),
         "Shift+Tab returns to the visible preview language input",
     )
+
+
+def source_only_focus_and_tab(window):
+    """While source-only is on, configuration enters on it and offers no language search."""
+
+    def source_only_focused():
+        return focused_in_content(window, window.find("Use source language only"))
+
+    window.wait(source_only_focused, "configuration focuses source-only while it is on")
+    assert window.find("Find preview language") is None, "no language search while source-only"
+    key("Tab")
+    window.wait(
+        lambda: focused_in_content(window, field(window, "Preview wording")),
+        "Tab reaches the preview wording",
+    )
+    key("Tab", shift=True)
+    window.wait(source_only_focused, "Shift+Tab returns to source-only")
 
 
 def exercise(window, po, output, results):
@@ -109,15 +128,17 @@ def exercise(window, po, output, results):
     edit(window, "Salut {name}.")
     action(window, "Return to writing")
     window.document_action("Configure preview")
+    source_only_focus_and_tab(window)
+    # Turning source-only off with no language chosen before opens the search for one.
+    action(window, "Use source language only")
     configuration_focus_and_tab(window)
     capture(output, "-language-tab")
     results["native_tab_reveals_preview_input"] = True
     reveal_field(window, "Find preview language")
     fill(window, "Find preview language", "fr-CA")
-    action(window, "Search preview languages")
     action(window, "Preview in French (Canada) · fr-CA")
     reveal_text(window, "Preview language:", prefix=True)
-    action(window, "Hide preview inputs")
+    action(window, "Done with preview inputs")
     action(window, "Configure preview")
     configuration_focus_and_tab(window)
     results["selected_locale_configuration_focuses_the_language_query"] = True
@@ -129,7 +150,7 @@ def exercise(window, po, output, results):
     capture_end(window, output, "-values")
     restart(window, "Bonjour Ada.")
     capture_end(window, output, "-saved")
-    assert window.find("Hide preview inputs") is None
+    assert window.find("Done with preview inputs") is None
     scrollbar = window.wait(
         lambda: (window.section_scrollbar("Conversation preview"),), "retained conversation layout"
     )[0]
@@ -143,7 +164,8 @@ def exercise(window, po, output, results):
         lambda: window.find_text("Source revision", contains=True), "expanded captured provenance"
     )
     capture_settled(window, output, "-context-details")
-    window.act("Hide preview context")
+    # The same disclosure collapses the provenance; it reports expanded rather than renaming.
+    window.act("Preview context")
     capture_settled(window, output, "-current-context")
     action(window, "Continue preview")
     reveal_text(window, "2 billets")

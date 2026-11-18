@@ -34,26 +34,40 @@ impl Widget for NativeIcon {
         _: LenReq,
         _: Option<Length>,
     ) -> Length {
-        (20. * f64::from(self.0.scale)).px()
+        (super::FACE * f64::from(self.0.scale)).px()
     }
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
     fn paint(&mut self, _: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+        let transform = Affine::scale(f64::from(self.0.scale) * super::FACE / super::GRID);
+        if self.0.icon.filled() {
+            painter
+                .fill(self.0.icon.path(), self.0.color)
+                .transform(transform)
+                .draw();
+            return;
+        }
         painter
             .stroke(
                 self.0.icon.path(),
-                &Stroke::new(1.6)
+                &Stroke::new(super::STROKE)
                     .with_caps(Cap::Round)
                     .with_join(Join::Round),
                 self.0.color,
             )
-            .transform(Affine::scale(f64::from(self.0.scale) * 20. / 24.))
+            .transform(transform)
             .draw();
     }
     fn accessibility_role(&self) -> Role {
         Role::Image
     }
+    /// An unnamed face is decoration, such as a disclosure chevron whose button reports the state:
+    /// hidden, so it adds nothing to the name assistive technology reads.
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
-        node.set_label(self.0.name);
+        if self.0.name.is_empty() {
+            node.set_hidden();
+        } else {
+            node.set_label(self.0.name);
+        }
     }
     fn children_ids(&self) -> ChildrenIds {
         ChildrenIds::new()

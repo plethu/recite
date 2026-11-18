@@ -1,98 +1,49 @@
 use super::*;
-use crate::presentation::group::named;
-use crate::presentation::{Icon, print};
-use xilem::masonry::properties::LineBreaking;
+use crate::presentation::number::{Range, Spin, number_field};
+use crate::presentation::space;
 
 pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let presentation = app.preferences.config.writer.presentation;
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let wide = width >= 300. * f64::from(scale);
     let fields = [
-        (
-            "Reading text size",
-            Field::ReadingSize,
-            "Smaller reading text",
-            "Larger reading text",
-        ),
-        (
-            "Source text size",
-            Field::SourceSize,
-            "Smaller source text",
-            "Larger source text",
-        ),
-        (
-            "UI scale",
-            Field::UiScale,
-            "Decrease UI scale",
-            "Increase UI scale",
-        ),
-        (
-            "Navigation width",
-            Field::DrawerWidth,
-            "Narrower navigation",
-            "Wider navigation",
-        ),
-        (
-            "Script width",
-            Field::ScriptWidth,
-            "Narrower script",
-            "Wider script",
-        ),
+        ("Reading text size", Field::ReadingSize),
+        ("Source text size", Field::SourceSize),
+        ("UI scale", Field::UiScale),
+        ("Navigation width", Field::DrawerWidth),
+        ("Script width", Field::ScriptWidth),
     ]
     .into_iter()
-    .map(|(caption, field, decrease, increase)| {
+    .map(|(caption, field)| {
         let (min, max) = field.bounds();
-        named(
+        let value = presentation.value(field);
+        super::row(
+            scale,
+            width,
             caption,
-            flex_row((
-                label(
-                    scale,
-                    format!(
-                        "{caption}: {}{}",
-                        presentation.value(field),
-                        if field == Field::UiScale { "%" } else { " px" }
-                    ),
-                )
-                .prop(LineBreaking::WordWrap)
-                .width((190. * f64::from(scale)).min(width).px()),
-                flex_row((
-                    print::icon_action(
-                        scale,
-                        decrease,
-                        Icon::Minus,
-                        &app.theme.palette,
-                        presentation.value(field) == min,
-                        move |app: &mut App| app.adjust_presentation(field, false),
-                    ),
-                    print::icon_action(
-                        scale,
-                        increase,
-                        Icon::Plus,
-                        &app.theme.palette,
-                        presentation.value(field) == max,
-                        move |app: &mut App| app.adjust_presentation(field, true),
-                    ),
-                ))
-                .gap(8.px()),
-            ))
-            .direction(if wide {
-                Axis::Horizontal
-            } else {
-                Axis::Vertical
-            })
-            .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(8.px())
-            .width(width.px()),
+            number_field(
+                scale,
+                caption,
+                format!(
+                    "{value}{}",
+                    if field == Field::UiScale { "%" } else { " px" }
+                ),
+                Range {
+                    value: f64::from(value),
+                    min: f64::from(min),
+                    max: f64::from(max),
+                    step: f64::from(presentation_step(field)),
+                },
+                app.theme.palette.ink,
+                move |app: &mut App, spin| match spin {
+                    Spin::Step { up } => app.adjust_presentation(field, up),
+                    // The field keeps the value within the range; the app keeps it on its step.
+                    Spin::To(target) => app.set_presentation(field, target.round() as u16),
+                },
+            ),
         )
     })
     .collect::<Vec<_>>();
-    flex_col((
-        label(scale, "Reading and layout").text_size(18. * scale),
-        flex_col(fields)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px()),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
-    .width(width.px())
+    flex_col(fields)
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::SIBLINGS.px())
 }

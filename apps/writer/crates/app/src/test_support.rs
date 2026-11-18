@@ -87,5 +87,5 @@ pub fn set_welcome(shell: &mut crate::shell::Shell, shown: bool) {
 }
 /// Show or hide settings directly, as a frontend test scenario setup.
 pub fn set_settings(shell: &mut crate::shell::Shell, shown: bool) {
-    shell.settings_open = shown;
+    shell.set_settings_open(shown);
 }

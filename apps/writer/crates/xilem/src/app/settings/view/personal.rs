@@ -1,152 +1,228 @@
 use super::*;
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::print::section_heading;
+use crate::presentation::segments::{segment_named, segments_on_paper};
+use crate::presentation::tokens::size;
+use crate::presentation::{Type, Typeset, print, space};
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
-use xilem::view::checkbox;
-use xilem::view::{GridExt, GridTrackSize, grid};
+use xilem::masonry::properties::LineBreaking;
+use xilem::view::{FlexExt, checkbox};
 mod reading;
-mod specimen;
 
-pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
+pub(super) fn personal(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let config = &app.preferences.config;
     let writer = &config.writer;
     let scale = crate::presentation::scale(writer);
     let presentation = writer.presentation;
-    let width = (app.viewport.width - 48.).max(280.);
-    let wide = width >= 1000. * f64::from(scale);
-    let sample_width = if wide { width * 0.38 } else { width };
-    let controls_width = if wide {
-        width - sample_width - 32.
-    } else {
-        width
-    };
-    let booleans = [
-        (
-            "Monochrome colours",
-            writer.monochrome,
-            UserConfigEdit::WriterMonochrome as fn(bool) -> UserConfigEdit,
-        ),
-        (
-            "Reduce animation",
-            writer.reduced_motion,
-            UserConfigEdit::WriterReducedMotion,
-        ),
-        (
-            "Always show shortcut hints",
-            writer.shortcut_hints,
-            UserConfigEdit::WriterShortcutHints,
-        ),
-        (
-            "Zoom around the pointer",
-            writer.zoom_to_pointer,
-            UserConfigEdit::WriterZoomToPointer,
-        ),
-        (
-            "Confirm before closing",
-            writer.confirm_exit,
-            UserConfigEdit::WriterConfirmExit,
-        ),
-    ]
-    .into_iter()
-    .map(|(caption, checked, edit)| {
-        checkbox(caption, checked, move |app: &mut App, value| {
-            app.update_preference(edit(value))
-        })
-        .text_size(14. * scale)
-    })
-    .collect::<Vec<_>>();
-    flex_col((
-        grid((
-            specimen::specimen(app, sample_width).grid_pos(0, u16::from(!wide)),
-            reading::reading(app, controls_width).grid_pos(u16::from(wide), 0),
-        ))
-        .columns(if wide {
-            vec![
-                GridTrackSize::Fixed(sample_width.px()),
-                GridTrackSize::Fixed(controls_width.px()),
-            ]
-        } else {
-            vec![GridTrackSize::Fixed(width.px())]
-        })
-        .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
-        .gap(32.px()),
-        label(scale, "Appearance").text_size(18. * scale),
-        radio_group(
-            flex_row((
-                radio_button(
-                    scale,
-                    "Light theme",
-                    writer.theme == WriterTheme::Light,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterTheme(WriterTheme::Light))
-                    },
-                ),
-                radio_button(
-                    scale,
-                    "Dark theme",
-                    writer.theme == WriterTheme::Dark,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterTheme(WriterTheme::Dark))
-                    },
-                ),
-            ))
-            .gap(12.px()),
-        ),
-        label(scale, "Editing").text_size(18. * scale),
-        radio_group(
-            flex_row((
-                radio_button(
-                    scale,
-                    "Standard keymap",
-                    config.ui.keymap == Keymap::Standard,
-                    |app: &mut App| app.update_preference(UserConfigEdit::Keymap(Keymap::Standard)),
-                ),
-                radio_button(
-                    scale,
-                    "Vim keymap",
-                    config.ui.keymap == Keymap::Vim,
-                    |app: &mut App| app.update_preference(UserConfigEdit::Keymap(Keymap::Vim)),
-                ),
-            ))
-            .gap(12.px()),
-        ),
-        radio_group(
-            flex_row((
-                radio_button(
-                    scale,
-                    "Script pane on the left",
-                    writer.pane_side == WriterPaneSide::Left,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterPaneSide(WriterPaneSide::Left))
-                    },
-                ),
-                radio_button(
-                    scale,
-                    "Script pane on the right",
-                    writer.pane_side == WriterPaneSide::Right,
-                    |app: &mut App| {
-                        app.update_preference(UserConfigEdit::WriterPaneSide(WriterPaneSide::Right))
-                    },
-                ),
-            ))
-            .gap(12.px()),
-        ),
-        checkbox(
-            "Split map and script",
-            presentation.split(),
-            move |app: &mut App, value| {
-                app.update_preference(UserConfigEdit::WriterPresentation(
-                    presentation.with_split(value),
-                ))
-            },
+    let check = |caption: &'static str, checked: bool, edit: fn(bool) -> UserConfigEdit| {
+        check_row(
+            scale,
+            width,
+            caption,
+            checked,
+            move |app: &mut App, value| app.update_preference(edit(value)),
         )
-        .text_size(14. * scale),
-        flex_col(booleans)
+    };
+    flex_col((
+        group(scale, "Reading and layout", reading::reading(app, width)),
+        group(
+            scale,
+            "Appearance",
+            flex_col((
+                choices(
+                    app,
+                    width,
+                    "Theme",
+                    [
+                        (
+                            ("Light", "Light theme"),
+                            writer.theme == WriterTheme::Light,
+                            UserConfigEdit::WriterTheme(WriterTheme::Light),
+                        ),
+                        (
+                            ("Dark", "Dark theme"),
+                            writer.theme == WriterTheme::Dark,
+                            UserConfigEdit::WriterTheme(WriterTheme::Dark),
+                        ),
+                    ],
+                ),
+                check(
+                    "Monochrome colours",
+                    writer.monochrome,
+                    UserConfigEdit::WriterMonochrome,
+                ),
+                check(
+                    "Reduce animation",
+                    writer.reduced_motion,
+                    UserConfigEdit::WriterReducedMotion,
+                ),
+            ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
-        prose(
+            .gap(space::SIBLINGS.px()),
+        ),
+        group(
+            scale,
+            "Editing",
+            flex_col((
+                choices(
+                    app,
+                    width,
+                    "Keymap",
+                    [
+                        (
+                            ("Standard", "Standard keymap"),
+                            config.ui.keymap == Keymap::Standard,
+                            UserConfigEdit::Keymap(Keymap::Standard),
+                        ),
+                        (
+                            ("Vim", "Vim keymap"),
+                            config.ui.keymap == Keymap::Vim,
+                            UserConfigEdit::Keymap(Keymap::Vim),
+                        ),
+                    ],
+                ),
+                choices(
+                    app,
+                    width,
+                    "Script pane",
+                    [
+                        (
+                            ("Left", "Script pane on the left"),
+                            writer.pane_side == WriterPaneSide::Left,
+                            UserConfigEdit::WriterPaneSide(WriterPaneSide::Left),
+                        ),
+                        (
+                            ("Right", "Script pane on the right"),
+                            writer.pane_side == WriterPaneSide::Right,
+                            UserConfigEdit::WriterPaneSide(WriterPaneSide::Right),
+                        ),
+                    ],
+                ),
+                check_row(
+                    scale,
+                    width,
+                    "Split map and script",
+                    presentation.split(),
+                    move |app: &mut App, value| {
+                        app.update_preference(UserConfigEdit::WriterPresentation(
+                            presentation.with_split(value),
+                        ))
+                    },
+                ),
+                check(
+                    "Always show shortcut hints",
+                    writer.shortcut_hints,
+                    UserConfigEdit::WriterShortcutHints,
+                ),
+                check(
+                    "Zoom around the pointer",
+                    writer.zoom_to_pointer,
+                    UserConfigEdit::WriterZoomToPointer,
+                ),
+                check(
+                    "Confirm before closing",
+                    writer.confirm_exit,
+                    UserConfigEdit::WriterConfirmExit,
+                ),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::SIBLINGS.px()),
+        ),
+        group(
+            scale,
+            "Project",
+            // A quiet row action, not a third choice beside the page segments.
+            print::action(
+                scale,
+                "Project settings…",
+                app.writer.as_ref().is_none_or(|writer| {
+                    writer.session.project().is_none()
+                        || writer.project_jobs_busy()
+                        || writer.phase() != crate::Phase::Writing
+                }),
+                |app: &mut App| app.open_project_settings(),
+            ),
+        ),
+        print::meta(
             scale,
             format!("Personal configuration: {}", app.preferences.path),
-        ),
+        )
+        .color(app.theme.palette.muted)
+        .prop(LineBreaking::WordWrap)
+        .width(width.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::GROUPS.px())
+}
+
+/// A group of preferences under its Section head.
+fn group<V: WidgetView<App>>(
+    scale: f32,
+    title: &'static str,
+    rows: V,
+) -> impl WidgetView<App> + use<V> {
+    flex_col((section_heading(scale, title), rows))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(space::TEXT.px())
+}
+
+/// One preference: its label on the left and its control against the sheet's right edge, on a
+/// row's height so every preference keeps one rhythm.
+pub(super) fn row<V: WidgetView<App>>(
+    scale: f32,
+    width: f64,
+    caption: &'static str,
+    control: V,
+) -> impl WidgetView<App> + use<V> {
+    flex_row((
+        Type::Body
+            .label(scale, caption)
+            .prop(LineBreaking::WordWrap)
+            .flex(1.),
+        control,
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(space::SIBLINGS.px())
+    .width(width.px())
+}
+
+/// A checkbox across the whole row, so its hover and its target span the row.
+fn check_row<F: Fn(&mut App, bool) + Send + Sync + 'static>(
+    scale: f32,
+    width: f64,
+    caption: &'static str,
+    checked: bool,
+    edit: F,
+) -> impl WidgetView<App> + use<F> {
+    styled(
+        ControlStyle::Flush,
+        checkbox(caption, checked, edit)
+            .typeset(Type::Body, scale)
+            .dims((width.px(), (size::ROW * f64::from(scale)).px())),
+    )
+}
+
+/// A preference with two choices, labelled on the left: one compact segmented track on the
+/// right, one Tab stop, each choice read by its full name.
+fn choices(
+    app: &App,
+    width: f64,
+    caption: &'static str,
+    options: [((&'static str, &'static str), bool, UserConfigEdit); 2],
+) -> impl WidgetView<App> + use<> {
+    let scale = crate::presentation::scale(&app.preferences.config.writer);
+    let palette = &app.theme.palette;
+    row(
+        scale,
+        width,
+        caption,
+        segments_on_paper(
+            palette,
+            options.map(|(title, chosen, edit)| {
+                segment_named(scale, palette, title, chosen, move |app: &mut App| {
+                    app.update_preference(edit.clone())
+                })
+            }),
+        ),
+    )
 }

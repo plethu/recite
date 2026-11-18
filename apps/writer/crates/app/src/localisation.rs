@@ -1,6 +1,8 @@
 //! Translation edits use the shared file-backed catalogue, with one native presentation owner.
 pub mod beat;
+mod caption;
 mod closing;
+mod commands;
 mod creation;
 mod editing;
 mod history;
@@ -44,7 +46,6 @@ pub enum Filter {
 pub struct Query {
     pub text: String,
     pub filter: Filter,
-    pub page: usize,
 }
 pub struct Row {
     pub id: PoEntryId,
@@ -54,10 +55,11 @@ pub struct Row {
     pub translation: String,
 }
 #[derive(Default)]
+/// The matching entries the queue lists (the first of them, for a very large catalogue) and how
+/// many match in all. The list scrolls; it does not page.
 pub struct Queue {
     pub rows: Vec<Row>,
     pub total: usize,
-    pub page: usize,
 }
 #[derive(Clone, PartialEq, Eq)]
 pub struct EntryKey {
@@ -110,6 +112,9 @@ pub struct Localisation {
     pub report: Vec<String>,
     pub report_page: usize,
     after_save: work::AfterSave,
+    /// The queue's filter text changed while the catalogue was checked out; the query runs again
+    /// when its owner returns.
+    query_pending: bool,
     pub creation: creation::Creation,
     pub refresh: Option<refresh::Refresh>,
     pub passage: Option<beat::Beat>,
@@ -147,134 +152,5 @@ impl Localisation {
         self.slot
             .owner()
             .is_some_and(|owner| owner.catalogue.saving)
-    }
-}
-impl Writer {
-    pub fn open_localisation(&mut self) {
-        if !self.can_open_localisation() {
-            return;
-        }
-        if self.localisation.has_catalogue() {
-            self.open_translation_beat(0);
-        } else {
-            self.enter_localisation();
-        }
-    }
-    fn can_open_localisation(&self) -> bool {
-        self.phase == Phase::Writing
-            && self.session.project().is_some()
-            && !self.project_action_blocked()
-    }
-    pub(crate) fn enter_localisation(&mut self) -> bool {
-        if !self.can_open_localisation() {
-            return false;
-        }
-        self.attention.leave_focus();
-        self.cancel_map_gesture();
-        self.remember_location();
-        self.workspaces.screen = Screen::Localisation;
-        self.remember_catalogue_location();
-        true
-    }
-    pub fn catalogue_feedback(&mut self, message: String) {
-        self.status = message
-            .lines()
-            .next()
-            .unwrap_or("Catalogue action finished")
-            .chars()
-            .take(240)
-            .collect();
-        self.localisation.report = if message.contains('\n') || message.chars().count() > 240 {
-            text::pages(&message)
-        } else {
-            Vec::new()
-        };
-        self.localisation.report_page = 0;
-    }
-    pub fn catalogue_action(&mut self, action: work::Action) {
-        let closing = matches!(
-            action,
-            work::Action::FlushForClose | work::Action::DiscardForClose
-        );
-        if self.phase == Phase::Closed
-            || (!closing && (self.phase != Phase::Writing || self.localisation.slot.read_only()))
-            || (self.session.read_only() && !closing)
-            || self.navigation.busy()
-            || self.work.busy()
-            || self.project_jobs_busy()
-        {
-            return;
-        }
-        let selected = self.localisation.mounted_entries();
-        match self.localisation.slot.checkout(selected) {
-            Ok(checkout) => self.submit_catalogue_tool(Work::checked(
-                checkout,
-                action,
-                self.localisation.query.clone(),
-                self.session.model().document().cached_passages(),
-            )),
-            Err(error) => self.catalogue_feedback(error),
-        }
-    }
-    pub fn open_catalogue_path(&mut self) {
-        let path = PathBuf::from(self.localisation.path.trim());
-        if !path.as_os_str().is_empty() {
-            self.catalogue_action(work::Action::Open(path));
-        }
-    }
-    pub(crate) fn flush_catalogue_before_close(&mut self) {
-        self.catalogue_action(work::Action::FlushForClose);
-    }
-    pub fn search_catalogue(&mut self) {
-        self.localisation.query.page = 0;
-        self.catalogue_action(work::Action::Query);
-    }
-    pub fn inspect_translation(&mut self, key: &EntryKey) {
-        if self.localisation.slot.identity() == Some(&key.catalogue) {
-            self.catalogue_action(work::Action::Inspect(key.id));
-        }
-    }
-    pub fn cancel_catalogue_action(&mut self) {
-        self.localisation.slot.cancel();
-        self.session.cancel_exclusive();
-        self.status = "Cancellation requested; waiting for the catalogue owner to return.".into();
-    }
-    pub fn compare_catalogue(&mut self) {
-        self.catalogue_action(work::Action::Compare);
-    }
-    pub fn resolve_catalogue(&mut self, decision: ExternalDecision) {
-        if let Some(comparison) = &self.localisation.comparison {
-            self.catalogue_action(work::Action::Resolve {
-                decision,
-                inspection: Box::new(comparison.inspection.clone()),
-            });
-        }
-    }
-}
-
-impl Localisation {
-    /// The catalogue language and file name, bounded for display.
-    pub fn catalogue_caption(&self) -> String {
-        let catalogue = self;
-        let filename = catalogue
-            .catalogue_path()
-            .and_then(|path| path.file_name())
-            .map(|name| name.to_string_lossy())
-            .unwrap_or_else(|| "PO catalogue".into());
-        let language = catalogue.slot.document().and_then(|document| {
-            document
-                .headers()
-                .iter()
-                .find(|header| header.key().eq_ignore_ascii_case("Language"))
-                .map(|header| header.value())
-        });
-        match language.filter(|language| !language.is_empty()) {
-            Some(language) => format!(
-                "{} · {}",
-                language.chars().take(80).collect::<String>(),
-                filename.chars().take(80).collect::<String>()
-            ),
-            None => filename.chars().take(80).collect(),
-        }
     }
 }

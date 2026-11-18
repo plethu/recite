@@ -143,6 +143,12 @@ impl Writer {
             .filter_map(Row::passage_mut)
             .find(|row| row.source.id == anchor)
     }
+    /// Disclose or fold the translation details under the passage row at `anchor`.
+    pub fn toggle_translation_details(&mut self, anchor: &str) {
+        if let Some(row) = self.translation_row_mut(anchor) {
+            row.details = !row.details;
+        }
+    }
 }
 
 impl Localisation {

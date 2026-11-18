@@ -47,11 +47,27 @@ pub enum PreviewError {
 #[derive(Clone, Debug, Default)]
 pub struct PreviewPage {
     pub text: String,
+    /// Who speaks the text, as the script names them; none for a speakerless line or a stand-in.
+    pub speaker: Option<String>,
     pub choices: Vec<DialogueChoice>,
     pub ended: bool,
     pub effects: Vec<recite_runtime::DialogueEffectRequest>,
     pub condition: Option<PreviewConditionRequest>,
     pub waiting_effect: Option<recite_core::EffectId>,
+    /// The text is Writer's own reply prompt, standing in for a prompt with no line, not a line
+    /// of the script.
+    pub prompt: bool,
+}
+
+/// What a page offering replies says when its prompt has no line of its own.
+pub const REPLY_PROMPT: &str = "Choose a reply";
+
+/// A page a preview has moved past: the lines it showed and the reply chosen after them.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreviewTurn {
+    pub text: String,
+    pub speaker: Option<String>,
+    pub reply: Option<String>,
 }
 
 /// The compiled asset remains fixed until an explicit new preview is started.
@@ -179,11 +195,19 @@ impl Preview {
         let mut page = PreviewPage::default();
         for event in output.events() {
             match event {
-                PreviewEvent::Line(line) => page.text = line.text.clone(),
+                PreviewEvent::Line(line) => {
+                    page.text = line.text.clone();
+                    page.speaker = line.speaker.as_ref().map(|id| id.as_str().to_owned());
+                }
                 PreviewEvent::Prompt(prompt) => {
+                    page.prompt = prompt.line().is_none();
+                    page.speaker = prompt
+                        .line()
+                        .and_then(|line| line.speaker.as_ref())
+                        .map(|id| id.as_str().to_owned());
                     page.text = prompt
                         .line()
-                        .map_or_else(|| "Choose a reply".to_owned(), |line| line.text.clone());
+                        .map_or_else(|| REPLY_PROMPT.to_owned(), |line| line.text.clone());
                     page.choices = prompt.choices().to_vec();
                 }
                 PreviewEvent::End { deferred_effects } => {

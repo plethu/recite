@@ -1,6 +1,7 @@
 //! A source refresh binds the exact local catalogue and extracted source input.
 use super::*;
 use crate::localisation::refresh::changes;
+use std::collections::BTreeSet;
 
 pub struct RefreshPreview {
     document: PoDocument,
@@ -58,10 +59,27 @@ impl RefreshPreview {
         catalogue: &mut Catalogue,
         current_template: &str,
     ) -> Result<RefreshApplied, String> {
+        self.apply_keeping(catalogue, current_template, &BTreeSet::new())
+    }
+    /// Apply every update except the records whose context is in `kept`, which stay as they are.
+    pub fn apply_keeping(
+        &self,
+        catalogue: &mut Catalogue,
+        current_template: &str,
+        kept: &BTreeSet<String>,
+    ) -> Result<RefreshApplied, String> {
         if current_template != self.template || !self.is_current(catalogue) {
             return Err(wording(MsgId::WriterCreationChanged));
         }
-        match catalogue.replace_refreshed(self.document.clone(), &self.origin.fingerprint()) {
+        let document = if kept.is_empty() {
+            self.document.clone()
+        } else {
+            let extracted = PoDocument::parse(&self.template).map_err(|e| e.to_string())?;
+            self.origin
+                .refreshed_keeping(&extracted, kept)
+                .map_err(|e| e.to_string())?
+        };
+        match catalogue.replace_refreshed(document, &self.origin.fingerprint()) {
             Ok(()) => Ok(RefreshApplied {
                 recovery_error: None,
             }),

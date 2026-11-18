@@ -1,5 +1,8 @@
 use super::{Phase, Writer, keyed::keyed};
 use crate::WriterLayout;
+use crate::presentation::sheet_head::{Close, Layout, sheet_head};
+use crate::presentation::space;
+use crate::presentation::tokens::breakpoint;
 use crate::presentation::{label, paragraph, prose, text_button};
 use recite_writer_model::View;
 use xilem::core::one_of::Either;
@@ -28,6 +31,7 @@ impl core::Property for Manuscript {
 mod navigation;
 mod reading;
 use manuscript::manuscript;
+pub(crate) use reading::SelectedBeat;
 pub(crate) use reading::viewport::ReadingViewport;
 mod trial;
 use navigation::navigation;
@@ -36,6 +40,7 @@ mod source_repair;
 use document_actions::recovery_copy;
 mod frame;
 pub(crate) mod reference;
+mod status_line;
 mod toolbar;
 
 fn retained<V: WidgetView<Writer>>(child: V, visible: bool) -> impl WidgetView<Writer> {
@@ -71,11 +76,6 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
         }),
         recovery_copy(state),
         state
-            .session
-            .project()
-            .is_some_and(|project| project.files().builds.busy())
-            .then(|| text_button(state.ui_scale(), "Cancel build", Writer::cancel_build)),
-        state
             .declaration_session()
             .is_some_and(|session| session.generation_active())
             .then(|| {
@@ -96,20 +96,22 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
         recovery_failure(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(16.px());
+    .gap(space::KINDS.px());
     xilem::core::fork(
         xilem::view::resize_observer(
             |state: &mut Writer, size| state.viewport.height = size.height,
             frame::frame(
                 state,
-                content.padding(Padding {
-                    bottom: if state.workspaces.screen == crate::workspaces::Screen::Write {
-                        0.px()
+                content.padding(
+                    if state.workspaces.screen == crate::workspaces::Screen::Write {
+                        Padding {
+                            bottom: 0.px(),
+                            ..Padding::all(space::KINDS.px())
+                        }
                     } else {
-                        16.px()
+                        workspace::sheet::page_padding(state)
                     },
-                    ..Padding::all(16.px())
-                }),
+                ),
             ),
         ),
         (
@@ -155,7 +157,7 @@ fn editor_status(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             ),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
+        .gap(space::SIBLINGS.px())
     })
 }
 fn recovery_failure(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -176,4 +178,49 @@ fn recovery_failure(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                 format!("Recovery failed: {error}. Save or keep the window open."),
             )
         })
+}
+
+/// A tool or Localise sheet's head for the open document: `title`, `actions`, and the close icon
+/// back to writing.
+pub(crate) fn tool_head<
+    T: Into<core::ArcStr>,
+    A: xilem::view::FlexSequence<Writer> + Send + Sync,
+>(
+    state: &Writer,
+    title: T,
+    actions: A,
+) -> impl WidgetView<Writer, Widget = widgets::Flex> + use<T, A> {
+    captioned_head(
+        state,
+        (title, None, actions),
+        ("Return to writing", Writer::return_to_writing),
+    )
+}
+
+/// A sheet head with a muted `caption` under its title and a close icon named for where its
+/// `close` action returns.
+pub(crate) fn captioned_head<
+    T: Into<core::ArcStr>,
+    A: xilem::view::FlexSequence<Writer> + Send + Sync,
+>(
+    state: &Writer,
+    (title, caption, actions): (T, Option<core::ArcStr>, A),
+    (name, close): (&'static str, fn(&mut Writer)),
+) -> impl WidgetView<Writer, Widget = widgets::Flex> + use<T, A> {
+    let scale = state.ui_scale();
+    sheet_head(
+        Layout {
+            scale,
+            // Narrower than this, the sheet's actions take a row under its title.
+            stacked: state.page_width() < breakpoint::SHEET_ROW * f64::from(scale),
+        },
+        &state.palette,
+        (title, caption, actions),
+        Close {
+            name,
+            disabled: state.phase() != Phase::Writing,
+            action: close,
+            link: Writer::copy_link,
+        },
+    )
 }

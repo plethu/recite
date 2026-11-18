@@ -352,3 +352,56 @@ fn catalogue_replacement_retires_bilingual_rows_before_numeric_ids_can_alias() {
         "Replacement catalogue."
     );
 }
+#[test]
+fn a_translation_row_discloses_its_details_in_place_and_reports_its_reviewed_toggle() {
+    let (_directory, writer) = fixture();
+    let first = row_key(&writer, 0);
+    let mut mounted = Mounted::new(writer, surface);
+    assert!(!mounted.contains_text("Open translation entry"));
+    // Each row's controls name its line, so a beat's rows read apart.
+    let details = format!("Translation details · {FIRST}");
+    assert!(mounted.is_expanded(&details, false));
+    mounted.activate(&details);
+    assert!(mounted.is_expanded(&details, true));
+    mounted.find("Open translation entry");
+    // The plural row discloses its rule and the wordings that share its source.
+    if !mounted.state.localisation.passage.as_ref().unwrap().rows[0]
+        .passage()
+        .unwrap()
+        .details
+    {
+        mounted.state.toggle_translation_details(FIRST);
+        mounted.settle();
+    }
+    assert!(mounted.contains_text("Plural rule: "));
+    assert!(mounted.contains_text("n > 1"));
+    assert!(mounted.contains_text("2 wordings share this source passage."));
+    // An entry without a fuzzy flag is reviewed; the toggle reports both states.
+    assert!(support::is_pressed(
+        &mut mounted.state,
+        &format!("Reviewed translation · {FIRST}"),
+        true
+    ));
+    mounted.state.review_translation(&first, false);
+    assert!(support::is_pressed(
+        &mut mounted.state,
+        &format!("Reviewed translation · {FIRST}"),
+        false
+    ));
+    mounted.state.toggle_translation_details(FIRST);
+    mounted.settle();
+    assert!(
+        !mounted.state.localisation.passage.as_ref().unwrap().rows[0]
+            .passage()
+            .unwrap()
+            .details
+    );
+}
+#[test]
+fn a_source_update_banner_heads_the_beat_while_a_passage_lacks_a_catalogue_entry() {
+    let (_directory, writer) = fixture();
+    let mounted = Mounted::new(writer, surface);
+    assert!(mounted.contains_text("SOURCE UPDATES"));
+    assert!(mounted.contains_text("1 passage without a catalogue entry"));
+    mounted.find("Review source updates");
+}

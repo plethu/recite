@@ -47,7 +47,7 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
         model.set_draft("An opening line.".into());
         Ok(())
     });
-    click(&mut writer, &["Project", "Apply draft", "Add reply"]).unwrap();
+    click(&mut writer, &["Workspace", "Apply draft", "Add reply"]).unwrap();
     let reply = writer.session.model().view().clone();
     assert_ne!(first, reply);
     let source = writer.session.model().document().source();
@@ -92,8 +92,20 @@ fn empty_and_effect_only_beats_have_distinct_reading_states() {
     let mut writer = open(&directory).unwrap();
     click(&mut writer, &["Start · Start · end"]).unwrap();
     let labels = labels(&mut writer).unwrap();
-    assert!(labels.iter().any(|label| label.starts_with("Effect ·")));
-    assert!(labels.iter().any(|label| label == "◆ END ◆"));
+    // An effect reads as its call, its source line beside it as a source label.
+    assert!(
+        labels
+            .iter()
+            .any(|label| label == "Overlays (work) now, then waits for the game")
+    );
+    assert!(
+        labels
+            .iter()
+            .any(|label| label == "!blocking overlay(work)")
+    );
+    // The end-mark's colon devices are images named with the glyph they replace.
+    assert!(labels.iter().any(|label| label == "END"));
+    assert_eq!(labels.iter().filter(|label| *label == "◆").count(), 2);
     assert!(
         !labels
             .iter()
@@ -113,7 +125,13 @@ fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_synt
     });
     click(
         &mut writer,
-        &["Add line", "Add reply", "Project", "Read beat", "Add beat"],
+        &[
+            "Add line",
+            "Add reply",
+            "Workspace",
+            "Read beat",
+            "Add beat",
+        ],
     )
     .unwrap();
     assert_eq!(writer.session.model().view(), &selection);
@@ -126,7 +144,7 @@ fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_synt
         model.set_draft("-> syntax".into());
         Ok(())
     });
-    click(&mut writer, &["Project", "Apply draft"]).unwrap();
+    click(&mut writer, &["Workspace", "Apply draft"]).unwrap();
     assert!(writer.status.contains("your editor"));
     assert_eq!(writer.session.model().draft(), "-> syntax");
 }
@@ -161,7 +179,7 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     source.push_str("-> END\n");
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["Project", "Read beat"]).unwrap();
+    click(&mut writer, &["Workspace", "Read beat"]).unwrap();
     let rows = writer.reading.rows.clone();
     let source = writer.reading.source.clone().unwrap();
     assert_eq!(rows.len(), 10_001);
@@ -189,9 +207,9 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     click(
         &mut writer,
         &[
-            "Project",
+            "Workspace",
             "Discard draft",
-            "Project",
+            "Workspace",
             "Read beat",
             "Next beat entries",
         ],
@@ -223,7 +241,7 @@ fn paged_conditional_entries_keep_their_context_and_plural_fragments_stay_read_o
     click(
         &mut writer,
         &[
-            "Project",
+            "Workspace",
             "Read beat",
             "Next beat entries",
             "Next beat entries",
@@ -259,11 +277,7 @@ fn preserved_source_selection_distinguishes_readable_script_and_repair() {
             .iter()
             .any(|name| name.starts_with("Choose a beat in the outline"))
     );
-    assert!(
-        !names
-            .iter()
-            .any(|name| name == "Source editing in your editor")
-    );
+    assert!(!names.iter().any(|name| name == "SOURCE NEEDS REPAIR"));
     drop(writer);
     let directory = project(":: start default\n->\n").unwrap();
     let mut writer = open(&directory).unwrap();
@@ -273,8 +287,25 @@ fn preserved_source_selection_distinguishes_readable_script_and_repair() {
         labels(&mut writer)
             .unwrap()
             .iter()
-            .any(|name| name == "Source editing in your editor")
+            .any(|name| name == "SOURCE NEEDS REPAIR")
     );
 }
 #[path = "inline/tests.rs"]
 mod inline;
+
+#[test]
+fn add_line_inserts_after_the_line_being_written_and_lands_in_the_new_line() {
+    let directory =
+        project(":: start default\n> @a1\n  First.\n\n> @a2\n  Second.\n-> END\n").unwrap();
+    let mut writer = open(&directory).unwrap();
+    click(&mut writer, &["Start · Start · end"]).unwrap();
+    writer.change(|model| model.select(View::Passage("a1".into())));
+    click(&mut writer, &["Add line"]).unwrap();
+    let source = writer.session.model().document().source().to_owned();
+    let View::Passage(added) = writer.session.model().view().clone() else {
+        panic!("the new line is selected");
+    };
+    assert!(!["a1", "a2"].contains(&added.as_str()));
+    let at = |needle: &str| source.find(needle).unwrap();
+    assert!(at("First.") < at(&format!("@{added}")) && at(&format!("@{added}")) < at("Second."));
+}

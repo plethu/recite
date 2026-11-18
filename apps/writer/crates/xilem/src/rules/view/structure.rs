@@ -1,5 +1,7 @@
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::segments::{segment, segments};
+use crate::presentation::space;
 use recite_writer_model::RuleEffect;
 use xilem::masonry::properties;
 
@@ -18,7 +20,7 @@ pub(super) fn condition(
         expanded.then(|| condition_actions(state, path, title, node)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn grouping(
     state: &Writer,
@@ -55,7 +57,7 @@ fn grouping(
         .disabled(disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn condition_actions(
     state: &Writer,
@@ -84,7 +86,7 @@ fn condition_actions(
         .disabled(!state.rules_editable()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 pub(super) fn effect(
     state: &Writer,
@@ -110,7 +112,7 @@ pub(super) fn effect(
         expanded.then(|| delivery_modes(state, index, effect)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn effect_order(
     state: &Writer,
@@ -139,34 +141,37 @@ fn effect_order(
         .disabled(disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+    .gap(space::SIBLINGS.px())
 }
 fn delivery_modes(
     state: &Writer,
     index: usize,
     effect: &RuleEffect,
 ) -> impl WidgetView<Writer> + use<> {
+    // One choice of several: a segmented track, the current mode chosen.
     let modes = effect
         .allowed_modes
         .iter()
         .map(|mode| {
             let mode = *mode;
-            let selected = mode == effect.mode;
-            text_button(
+            segment(
                 state.ui_scale(),
+                &state.palette,
                 format!(
-                    "{}Delivery: {}",
-                    if selected { "Selected · " } else { "" },
+                    "Delivery: {}",
                     recite_writer_app::rules::effect_mode_name(mode)
                 ),
-                move |state: &mut Writer| state.effect_mode(index, mode),
+                mode == effect.mode,
+                !state.rules_editable(),
+                move |state: &mut Writer| {
+                    if state.rules_editable() {
+                        state.effect_mode(index, mode);
+                    }
+                },
             )
-            .disabled(!state.rules_editable() || selected)
         })
         .collect::<Vec<_>>();
-    flex_col(modes)
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(4.px())
+    segments(&state.palette, modes)
 }
 fn actions(
     state: &Writer,

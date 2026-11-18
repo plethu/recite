@@ -1,6 +1,8 @@
 //! Both reading aids reuse one bounded read-only block without mounting more editors.
 use super::*;
 use crate::WriterLayout;
+use crate::presentation::pane;
+use crate::presentation::{Page, Sheet, space};
 use crate::presentation::{group::named, manuscript_text, print};
 use recite_writer_model::{PassageKind, ScriptEntry};
 use recite_writer_session::{choices::display_name, reading::Excerpt};
@@ -8,7 +10,7 @@ use xilem::{
     AnyWidgetView,
     masonry::properties::LineBreaking,
     style::Padding,
-    view::{GridExt, GridTrackSize, MainAxisAlignment, grid, portal},
+    view::{GridExt, GridTrackSize, MainAxisAlignment, grid},
 };
 
 pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -61,7 +63,6 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                             pinned.snapshot.document(),
                         ),
                     )
-                    .text_size(11. * scale)
                     .prop(LineBreaking::WordWrap)
                     .color(state.palette.muted)
                     .grid_pos(1, 0),
@@ -79,18 +80,21 @@ pub(super) fn pinned(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
                 ))
                 .columns([action, caption, action].map(|width| GridTrackSize::Fixed(width.px())))
                 .rows([GridTrackSize::Auto])
-                .gap(8.px()),
+                .gap(space::SIBLINGS.px()),
                 (!pinned.collapsed).then(|| {
-                    portal(entries(state, &pinned.snapshot.block().entries, width))
-                        .constrain_horizontal(true)
-                        .flex(1.)
+                    pane(
+                        "Pinned reference",
+                        entries(state, &pinned.snapshot.block().entries, width),
+                    )
+                    .constrain_horizontal(true)
+                    .flex(1.)
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         ))
         .dims((available.px(), height.px()))
-        .padding(Padding::from_vh(6.px(), 12.px())),))
+        .padding(Padding::from_vh(space::UNIT.px(), space::KINDS.px())),))
         .main_axis_alignment(MainAxisAlignment::Center)
         .background_color(state.palette.inset),
     )
@@ -141,10 +145,10 @@ pub(crate) fn destination(
                 ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
         )
         .width(width.px())
-        .padding(12.px())
+        .padding(space::KINDS.px())
         .background_color(state.palette.inset)
         .boxed(),
     )
@@ -174,7 +178,7 @@ fn entries(state: &Writer, items: &[ScriptEntry], width: f64) -> impl WidgetView
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetView<Writer>> {
     let scale = state.ui_scale();
@@ -193,20 +197,24 @@ fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetV
             };
             flex_row((
                 print::meta(scale, caption)
-                    .text_size(11. * scale)
                     .prop(LineBreaking::WordWrap)
                     .width(caption_width.px())
                     .color(state.palette.muted),
-                manuscript_text(0.75 * state.reading_size(), passage.text.clone())
-                    .width((width - caption_width - 8.).px()),
+                manuscript_text(
+                    0.75 * Sheet::Dialogue.size(Page::of(state)),
+                    passage.text.clone(),
+                )
+                .width((width - caption_width - 8.).px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(4.px())
+            .gap(space::UNIT.px())
             .boxed()
         }
         ScriptEntry::Group { heading, .. } => label(scale, heading.clone()).boxed(),
         ScriptEntry::Jump(target) => label(scale, format!("→ {}", display_name(target))).boxed(),
-        ScriptEntry::Effect(text) => paragraph(scale, format!("Effect · {text}"), width).boxed(),
+        ScriptEntry::Effect(effect) => {
+            paragraph(scale, format!("Effect · {}", effect.reading), width).boxed()
+        }
         ScriptEntry::Source(text) => {
             paragraph(scale, format!("Source fragment · {text}"), width).boxed()
         }

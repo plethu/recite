@@ -92,8 +92,18 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-opened")
                 window.workspace_action("Projects")
                 field(window, "Project folder")
+                create_tab = window.find_action("Create a new project")
+                assert window.call(create_tab, "Accessible", "GetRole")[0] == int(
+                    api.Atspi.Role.PAGE_TAB
+                )
                 window.act("Create a new project")
                 field(window, "Project name")
+                window.wait(
+                    lambda: window.has_state(
+                        window.find_action("Create a new project"), "SELECTED"
+                    ),
+                    "create tab selected",
+                )
                 capture(output, "-create-form")
                 created = root / "created"
                 fill(window, "Project folder", str(created))

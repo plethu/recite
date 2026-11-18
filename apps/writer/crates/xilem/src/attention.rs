@@ -39,6 +39,17 @@ pub struct Region(pub Option<Pane>);
 /// A contextual pane's preferred entry, without changing its geometry or Tab order.
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct PaneEntry(pub bool);
+/// A sheet head's own control that a pane's entry passes over, such as Copy link and the close
+/// icon, so focus enters at the page's work, or at its heading when it has none.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub struct EntrySkip(pub bool);
+impl core::UsesProperty<EntrySkip> for widgets::Button {}
+impl core::Property for EntrySkip {
+    fn static_default() -> &'static Self {
+        static NONE: EntrySkip = EntrySkip(false);
+        &NONE
+    }
+}
 /// Explicit pane entry reveals this small field group, then prioritises its editable control.
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct EntryContext(pub bool);

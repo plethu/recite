@@ -2,6 +2,7 @@
 use super::ShapedText;
 use super::styled_text::Family;
 use recite_writer_session::comparison::changed_range;
+use std::num::NonZeroUsize;
 use std::ops::Range;
 use xilem::{
     Pod, ViewCtx,
@@ -20,9 +21,6 @@ enum Emphasis {
     Search(ArcStr),
 }
 
-pub(crate) fn manuscript_search(size: f32, text: String, query: String) -> EmphasizedText {
-    search_text(size, text, query, Family::Manuscript)
-}
 pub(crate) fn search_label(size: f32, text: String, query: String) -> EmphasizedText {
     search_text(size, text, query, Family::Ui)
 }
@@ -32,6 +30,7 @@ fn search_text(size: f32, text: String, query: String, family: Family) -> Emphas
         emphasis: Emphasis::Search(query.into()),
         size,
         family,
+        single: false,
     }
 }
 pub(crate) struct EmphasizedText {
@@ -39,6 +38,14 @@ pub(crate) struct EmphasizedText {
     emphasis: Emphasis,
     size: f32,
     family: Family,
+    /// One line ending in an ellipsis; assistive technology still reads the whole text.
+    single: bool,
+}
+impl EmphasizedText {
+    pub fn single_line(mut self) -> Self {
+        self.single = true;
+        self
+    }
 }
 pub(crate) fn manuscript_comparison(size: f32, text: String, other: String) -> EmphasizedText {
     EmphasizedText {
@@ -46,6 +53,7 @@ pub(crate) fn manuscript_comparison(size: f32, text: String, other: String) -> E
         emphasis: Emphasis::ChangedFrom(other.into()),
         size,
         family: Family::Manuscript,
+        single: false,
     }
 }
 pub(crate) fn source_comparison(size: f32, text: String, other: String) -> EmphasizedText {
@@ -54,6 +62,7 @@ pub(crate) fn source_comparison(size: f32, text: String, other: String) -> Empha
         emphasis: Emphasis::ChangedFrom(other.into()),
         size,
         family: Family::Source,
+        single: false,
     }
 }
 impl EmphasizedText {
@@ -82,7 +91,8 @@ impl<State: 'static> View<State, (), ViewCtx> for EmphasizedText {
         let label = ShapedText::new(self.text.clone())
             .with_style(StyleProperty::FontSize(self.size))
             .with_style(StyleProperty::FontFamily(self.family.name().into()))
-            .with_ranged_styles(self.styles());
+            .with_ranged_styles(self.styles())
+            .with_max_lines(self.single.then_some(NonZeroUsize::MIN));
         (Pod::new_with_props(label, LineBreaking::WordWrap), ())
     }
     fn rebuild(

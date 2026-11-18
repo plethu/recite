@@ -272,6 +272,11 @@ fn personal_function_and_shifted_physical_bindings_reach_the_native_command_host
             continue;
         } // F6 is reserved for native pane cycling.
         let (mut context, messages) = context();
+        // F2 renames a beat by default; free it so Save can take every function key.
+        context
+            .shortcuts
+            .rebind(WriterCommand::Rename, String::new().try_into().unwrap())
+            .unwrap();
         context
             .shortcuts
             .rebind(

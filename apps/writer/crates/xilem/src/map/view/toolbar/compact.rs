@@ -1,5 +1,6 @@
 //! Short windows keep the camera tools visible and disclose secondary controls on demand.
 use super::*;
+use crate::presentation::space;
 use xilem::masonry::kurbo::Axis;
 
 pub(super) fn toolbar(
@@ -37,7 +38,7 @@ pub(super) fn toolbar(
         Axis::Horizontal
     })
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
 pub(super) fn actions(
     state: &Writer,
@@ -58,9 +59,9 @@ pub(super) fn actions(
                 }
             }),
         ))
-        .gap(4.px()),
+        .gap(space::UNIT.px()),
         search(state, scene, width.min(320. * f64::from(scale)), blocked),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }

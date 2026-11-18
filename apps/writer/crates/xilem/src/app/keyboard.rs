@@ -1,5 +1,6 @@
 //! A tagged immutable keyboard context routes native host messages to the shell through Xilem.
 use super::App;
+use crate::workspaces::rename::inline::Target;
 use recite_config::WriterShortcuts;
 pub(crate) use recite_writer_app::shell::keyboard::*;
 use std::sync::Arc;
@@ -9,9 +10,9 @@ use xilem::{
         MessageCtx, MessageProxy, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker,
     },
     masonry::{
-        core::{Property, WidgetTag},
+        core::{Property, UsesProperty, WidgetTag},
         properties::Dimensions,
-        widgets::Passthrough,
+        widgets::{Button, Passthrough, RadioButton, SizedBox, TextInput, ZStack},
     },
 };
 
@@ -20,6 +21,103 @@ use recite_writer_app::shell::keyboard::Context as CommandContext;
 pub(crate) type Context = CommandContext<MessageProxy<Invocation>>;
 #[derive(Clone, Default)]
 pub(crate) struct KeyboardContext(pub Option<Arc<Context>>);
+
+/// Marks the control a modal surface focuses when it opens, such as "Keep editing" on the close
+/// decision or the Settings sheet's close action.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct DefaultFocus(pub bool);
+impl Property for DefaultFocus {
+    fn static_default() -> &'static Self {
+        static OTHER: DefaultFocus = DefaultFocus(false);
+        &OTHER
+    }
+}
+impl UsesProperty<DefaultFocus> for Button {}
+/// A field can be the default too, such as a beat heading renamed in place.
+impl UsesProperty<DefaultFocus> for TextInput {}
+
+/// Marks a control whose picker opens as a combobox slip hanging from it, such as a reply's
+/// destination or a line's speaker.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct PickerAnchor(pub bool);
+impl Property for PickerAnchor {
+    fn static_default() -> &'static Self {
+        static OTHER: PickerAnchor = PickerAnchor(false);
+        &OTHER
+    }
+}
+impl UsesProperty<PickerAnchor> for Button {}
+
+/// Marks the heading or row an inline rename's slip hangs from, under its bottom-left corner.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct SlipAnchor(pub bool);
+impl Property for SlipAnchor {
+    fn static_default() -> &'static Self {
+        static OTHER: SlipAnchor = SlipAnchor(false);
+        &OTHER
+    }
+}
+impl UsesProperty<SlipAnchor> for SizedBox {}
+
+/// Marks the stack a slip floats in, such as the preview's transcript under Configure preview:
+/// the host measures the slip's anchor from its edge.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct SlipHost(pub bool);
+impl Property for SlipHost {
+    fn static_default() -> &'static Self {
+        static OTHER: SlipHost = SlipHost(false);
+        &OTHER
+    }
+}
+impl UsesProperty<SlipHost> for ZStack {}
+
+/// Marks a sidebar beat row or map card: F2 on it renames its beat in place there.
+#[derive(Clone, Default, PartialEq)]
+pub(crate) struct RenamesBeat(pub Option<Target>);
+impl Property for RenamesBeat {
+    fn static_default() -> &'static Self {
+        static NONE: RenamesBeat = RenamesBeat(None);
+        &NONE
+    }
+}
+impl UsesProperty<RenamesBeat> for Button {}
+
+/// Marks the control focus returns to when a modal surface closes and the control focused before
+/// it was rebuilt meanwhile, such as the sidebar row whose name became the rename field.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct ReturnFocus(pub bool);
+impl Property for ReturnFocus {
+    fn static_default() -> &'static Self {
+        static OTHER: ReturnFocus = ReturnFocus(false);
+        &OTHER
+    }
+}
+impl UsesProperty<ReturnFocus> for Button {}
+
+/// Marks the control focus falls back to when the control holding it goes away and nothing nearer
+/// is marked: the chosen view segment after a view switch, or the welcome page's chosen tab.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct FallbackFocus(pub bool);
+impl Property for FallbackFocus {
+    fn static_default() -> &'static Self {
+        static OTHER: FallbackFocus = FallbackFocus(false);
+        &OTHER
+    }
+}
+impl UsesProperty<FallbackFocus> for Button {}
+impl UsesProperty<FallbackFocus> for RadioButton {}
+
+/// Marks a modal surface: while one is mounted, Tab and Shift+Tab cycle within it. A control that
+/// toggles the surface from outside it, as Workspace does Settings, is marked with it.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct ModalSurface(pub bool);
+impl Property for ModalSurface {
+    fn static_default() -> &'static Self {
+        static OTHER: ModalSurface = ModalSurface(false);
+        &OTHER
+    }
+}
+impl UsesProperty<ModalSurface> for SizedBox {}
 impl Property for KeyboardContext {
     fn static_default() -> &'static Self {
         static EMPTY: KeyboardContext = KeyboardContext(None);

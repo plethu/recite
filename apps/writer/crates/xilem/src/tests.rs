@@ -1,6 +1,7 @@
 use super::*;
 use recite_writer_model::View;
 use recite_writer_session::{FileError, ProjectSession};
+pub(crate) mod gallery;
 #[path = "tests/keyed/tests.rs"]
 mod keyed;
 #[path = "tests/navigation/tests.rs"]
@@ -92,13 +93,13 @@ fn save_conflict_stays_open_and_reload_preserves_the_local_work() {
     support::save(&mut writer).unwrap();
     assert!(writer.status.contains("changed on disk"));
     assert!(writer.keep_running());
-    click(&mut writer, &["Project", "Reload (keep recovery copy)"]).unwrap();
+    click(&mut writer, &["Workspace", "Reload (keep recovery copy)"]).unwrap();
     assert_eq!(writer.session.model().view(), &View::Source);
     assert!(writer.status.contains("previous work preserved"));
-    click(&mut writer, &["Project", "Reload (keep recovery copy)"]).unwrap();
+    click(&mut writer, &["Workspace", "Reload (keep recovery copy)"]).unwrap();
     assert!(writer.status.contains("previous work preserved"));
     fs::remove_file(directory.path().join("recite.project.toml")).unwrap();
-    click(&mut writer, &["Project", "Reload (keep recovery copy)"]).unwrap();
+    click(&mut writer, &["Workspace", "Reload (keep recovery copy)"]).unwrap();
     assert_ne!(writer.status, "Reloaded from disk");
 }
 
@@ -134,11 +135,7 @@ fn malformed_source_offers_external_repair_without_an_editable_manuscript() {
     let labels = labels(&mut writer).unwrap();
     assert!(!labels.iter().any(|label| label == "Manuscript"));
     assert!(labels.iter().any(|label| label == "Open in editor"));
-    assert!(
-        labels
-            .iter()
-            .any(|label| label == "Source editing in your editor")
-    );
+    assert!(labels.iter().any(|label| label == "SOURCE NEEDS REPAIR"));
 }
 
 #[test]
@@ -150,9 +147,9 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
         model.set_draft("Accepted.".into());
         Ok(())
     });
-    click(&mut writer, &["Project", "Apply draft", "Undo applied"]).unwrap();
+    click(&mut writer, &["Workspace", "Apply draft", "Undo applied"]).unwrap();
     assert_eq!(writer.session.model().draft(), original);
-    click(&mut writer, &["Project", "Redo applied"]).unwrap();
+    click(&mut writer, &["Workspace", "Redo applied"]).unwrap();
     assert_eq!(writer.session.model().draft(), "Accepted.");
     writer.change(|model| {
         model.set_draft("Discard this.".into());
@@ -161,9 +158,9 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
     click(
         &mut writer,
         &[
-            "Project",
+            "Workspace",
             "Discard draft",
-            "Project",
+            "Workspace",
             "Close",
             "Keep editing",
         ],
@@ -171,7 +168,7 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
     .unwrap();
     assert!(writer.phase() == Phase::Writing);
     assert_eq!(writer.session.model().draft(), "Accepted.");
-    click(&mut writer, &["Project", "Close", "Save all and close"]).unwrap();
+    click(&mut writer, &["Workspace", "Close", "Save all and close"]).unwrap();
     assert!(!writer.keep_running());
     assert!(
         fs::read_to_string(directory.path().join("scene.recite"))
@@ -218,7 +215,7 @@ fn ordinary_exit_preference_does_not_weaken_unsaved_work_protection() {
     });
     writer.request_close();
     assert!(writer.phase() == Phase::ConfirmClose);
-    click(&mut writer, &["Keep editing", "Project", "Discard draft"]).unwrap();
+    click(&mut writer, &["Keep editing", "Workspace", "Discard draft"]).unwrap();
     writer.session.project_mut().unwrap().checkpoint().unwrap();
     writer.request_close();
     assert!(!writer.keep_running());

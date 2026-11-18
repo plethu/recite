@@ -1,47 +1,80 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
-use crate::app::picker::Search;
-use crate::presentation::{Icon, print};
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::sheet_text::one_line;
+use crate::presentation::space;
+use crate::presentation::tokens::breakpoint;
+use crate::presentation::tokens::size;
+use crate::presentation::{Icon, Type, print};
 use recite_writer_session::choices::display_name;
-use xilem::{
-    masonry::properties::LineBreaking,
-    view::{GridExt, GridTrackSize, grid},
-};
+use xilem::masonry::kurbo::Axis;
+use xilem::masonry::widgets::{FlexBasis, FlexParams};
+use xilem::view::FlexSpacer;
+use xilem::view::{GridExt, GridTrackSize, button, grid};
 
+/// One row from about 600 logical pixels: history, workspace modes, then the scene's
+/// tools with Save as the only raised action. Narrower windows move the modes to a second row.
 pub(super) fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let width = (state.viewport.width - state.navigation_width() - 32.).max(280.);
-    let wide = width >= 1120. * f64::from(state.ui_scale());
-    let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
-    grid((
-        history(state).grid_pos(0, 0),
-        workspace::workspace_tabs(state).grid_pos(u16::from(wide), u16::from(!wide)),
-        document_tools(state, blocked).grid_pos(if wide { 2 } else { 1 }, u16::from(!wide)),
-        app_tools(state, blocked).grid_pos(if wide { 3 } else { 1 }, 0),
-    ))
-    .columns(if wide {
-        [
-            GridTrackSize::FRACTION,
-            GridTrackSize::Auto,
-            GridTrackSize::Auto,
-            GridTrackSize::Auto,
-        ]
-    } else {
-        [
-            GridTrackSize::FRACTION,
-            GridTrackSize::Auto,
-            GridTrackSize::Fixed(0.px()),
-            GridTrackSize::Fixed(0.px()),
-        ]
-    })
-    .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
-    .gap(8.px())
-    .padding(xilem::style::Padding::from_vh(4.px(), 16.px()))
-    .background_color(state.palette.surface)
+    let width = state.content_width();
+    let wide = width >= breakpoint::TOOLBAR * f64::from(state.ui_scale());
+    let blocked = blocked(state);
+    let padding = xilem::style::Padding::from_vh(space::UNIT.px(), space::KINDS.px());
+    // Tool screens have no workspaces: history, then the tools, on one row where they fit.
+    if state.workspaces.screen != crate::workspaces::Screen::Write {
+        return Either::A(
+            flex_row((history(state).flex(1.), document_tools(state, blocked)))
+                .direction(if wide {
+                    Axis::Horizontal
+                } else {
+                    Axis::Vertical
+                })
+                .cross_axis_alignment(if wide {
+                    CrossAxisAlignment::Center
+                } else {
+                    CrossAxisAlignment::End
+                })
+                .gap(space::SIBLINGS.px())
+                .padding(padding),
+        );
+    }
+    Either::B(
+        grid((
+            history(state).grid_pos(0, 0),
+            workspace::workspace_tabs(state).grid_pos(u16::from(wide), u16::from(!wide)),
+            document_tools(state, blocked).grid_pos(if wide { 2 } else { 1 }, 0),
+        ))
+        .columns(if wide {
+            [
+                GridTrackSize::FRACTION,
+                GridTrackSize::Auto,
+                GridTrackSize::Auto,
+            ]
+        } else {
+            [
+                GridTrackSize::FRACTION,
+                GridTrackSize::Auto,
+                GridTrackSize::Fixed(0.px()),
+            ]
+        })
+        .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
+        .gap(space::SIBLINGS.px())
+        .padding(padding),
+    )
+}
+/// Whether the toolbar waits on a decision or on work in progress.
+fn busy(state: &Writer) -> bool {
+    state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy()
+}
+/// Whether the toolbar's controls are inert: while it is busy, and behind the Settings sheet,
+/// where only Workspace, the sheet's toggle, stays live.
+fn blocked(state: &Writer) -> bool {
+    busy(state) || state.settings_sheet()
 }
 fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let blocked = state.phase() != Phase::Writing || state.work.busy() || state.navigation.busy();
+    let blocked = blocked(state);
     let key = state.session.model().document().key().as_str();
+    let titled = state.visible_workspace() == crate::map::Workspace::Map;
     flex_row((
         print::icon_action(
             scale,
@@ -59,47 +92,52 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
             blocked || state.navigation.history.step(true).is_none(),
             |state: &mut Writer| state.history_step(true),
         ),
-        print::icon_action(
-            scale,
-            "Copy link",
-            Icon::Link,
-            &state.palette,
-            blocked,
-            Writer::copy_link,
-        ),
-        label(scale, display_name(key.rsplit('/').next().unwrap_or(key)))
-            .text_size(18. * scale)
-            .prop(LineBreaking::WordWrap)
-            .flex(1.),
-    ))
-    .gap(4.px())
-}
-fn app_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    flex_row((
-        (state.compact_chrome() && state.navigation_width() == 0.).then(|| {
-            print::action(scale, "Scenes…", blocked, |state: &mut Writer| {
-                state.request_search(Search::GoTo);
-            })
+        // The galley's beat heading and every sheet's head carry the link; the map's title and
+        // any writing view without a heading leave it to the toolbar. A source under repair has
+        // no beat to link to.
+        (state.visible_workspace() == crate::map::Workspace::Map
+            || (!state.trial.visible
+                && state.workspaces.screen == crate::workspaces::Screen::Write
+                && {
+                    let surface = surface::Surface::resolve(state);
+                    !super::manuscript::galley(state, &surface)
+                        && !matches!(surface, surface::Surface::SourceRepair { .. })
+                }))
+        .then(|| {
+            print::icon_action(
+                scale,
+                "Copy link",
+                Icon::Link,
+                &state.palette,
+                blocked,
+                Writer::copy_link,
+            )
         }),
-        print::action(scale, "Commands", blocked, |state: &mut Writer| {
-            state.request_search(Search::Commands)
+        // One line ending in an ellipsis only where the toolbar is short of room; the whole name
+        // is still read aloud. Like the file tab, it keeps 96px and takes the row's spare width.
+        titled.then(|| {
+            one_line(
+                display_name(key.rsplit('/').next().unwrap_or(key)),
+                Type::Section,
+                scale,
+                state.palette.ink,
+            )
+            .flex(FlexParams::new(
+                1.,
+                FlexBasis::Length((size::TAB_MIN * f64::from(scale)).px()),
+                None,
+            ))
         }),
-        (state.viewport.width - state.navigation_width()
-            >= if state.compact_chrome() { 760. } else { 600. } * f64::from(scale))
-        .then(|| workspace::authoring_modes(state)),
-        text_button(scale, "Workspace", |state: &mut Writer| {
-            state.request_workspace_menu()
-        })
-        .disabled(blocked),
+        FlexSpacer::Flex(if titled { 0. } else { 1. }),
     ))
-    .gap(8.px())
+    .gap(space::UNIT.px())
 }
 fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let history = state.viewport.width - state.navigation_width() >= 600. * f64::from(scale);
+    let history =
+        state.viewport.width - state.navigation_width() >= breakpoint::TOOLBAR * f64::from(scale);
     flex_row((
-        print::action(scale, "Try scene", blocked, Writer::start_trial),
+        try_scene(state, blocked),
         history.then(|| {
             print::icon_action(
                 scale,
@@ -120,71 +158,48 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
                 |state: &mut Writer| state.undo_redo(true),
             )
         }),
-        print::action(scale, "Project", blocked, |state: &mut Writer| {
-            state.toggle_document_menu()
-        }),
-        state.session.project().map(|_| {
-            text_button(scale, "Save", Writer::save)
-                .disabled(blocked || state.localisation.saving() || state.source_repair_pending())
-        }),
-    ))
-    .gap(4.px())
-}
-
-pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let dirty = state.session.current_dirty() || state.session.model().has_draft();
-    let diagnostics = state.session.model().document().diagnostic_snapshot();
-    let refusal = state.reading_refusal();
-    let saved = if state.session.project_root().is_none() {
-        "Temporary example"
-    } else if dirty {
-        "Unsaved changes"
-    } else {
-        "Saved to disk"
-    };
-    flex_row((
-        print::meta(state.ui_scale(), saved).color(state.palette.status_text),
-        print::separator(state.ui_scale(), state.palette.status_text),
-        print::meta(
-            state.ui_scale(),
-            if let Some(refusal) = refusal {
-                refusal.footer().to_owned()
-            } else if state.unfinished_trial_edit().is_some() && state.trial.visible {
-                "Preview needs an applied edit".to_owned()
-            } else if diagnostics.is_empty() {
-                "no problems".to_owned()
-            } else {
-                format!(
-                    "{} problem{}",
-                    diagnostics.len(),
-                    if diagnostics.len() == 1 { "" } else { "s" }
-                )
-            },
-        )
-        .color(
-            if diagnostics.is_empty()
-                && refusal.is_none()
-                && state.unfinished_trial_edit().is_none()
-            {
-                state.palette.status_signal
-            } else {
-                state.palette.status_text
-            },
-        ),
-        (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
+        // Workspace holds the project, document and app actions in one menu, and toggles the
+        // Settings sheet while it is open.
+        print::workspace(
+            scale,
             (
-                print::separator(state.ui_scale(), state.palette.status_text),
-                print::meta(state.ui_scale(), state.status.clone())
-                    .color(state.palette.status_text)
-                    .prop(LineBreaking::WordWrap)
-                    .flex(1.),
+                state.settings_sheet(),
+                state.settings_sheet() || state.document_menu().is_open(),
+                busy(state),
+            ),
+            Writer::toggle_document_menu,
+        ),
+        // Save is tonal while clean and the view's one primary with unsaved work.
+        state.session.project().map(|_| {
+            print::emphasised_action(
+                scale,
+                "Save",
+                &state.palette,
+                (state.save_is_primary(), ControlStyle::Tonal),
+                blocked || state.localisation.saving() || state.source_repair_pending(),
+                Writer::save,
             )
         }),
     ))
-    .gap((8. * f64::from(state.ui_scale())).px())
-    .padding(xilem::style::Padding::from_vh(6.px(), 16.px()))
-    .background_color(state.palette.status_bar)
+    .gap(space::UNIT.px())
 }
 
-#[cfg(test)]
-mod tests;
+/// "Try scene" reports itself pressed while Preview fills the pane, so the toolbar says which
+/// view is showing; pressing it runs the scene again with the current inputs, and "Return to
+/// writing" leaves Preview.
+fn try_scene(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
+    let previewing = state.trial.visible;
+    styled(
+        if previewing {
+            ControlStyle::ToggleOn
+        } else {
+            ControlStyle::Action
+        },
+        button(
+            Type::Control.label(state.ui_scale(), "Try scene"),
+            Writer::start_trial,
+        )
+        .toggled(previewing)
+        .disabled(blocked),
+    )
+}

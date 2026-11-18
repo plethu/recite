@@ -1,19 +1,37 @@
 //! The access form scrolls independently of its persistent submission actions.
 use super::{App, ProjectField};
-use crate::presentation::{label, paragraph, print, radio_button, text_button};
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::pane;
+use crate::presentation::print::page_heading;
+use crate::presentation::segments::{tab, tabs};
+use crate::presentation::space;
+use crate::presentation::tokens::breakpoint;
+use crate::presentation::{Type, Typeset};
+use crate::presentation::{identity, label, paragraph, print, text_button};
 use xilem::{
     WidgetView,
     masonry::{
         kurbo::Axis,
         layout::{AsUnit, Dim},
-        properties::TextAreaLabel,
+        properties::{LineBreaking, TextAreaLabel},
     },
     style::Style,
     view::{
-        CrossAxisAlignment, FlexExt, FlexSpacer, flex_col, flex_row, portal, radio_group,
+        CrossAxisAlignment, FlexExt, FlexSpacer, MainAxisAlignment, flex_col, flex_row,
         resize_observer, sized_box, text_input,
     },
 };
+
+/// The welcome column: the hero wordmark, the form and its actions share one measure.
+const COLUMN: f64 = 560.;
+/// The Browse folders button's width beside the folder field.
+const BROWSE: f64 = 160.;
+/// The narrowest column, below which the page scrolls sideways rather than crush its fields.
+const NARROWEST: f64 = 240.;
+/// The hero wordmark's widest.
+const HERO: f64 = 360.;
+/// The status note's height: three Body lines before it scrolls.
+const STATUS_LINES: f64 = 3.;
 
 #[derive(Clone, Copy)]
 struct Layout {
@@ -25,13 +43,16 @@ struct Layout {
 impl Layout {
     fn resolve(app: &App) -> Self {
         let scale = crate::presentation::scale(&app.preferences.config.writer);
-        let width = (app.viewport.width - 48.).max(240.);
-        let wide = width >= 600. * f64::from(scale);
+        let width = (app.viewport.width - 2. * space::GROUPS)
+            .max(NARROWEST)
+            .min(COLUMN * f64::from(scale));
+        let wide = width >= breakpoint::FIELD_ROW * f64::from(scale);
         Self {
             scale,
             width,
+            // Beside Browse folders where the column is wide.
             field_width: if wide {
-                (width - 160. * f64::from(scale) - 8.).min(600. * f64::from(scale))
+                width - BROWSE * f64::from(scale) - space::SIBLINGS
             } else {
                 width
             },
@@ -54,15 +75,24 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
             }
         },
         sized_box(
+            // The page sits in the middle of the window while it fits: what is left over goes
+            // half above and half below.
             flex_col((
-                portal(resize_observer(
-                    |app: &mut App, size| {
-                        if app.welcome_layout.content != Some(size) {
-                            app.welcome_layout.content = Some(size);
-                        }
-                    },
-                    sized_box(fields(app, layout)).padding(24.px()),
-                ))
+                FlexSpacer::Flex(surplus / 2.),
+                pane(
+                    "Welcome",
+                    resize_observer(
+                        |app: &mut App, size| {
+                            if app.welcome_layout.content != Some(size) {
+                                app.welcome_layout.content = Some(size);
+                            }
+                        },
+                        column(
+                            layout,
+                            sized_box(fields(app, layout)).padding(space::GROUPS.px()),
+                        ),
+                    ),
+                )
                 .constrain_horizontal(true)
                 .flex(form),
                 resize_observer(
@@ -71,9 +101,9 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
                             app.welcome_layout.actions = Some(size);
                         }
                     },
-                    submission(app, layout),
+                    column(layout, submission(app, layout)),
                 ),
-                FlexSpacer::Flex(surplus),
+                FlexSpacer::Flex(surplus / 2.),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .gap(0.px()),
@@ -82,48 +112,53 @@ pub(in crate::app) fn panel(app: &App) -> impl WidgetView<App> + use<> {
     )
 }
 
+/// Centre a part of the welcome page on the column's measure.
+fn column<V: WidgetView<App>>(layout: Layout, child: V) -> impl WidgetView<App> + use<V> {
+    flex_row((sized_box(child).width((layout.width + 2. * space::GROUPS).px()),))
+        .main_axis_alignment(MainAxisAlignment::Center)
+}
+
 fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     let busy = app.opening.is_some() || app.auxiliary;
-    let Layout {
-        scale,
-        width,
-        direction,
-        ..
-    } = layout;
+    let Layout { scale, width, .. } = layout;
     flex_col((
-        label(scale, "Projects").text_size(24. * scale),
+        identity::hero(&app.theme, width.min(HERO * f64::from(scale))),
+        page_heading(scale, "Projects"),
         paragraph(
             scale,
             "Open a project or create one to start writing.",
             width,
         ),
-        radio_group(
-            flex_row((
-                radio_button(
+        // Opening and creating are two tabs over their fields on the desk.
+        tabs(
+            "Project",
+            (
+                tab(
                     scale,
-                    "Open an existing project",
+                    &app.theme.palette,
+                    ("Open an existing project", true),
                     !app.creating,
+                    busy,
                     |app: &mut App| app.choose_project_action(false),
-                )
-                .disabled(busy),
-                radio_button(
+                ),
+                tab(
                     scale,
-                    "Create a new project",
+                    &app.theme.palette,
+                    ("Create a new project", true),
                     app.creating,
+                    busy,
                     |app: &mut App| app.choose_project_action(true),
-                )
-                .disabled(busy),
-            ))
-            .direction(direction)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(12.px()),
+                ),
+            ),
         ),
-        folder(app, layout),
-        app.creating.then(|| name(app, layout)),
+        // The fields sit on the desk under their tab, not in a card of their own.
+        flex_col((folder(app, layout), app.creating.then(|| name(app, layout))))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(space::TEXT.px()),
         super::feedback::details(app, scale, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
 }
 
 fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
@@ -144,23 +179,33 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
             },
         ),
         flex_row((
-            text_input(app.path.clone(), |app: &mut App, text| {
-                app.edit_project_path(text)
-            })
-            .placeholder("Project folder")
-            .text_size(14. * scale)
-            .disabled(busy)
-            .prop(TextAreaLabel::new("Project folder"))
-            .prop(ProjectField(true))
-            .width(field_width.px()),
-            text_button(scale, "Browse folders", |app: &mut App| app.browse()).disabled(busy),
+            styled(
+                ControlStyle::DeskField,
+                text_input(app.path.clone(), |app: &mut App, text| {
+                    app.edit_project_path(text)
+                })
+                .placeholder("Type a folder path, or browse")
+                .typeset(Type::Body, scale)
+                .disabled(busy)
+                .prop(TextAreaLabel::new("Project folder"))
+                .prop(ProjectField(true))
+                .width(field_width.px()),
+            ),
+            // Beside the field it fills the column, so the form's right edge is the column's.
+            text_button(scale, "Browse folders", |app: &mut App| app.browse())
+                .disabled(busy)
+                .width(if direction == Axis::Horizontal {
+                    Dim::Fixed((BROWSE * f64::from(scale)).px())
+                } else {
+                    Dim::Auto
+                }),
         ))
         .direction(direction)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::UNIT.px())
 }
 
 fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
@@ -172,15 +217,18 @@ fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     } = layout;
     flex_col((
         label(scale, "Project name"),
-        text_input(app.name.clone(), |app: &mut App, text| app.edit_project_name(text))
-            .placeholder("Project name").text_size(14. * scale)
+        styled(ControlStyle::DeskField, text_input(app.name.clone(), |app: &mut App, text| app.edit_project_name(text))
+            .placeholder("The name Writer shows for it")
+            .typeset(Type::Body, scale)
             .disabled(app.opening.is_some() || app.auxiliary)
             .prop(TextAreaLabel::new("Project name")).prop(ProjectField(true))
-            .width(field_width.px()),
-        paragraph(scale, "Creates recite.project.toml and a first scene with a default beat. Existing project files are preserved.", width),
+            .width(field_width.px())),
+        // Its guidance sits a step under the field, as one group with it.
+        sized_box(paragraph(scale, "Creates recite.project.toml and a first scene with a default beat. Existing project files are preserved.", width))
+            .padding(xilem::style::Padding::top(space::UNIT.px())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::UNIT.px())
 }
 
 fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
@@ -195,9 +243,12 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
         flex_col((
             super::feedback::panel(app, layout.scale, layout.width),
             (app.welcome_problem.is_none() && !app.status.is_empty()).then(|| {
-                portal(paragraph(scale, app.status.clone(), width - 16.))
-                    .constrain_horizontal(true)
-                    .height((56. * f64::from(scale)).px())
+                pane(
+                    "Status",
+                    paragraph(scale, app.status.clone(), width - space::KINDS),
+                )
+                .constrain_horizontal(true)
+                .height((STATUS_LINES * f64::from(Type::Body.metrics().1 * scale)).px())
             }),
             flex_row((
                 print::primary_action(
@@ -214,19 +265,29 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                 app.opening.as_ref().map(|_| {
                     text_button(scale, "Cancel opening", |app: &mut App| app.cancel_open())
                 }),
-                text_button(scale, "Try temporary examples", |app: &mut App| {
+                // One primary; the examples are a quiet way in. Closing belongs to the window.
+                print::action(scale, "Try temporary examples", busy, |app: &mut App| {
                     app.show_examples()
-                })
-                .disabled(busy),
-                text_button(scale, "Close Writer", |app: &mut App| app.request_close())
-                    .disabled(app.auxiliary),
+                }),
             ))
             .direction(direction)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
+            .gap(space::SIBLINGS.px()),
+            // Why the primary is unavailable, under it, so the row never moves as it changes.
+            app.project_form_hint().map(|hint| {
+                print::caption(scale, hint)
+                    .color(app.theme.palette.muted)
+                    .prop(LineBreaking::WordWrap)
+            }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     )
-    .padding(xilem::style::Padding::from_vh(12.px(), 24.px()))
+    // The fields' own padding is the gap above, so the actions sit one group under the guidance.
+    .padding(xilem::style::Padding {
+        top: 0.px(),
+        bottom: space::KINDS.px(),
+        left: space::GROUPS.px(),
+        right: space::GROUPS.px(),
+    })
 }

@@ -21,6 +21,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     writer.open_localisation();
     let mut mounted = Mounted::new(writer, surface);
     let mut tools = ToolDriver::new(&mut mounted.state);
+    mounted.activate("Open a catalogue…");
     mounted.type_text("Catalogue path", po.to_str().unwrap());
     mounted.activate("Open catalogue");
     tools.finish(&mut mounted.state);
@@ -28,10 +29,11 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.settle();
     let (sender, mut requests) = async_mpsc::unbounded_channel();
     mounted.state.trial.sender = Some(sender);
-    mounted.activate("Project");
+    mounted.activate("Workspace");
     mounted.activate("Configure preview");
+    // Source-only is on until it is turned off; the language list filters as the query is typed.
+    mounted.activate("Use source language only");
     mounted.type_text("Find preview language", "fr-CA");
-    mounted.activate("Search preview languages");
     mounted.activate("Preview in French (Canada) · fr-CA");
     mounted.type_text("Preview wording", "formal");
     mounted.type_text("Preview value: a_count", "2");
@@ -44,6 +46,9 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.activate("Try scene");
     finish(&mut mounted.state, requests.try_recv().unwrap()).unwrap();
     mounted.settle();
+    // Preview fills the pane: no workspace is chosen, and Try scene reports itself pressed.
+    assert!(mounted.is_toggled("Script", false));
+    assert!(mounted.is_toggled("Try scene", true));
     mounted.activate("Answer true");
     assert_eq!(
         mounted.state.session.model().preview_page().unwrap().text,

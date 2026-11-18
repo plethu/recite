@@ -76,8 +76,9 @@ def _reveal(window, find, label):
 def open_catalogue(window, path):
     command(window, "Localise")
     show_queue(window)
-    if not window.find("Catalogue path") and window.find("Catalogue files"):
-        window.act("Catalogue files")
+    if not window.find("Catalogue path"):
+        # Without a catalogue the path waits behind "Open a catalogue…"; with one, behind its files.
+        window.act("Open a catalogue…" if window.find("Open a catalogue…") else "Catalogue files")
     reveal(window, "Catalogue path")
     fill(window, "Catalogue path", str(path))
     window.reveal_end("Open catalogue")
@@ -115,25 +116,16 @@ def catalogue_action(window, caption):
 
 
 def search_entries(window, query):
+    """Type into the queue's filter; the queue filters as the text is typed."""
     show_queue(window)
     reveal_field(window, "Search translations")
     fill(window, "Search translations", query)
-
-    def search():
-        return next(
-            (
-                node
-                for node, name in window.nodes()
-                if name == "Search translations"
-                and window.call(node, "Accessible", "GetRole")[0]
-                == int(window.api.Atspi.Role.PUSH_BUTTON)
-            ),
-            None,
-        )
-
-    _reveal(window, search, "queue search action")
-    node = window.wait(search, "queue search action")
-    window.call(node, "Action", "DoAction", window.api.GLib.Variant("(i)", (0,)))
+    push_button = int(window.api.Atspi.Role.PUSH_BUTTON)
+    assert not any(
+        name == "Search translations"
+        and window.call(node, "Accessible", "GetRole")[0] == push_button
+        for node, name in window.nodes()
+    ), "no separate Search button"
 
 
 def open_entry(window):
@@ -149,17 +141,28 @@ def open_entry(window):
     return field(window, "Translation form 1")
 
 
+def details(window):
+    """The beat row's details disclosure, named with its line id: "Translation details · <id>"."""
+    return next(
+        (name for _, name in window.nodes() if name.startswith("Translation details · ")), None
+    )
+
+
 def edit(window, value):
     window.wait(
         lambda: (
-            (window.find_action("Translation details") and window.enabled("Translation details"))
+            ((name := details(window)) and window.find_action(name) and window.enabled(name))
             or (window.find("Translation form 1") and window.enabled("Translation form 1"))
         ),
         "editable translation destination ready",
     )
     if not window.find("Translation form 1"):
-        reveal(window, "Translation details")
-        window.act("Translation details")
+        name = details(window)
+        reveal(window, name)
+        window.act(name)
+        window.wait(lambda: window.expanded(name), "details disclosed")
+        reveal(window, "Open translation entry")
+        window.act("Open translation entry")
     reveal(window, "Translation form 1")
     fill(window, "Translation form 1", value)
 
@@ -193,7 +196,14 @@ def run(api, bus, registry, binary, output):
                 open_entry(window)
                 edit(window, "Le dernier tram part.")
                 window.reveal_end("Reviewed translation")
+                assert not window.has_state(
+                    window.find_action("Reviewed translation"), "PRESSED"
+                ), "reviewed toggle starts released"
                 window.act("Reviewed translation")
+                window.wait(
+                    lambda: window.has_state(window.find_action("Reviewed translation"), "PRESSED"),
+                    "reviewed toggle reports PRESSED",
+                )
                 window.act("Save translation")
                 window.wait(
                     lambda: "Le dernier tram part." in po.read_text(), "explicit translation save"
@@ -227,7 +237,7 @@ def run(api, bus, registry, binary, output):
                 )
                 po.write_text(disk)
                 window.wait(
-                    lambda: window.find_text("Changed on disk · 1 file"),
+                    lambda: window.find_text("CHANGED ON DISK") and window.find_text("1 file"),
                     "external catalogue notice laid out",
                 )
                 reveal(window, "Save translation")

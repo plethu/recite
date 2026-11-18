@@ -3,6 +3,8 @@ pub use crate::{Writer, navigation::Target};
 use recite_core::DocumentKey;
 use recite_writer_session::reading::ReferenceSnapshot;
 use std::collections::BTreeSet;
+#[cfg(test)]
+mod tests;
 
 #[derive(Default)]
 pub struct Context {
@@ -23,6 +25,22 @@ pub struct Destination {
 impl Writer {
     pub fn pin_reference(&mut self) {
         self.navigate(Target::PinReference);
+    }
+    /// Whether the pinned reference is the selected beat of the open document.
+    pub fn reference_pinned(&self) -> bool {
+        self.reading_context.pinned.as_ref().is_some_and(|pinned| {
+            pinned.snapshot.document() == self.session.model().document().key()
+                && self.reading.selected.as_deref() == Some(pinned.snapshot.block().id.as_str())
+        })
+    }
+    /// The beat heading's pin toggle: unpin the selected beat when it is the reference, otherwise
+    /// pin it (replacing any other reference).
+    pub fn toggle_reference(&mut self) {
+        if self.reference_pinned() {
+            self.reading_context.pinned = None;
+        } else {
+            self.pin_reference();
+        }
     }
     pub fn publish_reference(&mut self) -> Result<(), String> {
         let snapshot = ReferenceSnapshot::capture(self.session.model())

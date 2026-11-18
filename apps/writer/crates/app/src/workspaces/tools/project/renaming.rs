@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(test)]
+mod tests;
 use recite_writer_session::comparison::ComparisonRow;
 impl Action {
     pub fn perform(
@@ -14,7 +16,7 @@ impl Action {
                 files.review_rename(model, block, name)?;
                 control.checkpoint()?;
                 Ok(Success::message(
-                    "Rename reviewed. Inspect every change, then Apply project rename.",
+                    "Rename reviewed. Inspect every change, then Rename.",
                 ))
             }
             Self::ApplyRename => {
@@ -56,6 +58,8 @@ pub(super) fn describe(project: &ProjectSession) -> Vec<rename::Change> {
         .iter()
         .flat_map(|change| {
             ComparisonRow::source(change.document.as_str(), &change.before, &change.after)
+                .into_iter()
+                .map(|row| located(row, &change.before))
         })
         .chain(
             (review.manifest_before != review.manifest_after)
@@ -65,6 +69,8 @@ pub(super) fn describe(project: &ProjectSession) -> Vec<rename::Change> {
                         &review.manifest_before,
                         &review.manifest_after,
                     )
+                    .into_iter()
+                    .map(|row| located(row, ""))
                 })
                 .into_iter()
                 .flatten(),
@@ -72,4 +78,23 @@ pub(super) fn describe(project: &ProjectSession) -> Vec<rename::Change> {
     rows.filter(|row| row.before != row.after)
         .flat_map(text::change_pages)
         .collect()
+}
+
+/// Caption a review row as its reference reads: the file, the beat it falls in, and its line.
+pub(super) fn located(mut row: ComparisonRow, source: &str) -> ComparisonRow {
+    if let Some((file, line)) = row.caption.rsplit_once(':')
+        && let Ok(start) = line.parse::<usize>()
+    {
+        let beat = source
+            .lines()
+            .take(start)
+            .filter_map(|line| line.trim_start().strip_prefix("::"))
+            .filter_map(|header| header.split_whitespace().next())
+            .last();
+        row.caption = match beat {
+            Some(beat) => format!("{file} · {beat} · line {start}"),
+            None => format!("{file} · line {start}"),
+        };
+    }
+    row
 }

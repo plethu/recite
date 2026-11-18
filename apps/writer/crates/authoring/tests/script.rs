@@ -1,4 +1,4 @@
-use recite_writer_model::{Document, ScriptEntry, View, WRITER_EXAMPLES};
+use recite_writer_model::{Document, EffectEntry, ScriptEntry, View, WRITER_EXAMPLES};
 
 #[test]
 fn hub_script_edits_prose_without_losing_effects_or_return_links()
@@ -11,7 +11,7 @@ fn hub_script_edits_prose_without_losing_effects_or_return_links()
         .find(|block| block.id == "accept_search")
         .ok_or("accept block")?;
     assert!(
-        matches!(&accept.entries[0], ScriptEntry::Effect(text) if text.contains("set_flag(courier_search, true)"))
+        matches!(&accept.entries[0], ScriptEntry::Effect(effect) if effect.source.contains("set_flag(courier_search, true)"))
     );
     assert!(
         matches!(accept.entries.last(), Some(ScriptEntry::Jump(target)) if target == "relay_desk")
@@ -97,21 +97,26 @@ fn nested_script_headings_follow_source_lines_across_unicode_crlf_edit_and_undo(
         ScriptEntry::Group {
             heading: ":if has_flag(ready)".into(),
             entries: vec![
-                ScriptEntry::Effect("! immediate set_flag(done, true)".into()),
+                ScriptEntry::Effect(EffectEntry {
+                    source: "! immediate set_flag(done, true)".into(),
+                    reading: "Sets flag (done, true) now".into(),
+                }),
                 ScriptEntry::Group {
                     heading: ":match mood(mara)".into(),
                     entries: vec![
                         ScriptEntry::Group {
                             heading: ":case calm".into(),
-                            entries: vec![ScriptEntry::Effect(
-                                "! immediate change_disposition(mara, 1)".into(),
-                            )],
+                            entries: vec![ScriptEntry::Effect(EffectEntry {
+                                source: "! immediate change_disposition(mara, 1)".into(),
+                                reading: "Changes disposition (mara, 1) now".into(),
+                            })],
                         },
                         ScriptEntry::Group {
                             heading: ":case _".into(),
-                            entries: vec![ScriptEntry::Effect(
-                                "! immediate change_disposition(mara, -1)".into(),
-                            )],
+                            entries: vec![ScriptEntry::Effect(EffectEntry {
+                                source: "! immediate change_disposition(mara, -1)".into(),
+                                reading: "Changes disposition (mara, -1) now".into(),
+                            })],
                         },
                     ],
                 },
@@ -119,9 +124,10 @@ fn nested_script_headings_follow_source_lines_across_unicode_crlf_edit_and_undo(
         },
         ScriptEntry::Group {
             heading: "Otherwise".into(),
-            entries: vec![ScriptEntry::Effect(
-                "! immediate change_disposition(mara, 0)".into(),
-            )],
+            entries: vec![ScriptEntry::Effect(EffectEntry {
+                source: "! immediate change_disposition(mara, 0)".into(),
+                reading: "Changes disposition (mara, 0) now".into(),
+            })],
         },
         ScriptEntry::Jump("END".into()),
     ];

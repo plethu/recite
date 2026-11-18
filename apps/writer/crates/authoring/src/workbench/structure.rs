@@ -23,6 +23,14 @@ impl Workbench {
         let id = self.document.add_beat(self.document.revision())?;
         self.inspect_block(&id)
     }
+    /// A line after a line or a reply after a reply, selected for writing.
+    pub fn insert_after(&mut self, passage: &str) -> Result<(), WorkbenchError> {
+        self.require_applied()?;
+        let id = self
+            .document
+            .insert_after(self.document.revision(), passage)?;
+        self.select(View::Passage(id))
+    }
     pub fn add_line(&mut self) -> Result<(), WorkbenchError> {
         self.require_applied()?;
         let block = self.selected_block()?.ok_or(EditError::Destination)?;

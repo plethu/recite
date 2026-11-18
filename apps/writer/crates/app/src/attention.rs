@@ -118,11 +118,30 @@ impl PaneRequest {
 pub struct Attention {
     composition: Composition,
     focused: bool,
+    /// The scene list is hidden by the writer's own choice.
+    sidebar_hidden: bool,
     pane: Option<PaneRequest>,
     field: Option<EditingTarget>,
     edit_request: Option<EditRequest>,
+    /// Raised each time the writer asks to be taken to the first problem.
+    problem_request: u64,
+    /// The beats a scrolling beat list last reported in view, which place its scroll thumb.
+    beats_in_view: Option<std::ops::Range<usize>>,
 }
 impl Attention {
+    pub fn beats_in_view(&self) -> Option<std::ops::Range<usize>> {
+        self.beats_in_view.clone()
+    }
+    pub fn show_beats(&mut self, range: std::ops::Range<usize>) {
+        self.beats_in_view = Some(range);
+    }
+    /// How many times focus has been asked to move to the first problem.
+    pub fn problem_request(&self) -> u64 {
+        self.problem_request
+    }
+    pub(crate) fn request_problem_focus(&mut self) {
+        self.problem_request = self.problem_request.wrapping_add(1);
+    }
     pub fn begin_preedit(&self) -> Preedit {
         self.composition.begin()
     }
@@ -134,6 +153,9 @@ impl Attention {
     }
     pub fn is_focused(&self) -> bool {
         self.focused
+    }
+    pub fn sidebar_hidden(&self) -> bool {
+        self.sidebar_hidden
     }
     pub(crate) fn leave_focus(&mut self) {
         self.focused = false;
@@ -182,6 +204,19 @@ impl Writer {
             self.map.workspace
         }
     }
+    /// Show or hide the scene list; focus mode hides it regardless.
+    pub fn toggle_sidebar(&mut self) {
+        if self.attention.focused {
+            return;
+        }
+        self.attention.sidebar_hidden = !self.attention.sidebar_hidden;
+        self.status = if self.attention.sidebar_hidden {
+            "Scene list hidden"
+        } else {
+            "Scene list shown"
+        }
+        .into();
+    }
     pub fn toggle_focus(&mut self) {
         if self.phase != Phase::Writing || self.work.busy() || self.navigation.busy() {
             self.status = "Finish the current action before changing writing focus.".into();
@@ -201,3 +236,6 @@ impl Writer {
         self.attention.pane = Some(PaneRequest(Arc::new(direction)));
     }
 }
+
+#[cfg(test)]
+mod tests;

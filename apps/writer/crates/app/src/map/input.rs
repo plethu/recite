@@ -22,9 +22,14 @@ pub enum Input {
     OverviewClick(Point),
     Cancel,
     Pan(Vec2),
-    Zoom { factor: f32, anchor: Point },
+    Zoom {
+        factor: f32,
+        anchor: Point,
+    },
     Direction(Vec2),
     Open,
+    /// A double-click on a card: rename its beat in place.
+    Rename,
     Search,
     Focus,
     Hover(bool),

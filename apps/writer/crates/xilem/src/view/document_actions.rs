@@ -1,13 +1,22 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
 use crate::WriterLayout;
+use crate::app::keyboard::{DefaultFocus, ModalSurface};
+use crate::presentation::Type;
+use crate::presentation::group::dialog;
+use crate::presentation::material::{Texture, backdrop, screen};
 use crate::presentation::print;
-use xilem::{masonry::properties::LineBreaking, view::portal};
+use crate::presentation::slip::slip;
+use crate::presentation::space;
+use crate::presentation::tokens::size;
+use xilem::masonry::layout::Dim;
+use xilem::masonry::properties::LineBreaking;
+use xilem::view::{FlexSpacer, MainAxisAlignment};
 mod menu;
 pub(super) use menu::panel;
 
 mod header;
-pub(super) use header::{focus_header, project_header};
+pub(super) use header::focus_header;
 
 pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = state.ui_scale();
@@ -32,88 +41,107 @@ pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + 
                 }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         })
 }
 
-pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+/// The decision before closing with unsaved work: a slip over the dimmed document, titled in
+/// Section type, with "Keep editing" focused first and Esc keeping the document open.
+pub(super) fn close_decision(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = state.ui_scale();
     let ordinary_exit = state.phase() == Phase::ConfirmExit;
+    let project = state.session.project().is_some();
+    let width = (size::DECISION_WIDTH * f64::from(scale))
+        .min(state.viewport.width - 2. * space::GROUPS)
+        - 2. * space::GROUPS;
     matches!(
         state.phase(),
         Phase::ConfirmClose | Phase::ConfirmExit | Phase::Closing
     )
     .then(|| {
-        sized_box(
-            flex_col((
-                label(
-                    scale,
-                    if state.phase() == Phase::Closing {
-                        "Finishing recovery before closing"
-                    } else if ordinary_exit {
-                        "Close Recite Writer?"
-                    } else if state.session.project().is_some() {
-                        "Keep your unsaved work before closing"
-                    } else {
-                        "Example edits are temporary and will be discarded"
-                    },
-                ),
-                label(scale, state.document_caption())
-                    .prop(LineBreaking::WordWrap),
-                (state.session.project().is_some() && !ordinary_exit).then(|| {
-                    paragraph(scale, "Save all and close checks and saves pending prose and project drafts. Close and keep recovery keeps pending edits recoverable without saving them to the source files.", (state.viewport.width - 80.).min(760.))
-                }),
-                crate::localisation::close_details(state),
-                flex_row((
-                    text_button(scale, "Keep editing", Writer::keep_editing),
-                    (state.session.project().is_some()
-                        && !ordinary_exit
-                        && state.phase() != Phase::Closing)
-                        .then(|| {
-                            text_button(scale, "Save all and close", Writer::save_and_close)
-                                .disabled(
-                                    state.work.busy()
-                                        || state.project_jobs_busy()
-                                        || state.source_repair_pending(),
+        let title = if state.phase() == Phase::Closing {
+            "Finishing recovery before closing"
+        } else if ordinary_exit {
+            "Close Recite Writer?"
+        } else if project {
+            "Keep your unsaved work before closing"
+        } else {
+            "Example edits are temporary and will be discarded"
+        };
+        let saving = project && !ordinary_exit && state.phase() != Phase::Closing;
+        backdrop(
+            state.palette.backdrop,
+            screen(Texture::default(), state.palette.screen),
+            flex_col((dialog(
+                title,
+                slip(
+                    &state.palette,
+                    sized_box(
+                        flex_col((
+                            Type::Section
+                                .label(scale, title)
+                                .prop(LineBreaking::WordWrap)
+                                .width(width.px()),
+                            print::caption(scale, state.document_caption())
+                                .color(state.palette.muted)
+                                .prop(LineBreaking::WordWrap)
+                                .width(width.px()),
+                            saving.then(|| {
+                                paragraph(
+                                    scale,
+                                    "Save all and close checks and saves pending prose and \
+                                     project drafts. Close and keep recovery keeps pending edits \
+                                     recoverable without saving them to the source files.",
+                                    width,
                                 )
-                        }),
-                    text_button(
-                        scale,
-                        if ordinary_exit {
-                            "Close Writer"
-                        } else if state.session.project().is_some() {
-                            "Close and keep recovery"
-                        } else {
-                            "Close and discard example changes"
-                        },
-                        Writer::close_with_recovery,
+                            }),
+                            crate::localisation::close_details(state),
+                            flex_row((
+                                text_button(scale, "Keep editing", Writer::keep_editing)
+                                    .prop(DefaultFocus(true)),
+                                FlexSpacer::Flex(1.),
+                                text_button(
+                                    scale,
+                                    if ordinary_exit {
+                                        "Close Writer"
+                                    } else if project {
+                                        "Close and keep recovery"
+                                    } else {
+                                        "Close and discard example changes"
+                                    },
+                                    Writer::close_with_recovery,
+                                )
+                                .disabled(state.work.busy() || state.project_jobs_busy()),
+                                saving.then(|| {
+                                    print::primary_action(
+                                        scale,
+                                        "Save all and close",
+                                        &state.palette,
+                                        state.work.busy()
+                                            || state.project_jobs_busy()
+                                            || state.source_repair_pending(),
+                                        Writer::save_and_close,
+                                    )
+                                }),
+                            ))
+                            .cross_axis_alignment(CrossAxisAlignment::Center)
+                            .gap(space::SIBLINGS.px())
+                            .width(width.px()),
+                        ))
+                        .cross_axis_alignment(CrossAxisAlignment::Start)
+                        .gap(space::TEXT.px()),
                     )
-                    .disabled(state.work.busy() || state.project_jobs_busy()),
-                ))
-                .gap(8.px()),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
-        )
-        .padding(12.px())
-        .background_color(state.palette.surface)
-    })
-}
-
-pub(super) fn close_view(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    portal(
-        flex_col((
-            xilem::view::FlexSpacer::Fixed(48.px()),
-            flex_row((sized_box(flex_col((close_prompt(state),))).width(
-                (state.viewport.width - 48.)
-                    .min(720. * f64::from(state.ui_scale()))
-                    .px(),
+                    .padding(space::GROUPS.px())
+                    .width((width + 2. * space::GROUPS).px())
+                    .prop(ModalSurface(true)),
+                ),
             ),))
-            .main_axis_alignment(xilem::view::MainAxisAlignment::Center),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .padding(24.px()),
-    )
-    .constrain_horizontal(true)
-    .background_color(state.palette.inset)
+            .main_axis_alignment(MainAxisAlignment::Start)
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .padding(Padding::top(
+                ((size::PICKER_TOP - size::ROW) * f64::from(scale)).px(),
+            ))
+            .dims(Dim::Stretch),
+        )
+    })
 }

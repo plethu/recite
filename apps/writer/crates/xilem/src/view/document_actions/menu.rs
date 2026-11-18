@@ -1,12 +1,16 @@
 //! A bounded action panel leaves the writing workspace allocated and retained.
 use super::*;
+use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
+use crate::presentation::pane;
+use crate::presentation::slip::slip;
+use crate::presentation::space;
+use crate::presentation::{Type, Typeset};
 use crate::presentation::{group::named, print};
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use xilem::{
     core::{MessageResult, map_message_result},
     masonry::kurbo::Axis,
-    view::portal,
 };
 
 pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -14,48 +18,48 @@ pub(in crate::view) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> 
     let width = (600. * f64::from(scale))
         .min(state.viewport.width - 48.)
         .max(280.);
-    sized_box(named(
-        "Document actions menu",
-        flex_col((
-            flex_row((
-                label(scale, "Document actions")
-                    .text_size(18. * scale)
-                    .flex(1.),
-                print::action(
-                    scale,
-                    "Dismiss document actions",
-                    false,
-                    Writer::dismiss_document_menu,
-                ),
-            ))
-            .gap(8.px()),
-            map_message_result(
-                flex_col((
-                    portal(content(state, width - 26.))
-                        .constrain_horizontal(true)
+    slip(
+        &state.palette,
+        sized_box(named(
+            "Document actions menu",
+            flex_col((
+                flex_row((
+                    label(scale, "Document actions")
+                        .typeset(Type::Section, scale)
                         .flex(1.),
-                    footer(state),
+                    print::action(
+                        scale,
+                        "Dismiss document actions",
+                        false,
+                        Writer::dismiss_document_menu,
+                    ),
                 ))
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(12.px()),
-                |state: &mut Writer, result: MessageResult<()>| {
-                    if matches!(result, MessageResult::Action(())) {
-                        state.close_document_menu();
-                    }
-                    result
-                },
-            )
-            .flex(1.),
+                .gap(space::SIBLINGS.px()),
+                map_message_result(
+                    flex_col((
+                        pane("Workspace actions", content(state, width - 26.))
+                            .constrain_horizontal(true)
+                            .flex(1.),
+                        footer(state),
+                    ))
+                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                    .gap(space::TEXT.px()),
+                    |state: &mut Writer, result: MessageResult<()>| {
+                        if matches!(result, MessageResult::Action(())) {
+                            state.close_document_menu();
+                        }
+                        result
+                    },
+                )
+                .flex(1.),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(space::TEXT.px())
+            .prop(Region(Some(Pane::DocumentActions))),
         ))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .gap(12.px())
-        .prop(Region(Some(Pane::DocumentActions))),
-    ))
-    .dims((width.px(), (state.viewport.height * 0.65).px()))
-    .padding(12.px())
-    .background_color(state.palette.inset)
-    .border_color(state.palette.accent)
-    .border_width(1.px())
+        .dims((width.px(), (state.viewport.height * 0.65).px()))
+        .padding(space::KINDS.px()),
+    )
 }
 
 fn action_axis(state: &Writer, width: f64) -> Axis {
@@ -71,6 +75,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase() != Phase::Writing;
     let axis = action_axis(state, width);
     flex_col((
+        workspace_entries(state, axis),
         state.reading.selected.as_ref().map(|_| {
             text_button(scale, "Read beat", Writer::read_current)
                 .disabled(closing || state.navigation.busy() || state.work.busy())
@@ -89,7 +94,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
                 .then(|| reading::reply_actions(state, &passage.id)),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px())
+            .gap(space::SIBLINGS.px())
         }),
         flex_row((
             text_button(scale, "Redo applied", |state: &mut Writer| {
@@ -104,7 +109,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
         ))
         .direction(axis)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_row((
             state.session.project().is_some().then(|| {
                 text_button(scale, "Open in editor", Writer::open_editor).disabled(
@@ -125,7 +130,7 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
         ))
         .direction(axis)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
         flex_row((
             state
                 .work
@@ -142,10 +147,33 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
         ))
         .direction(axis)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(space::SIBLINGS.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(space::TEXT.px())
+}
+
+/// The app's workspace actions, folded into the same menu as the document's.
+fn workspace_entries(state: &Writer, axis: Axis) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let blocked = state.phase() != Phase::Writing;
+    flex_row((
+        text_button(scale, "Projects", Writer::request_projects).disabled(blocked),
+        text_button(scale, "Settings", Writer::request_settings).disabled(blocked),
+        text_button(scale, "Go to", |state: &mut Writer| {
+            state.request_search(Search::GoTo)
+        })
+        .disabled(blocked),
+        state.session.project().map(|_| {
+            text_button(scale, "Find project text", |state: &mut Writer| {
+                state.request_search(Search::ProjectText)
+            })
+            .disabled(blocked)
+        }),
+    ))
+    .direction(axis)
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::SIBLINGS.px())
 }
 
 fn footer(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -176,5 +204,5 @@ fn footer(state: &Writer) -> impl WidgetView<Writer> + use<> {
         text_button(scale, "Close", Writer::request_close).disabled(closing),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
+    .gap(space::SIBLINGS.px())
 }
