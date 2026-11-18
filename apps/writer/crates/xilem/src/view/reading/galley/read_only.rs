@@ -2,6 +2,7 @@
 //! grid and at the same sizes as the editable beat, so choosing a beat never reflows the page.
 use super::*;
 use crate::view::reading::passage::{RouteFace, absorbed, continuation_row, ends, joined};
+use recite_writer_model::Passage;
 use xilem::masonry::properties::Dimensions;
 use xilem::view::{Label, MainAxisAlignment};
 
@@ -68,63 +69,7 @@ fn read_only_row(
     let page = Page::of(state);
     match &row.content {
         Content::Passage { passage, .. } => {
-            let (label, number) = margin_label(passage, row.reply);
-            let size = Sheet::text(row.reply).size(page);
-            let measure = grid.measure;
-            let destination = match &passage.kind {
-                PassageKind::Choice {
-                    destination: Some(target),
-                } if target != "END" => Some(format!("→ {}", display_name(target))),
-                PassageKind::Dialogue { .. } => joined
-                    .filter(|target| *target != "END")
-                    .map(|target| format!("→ {}", display_name(target))),
-                PassageKind::Choice { .. } => None,
-            };
-            let wide = grid.margin > 0.;
-            let route = |target: String| {
-                Sheet::Destination
-                    .label(page, target)
-                    .color(state.palette.teal_text)
-                    .prop(LineBreaking::WordWrap)
-            };
-            let column = grid.destination > 0.;
-            flex_col((
-                flex_row((
-                    wide.then(|| margin(state, grid, label, number)),
-                    // Fields keep 2px of padding and border before their text; so does this.
-                    sized_box(sheet_text(passage.text.clone(), size, state.palette.ink))
-                        .padding(Padding::all(size::FIELD_INSET.px()))
-                        .width(measure.px()),
-                    column.then(|| destination.clone()).flatten().map(|target| {
-                        sized_box(route(target).width(grid.destination.px())).padding(
-                            Padding::left(
-                                (DESTINATION_GUTTER - GUTTER)
-                                    .max(control_inset(state.ui_scale()))
-                                    .px(),
-                            ),
-                        )
-                    }),
-                ))
-                .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
-                .gap(grid.gutter().px()),
-                (!column).then_some(destination).flatten().map(|target| {
-                    // Under the text, where a route button's words would start.
-                    sized_box(route(target).width(grid.measure.px())).padding(Padding::left(
-                        (grid.text() + control_inset(state.ui_scale())).px(),
-                    ))
-                }),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(space::UNIT.px())
-            .padding(Padding::top(
-                if row.reply == Some(1) {
-                    space::TEXT
-                } else {
-                    0.
-                }
-                .px(),
-            ))
-            .boxed()
+            passage_row(state, grid, passage, row.reply, joined).boxed()
         }
         Content::Heading(text) => sized_box(
             sheet_text(
@@ -179,4 +124,76 @@ fn read_only_row(
         )
         .boxed(),
     }
+}
+
+/// A read-only passage: its margin label, its text, and where it goes, beside the text when the
+/// grid has a destination column and under it otherwise. Each part is its own view so the row's
+/// type stays small to check.
+fn passage_row(
+    state: &Writer,
+    grid: &Grid,
+    passage: &Passage,
+    reply: Option<usize>,
+    joined: Option<&str>,
+) -> impl WidgetView<Writer> + use<> {
+    let (label, number) = margin_label(passage, reply);
+    let size = Sheet::text(reply).size(Page::of(state));
+    let destination = match &passage.kind {
+        PassageKind::Choice {
+            destination: Some(target),
+        } if target != "END" => Some(format!("→ {}", display_name(target))),
+        PassageKind::Dialogue { .. } => joined
+            .filter(|target| *target != "END")
+            .map(|target| format!("→ {}", display_name(target))),
+        PassageKind::Choice { .. } => None,
+    };
+    let column = grid.destination > 0.;
+    let (beside, under) = if column {
+        (destination, None)
+    } else {
+        (None, destination)
+    };
+    flex_col((
+        flex_row((
+            (grid.margin > 0.).then(|| margin(state, grid, label, number)),
+            // Fields keep 2px of padding and border before their text; so does this.
+            sized_box(sheet_text(passage.text.clone(), size, state.palette.ink))
+                .padding(Padding::all(size::FIELD_INSET.px()))
+                .width(grid.measure.px()),
+            beside.map(|target| route_beside(state, grid, target)),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::FirstBaseline)
+        .gap(grid.gutter().px()),
+        under.map(|target| route_under(state, grid, target)),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(space::UNIT.px())
+    .padding(Padding::top(
+        if reply == Some(1) { space::TEXT } else { 0. }.px(),
+    ))
+}
+
+/// A passage's destination in the grid's destination column.
+fn route_beside(state: &Writer, grid: &Grid, target: String) -> impl WidgetView<Writer> + use<> {
+    sized_box(route(state, target, grid.destination)).padding(Padding::left(
+        (DESTINATION_GUTTER - GUTTER)
+            .max(control_inset(state.ui_scale()))
+            .px(),
+    ))
+}
+
+/// A passage's destination under its text, where a route button's words would start.
+fn route_under(state: &Writer, grid: &Grid, target: String) -> impl WidgetView<Writer> + use<> {
+    sized_box(route(state, target, grid.measure)).padding(Padding::left(
+        (grid.text() + control_inset(state.ui_scale())).px(),
+    ))
+}
+
+/// A destination's words, in teal, `width` wide.
+fn route(state: &Writer, target: String, width: f64) -> impl WidgetView<Writer> + use<> {
+    Sheet::Destination
+        .label(Page::of(state), target)
+        .color(state.palette.teal_text)
+        .prop(LineBreaking::WordWrap)
+        .width(width.px())
 }
