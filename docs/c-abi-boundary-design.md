@@ -168,8 +168,9 @@ snapshot; hosts must provide them again on restore when the resumption drain nee
 Consume the generated header linked above rather than hand-maintaining declarations. It is generated
 from `crates/recite-ffi` with `cbindgen.toml`.
 
-Run `scripts/generate-ffi-header.sh --write` after changing the FFI surface. The project gate runs
-`scripts/generate-ffi-header.sh` without `--write`, which fails if the committed header is stale.
+Run `scripts/engines/generate-ffi-header.sh --write` after changing the FFI surface. The project
+gate runs `scripts/engines/generate-ffi-header.sh` without `--write`, which fails if the committed
+header is stale.
 
 Header version constants (`RECITE_FFI_VERSION_MAJOR`, `RECITE_FFI_VERSION_MINOR`, and
 `RECITE_FFI_VERSION_PATCH`) match the `recite-ffi` crate version. The ABI is currently unreleased

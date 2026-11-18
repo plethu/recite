@@ -1,9 +1,9 @@
 # Recite for Godot 4.6
 
 The checked host target is the official Godot 4.6.3 Linux x86_64 standard build. Run
-`scripts/package-godot-addon.sh` from the Recite repository to build a release library (or set
-`RECITE_GODOT_PROFILE=debug` for a debug build), then extract `recite-godot-addon.tar.gz` from the
-output directory and copy its `addons/recite` directory into a Godot project. The archive also
+`scripts/engines/package-godot-addon.sh` from the Recite repository to build a release library (or
+set `RECITE_GODOT_PROFILE=debug` for a debug build), then extract `recite-godot-addon.tar.gz` from
+the output directory and copy its `addons/recite` directory into a Godot project. The archive also
 contains `examples/basic-dialogue`, a small playable project with its `.recite` source and project
 manifest. Enable **Recite** in Project Settings → Plugins. The packaged library is a native
 GDExtension; other platforms require a corresponding native build and library entry in
@@ -81,10 +81,10 @@ traversal resumes. No catalogue lookup or traversal operation performs game-side
 
 Rust unit tests cover the catalogue's line, choice, availability-reason, presentation-label, plural,
 variant, fallback, placeholder, and restore semantics. The executable host conformance lane is
-`scripts/check-godot-host.sh`. It builds the GDExtension, compiles the basic dialogue fixture,
-initializes a clean Godot project, and exercises malformed persisted array/dictionary/plural shapes,
-reload-before-mutation, a `.tres` round trip, class registration, and output signal delivery. It
-uses the official Godot 4.6.3 stable Linux x86_64 standard build
+`scripts/engines/check-godot-host.sh`. It builds the GDExtension, compiles the basic dialogue
+fixture, initializes a clean Godot project, and exercises malformed persisted
+array/dictionary/plural shapes, reload-before-mutation, a `.tres` round trip, class registration,
+and output signal delivery. It uses the official Godot 4.6.3 stable Linux x86_64 standard build
 (`4.6.3.stable.official.7d41c59c4`), matching the crate's `api-4-6` feature; set `GODOT` to that
 binary when it is not on `PATH`. The ordinary Cargo lane remains host-independent, while this script
 is the required engine-hosted evidence before changing the Resource format.

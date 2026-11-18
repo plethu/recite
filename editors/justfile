@@ -12,4 +12,4 @@ protocol-update:
 
 # Run an installed Neovim, VS Code, or Zed host check.
 host client *args:
-    case "$1" in neovim|vscode|zed) scripts/check-"$1"-host.sh "${@:2}" ;; *) echo 'Expected neovim, vscode, or zed' >&2; exit 2 ;; esac
+    case "$1" in neovim|vscode|zed) scripts/editors/check-"$1"-host.sh "${@:2}" ;; *) echo 'Expected neovim, vscode, or zed' >&2; exit 2 ;; esac

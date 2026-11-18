@@ -11,7 +11,7 @@ Build the tarball from the Recite checkout and add it through Unity Package Mana
 from tarball** action:
 
 ```bash
-CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/unity/build-upm.sh
+CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/engines/unity/build-upm.sh
 ```
 
 Import the **Basic Dialogue** sample, then run **Tools > Recite > Migrate Legacy Compiled Asset

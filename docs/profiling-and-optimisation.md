@@ -221,8 +221,8 @@ and routes. The probe measures both reconstruction and content refresh after an 
 including connection derivation and guard work; it excludes native frame pacing.
 
 Kernel-open timing excludes filesystem discovery, indexing and painting. The
-[profile script](../scripts/profile-writer.sh) records builds/environment, refuses overwrite and
-runs perf or bench-only DHAT instrumentation; instrumented latency is not normal-run timing and
+[profile script](../scripts/writer/profile-writer.sh) records builds/environment, refuses overwrite
+and runs perf or bench-only DHAT instrumentation; instrumented latency is not normal-run timing and
 production allocation is unchanged. Allocation bounds run in `just writer check`; investigate
 unexplained regressions before changing them.
 

@@ -28,7 +28,7 @@ expect_failure() {
     crates/recite-lsp/tests/module_tests.inc crates/recite-lsp/tests/module_shapes.rs \
     crates/recite-lsp/build.rs \
     shared-build.inc shared_workspace.rs \
-    scripts/check-neovim-host.sh scripts/check-vscode-host.sh
+    scripts/editors/check-neovim-host.sh scripts/editors/check-vscode-host.sh
   rm -rf "$fixture_repo/digest-inputs" "$fixture_repo/../outside-input"
 }
 
@@ -127,7 +127,7 @@ expect_failure keyboard-host-record-missing "must name a non-empty architecture"
 expect_failure keyboard-host-runner-missing "host_records require an installed-host evidence runner command"
 expect_failure keyboard-host-runner-file-missing "installed-host evidence runner does not exist"
 expect_failure keyboard-host-runner-non-executable "installed-host evidence runner is not executable"
-expect_failure keyboard-host-runner-mismatch "runner scripts/check-vscode-host.sh does not match client neovim"
+expect_failure keyboard-host-runner-mismatch "runner scripts/editors/check-vscode-host.sh does not match client neovim"
 expect_failure keyboard-host-platform-overclaim "host records do not cover claimed macos platform evidence"
 expect_failure keyboard-host-scenario-mismatch "partial/implemented status requires a partial/implemented keyboard-workflow scenario"
 expect_failure keyboard-host-key-sequence "key_sequence must be a non-empty string or array"
@@ -156,7 +156,7 @@ if ((non_keyboard_incremental_result != 0)); then
 fi
 echo "editor parity valid incremental installed-host evidence fixture passed"
 git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json
-expect_failure host-dual-client-mismatch "runner scripts/check-vscode-host.sh does not match client zed"
+expect_failure host-dual-client-mismatch "runner scripts/editors/check-vscode-host.sh does not match client zed"
 expect_failure keyboard-host-missing-client-platform "host records do not cover claimed vscode client evidence"
 expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"
 expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"

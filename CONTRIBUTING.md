@@ -25,11 +25,11 @@ them. It checks Rust, editor packages, adapters, docs, dependency policy, spelli
 smoke. `just verify` and `mise run verify` run that same gate. It is serial and slow: it repeats the
 test suite under coverage and mutation and runs every host. While editing, use `just check-fast`
 (formatting, lints, tests and docs for the core workspace) and the affected area's own command; CI
-runs the rest in parallel. With mise activated in your shell,
-the `mise exec --` prefix is unnecessary. Run `just` to list the cross-project commands and modules,
-or `just web`, `just writer`, `just editor`, `just engines`, `just stress`, or `just perf` to list
-one area's commands. Each module is also callable from its own directory without the area name, for
-example `cd apps/writer && just run --project /path/to/project`.
+runs the rest in parallel. With mise activated in your shell, the `mise exec --` prefix is
+unnecessary. Run `just` to list the cross-project commands and modules, or `just web`, `just
+writer`, `just editor`, `just engines`, `just stress`, or `just perf` to list one area's commands.
+Each module is also callable from its own directory without the area name, for example `cd
+apps/writer && just run --project /path/to/project`.
 
 Bun installs the frozen JavaScript workspace and runs its scripts. `bun run js:fmt`, `bun run
 js:check` and `bun run js:test` run standalone Oxfmt, Oxlint/TypeScript/Knip and Bun’s native test
@@ -140,10 +140,10 @@ their tools so they do not provision the complete development environment.
 
 Cached tasks use a bounded environment and repository-owned settings. Bun does not implicitly load
 ignored dotenv files; explicit `bun --env-file PATH` remains available for other workflows. For a
-fresh quality run, use `mise -E quality exec -- python scripts/run-checks.py quality --force`. The
-cache keeps up to 512 MB for seven days. Git policy, advisories, Rust tests, coverage, mutations,
-native acceptance and performance measurements still execute fresh. CI restores its own scoped
-result cache; local results do not establish protected merge checks. Cache uploads after
+fresh quality run, use `mise -E quality exec -- python scripts/ci/run-checks.py quality --force`.
+The cache keeps up to 512 MB for seven days. Git policy, advisories, Rust tests, coverage,
+mutations, native acceptance and performance measurements still execute fresh. CI restores its own
+scoped result cache; local results do not establish protected merge checks. Cache uploads after
 cancellation are best effort. No hosted cache account is required.
 
 ## Formatting and validation
@@ -277,10 +277,10 @@ maintainer's home-directory instructions, or copy a general skill collection int
 
 ## CI coverage
 
-[`scripts/ci-scope.py`](scripts/ci-scope.py) and its tests own affected-lane selection. Inspect it
-with `just perf scope --explain` to see triggering files, and verify it with `just perf check`. The
-unconditional `required-check` rollup rejects missing, failed, cancelled and unexpected skipped
-results. Trusted policy executes base-owned code with read-only permissions, separately from
+[`scripts/ci/ci-scope.py`](scripts/ci/ci-scope.py) and its tests own affected-lane selection.
+Inspect it with `just perf scope --explain` to see triggering files, and verify it with `just perf
+check`. The unconditional `required-check` rollup rejects missing, failed, cancelled and unexpected
+skipped results. Trusted policy executes base-owned code with read-only permissions, separately from
 ordinary untrusted CI.
 
 Workflow definitions own lanes, schedules and manual complete/package runs. Run package previews
@@ -384,8 +384,8 @@ prepare the next patch version with the steps above.
 When `main` already carries changes that cannot ship in a patch, create a `release/vMAJOR-MINOR`
 maintenance branch such as `release/v0-2` from the last tag of that series, and give it the same
 protection rules as `main` before its first PR. A fix still lands on `main` first. Cherry-pick it
-with `git cherry-pick -x` onto a short-lived branch and open a PR against the maintenance branch;
-CI and the trusted policy run there as they do for `main`. Prepare the patch version on that branch,
+with `git cherry-pick -x` onto a short-lived branch and open a PR against the maintenance branch; CI
+and the trusted policy run there as they do for `main`. Prepare the patch version on that branch,
 dispatch **Release candidate** from `main` with the maintenance commit, then tag and publish as
 above. A tag is accepted only for a commit on `main` or on its own series' maintenance branch.
 Delete the branch when the series stops receiving fixes.

@@ -36,7 +36,7 @@
     "workspaces": {
       ".": {
         "entry": [
-          "scripts/check-schema-manifest.mjs",
+          "scripts/docs/check-schema-manifest.mjs",
           "editors/recite-neovim/scripts/*.mjs",
           "editors/recite-neovim/test/*.test.mjs",
           "editors/recite-tree-sitter/grammar.js",

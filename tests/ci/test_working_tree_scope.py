@@ -42,7 +42,7 @@ class WorkingTreeScopeTests(unittest.TestCase):
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(ROOT / "scripts/ci-scope.py"),
+                    str(ROOT / "scripts/ci/ci-scope.py"),
                     "--base",
                     base,
                     "--working-tree",
@@ -71,7 +71,7 @@ class WorkingTreeScopeTests(unittest.TestCase):
             changed = subprocess.check_output(
                 [
                     sys.executable,
-                    str(ROOT / "scripts/ci-scope.py"),
+                    str(ROOT / "scripts/ci/ci-scope.py"),
                     "--base",
                     base,
                     "--working-tree",

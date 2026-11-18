@@ -11,7 +11,7 @@
   },
   "globalDependencies": [
     ".config/mise/config.toml",
-    "scripts/run-checks.py",
+    "scripts/ci/run-checks.py",
     "justfile"
   ],
   "tasks": {

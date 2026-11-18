@@ -16,7 +16,7 @@ extension and its pinned grammar from that directory. Rust with the `wasm32-wasi
 grammar build prerequisites must be available to the host; the repository gate uses host checks when
 that target is unavailable.
 
-Run `scripts/run-editor-host-check.sh zed` to exercise development-extension installation,
+Run `scripts/editors/run-editor-host-check.sh zed` to exercise development-extension installation,
 rendering, LSP features, versioned code actions and rename, static tasks, keyboard diagnostics, and
 process cleanup in a private Linux compositor. The run writes a log and result under
 `target/editor-host-evidence/`. The UTF-16 probe checks a request position after a non-BMP marker;
@@ -83,10 +83,10 @@ establish complete accessibility, screen-reader or other-platform behavior.
 
 ## Evidence and limits
 
-`scripts/check-zed.sh` checks the manifest, package inventory, grammar pin and query drift, task
-argv contract, launcher unit tests, and a real `recite-lsp` stdio parity test.
-`scripts/check-zed-host.sh` exercises the installed Linux development-extension path in isolated
-Cage/WLR state. Package, LSP transport and installed-host assertions are distinct. The
+`scripts/editors/check-zed.sh` checks the manifest, package inventory, grammar pin and query drift,
+task argv contract, launcher unit tests, and a real `recite-lsp` stdio parity test.
+`scripts/editors/check-zed-host.sh` exercises the installed Linux development-extension path in
+isolated Cage/WLR state. Package, LSP transport and installed-host assertions are distinct. The
 [parity fixture](../../fixtures/editor-parity/contract.json) records supported observations and
 remaining gaps, including task-record parsing, native cancellation and non-Linux hosts.
 

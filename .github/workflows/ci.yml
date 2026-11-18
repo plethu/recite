@@ -81,7 +81,7 @@ jobs:
           install_args: python
       - id: scope
         name: Inspect complete changed-file list
-        run: python3 scripts/ci-scope.py
+        run: python3 scripts/ci/ci-scope.py
 
   git-policy:
     name: Git workflow policy
@@ -121,10 +121,10 @@ jobs:
         run: just spelling
 
       - name: Validate workflow syntax
-        run: python3 scripts/run-checks.py workflows
+        run: python3 scripts/ci/run-checks.py workflows
 
       - name: Check CI selection and result contracts
-        run: python3 scripts/run-checks.py ci-contracts
+        run: python3 scripts/ci/run-checks.py ci-contracts
 
       - name: Check integration-mode policy fixtures
         run: bash tests/git-policy/check-integration.sh
@@ -308,10 +308,10 @@ jobs:
         run: scripts/install-js-dependencies.sh
 
       - name: Check shared VS Code/VSCodium client and package
-        run: scripts/check-vscode.sh
+        run: scripts/editors/check-vscode.sh
 
       - name: Check Helix language configuration
-        run: scripts/check-helix.sh
+        run: scripts/editors/check-helix.sh
 
       - name: Check Helix checker hostile fixtures
         run: tests/editor-hosts/helix/check.sh
@@ -342,7 +342,7 @@ jobs:
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Run benchmark smoke
-        run: scripts/benchmark-smoke.sh
+        run: scripts/perf/benchmark-smoke.sh
 
       - name: Compare LSP performance against the change base
         env:
@@ -620,4 +620,4 @@ jobs:
       - name: Require every selected lane
         env:
           RECITE_CI_NEEDS: ${{ toJSON(needs) }}
-        run: python3 scripts/check-ci-results.py
+        run: python3 scripts/ci/check-ci-results.py

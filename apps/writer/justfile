@@ -45,8 +45,8 @@ check:
 # Check package metadata and runtime dependencies without a host.
 packaging *args:
     python3 tests/writer-packaging/check.py
-    python3 scripts/package-writer.py --check-config > /dev/null
-    python3 scripts/check-writer-flatpak.py "$@"
+    python3 scripts/writer/package-writer.py --check-config > /dev/null
+    python3 scripts/writer/check-writer-flatpak.py "$@"
 
 # Audit the separate Writer graph with the shared dependency policy.
 supply-chain:
@@ -66,7 +66,7 @@ heap:
 
 # Profile the writer with perf (CPU) or DHAT (heap).
 profile mode="cpu" passages="10000" output="/tmp/recite-writer-profile":
-    scripts/profile-writer.sh "$1" "$2" "$3"
+    scripts/writer/profile-writer.sh "$1" "$2" "$3"
 
 # Scenarios, all without a native window: project (default; arguments go to the benchmark) times a generated saved project.
 # recovery times the background draft queue, durable flush/reopen and JSON serialization.

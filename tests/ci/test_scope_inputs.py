@@ -281,10 +281,10 @@ class ConfigInputTests(unittest.TestCase):
                 '[tasks.quality-powershell-setup]\nrun = "echo scoped-profile-only"\n'
             )
             (configs / "config.quality.toml").write_text(f"[tools]\njust = {tools['just']!r}\n")
-            scripts = root / "scripts"
-            scripts.mkdir()
+            scripts = root / "scripts/ci"
+            scripts.mkdir(parents=True)
             script = scripts / "setup-quality.py"
-            script.write_bytes((ROOT / "scripts/setup-quality.py").read_bytes())
+            script.write_bytes((ROOT / "scripts/ci/setup-quality.py").read_bytes())
             result = subprocess.run(
                 [sys.executable, str(script)],
                 text=True,
@@ -349,7 +349,7 @@ class ConfigInputTests(unittest.TestCase):
             ),
             (
                 ".github/workflows/ci.yml",
-                b"name: CI\n\njobs:\n  changes:\n    steps:\n      - run: python3 scripts/ci-scope.py\n",
+                b"name: CI\n\njobs:\n  changes:\n    steps:\n      - run: python3 scripts/ci/ci-scope.py\n",
                 b"name: CI\n\njobs:\n  changes:\n    steps:\n      - run: echo skip checks\n",
                 scope.LANES,
             ),

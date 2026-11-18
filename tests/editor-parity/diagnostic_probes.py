@@ -12,7 +12,7 @@ TARGET_KEY = ("recite-lsp", "module_shapes")
 
 
 def load_editor_parity(repo: Path):
-    sys.path.insert(0, str(repo / "scripts"))
+    sys.path.insert(0, str(repo / "scripts/editors"))
     from editor_parity import cargo_evidence, evidence
     from editor_parity.model import Context
 

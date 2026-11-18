@@ -100,7 +100,7 @@ activation evidence; native F2 remains intentionally unsupported by this client.
 
 Relative paths and process spawning use Node's platform-neutral path and process APIs. Linux, macOS,
 and Windows are intended hosts, but installed-host evidence is currently Linux-only; platform
-packaging and publication smoke remain release work. Run `scripts/check-vscode-host.sh` for
+packaging and publication smoke remain release work. Run `scripts/editors/check-vscode-host.sh` for
 installed VS Code and VSCodium activation checks; it prints the observed host versions and
 assertions. The same VSIX can be submitted to the VS Code Marketplace or Open VSX when those
 distribution decisions are made.

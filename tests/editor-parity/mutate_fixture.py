@@ -217,7 +217,7 @@ def main() -> int:
         record(contract, "scenarios", "keyboard-workflow")["status"] = "planned"
     elif mutation == "keyboard-executable-evidence":
         evidence = record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]
-        evidence["commands"] = ["scripts/check-vscode.sh"]
+        evidence["commands"] = ["scripts/editors/check-vscode.sh"]
     elif mutation == "keyboard-evidence-boundary":
         capability = record(contract, "capabilities", "editor.keyboard.workflow")
         capability["known_limitation"] = capability["known_limitation"].replace(
@@ -236,17 +236,17 @@ def main() -> int:
         set_keyboard_host_evidence(contract)
         record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"][
             "commands"
-        ] = ["scripts/check-neovim.sh"]
+        ] = ["scripts/editors/check-neovim.sh"]
     elif mutation == "keyboard-host-runner-file-missing":
         set_keyboard_host_evidence(contract)
-        (fixture_repo / "scripts/check-neovim-host.sh").unlink()
+        (fixture_repo / "scripts/editors/check-neovim-host.sh").unlink()
     elif mutation == "keyboard-host-runner-non-executable":
         set_keyboard_host_evidence(contract)
-        (fixture_repo / "scripts/check-neovim-host.sh").chmod(0o644)
+        (fixture_repo / "scripts/editors/check-neovim-host.sh").chmod(0o644)
     elif mutation == "keyboard-host-runner-mismatch":
         set_keyboard_host_evidence(contract)
         evidence = record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]
-        evidence["host_records"][0]["runner"] = "scripts/check-vscode-host.sh"
+        evidence["host_records"][0]["runner"] = "scripts/editors/check-vscode-host.sh"
     elif mutation == "keyboard-host-platform-overclaim":
         set_keyboard_host_evidence(contract)
         record(contract, "capabilities", "editor.keyboard.workflow")["platform_status"]["macos"] = (
@@ -374,7 +374,7 @@ def set_keyboard_host_evidence(contract: dict) -> None:
     record(contract, "scenarios", "keyboard-workflow")["status"] = "partial"
     evidence = capability["expected_evidence"]
     evidence["status"] = "partial"
-    evidence["commands"] = ["scripts/check-neovim-host.sh"]
+    evidence["commands"] = ["scripts/editors/check-neovim-host.sh"]
     evidence["host_records"] = [
         host_record("0.10.4"),
         host_record("0.12.5"),
@@ -385,21 +385,21 @@ def set_dual_client_host_evidence(contract: dict) -> None:
     capability = record(contract, "capabilities", "editor.filetype.registration")
     evidence = capability["expected_evidence"]
     evidence["commands"] = [
-        "scripts/check-neovim.sh",
-        "scripts/check-vscode.sh",
-        "scripts/check-zed.sh",
-        "scripts/check-vscode-host.sh",
+        "scripts/editors/check-neovim.sh",
+        "scripts/editors/check-vscode.sh",
+        "scripts/editors/check-zed.sh",
+        "scripts/editors/check-vscode-host.sh",
     ]
     evidence["host_records"] = [
         generic_host_record(
             client="vscode",
-            runner="scripts/check-vscode-host.sh",
+            runner="scripts/editors/check-vscode-host.sh",
             product="VS Code",
             version="1.136.1",
         ),
         generic_host_record(
             client="vscodium",
-            runner="scripts/check-vscode-host.sh",
+            runner="scripts/editors/check-vscode-host.sh",
             product="VSCodium",
             version="1.126.04524",
         ),
@@ -410,7 +410,7 @@ def set_incremental_host_evidence(contract: dict) -> None:
     capability = record(contract, "capabilities", "editor.neovim.syntax-projection")
     evidence = capability["expected_evidence"]
     original = evidence.pop("command")
-    evidence["commands"] = [original, "scripts/check-neovim-host.sh"]
+    evidence["commands"] = [original, "scripts/editors/check-neovim-host.sh"]
     evidence["host_records"] = [generic_host_record()]
 
 
@@ -441,7 +441,7 @@ def host_record(version: str) -> dict:
 def generic_host_record(
     *,
     client: str = "neovim",
-    runner: str = "scripts/check-neovim-host.sh",
+    runner: str = "scripts/editors/check-neovim-host.sh",
     product: str = "Neovim",
     version: str = "0.12.5",
 ) -> dict:

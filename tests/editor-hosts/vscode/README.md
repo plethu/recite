@@ -1,9 +1,9 @@
 # Installed VS Code host probe
 
-Run `scripts/check-vscode-host.sh` to test the deterministic VSIX in an isolated VS Code or VSCodium
-profile against the real Recite binaries. The harness owns host installation, process cleanup and
-the temporary result files. Set `RECITE_HOST_TMPDIR` to an ignored build directory when `/tmp` lacks
-space for a full host profile.
+Run `scripts/editors/check-vscode-host.sh` to test the deterministic VSIX in an isolated VS Code or
+VSCodium profile against the real Recite binaries. The harness owns host installation, process
+cleanup and the temporary result files. Set `RECITE_HOST_TMPDIR` to an ignored build directory when
+`/tmp` lacks space for a full host profile.
 
 [`host-probe.cjs`](host-probe.cjs) owns the host API assertions. The keyboard phase runs under a
 private Cage/WLR session with real Wayland input: it opens a fixture, navigates to a diagnostic,

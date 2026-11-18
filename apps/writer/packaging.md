@@ -17,10 +17,10 @@ Packages are built with cargo-packager 0.11.8:
 ```sh
 mise -E packaging install cargo:cargo-packager
 mise -E packaging exec -- python tests/writer-packaging/check.py
-mise -E packaging exec -- python scripts/package-writer.py --check-config
-mise -E packaging exec -- python scripts/package-writer.py            # writes target/writer-packages/
-mise -E packaging exec -- python scripts/check-writer-package.py target/writer-packages/linux
-mise -E packaging exec -- python scripts/check-writer-desktop-links.py /path/to/extracted-deb
+mise -E packaging exec -- python scripts/writer/package-writer.py --check-config
+mise -E packaging exec -- python scripts/writer/package-writer.py            # writes target/writer-packages/
+mise -E packaging exec -- python scripts/writer/check-writer-package.py target/writer-packages/linux
+mise -E packaging exec -- python scripts/writer/check-writer-desktop-links.py /path/to/extracted-deb
 ```
 
 `--binary /path/to/recite-writer` stages an existing build for a quick packaging smoke. Build Linux
@@ -34,9 +34,9 @@ Needs `flatpak-builder`, `dbus-run-session`, `org.gnome.Platform//50`, `org.gnom
 (`XDG_DATA_HOME=$PWD/target/writer-flatpak-profile`) rather than your user profile.
 
 ```sh
-python3 scripts/check-writer-flatpak.py              # metadata and Cargo sources, no SDK needed
-python3 scripts/check-writer-flatpak.py --builder
-scripts/package-writer-flatpak.sh /path/to/build-output
+python3 scripts/writer/check-writer-flatpak.py              # metadata and Cargo sources, no SDK needed
+python3 scripts/writer/check-writer-flatpak.py --builder
+scripts/writer/package-writer-flatpak.sh /path/to/build-output
 ```
 
 When `apps/writer/Cargo.lock` changes, regenerate the offline sources with

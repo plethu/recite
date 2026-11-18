@@ -75,7 +75,7 @@ explicitly for compile, validate, extract, run, trace, and watch operations.
 ## Evidence boundary
 
 `../recite-tree-sitter` and the shared LSP fixture tests provide the package and protocol evidence.
-`scripts/check-helix.sh` checks the package without requiring a running editor. Installed-host
-keyboard evidence is not claimed: Helix 25.07.1 has no headless mode in its command-line interface,
-and a future host lane must add a private PTY/compositor harness with inspectable assertions before
-it can be accepted.
+`scripts/editors/check-helix.sh` checks the package without requiring a running editor.
+Installed-host keyboard evidence is not claimed: Helix 25.07.1 has no headless mode in its
+command-line interface, and a future host lane must add a private PTY/compositor harness with
+inspectable assertions before it can be accepted.

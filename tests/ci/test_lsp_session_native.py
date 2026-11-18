@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.lsp_tools.native import intervals, native_requests, recovery_wire_samples
+from scripts.lsp.lsp_tools.native import intervals, native_requests, recovery_wire_samples
 
 
 class NativeTimingTests(unittest.TestCase):

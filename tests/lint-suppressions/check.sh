@@ -5,20 +5,20 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 test_root="$(mktemp -d)"
 trap 'rm -rf "$test_root"' EXIT
 mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/tests" \
-  "$test_root/repo/fixtures" "$test_root/repo/scripts"
-cp "$repo_root/scripts/check-lint-suppressions.sh" \
-  "$repo_root/scripts/check-lint-suppressions.py" \
-  "$repo_root/scripts/lint_suppression_ast.py" \
-  "$repo_root/scripts/lint_suppression_scan.py" \
-  "$repo_root/scripts/lint_suppression_meta.py" "$test_root/repo/scripts/"
-chmod +x "$test_root/repo/scripts/check-lint-suppressions.sh"
+  "$test_root/repo/fixtures" "$test_root/repo/scripts/quality"
+cp "$repo_root/scripts/quality/check-lint-suppressions.sh" \
+  "$repo_root/scripts/quality/check-lint-suppressions.py" \
+  "$repo_root/scripts/quality/lint_suppression_ast.py" \
+  "$repo_root/scripts/quality/lint_suppression_scan.py" \
+  "$repo_root/scripts/quality/lint_suppression_meta.py" "$test_root/repo/scripts/quality/"
+chmod +x "$test_root/repo/scripts/quality/check-lint-suppressions.sh"
 git -C "$test_root/repo" init -q -b main
 git -C "$test_root/repo" config user.name Fixture
 git -C "$test_root/repo" config user.email fixture@example.invalid
 git -C "$test_root/repo" config commit.gpgsign false
 check_passes() {
   local base="$1" head="$2" output
-  if ! output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$base" "$head" 2>&1)"; then
+  if ! output="$(cd "$test_root/repo" && scripts/quality/check-lint-suppressions.sh "$base" "$head" 2>&1)"; then
     printf '%s\n' "$output" >&2
     exit 1
   fi
@@ -31,7 +31,7 @@ check_passes() {
 check_fails() {
   local base="$1" head="$2" expected="$3" output result
   set +e
-  output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$base" "$head" 2>&1)"
+  output="$(cd "$test_root/repo" && scripts/quality/check-lint-suppressions.sh "$base" "$head" 2>&1)"
   result=$?
   set -e
   if ((result == 0)) || [[ "$output" != *"$expected"* ]]; then
@@ -85,7 +85,7 @@ git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m cfg-predicate-change
 cfg_changed_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
 check_passes "$moved_sha" "$cfg_changed_sha"
-cfg_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$moved_sha" "$cfg_changed_sha")"
+cfg_output="$(cd "$test_root/repo" && scripts/quality/check-lint-suppressions.sh "$moved_sha" "$cfg_changed_sha")"
 [[ "$cfg_output" == *"cfg_helper"* && "$cfg_output" == *"owner_stable=false"* ]] || {
   echo "configured suppression sibling was treated as a stable owner" >&2
   printf '%s\n' "$cfg_output" >&2
@@ -154,7 +154,7 @@ git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m ambiguous-scopes
 ambiguous_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
 set +e
-ambiguous_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$structured_sha" "$ambiguous_sha" 2>&1)"
+ambiguous_output="$(cd "$test_root/repo" && scripts/quality/check-lint-suppressions.sh "$structured_sha" "$ambiguous_sha" 2>&1)"
 ambiguous_result=$?
 set -e
 ((ambiguous_result != 0)) || {
@@ -194,7 +194,7 @@ git -C "$test_root/repo" commit -q -m opaque-token-tree-records
 opaque_base="$ambiguous_sha"
 opaque_head="$(git -C "$test_root/repo" rev-parse HEAD)"
 set +e
-opaque_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_base" "$opaque_head" 2>&1)"
+opaque_output="$(cd "$test_root/repo" && scripts/quality/check-lint-suppressions.sh "$opaque_base" "$opaque_head" 2>&1)"
 opaque_result=$?
 set -e
 ((opaque_result != 0)) || {
@@ -243,7 +243,7 @@ git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m raw-identifiers
 raw_identifiers_head="$(git -C "$test_root/repo" rev-parse HEAD)"
 set +e
-raw_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_base" "$raw_identifiers_head" 2>&1)"
+raw_output="$(cd "$test_root/repo" && scripts/quality/check-lint-suppressions.sh "$opaque_base" "$raw_identifiers_head" 2>&1)"
 raw_result=$?
 set -e
 ((raw_result != 0)) || {
@@ -289,7 +289,7 @@ EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m opaque-token-tree-negatives
 opaque_negative_head="$(git -C "$test_root/repo" rev-parse HEAD)"
-opaque_negative_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$raw_identifiers_head" "$opaque_negative_head")"
+opaque_negative_output="$(cd "$test_root/repo" && scripts/quality/check-lint-suppressions.sh "$raw_identifiers_head" "$opaque_negative_head")"
 [[ "$opaque_negative_output" != *"opaque-negative.rs"* ]] || {
   echo "strings, comments, or Unicode near-identifiers became opaque records" >&2
   printf '%s\n' "$opaque_negative_output" >&2
@@ -347,7 +347,7 @@ cat >"$test_root/repo/fixtures/generated.rs" <<'EOF'
 #[allow(dead_code)]
 fn generated() {}
 EOF
-printf '%s\n' fixtures/generated.rs >"$test_root/repo/scripts/generated-rust-allowlist.txt"
+printf '%s\n' fixtures/generated.rs >"$test_root/repo/scripts/quality/generated-rust-allowlist.txt"
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m broad-and-exceptions
 broad_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
@@ -391,7 +391,7 @@ git -C "$test_root/repo" commit -q -m remove-escaped-reason
 # Full mode must be self-contained even when the caller supplied exact refs
 # from the outer repository (as CI does). Both refs are overridden to this
 # fixture's HEAD before the temporary Git checkout is inspected.
-full_output="$(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD scripts/check-lint-suppressions.sh --full)"
+full_output="$(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD scripts/quality/check-lint-suppressions.sh --full)"
 [[ "$full_output" == *"full inventory mode is reporting-only"* &&
   "$full_output" == *"owner=fn:named_function"* &&
   "$full_output" == *"owner=unstable"* ]] || {

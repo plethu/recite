@@ -14,18 +14,20 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "scripts/writer"))
 
-spec = importlib.util.spec_from_file_location("package_writer", ROOT / "scripts/package-writer.py")
+spec = importlib.util.spec_from_file_location(
+    "package_writer", ROOT / "scripts/writer/package-writer.py"
+)
 package_writer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package_writer)
 check_spec = importlib.util.spec_from_file_location(
-    "check_writer_package", ROOT / "scripts/check-writer-package.py"
+    "check_writer_package", ROOT / "scripts/writer/check-writer-package.py"
 )
 package_check = importlib.util.module_from_spec(check_spec)
 check_spec.loader.exec_module(package_check)
 flatpak_spec = importlib.util.spec_from_file_location(
-    "check_writer_flatpak", ROOT / "scripts/check-writer-flatpak.py"
+    "check_writer_flatpak", ROOT / "scripts/writer/check-writer-flatpak.py"
 )
 flatpak_check = importlib.util.module_from_spec(flatpak_spec)
 flatpak_spec.loader.exec_module(flatpak_check)
@@ -255,7 +257,7 @@ class PackageConfigTests(unittest.TestCase):
         result = subprocess.run(
             [
                 sys.executable,
-                str(ROOT / "scripts/check-writer-package.py"),
+                str(ROOT / "scripts/writer/check-writer-package.py"),
                 "--platform",
                 foreign,
                 ".",

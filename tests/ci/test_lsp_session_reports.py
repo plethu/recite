@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.lsp_tools import recovery
+from scripts.lsp.lsp_tools import recovery
 
 
 class SessionReportsTests(unittest.TestCase):

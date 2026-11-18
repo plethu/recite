@@ -100,8 +100,8 @@ Serious v1 covers the compiler, runtime, CLI, LSP, editor integrations and engin
 ships beside it as a preview on its own version line until its criteria below pass; a v1 candidate
 records Writer's current limits rather than waiting for them.
 
-Published previews make one promise before 1.0: dialogue source and author-visible IDs written for
-a published preview keep compiling, or the release that changes them ships an automated migration.
+Published previews make one promise before 1.0: dialogue source and author-visible IDs written for a
+published preview keep compiling, or the release that changes them ships an automated migration.
 Compiled assets, snapshots, the Rust API, the C ABI and Writer may change between minor versions;
 readers refuse unsupported versions under the
 [serialization policy](../serialization-compatibility.md).
@@ -124,9 +124,8 @@ A serious-v1 candidate requires all of the following:
   semantic models. VS Code/VSCodium, Neovim and Zed have tested setup and parity for declared
   capabilities.
 - Linux, Windows and macOS are supported for the CLI, LSP and editors. Engine companions may declare
-  narrower engine/platform matrices. Shared configuration resolves explicit
-  `$RECITE_CONFIG` or its platform location consistently and stays separate from project content and
-  generated files.
+  narrower engine/platform matrices. Shared configuration resolves explicit `$RECITE_CONFIG` or its
+  platform location consistently and stays separate from project content and generated files.
 - Authors can follow a documented edit → diagnostics → explicit ID insertion → watch rebuild →
   engine import/refresh → restart loop, including each adapter's active-session policy.
 - Narrative-scale fixtures exercise compilation, validation, traversal, traces, extraction and

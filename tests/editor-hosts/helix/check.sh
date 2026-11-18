@@ -7,7 +7,7 @@ if [[ -n "$input_root" ]]; then
 else
   repo_root="$(git rev-parse --show-toplevel)"
 fi
-checker="$repo_root/scripts/check-helix.sh"
+checker="$repo_root/scripts/editors/check-helix.sh"
 test_root="$(mktemp -d "${TMPDIR:-/tmp}/recite-helix-check.XXXXXX")"
 cleanup() {
   rm -rf -- "$test_root"

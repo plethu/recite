@@ -9,7 +9,7 @@ setup:
 
 # Run LSP harness and CI contract tests; quality owns formatting and linting.
 check:
-    mise -E lsp exec -- uv run --locked python scripts/run-checks.py ci-contracts
+    mise -E lsp exec -- uv run --locked python scripts/ci/run-checks.py ci-contracts
     cargo test --locked -p recite-perf
 
 # Install the pinned native regression runner; Valgrind is an external host tool.
@@ -18,11 +18,11 @@ regression-setup:
 
 # Compare fixed instruction/heap workloads; full adds the medium corpus.
 regression base scope="pr" output="target/workflow-performance":
-    mise -E perf exec -- scripts/check-workflow-performance.sh "$1" "$2" "$3"
+    mise -E perf exec -- scripts/perf/check-workflow-performance.sh "$1" "$2" "$3"
 
 # Inspect the same changed-path selection used by GitHub Actions.
 scope *args:
-    mise -E lsp exec -- uv run --locked python scripts/ci-scope.py --base origin/main "$@"
+    mise -E lsp exec -- uv run --locked python scripts/ci/ci-scope.py --base origin/main "$@"
 
 # Measure a Criterion target on selected fixture scales; trailing arguments go to Criterion.
 bench target scales="tiny,small" *args:
@@ -31,7 +31,7 @@ bench target scales="tiny,small" *args:
 
 # Check benchmark execution without collecting timing baselines.
 smoke:
-    scripts/benchmark-smoke.sh
+    scripts/perf/benchmark-smoke.sh
 
 # Report warm adapter choice and preview replay allocations at bounded history sizes.
 allocations:
@@ -50,12 +50,12 @@ build:
 
 # Build and compare release LSP revisions, including bounded session probes.
 compare base:
-    scripts/check-lsp-performance.sh "$1"
+    scripts/lsp/check-lsp-performance.sh "$1"
 
 # Run the same fixed-set/churn repetitions as CI (build first with perf build).
 sessions *args:
-    mise -E lsp exec -- uv run --locked python scripts/lsp.py matrix "$@"
+    mise -E lsp exec -- uv run --locked python scripts/lsp/lsp.py matrix "$@"
 
 # Run one external LSP probe or report check; use --help to list commands.
 lsp *args:
-    mise -E lsp exec -- uv run --locked python scripts/lsp.py "$@"
+    mise -E lsp exec -- uv run --locked python scripts/lsp/lsp.py "$@"

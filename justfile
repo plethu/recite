@@ -33,7 +33,7 @@ fmt:
     just quality fmt
 
 fmt-check:
-    mise -E quality exec -- python scripts/run-checks.py fmt
+    mise -E quality exec -- python scripts/ci/run-checks.py fmt
 
 lint:
     just quality lint
@@ -59,8 +59,8 @@ core-check:
 
 # Real host conformance and clean package consumers remain correctness checks.
 host-check:
-    scripts/generate-ffi-header.sh
-    scripts/check-ffi-header.sh
+    scripts/engines/generate-ffi-header.sh
+    scripts/engines/check-ffi-header.sh
     just engines unity
     just engines godot
     cargo fetch --locked
@@ -69,12 +69,12 @@ host-check:
 
 # Native editor and grammar contracts, separate from the TypeScript client lane.
 editor-native-check:
-    scripts/check-test-organization.sh
-    scripts/check-editor-parity.sh
-    scripts/check-tree-sitter.sh
-    scripts/check-neovim.sh
-    scripts/check-zed.sh
-    scripts/check-lint-suppressions.sh
+    scripts/quality/check-test-organization.sh
+    scripts/editors/check-editor-parity.sh
+    scripts/editors/check-tree-sitter.sh
+    scripts/editors/check-neovim.sh
+    scripts/editors/check-zed.sh
+    scripts/quality/check-lint-suppressions.sh
 
 test *args:
     cargo nextest run --workspace --locked "$@"
@@ -118,11 +118,11 @@ unused-deps:
     cargo machete crates tools editors/zed apps/writer/crates
 
 spelling:
-    python3 scripts/run-checks.py spelling
+    python3 scripts/ci/run-checks.py spelling
 
 # Check source size, structural rules and lint-suppression regressions.
 maintainability:
-    mise -E maintainability exec -- scripts/check-source-policy.sh
+    mise -E maintainability exec -- scripts/quality/check-source-policy.sh
     mise -E maintainability exec -- ast-grep test --config tools/ast-grep/sgconfig.yml --skip-snapshot-tests
     mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml
 
@@ -146,11 +146,11 @@ _verify:
     bash tests/git-policy/check-integration.sh
     bash tests/trusted-policy/check.sh
     bash tests/editor-parity/check.sh
-    scripts/check-vscode.sh
-    scripts/check-helix.sh
+    scripts/editors/check-vscode.sh
+    scripts/editors/check-helix.sh
     tests/editor-hosts/helix/check.sh
     scripts/check-project-gates.sh
-    scripts/check-docs.sh
+    scripts/docs/check-docs.sh
     just perf smoke
     just coverage
     just writer coverage
@@ -161,7 +161,7 @@ _verify:
 _check-quality:
     scripts/install-js-dependencies.sh
     just quality setup
-    mise -E quality exec -- python scripts/run-checks.py quality
+    mise -E quality exec -- python scripts/ci/run-checks.py quality
     python3 tests/maintainability/config-discovery.py
     python3 tests/maintainability/tooling-checks.py
     tests/maintainability/check.sh

@@ -6,7 +6,7 @@ set default-list
 # Provision language quality tools and the exact PowerShell analyzer module.
 setup:
     mise install python
-    "$(mise which python)" scripts/setup-quality.py
+    "$(mise which python)" scripts/ci/setup-quality.py
 
 # Deliberately format non-Rust sources with the shared configuration.
 fmt:
@@ -19,7 +19,7 @@ fmt:
 
 # Check formatting without rewriting source files.
 fmt-check:
-    mise -E quality exec -- python scripts/run-checks.py fmt-other
+    mise -E quality exec -- python scripts/ci/run-checks.py fmt-other
 
 [private]
 _fmt-check:
@@ -32,7 +32,7 @@ _fmt-check:
 
 # Run language linters; engine/parser contract checks remain in their own lanes.
 lint:
-    mise -E quality exec -- python scripts/run-checks.py lint-other
+    mise -E quality exec -- python scripts/ci/run-checks.py lint-other
 
 [private]
 _lint:

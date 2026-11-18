@@ -7,9 +7,9 @@ Recite's Godot addon imports compiled `.recitec` files as `ReciteDialogueResourc
 through `ReciteDialogueNode`. The Node returns structured operation results and emits ordered output
 and error signals. Runtime effects are requests for game code to handle.
 
-Build the installable addon from the repository with `scripts/package-godot-addon.sh`. It creates a
-release GDExtension archive containing `addons/recite` and `examples/basic-dialogue`; copy the addon
-into a Godot project and enable **Recite** under Project Settings → Plugins. See the
+Build the installable addon from the repository with `scripts/engines/package-godot-addon.sh`. It
+creates a release GDExtension archive containing `addons/recite` and `examples/basic-dialogue`; copy
+the addon into a Godot project and enable **Recite** under Project Settings → Plugins. See the
 [addon installation and authoring guide](https://github.com/plethu/recite/tree/main/addons/recite)
 and the
 [basic dialogue example](https://github.com/plethu/recite/tree/main/examples/godot/basic-dialogue).
