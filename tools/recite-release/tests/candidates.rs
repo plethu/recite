@@ -226,3 +226,45 @@ fn product_tag_must_be_annotated_and_identify_the_verified_commit() {
         "does not identify",
     );
 }
+
+#[test]
+fn product_tag_accepts_only_main_or_its_own_maintenance_branch() {
+    let candidate = Candidate::new();
+    let tag = |name: &str| {
+        git(
+            candidate.root(),
+            &["-c", "tag.gpgsign=false", "tag", "-a", name, "-m", "fix"],
+        );
+    };
+    let main = git(candidate.root(), &["rev-parse", "HEAD~0"]);
+    git(
+        candidate.root(),
+        &["update-ref", "-d", "refs/remotes/origin/main"],
+    );
+    tag("v0.2.1");
+    failure(
+        candidate.run(&["tag", "0.2.1", &candidate.commit]),
+        "neither origin/main nor origin/release/v0-2",
+    );
+    git(
+        candidate.root(),
+        &[
+            "update-ref",
+            "refs/remotes/origin/release/v0-3",
+            main.trim(),
+        ],
+    );
+    failure(
+        candidate.run(&["tag", "0.2.1", &candidate.commit]),
+        "neither origin/main nor origin/release/v0-2",
+    );
+    git(
+        candidate.root(),
+        &[
+            "update-ref",
+            "refs/remotes/origin/release/v0-2",
+            main.trim(),
+        ],
+    );
+    success(candidate.run(&["tag", "0.2.1", &candidate.commit]));
+}

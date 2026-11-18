@@ -13,6 +13,11 @@ git_policy_is_valid_integration_branch_name() {
   [[ "$1" =~ ^integration/[a-z][a-z0-9]*(\-[a-z0-9]+)*$ ]]
 }
 
+# Protected maintenance branches for a published series, such as release/v0-2.
+git_policy_is_maintenance_branch_name() {
+  [[ "$1" =~ ^release/v[0-9]+-[0-9]+$ ]]
+}
+
 git_policy_resolve_branch_name() {
   local repo_root="$1"
   local branch_name
@@ -28,8 +33,8 @@ git_policy_validate_branch() {
   local branch_name="$1"
   local pr_context="$2"
 
-  if ((pr_context)) && [[ "$branch_name" == "main" ]]; then
-    echo "pull-request head branch must not be protected main" >&2
+  if ((pr_context)) && { [[ "$branch_name" == "main" ]] || git_policy_is_maintenance_branch_name "$branch_name"; }; then
+    echo "pull-request head branch must not be a protected branch: $branch_name" >&2
     return 1
   fi
 

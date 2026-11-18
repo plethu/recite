@@ -10,10 +10,11 @@ git_policy_run_commit_range() {
   local commits=()
   local failures=0
 
-  # A push to protected main is not a pull-request change range. This also lets
-  # a local checkout that is merely behind origin/main run the ordinary gate.
-  if [[ "$branch_name" == "main" && -z "${GITHUB_HEAD_REF:-}" && -z "${RECITE_BASE_REF:-}" && -z "${RECITE_HEAD_REF:-}" ]]; then
-    echo "commit range check skipped for protected branch: main"
+  # A push to protected main or a maintenance branch is not a pull-request change
+  # range. This also lets a local checkout that is merely behind origin/main run
+  # the ordinary gate.
+  if { [[ "$branch_name" == "main" ]] || git_policy_is_maintenance_branch_name "$branch_name"; } && [[ -z "${GITHUB_HEAD_REF:-}" && -z "${RECITE_BASE_REF:-}" && -z "${RECITE_HEAD_REF:-}" ]]; then
+    echo "commit range check skipped for protected branch: $branch_name"
     return 0
   fi
 

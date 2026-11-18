@@ -4,6 +4,7 @@ on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] Executes main-owned policy only, with a read-only token.
     branches:
       - main
+      - release/v[0-9]+-[0-9]+
     types:
       - opened
       - edited
@@ -29,8 +30,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      # pull_request_target runs this workflow from the default branch. Keep
-      # the explicit ref as a visible assertion of the trust boundary.
+      # pull_request_target runs this workflow from the protected base branch.
+      # Policy code always comes from main, whichever branch the PR targets.
       - name: Check out base policy
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

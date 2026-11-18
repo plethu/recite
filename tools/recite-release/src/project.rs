@@ -44,7 +44,7 @@ pub(super) fn workspace_version(manifest: &str) -> Result<String> {
 }
 
 pub(super) fn tag(version: &str, commit: &str) -> Result<()> {
-    version::parse(version)?;
+    let parsed = version::parse(version)?;
     let tag = format!("v{version}");
     if git(&["cat-file", "-t", &tag])? != "tag" {
         return Err(
@@ -54,6 +54,12 @@ pub(super) fn tag(version: &str, commit: &str) -> Result<()> {
     if git(&["rev-parse", &format!("{tag}^{{commit}}")])? != commit {
         return Err("signed release tag does not identify the verified candidate".into());
     }
-    git(&["merge-base", "--is-ancestor", commit, "origin/main"])?;
+    // A fix for a published series may come from its protected maintenance branch.
+    let maintenance = format!("origin/release/v{}-{}", parsed.major, parsed.minor);
+    if git(&["merge-base", "--is-ancestor", commit, "origin/main"]).is_err()
+        && git(&["merge-base", "--is-ancestor", commit, &maintenance]).is_err()
+    {
+        return Err(format!("release commit is on neither origin/main nor {maintenance}").into());
+    }
     Ok(())
 }
