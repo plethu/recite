@@ -126,6 +126,12 @@ maintainability:
     mise -E maintainability exec -- ast-grep test --config tools/ast-grep/sgconfig.yml --skip-snapshot-tests
     mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml
 
+# Coverage, mutations, hosts, Writer and dependency policy stay in their own commands and CI.
+# Everyday local gate: formatting, lints, tests and docs for the core workspace.
+check-fast:
+    just fmt-check
+    just core-check
+
 check:
     mise -E maintainability exec -- just _verify
 
