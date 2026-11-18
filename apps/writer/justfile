@@ -8,10 +8,11 @@ run *args:
     cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer -- "$@"
 
 # Probe AT-SPI on an owned headless Wayland host; needs Cage, wtype, grim, wl-clipboard, python3-gi and D-Bus.
-# The large-project scenario times an optimized build on a generated project against its budgets (#109).
+# The timing scenarios run an optimized build: large-project on a generated project against its
+# budgets (#109), frame-timing for typing and beat steps on a software renderer (#283).
 probe output="target/writer-native/result.json" scenario="all":
-    if [[ "$2" == large-project ]]; then \
-      cargo build --locked --release -p recite-fixturegen; \
+    if [[ "$2" == large-project || "$2" == frame-timing ]]; then \
+      if [[ "$2" == large-project ]]; then cargo build --locked --release -p recite-fixturegen; fi; \
       cargo build --locked --profile bench --manifest-path apps/writer/Cargo.toml -p recite-writer; \
       binary=apps/writer/target/release/recite-writer; \
     else \

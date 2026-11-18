@@ -1,7 +1,9 @@
-"""Software-rendering frame pacing and edit-to-paint for typing in the Script view.
+"""Software-rendering edit-to-paint for typing, and step-to-paint for stepping between beats.
 
 The client's own Wayland protocol log times each key press against the next main-surface commit
 that attaches a buffer. These are client frame-readiness timings, not input-to-photon latency.
+Writer presents only frames whose contents changed, so the interval between presented frames
+follows the input rather than the display; it is recorded, not budgeted.
 """
 
 import json
@@ -20,10 +22,15 @@ from native_window import attach
 ROOT = Path(__file__).resolve().parents[2]
 TEXT = "The quick brown fox jumps over the lazy dog"
 KEY_DELAY_MS = 60
-# Budgets for the debug probe build on a CPU adapter. Vello CPU keeps frame pacing near the
-# compositor's 60 Hz (about 17 ms); GPU Vello emulated by llvmpipe paces near 47 ms (#283).
-FRAME_INTERVAL_P50_BUDGET_MS = 30.0
+# Budgets for the optimized probe build on a CPU adapter (#283). Every typed key paints before the
+# next key arrives. Stepping to another beat scrolls it into view and repaints the whole window.
 EDIT_TO_PAINT_P50_BUDGET_MS = 80.0
+STEP_TO_PAINT_P50_BUDGET_MS = 30.0
+# Beats stepped down and back up with Primary+arrows, spaced so each step is timed on its own.
+STEPS = 8
+STEP_DELAY_MS = 150
+# Presses this close together come from one wtype keystroke.
+PAIRED_PRESS_MS = 20
 CPU_BACKEND = "imaging_vello_cpu"
 LINE = re.compile(
     r"^\[\s*(\d+)\.(\d+)\]\s+(?:\{[^}]*\}\s+)?(->\s+)?([a-z_0-9]+)@(\d+)\.([a-z_0-9]+)\((.*)\)"
@@ -107,18 +114,27 @@ def timings(events, start, end):
         and e["args"].rstrip().endswith(", 1")
         and start <= e["t"] <= end
     ]
+    # wtype sends a second press within a millisecond or two of the first (a keymap switch, or the
+    # modifier before an arrow); the last press of such a pair is the keystroke.
+    presses = [
+        press
+        for press, following in zip(presses, presses[1:] + [None])
+        if following is None or following - press > PAIRED_PRESS_MS
+    ]
     painted = [t for t in frames if start <= t]
-    latencies, unpainted = [], 0
-    for press in presses:
+    latencies, unpainted, late = [], 0, 0
+    for press, following in zip(presses, presses[1:] + [None]):
         frame = next((t for t in painted if t >= press), None)
         if frame is None:
             unpainted += 1
         else:
             latencies.append(frame - press)
+            late += following is not None and frame > following
     window = [t for t in painted if t <= end]
     return {
         "key_presses": len(presses),
         "unpainted_presses": unpainted,
+        "late_presses": late,
         "edit_to_paint_ms": summary(latencies),
         "frame_interval_ms": summary([b - a for a, b in zip(window, window[1:])]),
     }
@@ -148,9 +164,11 @@ def run(api, bus, registry, binary, output):
         "scope": "typing into Mara's inline line in the Relay Hub Script view",
         "text": TEXT,
         "key_delay_ms": KEY_DELAY_MS,
+        "steps": STEPS * 2,
+        "step_delay_ms": STEP_DELAY_MS,
         "budgets_ms": {
-            "frame_interval_p50": FRAME_INTERVAL_P50_BUDGET_MS,
             "edit_to_paint_p50": EDIT_TO_PAINT_P50_BUDGET_MS,
+            "step_to_paint_p50": STEP_TO_PAINT_P50_BUDGET_MS,
         },
     }
     process = None
@@ -186,6 +204,17 @@ def run(api, bus, registry, binary, output):
                 )
                 end = wayland_ms()
                 time.sleep(1.0)
+                # Stepping between beats scrolls the galley, so most of the window repaints.
+                step_start = wayland_ms()
+                for direction in ["Down"] * STEPS + ["Up"] * STEPS:
+                    subprocess.run(
+                        ["wtype", "-M", "ctrl", "-k", direction, "-m", "ctrl"],
+                        check=True,
+                        timeout=10,
+                    )
+                    time.sleep(STEP_DELAY_MS / 1000)
+                step_end = wayland_ms()
+                time.sleep(1.0)
                 process.terminate()
                 process.wait(timeout=10)
                 process = None
@@ -193,6 +222,12 @@ def run(api, bus, registry, binary, output):
         events = protocol_events(text)
         base = events[0]["t"]
         results.update(timings(events, unwrap(start, base), unwrap(end, base)))
+        stepping = timings(events, unwrap(step_start, base), unwrap(step_end, base))
+        results["stepping"] = {
+            "steps": stepping["key_presses"],
+            "unpainted_steps": stepping["unpainted_presses"],
+            "step_to_paint_ms": stepping["edit_to_paint_ms"],
+        }
         selection = SELECTION.search(ANSI.sub("", text))
         results["imaging_backend"] = selection.group(1) if selection else None
         results["adapter_device_type"] = selection.group(2) if selection else None
@@ -203,14 +238,19 @@ def run(api, bus, registry, binary, output):
             failures.append("Writer did not report its imaging backend")
         elif selection.group(2) == "Cpu" and selection.group(1) != CPU_BACKEND:
             failures.append(f"a CPU adapter selected {selection.group(1)}, not {CPU_BACKEND}")
-        if results["key_presses"] < len(TEXT) or results["unpainted_presses"]:
+        if results["key_presses"] != len(TEXT) or results["unpainted_presses"]:
             failures.append("every typed key must be followed by a painted frame")
-        frame = results["frame_interval_ms"].get("p50")
-        if frame is None or frame > FRAME_INTERVAL_P50_BUDGET_MS:
-            failures.append(f"frame interval p50 {frame} ms exceeds its budget")
+        if results["late_presses"]:
+            failures.append(f"{results['late_presses']} typed keys painted after the next key")
         latency = results["edit_to_paint_ms"].get("p50")
         if latency is None or latency > EDIT_TO_PAINT_P50_BUDGET_MS:
             failures.append(f"edit-to-paint p50 {latency} ms exceeds its budget")
+        stepped = results["stepping"]
+        if stepped["steps"] < STEPS * 2 or stepped["unpainted_steps"]:
+            failures.append("every beat step must be followed by a painted frame")
+        step = stepped["step_to_paint_ms"].get("p50")
+        if step is None or step > STEP_TO_PAINT_P50_BUDGET_MS:
+            failures.append(f"step-to-paint p50 {step} ms exceeds its budget")
         if failures:
             results["error"] = "; ".join(failures)
     except Exception as error:

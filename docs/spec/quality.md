@@ -327,12 +327,15 @@ do not establish elapsed-time or native GUI acceptance; the
 [profiling guide](../profiling-and-optimisation.md) owns local commands and boundaries.
 
 The Writer lane also runs the native `frame-timing` probe on its Linux runner: an owned `cage`
-compositor, Mesa lavapipe as the only adapter, and the debug probe build with its rasteriser crates
-optimized. It types into the Relay Hub Script view and times each key press to the next presented
-frame from the client's Wayland protocol log. It requires a CPU adapter to select Vello CPU, every
-key to paint, a frame interval p50 within 30 ms and an edit-to-paint p50 within 80 ms (#283), and
-retains its receipt. These are client frame-readiness timings for software rendering, not
-input-to-photon latency or release baselines (#109).
+compositor, Mesa lavapipe as the only adapter, and the optimized (`bench` profile) probe build. It
+types into the Relay Hub Script view, then steps down through the scene's beats and back with
+Primary+arrows, and times each key press to the next presented frame from the client's Wayland
+protocol log. Stepping scrolls the chosen beat into view, so each step repaints the whole window. It
+requires a CPU adapter to select Vello CPU, every key to paint before the next key, an edit-to-paint
+p50 within 80 ms, every step to paint and a step-to-paint p50 within 30 ms (#283), and retains its
+receipt. Writer presents only frames whose contents changed, so the interval between presented
+frames follows the input; the receipt records it without a budget. These are client frame-readiness
+timings for software rendering, not input-to-photon latency or release baselines (#109).
 
 Scheduled, manual and release CI also runs the large-project probe on that runner with budgets of
 several times the timings measured on a 4-core development machine: cold open to diagnostics
