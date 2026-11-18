@@ -22,7 +22,10 @@ mise exec -- just check
 
 `just check` installs the JavaScript workspace dependencies from the frozen lockfile before using
 them. It checks Rust, editor packages, adapters, docs, dependency policy, spelling, and benchmark
-smoke. `just verify` and `mise run verify` run that same gate. With mise activated in your shell,
+smoke. `just verify` and `mise run verify` run that same gate. It is serial and slow: it repeats the
+test suite under coverage and mutation and runs every host. While editing, use `just check-fast`
+(formatting, lints, tests and docs for the core workspace) and the affected area's own command; CI
+runs the rest in parallel. With mise activated in your shell,
 the `mise exec --` prefix is unnecessary. Run `just` to list the cross-project commands and modules,
 or `just web`, `just writer`, `just editor`, `just engines`, `just stress`, or `just perf` to list
 one area's commands. Each module is also callable from its own directory without the area name, for
