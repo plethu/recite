@@ -456,7 +456,11 @@ jobs:
           install_args: python just
       - name: Validate native and Flatpak package contracts
         run: |
-          sudo apt-get update && sudo apt-get install -y flatpak-builder appstream desktop-file-utils
+          # Only the manifest, desktop-file and AppStream tools are used; recommended packages pull in
+          # about a hundred desktop and media libraries that a slow mirror can stall past the timeout.
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
+            flatpak-builder appstream desktop-file-utils
           just writer packaging --builder
           desktop-file-validate apps/writer/packaging/flatpak/io.github.plethu.recite.desktop
           appstreamcli validate --no-net apps/writer/packaging/flatpak/io.github.plethu.recite.metainfo.xml
