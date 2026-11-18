@@ -373,3 +373,17 @@ evidence; green CI alone does not establish readiness.
    delete only an incomplete draft, never overwrite a public release or re-upload different bytes
    under an existing crate version. Stable promotion requires a stable-version preparation PR and
    fresh candidate, even when its code matches the last RC.
+
+### Fixes to a published release
+
+Only the newest published series receives fixes. Land the fix on `main` through the usual PR, then
+prepare the next patch version with the steps above.
+
+When `main` already carries changes that cannot ship in a patch, create a `release/vMAJOR-MINOR`
+maintenance branch such as `release/v0-2` from the last tag of that series, and give it the same
+protection rules as `main` before its first PR. A fix still lands on `main` first. Cherry-pick it
+with `git cherry-pick -x` onto a short-lived branch and open a PR against the maintenance branch;
+CI and the trusted policy run there as they do for `main`. Prepare the patch version on that branch,
+dispatch **Release candidate** from `main` with the maintenance commit, then tag and publish as
+above. A tag is accepted only for a commit on `main` or on its own series' maintenance branch.
+Delete the branch when the series stops receiving fixes.

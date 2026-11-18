@@ -174,6 +174,17 @@ if ! PATH="$clean_path" \
   echo 'valid trusted-policy fixture was rejected' >&2
   exit 1
 fi
+
+# A protected maintenance branch is the only other accepted base.
+jq '.base.ref = "release/v0-2"' "$test_root/live.json" >"$test_root/maintenance-live.json"
+if ! PATH="$clean_path" GH_FIXTURE_JSON="$test_root/maintenance-live.json" \
+  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
+  GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/maintenance.marker" \
+  TRUSTED_POLICY_EXPECTED_BASE=release/v0-2 TRUSTED_LINT_POLICY_MARKER="$test_root/maintenance-lint.marker" \
+  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
+  echo 'maintenance base branch was rejected' >&2
+  exit 1
+fi
 [[ "$(<"$marker")" == base-policy ]] || {
   echo 'base policy did not execute' >&2
   exit 1
@@ -282,14 +293,21 @@ grep -Fq 'policy metadata changed during validation' "$test_root/race-output" ||
   exit 1
 }
 
-jq '.base.ref = "release"' "$test_root/live.json" >"$test_root/invalid-live.json"
-if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/invalid-live.json" \
-  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
-  GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/invalid.marker" \
-  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
-  echo 'invalid base branch was accepted' >&2
-  exit 1
-fi
+for invalid_base in release release/prepare-v0-2-0 release/v0-2-1; do
+  jq --arg ref "$invalid_base" '.base.ref = $ref' "$test_root/live.json" >"$test_root/invalid-live.json"
+  if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/invalid-live.json" \
+    GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
+    GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/invalid.marker" \
+    bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >"$test_root/base-output" 2>&1; then
+    echo "invalid base branch was accepted: $invalid_base" >&2
+    exit 1
+  fi
+  grep -Fq 'pull request must target main or a release/vMAJOR-MINOR' "$test_root/base-output" || {
+    echo "invalid base branch was rejected for another reason: $invalid_base" >&2
+    cat "$test_root/base-output" >&2
+    exit 1
+  }
+done
 
 jq '.pull_request.head.sha = "0000000000000000000000000000000000000000"' "$test_root/event.json" >"$test_root/stale-event.json"
 if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/live.json" \
