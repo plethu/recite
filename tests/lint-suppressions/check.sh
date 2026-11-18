@@ -399,6 +399,13 @@ full_output="$(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD
   printf '%s\n' "$full_output" >&2
   exit 1
 }
+# Scheduled and manual CI runs export an empty base ref; it must mean the default base.
+git -C "$test_root/repo" update-ref refs/remotes/origin/main HEAD
+if ! (cd "$test_root/repo" && RECITE_BASE_REF='' RECITE_HEAD_REF=HEAD scripts/quality/check-lint-suppressions.sh) >/dev/null 2>&1; then
+  echo "empty RECITE_BASE_REF did not fall back to origin/main" >&2
+  exit 1
+fi
+git -C "$test_root/repo" update-ref -d refs/remotes/origin/main
 echo "lint suppression structural fixtures passed"
 
 # Both branches independently introduce the same suppression. The base tip

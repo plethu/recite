@@ -259,8 +259,11 @@ def main() -> int:
             text=True,
             check=True,
         ).stdout.strip()
-        base_ref = args.refs[0] if args.refs else os.environ.get("RECITE_BASE_REF", "origin/main")
-        head_ref = args.refs[1] if len(args.refs) > 1 else os.environ.get("RECITE_HEAD_REF", "HEAD")
+        # Scheduled and manual CI runs export an empty base; treat it as unset.
+        base_ref = args.refs[0] if args.refs else os.environ.get("RECITE_BASE_REF") or "origin/main"
+        head_ref = (
+            args.refs[1] if len(args.refs) > 1 else os.environ.get("RECITE_HEAD_REF") or "HEAD"
+        )
         head = resolve(repo, head_ref, "tree")
         base = (
             None if args.full else (base_ref if is_zero_sha(base_ref) else resolve(repo, base_ref))
