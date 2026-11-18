@@ -19,6 +19,11 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let (text, signal) = (state.palette.status_text, state.palette.status_signal);
     let diagnostics = state.session.model().document().diagnostic_snapshot();
     let refusal = state.reading_refusal();
+    // "Ready" says nothing the bar does not already show; a refused rename's clash is said in
+    // writer words under its field, so the compiler's words are not repeated here.
+    let idle = matches!(state.status.as_str(), "Ready" | "Map ready");
+    let clash_shown = state.workspaces.screen == crate::workspaces::Screen::Rename
+        && state.rename_clash().is_some();
     let saved = if state.session.project_root().is_none() {
         "Temporary example"
     } else if dirty {
@@ -80,12 +85,7 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 print::meta(state.ui_scale(), "Split needs a wider window").color(text),
             )
         }),
-        // A refused rename's clash is said in writer words under its field; the compiler's own
-        // words are not repeated here.
-        (!matches!(state.status.as_str(), "Ready" | "Map ready")
-            && !(state.workspaces.screen == crate::workspaces::Screen::Rename
-                && state.rename_clash().is_some()))
-        .then(|| {
+        (!(idle || clash_shown)).then(|| {
             (
                 print::separator(state.ui_scale(), text),
                 // One line, ending in an ellipsis where it would not fit; read in full.
