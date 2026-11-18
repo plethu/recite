@@ -12,14 +12,14 @@ isolang = { version = "2.4", features = ["list_languages", "local_names"] }
 language-tags = "0.3.2"
 unic-langid = "0.9"
 notify = "8.2.0"
-recite-build = { path = "../../../../crates/recite-build", version = "0.1.0" }
-recite-ui = { path = "../../../../crates/recite-ui", version = "0.1.0" }
+recite-build = { path = "../../../../crates/recite-build" }
+recite-ui = { path = "../../../../crates/recite-ui" }
 similar = "=2.7.0"
 wait-timeout = "0.2.1"
 url = "2.5"
 atomic-write-file = "0.3.1"
 recite-compiler.workspace = true
-recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }
+recite-config = { path = "../../../../crates/recite-config" }
 recite-core.workspace = true
 recite-runtime.workspace = true
 recite-writer-model.workspace = true

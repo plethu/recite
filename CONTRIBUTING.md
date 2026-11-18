@@ -334,11 +334,13 @@ evidence; green CI alone does not establish readiness.
 1. Create a release branch such as `release/prepare-v0-2-0-beta-1` from current `main`, linked to
    that release issue. Branches follow the usual kebab-case policy; tags retain exact SemVer.
    Provision tools with `just release setup`, inspect `just release prepare VERSION`, then apply
-   with `just release set-version VERSION`. This coordinated helper updates core and Writer; the FFI
-   version is deliberately excluded. Review the manifest, lockfile, installer and AppStream changes
-   and update `CHANGELOG.md`. Commit with `[REC-N] release: prepare VERSION` and use the usual
-   protected PR workflow with `Refs #N`, keeping the release issue open until publication succeeds.
-   Neither helper commits, tags, pushes nor publishes.
+   with `just release set-version VERSION`. This helper updates the core product only; the FFI
+   version is deliberately excluded. Writer keeps its own preview version: when a release ships
+   Writer changes, use `just release prepare-writer VERSION` and `just release set-writer-version
+   VERSION` with Writer's next version in the same PR. Review the manifest, lockfile, installer and
+   AppStream changes and update `CHANGELOG.md`. Commit with `[REC-N] release: prepare VERSION` and
+   use the usual protected PR workflow with `Refs #N`, keeping the release issue open until
+   publication succeeds. No helper commits, tags, pushes or publishes.
 2. After the approved merge, resolve the complete commit ID. Dispatch **Release candidate** from
    `main`, supplying that exact `commit`, prepared `version` and `api_baseline`: a prior accepted
    revision recorded in the release issue. `just release api-check BASELINE` also runs locally. It

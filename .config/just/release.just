@@ -11,16 +11,26 @@ setup:
 plan:
     mise -E release exec -- dist plan
 
-# Preview the exact version changes; this does not commit, tag, push or publish.
+# Preview the exact product version changes; this does not commit, tag, push or publish.
 prepare version:
     cargo run --locked -p recite-release -- version "$1"
     mise -E release exec -- cargo release version "$1" --workspace --exclude recite-ffi --exclude recite-release --isolated --config release.toml
-    mise -E release exec -- cargo release version "$1" --manifest-path apps/writer/Cargo.toml --workspace --isolated --config "$PWD/release.toml"
 
-# Apply reviewed version changes on a release branch; Git remains maintainer-owned.
+# Apply reviewed product version changes on a release branch; Git remains maintainer-owned.
 set-version version:
     cargo run --locked -p recite-release -- version "$1"
     mise -E release exec -- cargo release version "$1" --workspace --exclude recite-ffi --exclude recite-release --isolated --config release.toml --execute --no-confirm
+    # Writer follows the core crates by path; record their new version in its lockfile.
+    cargo metadata --quiet --manifest-path apps/writer/Cargo.toml --format-version 1 > /dev/null
+
+# Preview Writer's own preview version; it moves only when Writer changes ship.
+prepare-writer version:
+    cargo run --locked -p recite-release -- version "$1"
+    mise -E release exec -- cargo release version "$1" --manifest-path apps/writer/Cargo.toml --workspace --isolated --config "$PWD/release.toml"
+
+# Apply a reviewed Writer version to its manifests, installers and AppStream metadata.
+set-writer-version version:
+    cargo run --locked -p recite-release -- version "$1"
     mise -E release exec -- cargo release version "$1" --manifest-path apps/writer/Cargo.toml --workspace --isolated --config "$PWD/release.toml" --execute --no-confirm
     mise -E release exec -- cargo release replace --manifest-path apps/writer/Cargo.toml --package recite-writer --isolated --config "$PWD/apps/writer/packaging/release.toml" --execute --no-confirm
     mise -E quality exec -- dprint fmt apps/writer/packaging/common.json

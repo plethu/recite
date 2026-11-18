@@ -10,6 +10,8 @@ unused-ignored-advisory = "deny"
 
 [bans]
 multiple-versions = "warn"
+# Unpublished workspaces such as Writer follow the core crates by path, without a version pin.
+allow-wildcard-paths = true
 wildcards = "deny"
 
 [licenses]

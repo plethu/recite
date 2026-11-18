@@ -13,7 +13,7 @@ masonry_winit = { version = "0.4.0", git = "https://github.com/plethu/xilem", re
 png = "0.18"
 recite-core.workspace = true
 recite-compiler.workspace = true
-recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }
+recite-config = { path = "../../../../crates/recite-config" }
 recite-runtime.workspace = true
 recite-writer-app.workspace = true
 recite-writer-model.workspace = true
