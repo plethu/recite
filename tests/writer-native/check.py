@@ -274,6 +274,10 @@ def main():
                 )
             output.write_text(json.dumps(receipt, indent=2) + "\n")
         if not passed:
+            # The receipt is an artifact; name the failure where the job log shows it.
+            for key in ("error", "budget_failures", "logging_error", "binary_error"):
+                if receipt.get(key):
+                    print(f"{args.scenario} probe {key}: {receipt[key]}", file=sys.stderr)
             sys.exit(2)
         return
     # Wayland's Unix socket pathname must fit within 108 bytes, including NUL.
