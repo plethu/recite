@@ -267,7 +267,7 @@ than compiled asset size, and traversal must not clone full compiled assets.
 ### 19.5 LSP and Editor Benchmarks
 
 The [LSP target](../../crates/recite-benchmarks/benches/lsp.rs) and
-[process harness](../../scripts/lsp_tools/) cover different boundaries. Evidence must include
+[process harness](../../scripts/lsp/lsp_tools/) cover different boundaries. Evidence must include
 initial indexing, open/edit parsing, diagnostic refresh, completion, definition, block rename and
 index memory. Initial targets are completion under 50 ms for small/medium projects and diagnostics
 under 100 ms for typical single-file edits. Large-project indexing should be incremental and
@@ -308,10 +308,10 @@ changes do not require benchmark builds. Smoke proves execution; fuller suites b
 branches or scheduled jobs.
 
 The paired LSP gate compares base and candidate binaries on the same named Linux runner. Its
-[policy](../../scripts/lsp-performance-policy.json) and [harness](../../scripts/lsp_tools/) own
-workloads, samples, thresholds and confirmation rounds. It requires complete coverage and matching
-output fingerprints, with raw samples and binary identities retained as CI artifacts. It covers
-those process workloads, not cross-platform rendering or long-lived memory.
+[policy](../../scripts/lsp/lsp-performance-policy.json) and [harness](../../scripts/lsp/lsp_tools/)
+own workloads, samples, thresholds and confirmation rounds. It requires complete coverage and
+matching output fingerprints, with raw samples and binary identities retained as CI artifacts. It
+covers those process workloads, not cross-platform rendering or long-lived memory.
 
 The private [Rust harness](../../tools/recite-perf/) uses pinned Gungraun/Callgrind and DHAT on
 Linux to compare the change base and candidate with identical current workloads. Changed-path

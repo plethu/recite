@@ -11,8 +11,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts"))
-spec = importlib.util.spec_from_file_location("ci_scope", ROOT / "scripts/ci-scope.py")
+sys.path.insert(0, str(ROOT / "scripts/ci"))
+spec = importlib.util.spec_from_file_location("ci_scope", ROOT / "scripts/ci/ci-scope.py")
 scope = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scope)
 
@@ -28,7 +28,7 @@ def selected(*paths):
 class ScopeTests(unittest.TestCase):
     def test_maintainability_exceptions_select_policy_and_docs(self):
         self.assertEqual(
-            selected("scripts/maintainability/exceptions.toml"), {"docs", "maintainability"}
+            selected("scripts/quality/maintainability/exceptions.toml"), {"docs", "maintainability"}
         )
 
     def test_core_and_dependencies_keep_contracts_without_distribution(self):
@@ -47,8 +47,8 @@ class ScopeTests(unittest.TestCase):
 
     def test_lsp_tooling_package_and_environment_select_their_consumers(self):
         for path in (
-            "scripts/lsp.py",
-            "scripts/lsp_tools/client.py",
+            "scripts/lsp/lsp.py",
+            "scripts/lsp/lsp_tools/client.py",
             ".config/mise/config.lsp.toml",
             "pyproject.toml",
             "uv.lock",
@@ -60,7 +60,7 @@ class ScopeTests(unittest.TestCase):
             ".config/just/perf.just",
             ".config/just/stress.just",
             ".config/mise/config.perf.toml",
-            "scripts/check-workflow-performance.sh",
+            "scripts/perf/check-workflow-performance.sh",
             "tools/recite-perf/benches/workflows.rs",
             "crates/recite-core/src/text/interpolation.rs",
             "crates/recite-benchmarks/src/preview.rs",
@@ -74,7 +74,7 @@ class ScopeTests(unittest.TestCase):
         for path in (
             "docs/profiling-and-optimisation.md",
             "apps/writer/src/app.rs",
-            "scripts/lsp_tools/client.py",
+            "scripts/lsp/lsp_tools/client.py",
             "editors/vscode/src/extension.ts",
         ):
             with self.subTest(path=path):
@@ -93,28 +93,17 @@ class ScopeTests(unittest.TestCase):
 
     def test_lsp_measurement_changes_select_benchmark_lane(self):
         for path in (
-            "scripts/check-lsp-performance.py",
-            "scripts/check-lsp-performance.sh",
-            "scripts/measure-lsp-session.py",
-            "scripts/lsp_regression.py",
-            "scripts/lsp-performance-policy.json",
+            "scripts/lsp/check-lsp-performance.sh",
+            "scripts/lsp/lsp-performance-policy.json",
+            "scripts/perf/benchmark-smoke.sh",
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"benchmark-smoke", "maintainability"})
 
     def test_session_matrix_is_scoped_and_cannot_disable_pr_coverage(self):
-        for path in (
-            "scripts/measure-lsp-endurance.py",
-            "scripts/lsp_session_health.py",
-            "scripts/check-lsp-session-faults.py",
-            "scripts/lsp-session-requirements.txt",
-            "scripts/measure-lsp-channel-handoff.py",
-            "scripts/summarize-lsp-server-comparison.py",
-            "scripts/measure-lsp-stopped-responses.py",
-            "scripts/measure-lsp-driver-accounting.py",
-            ".github/workflows/lsp-sessions.yml",
-        ):
-            self.assertEqual(selected(path), {"lsp-sessions", "maintainability"})
+        self.assertEqual(
+            selected(".github/workflows/lsp-sessions.yml"), {"lsp-sessions", "maintainability"}
+        )
         for path in ("crates/recite-lsp/src/server.rs", "crates/recite-compiler/src/lib.rs"):
             self.assertIn("lsp-sessions", selected(path))
         self.assertEqual(
@@ -194,11 +183,11 @@ class ScopeTests(unittest.TestCase):
             "examples/godot/basic-dialogue/project.godot",
             "tests/godot-host/run_tests.gd",
             "tests/unity-project/Packages/manifest.json",
-            "scripts/check-godot-host.sh",
-            "scripts/package-godot-addon.sh",
-            "scripts/check-unity-adapter.sh",
-            "scripts/check-bevy-package.sh",
-            "scripts/unity/build-upm.sh",
+            "scripts/engines/check-godot-host.sh",
+            "scripts/engines/package-godot-addon.sh",
+            "scripts/engines/check-unity-adapter.sh",
+            "scripts/engines/check-bevy-package.sh",
+            "scripts/engines/unity/build-upm.sh",
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), scope.ENGINE)
@@ -216,15 +205,15 @@ class ScopeTests(unittest.TestCase):
             ("flake.lock", "nix-packages"),
             ("nix/packages.nix", "nix-packages"),
             ("apps/writer/packaging/flatpak/manifest.json", "flatpak-packages"),
-            ("scripts/package-writer-flatpak.sh", "flatpak-packages"),
-            ("scripts/check-writer-flatpak.py", "flatpak-packages"),
+            ("scripts/writer/package-writer-flatpak.sh", "flatpak-packages"),
+            ("scripts/writer/check-writer-flatpak.py", "flatpak-packages"),
             ("tests/writer-flatpak/check.py", "flatpak-packages"),
             ("apps/writer/packaging/icons/recite-writer.svg", "flatpak-packages"),
-            ("scripts/package-writer.py", "packages"),
-            ("scripts/check-writer-desktop-links.py", "packages"),
-            ("scripts/writer_desktop_launcher.py", "packages"),
+            ("scripts/writer/package-writer.py", "packages"),
+            ("scripts/writer/check-writer-desktop-links.py", "packages"),
+            ("scripts/writer/writer_desktop_launcher.py", "packages"),
             (".config/mise/config.packaging.toml", "packages"),
-            ("scripts/check-writer-package-windows.ps1", "packages"),
+            ("scripts/writer/check-writer-package-windows.ps1", "packages"),
             ("tests/writer-packaging/check.py", "packages"),
             ("apps/writer/packaging/common.json", "packages"),
             ("apps/writer/packaging/icons/recite-writer.ico", "packages"),
@@ -259,9 +248,9 @@ class ScopeTests(unittest.TestCase):
 
     def test_ci_policy_changes_use_unconditional_contract_checks(self):
         for path in (
-            "scripts/ci-scope.py",
-            "scripts/ci_scope_config.py",
-            "scripts/check-ci-results.py",
+            "scripts/ci/ci-scope.py",
+            "scripts/ci/ci_scope_config.py",
+            "scripts/ci/check-ci-results.py",
             "tests/ci/test_scope.py",
         ):
             with self.subTest(path=path):
@@ -325,7 +314,7 @@ class ScopeTests(unittest.TestCase):
 
 class GitDiffTests(unittest.TestCase):
     def test_complete_diff_includes_deletions_rename_sources_and_unusual_names(self):
-        cli = str(ROOT / "scripts/ci-scope.py")
+        cli = str(ROOT / "scripts/ci/ci-scope.py")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
 

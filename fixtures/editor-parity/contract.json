@@ -65,7 +65,7 @@
       "status": "partial",
       "path": null,
       "clients": ["zed"],
-      "notes": "The source package is checked by scripts/check-zed.sh and installed as a local development extension by scripts/check-zed-host.sh; no gallery artifact or publication is claimed."
+      "notes": "The source package is checked by scripts/editors/check-zed.sh and installed as a local development extension by scripts/editors/check-zed-host.sh; no gallery artifact or publication is claimed."
     }
   ],
   "distributions": [
@@ -260,11 +260,11 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio initialize response contains the advertised fields",
@@ -276,7 +276,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -284,7 +284,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -292,7 +292,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -340,12 +340,12 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-neovim-host.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-neovim-host.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "diagnostics carry URI, version, code, severity, and range for the canonical malformed fixture",
@@ -357,7 +357,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -365,7 +365,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -373,7 +373,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.10.4",
             "architecture": "x86_64"
@@ -381,7 +381,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.12.5",
             "architecture": "x86_64"
@@ -389,7 +389,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -436,11 +436,11 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "completion and definition are actual stdio responses for the canonical fixture",
@@ -452,7 +452,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -460,7 +460,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -468,7 +468,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -515,9 +515,9 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity utf16_crlf_and_non_bmp_ranges_are_projected_over_stdio",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio diagnostics expose the expected UTF-16 range for the derived CRLF fixture",
@@ -529,7 +529,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -577,7 +577,7 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable",
-          "scripts/check-vscode.sh"
+          "scripts/editors/check-vscode.sh"
         ],
         "assertions": [
           "accepted newer overlay publishes only its current version in the recovery scenario",
@@ -727,9 +727,9 @@
       "expected_evidence": {
         "status": "partial",
         "commands": [
-          "scripts/check-vscode.sh",
-          "scripts/check-neovim.sh",
-          "scripts/check-neovim-host.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-neovim-host.sh",
           "cargo test --locked -p recite-compiler --test authoring_build status_projection::projects_every_lifecycle_state_with_stable_fields"
         ],
         "assertions": [
@@ -743,7 +743,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.10.4",
             "architecture": "x86_64"
@@ -751,7 +751,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.12.5",
             "architecture": "x86_64"
@@ -797,12 +797,12 @@
       "expected_evidence": {
         "status": "partial",
         "commands": [
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-neovim-host.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-neovim-host.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           ".recite activates the recite filetype through the automatic runtimepath entry",
@@ -815,7 +815,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -823,7 +823,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -831,7 +831,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.10.4",
             "architecture": "x86_64"
@@ -839,7 +839,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.12.5",
             "architecture": "x86_64"
@@ -847,7 +847,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -892,7 +892,7 @@
       },
       "expected_evidence": {
         "status": "partial",
-        "commands": ["scripts/check-vscode.sh"],
+        "commands": ["scripts/editors/check-vscode.sh"],
         "assertions": [
           "the checked-in TextMate grammar covers canonical, malformed, and incomplete lexical fixtures",
           "grammar scopes distinguish statement markers, names, stable IDs, references, values, calls, prose, markup, and placeholders",
@@ -939,7 +939,7 @@
       },
       "expected_evidence": {
         "status": "partial",
-        "command": "scripts/check-neovim.sh",
+        "command": "scripts/editors/check-neovim.sh",
         "assertions": [
           "ABI14 parser loads and the checked-in highlights query emits captures in Neovim"
         ],
@@ -983,7 +983,7 @@
       },
       "expected_evidence": {
         "status": "partial",
-        "commands": ["scripts/check-zed.sh", "scripts/check-zed-host.sh"],
+        "commands": ["scripts/editors/check-zed.sh", "scripts/editors/check-zed-host.sh"],
         "assertions": [
           "the Zed package check proves manifest/config/task/query drift and the exact pinned grammar reference",
           "the check exercises lexical captures against the pinned grammar",
@@ -994,7 +994,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1041,10 +1041,10 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract",
-          "scripts/check-neovim.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio completion contains the canonical work symbol",
@@ -1055,7 +1055,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1063,7 +1063,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1071,7 +1071,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1118,11 +1118,11 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio definition resolves into the discovered sibling file",
@@ -1134,7 +1134,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1142,7 +1142,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1150,7 +1150,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1194,10 +1194,10 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract",
-          "scripts/check-neovim.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio hover response carries a symbol range and structured contents",
@@ -1208,7 +1208,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1216,7 +1216,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1224,7 +1224,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1271,10 +1271,10 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract",
-          "scripts/check-neovim.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio references include the declaration and use location",
@@ -1285,7 +1285,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1293,7 +1293,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1301,7 +1301,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1349,10 +1349,10 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio rename response contains a source document edit",
@@ -1364,7 +1364,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1411,11 +1411,11 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio code action response carries a source edit",
@@ -1427,7 +1427,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1435,7 +1435,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1443,7 +1443,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1490,8 +1490,8 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh"
         ],
         "assertions": [
           "root URI discovers the canonical sibling source",
@@ -1539,8 +1539,8 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode.sh"
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode.sh"
         ],
         "assertions": [
           "stdio startup uses the supplied project root",
@@ -1588,9 +1588,9 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "stdio operation delegates missing-ID repair to the shared kernel",
@@ -1602,7 +1602,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1610,7 +1610,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1618,7 +1618,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1714,12 +1714,12 @@
         "status": "partial",
         "commands": [
           "cargo test --locked -p recite-cli --test structured_command structured_compile_and_extract_project_machine_artifacts_or_typed_entries",
-          "scripts/check-vscode.sh",
-          "scripts/check-neovim.sh",
-          "scripts/check-zed.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-neovim-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-zed.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-neovim-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "version-1 compile, validate, and extract records are externally tested",
@@ -1734,7 +1734,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1742,7 +1742,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1750,7 +1750,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.10.4",
             "architecture": "x86_64"
@@ -1758,7 +1758,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.12.5",
             "architecture": "x86_64"
@@ -1766,7 +1766,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -1814,10 +1814,10 @@
         "commands": [
           "cargo test --locked -p recite-cli --test structured_command structured_run_and_trace_share_deterministic_trace_data_without_run_text",
           "cargo test --locked -p recite-cli --test dialogue_locale run_trace_and_play_plain_preview_dialogue_locale_catalogs",
-          "scripts/check-vscode.sh",
-          "scripts/check-neovim.sh",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-neovim-host.sh"
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-neovim-host.sh"
         ],
         "assertions": [
           "version-1 run and trace records preserve deterministic runtime data",
@@ -1832,7 +1832,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1840,7 +1840,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1848,7 +1848,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.10.4",
             "architecture": "x86_64"
@@ -1856,7 +1856,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.12.5",
             "architecture": "x86_64"
@@ -1903,13 +1903,13 @@
       "expected_evidence": {
         "status": "partial",
         "commands": [
-          "scripts/check-vscode.sh",
-          "scripts/check-neovim.sh",
-          "scripts/check-zed.sh",
+          "scripts/editors/check-vscode.sh",
+          "scripts/editors/check-neovim.sh",
+          "scripts/editors/check-zed.sh",
           "cargo test --locked -p recite-compiler --test authoring_build status_projection::projection_retains_structured_diagnostics_and_freshness",
-          "scripts/check-vscode-host.sh",
-          "scripts/check-neovim-host.sh",
-          "scripts/check-zed-host.sh"
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-neovim-host.sh",
+          "scripts/editors/check-zed-host.sh"
         ],
         "assertions": [
           "the real CLI watch adapter covers start, initial build/waiting, stop, and process exit",
@@ -1922,7 +1922,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64"
@@ -1930,7 +1930,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64"
@@ -1938,7 +1938,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.10.4",
             "architecture": "x86_64"
@@ -1946,7 +1946,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.12.5",
             "architecture": "x86_64"
@@ -1954,7 +1954,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64"
@@ -2008,10 +2008,10 @@
       "expected_evidence": {
         "status": "partial",
         "commands": [
-          "scripts/check-vscode-host.sh",
-          "scripts/check-neovim-host.sh",
-          "scripts/check-zed-host.sh",
-          "scripts/check-zed.sh"
+          "scripts/editors/check-vscode-host.sh",
+          "scripts/editors/check-neovim-host.sh",
+          "scripts/editors/check-zed-host.sh",
+          "scripts/editors/check-zed.sh"
         ],
         "assertions": [
           "each claimed client/platform names the exact installed host and version",
@@ -2025,7 +2025,7 @@
           {
             "client": "vscode",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VS Code",
             "version": "1.136.1",
             "architecture": "x86_64",
@@ -2060,7 +2060,7 @@
           {
             "client": "vscodium",
             "platform": "linux",
-            "runner": "scripts/check-vscode-host.sh",
+            "runner": "scripts/editors/check-vscode-host.sh",
             "product": "VSCodium",
             "version": "1.126.04524",
             "architecture": "x86_64",
@@ -2095,7 +2095,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.10.4",
             "architecture": "x86_64",
@@ -2122,7 +2122,7 @@
           {
             "client": "neovim",
             "platform": "linux",
-            "runner": "scripts/check-neovim-host.sh",
+            "runner": "scripts/editors/check-neovim-host.sh",
             "product": "Neovim",
             "version": "0.12.5",
             "architecture": "x86_64",
@@ -2149,7 +2149,7 @@
           {
             "client": "zed",
             "platform": "linux",
-            "runner": "scripts/check-zed-host.sh",
+            "runner": "scripts/editors/check-zed-host.sh",
             "product": "Zed",
             "version": "1.18.1",
             "architecture": "x86_64",
@@ -2177,7 +2177,7 @@
         ]
       },
       "evidence_issues": ["#202", "#192"],
-      "keyboard_sequence_scope": "The bounded keyboard workflow sequence covers activation, diagnostics, supported commands, and watch shutdown; Zed code-action and rename application use the dedicated LSP UI action sequence in scripts/check-zed-host.sh and remain recorded in their lsp.code-actions and lsp.rename evidence rows."
+      "keyboard_sequence_scope": "The bounded keyboard workflow sequence covers activation, diagnostics, supported commands, and watch shutdown; Zed code-action and rename application use the dedicated LSP UI action sequence in scripts/editors/check-zed-host.sh and remain recorded in their lsp.code-actions and lsp.rename evidence rows."
     }
   ]
 }

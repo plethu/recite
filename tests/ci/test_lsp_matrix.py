@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.lsp_tools.matrix import run
+from scripts.lsp.lsp_tools.matrix import run
 
 
 class MatrixTests(unittest.TestCase):
@@ -14,7 +14,7 @@ class MatrixTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as directory,
             patch.dict("os.environ", {"RECITE_LSP_TRACE_DIR": "inherited-trace"}),
-            patch("scripts.lsp_tools.matrix.subprocess.run") as launch,
+            patch("scripts.lsp.lsp_tools.matrix.subprocess.run") as launch,
         ):
             root = Path(directory)
             run(Path("candidate"), root, control=Path("control"), native_trace=True)
@@ -45,7 +45,7 @@ class MatrixTests(unittest.TestCase):
 
     def test_failed_observation_stops_the_matrix(self):
         with patch(
-            "scripts.lsp_tools.matrix.subprocess.run",
+            "scripts.lsp.lsp_tools.matrix.subprocess.run",
             side_effect=subprocess.CalledProcessError(1, "driver"),
         ) as launch:
             with self.assertRaises(subprocess.CalledProcessError):

@@ -205,6 +205,11 @@ if run_policy "[REC-163] chore: integrate milestone" 0 0 main >/dev/null 2>&1; t
   exit 1
 fi
 
+if run_policy "[REC-163] chore: integrate milestone" 0 0 release/v0-2 >/dev/null 2>&1; then
+  echo "pull request with a protected maintenance branch as its head was accepted" >&2
+  exit 1
+fi
+
 if run_policy "" 0 0 feat/milestone-integration >/dev/null 2>&1; then
   echo "pull request without a title was accepted" >&2
   exit 1

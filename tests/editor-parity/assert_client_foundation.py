@@ -69,7 +69,7 @@ def main() -> int:
         capability_id
         for capability_id, capability in capabilities.items()
         if capability["client_status"]["vscode"] == "partial"
-        and "scripts/check-vscode.sh" in capability["expected_evidence"].get("commands", [])
+        and "scripts/editors/check-vscode.sh" in capability["expected_evidence"].get("commands", [])
     }
     if actual_client_evidence != expected_client_evidence:
         raise SystemExit(
@@ -108,7 +108,7 @@ def main() -> int:
         capability_id
         for capability_id, capability in capabilities.items()
         if capability["client_status"].get("zed") == "partial"
-        and "scripts/check-zed.sh" in capability["expected_evidence"].get("commands", [])
+        and "scripts/editors/check-zed.sh" in capability["expected_evidence"].get("commands", [])
     }
     if actual_zed_evidence != expected_zed_evidence:
         raise SystemExit(
@@ -177,7 +177,7 @@ def main() -> int:
     for capability_id, assertion in expected_zed_host_evidence.items():
         capability = capabilities[capability_id]
         evidence = capability["expected_evidence"]
-        if "scripts/check-zed-host.sh" not in evidence.get("commands", []):
+        if "scripts/editors/check-zed-host.sh" not in evidence.get("commands", []):
             raise SystemExit(f"{capability_id} must retain installed Zed host evidence")
         records = evidence.get("host_records", [])
         if not any(

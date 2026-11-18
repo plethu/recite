@@ -104,7 +104,7 @@ tree-sitter build editors/recite-tree-sitter \
 Use `recite.dll` on Windows. On macOS, `recite.so` is the usual Neovim runtimepath name for this
 parser. The generated library is ignored by Git and must be rebuilt for the host where Neovim runs.
 `mise run check-tree-sitter` checks grammar generation, captures, recovery, and canonical fixture
-coverage. `scripts/check-neovim.sh` builds and loads the ABI14 parser in Neovim and is the
+coverage. `scripts/editors/check-neovim.sh` builds and loads the ABI14 parser in Neovim and is the
 authoritative integration gate; it does not install the Neovim parser library.
 
 Highlighting starts automatically for `recite` buffers when the parser is available. Without it, the

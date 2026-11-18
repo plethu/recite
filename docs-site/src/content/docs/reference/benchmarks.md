@@ -27,7 +27,7 @@ just perf compare BASE_COMMIT
 ```
 
 This builds both revisions and samples them on the same runner. The
-[checked-in policy](https://github.com/plethu/recite/blob/main/scripts/lsp-performance-policy.json)
+[checked-in policy](https://github.com/plethu/recite/blob/main/scripts/lsp/lsp-performance-policy.json)
 owns exact workloads, sample counts, thresholds and confirmation rounds. It requires matching output
 fingerprints and complete evidence; raw samples and binary identities remain artifacts under
 `target/lsp-performance/`. These Linux process checks do not establish cross-platform rendering,

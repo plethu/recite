@@ -26,7 +26,7 @@ claim for this package.
 From the Recite checkout, build a reproducible package archive:
 
 ```bash
-CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/unity/build-upm.sh
+CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/engines/unity/build-upm.sh
 ```
 
 The script prints `com.recite.dialogue-0.1.0-linux-x86_64.tgz`. Add that archive with Unity Package
@@ -115,12 +115,12 @@ inspecting the result. A sample scene and EditMode fixture exercise this path.
 ## Verification
 
 ```bash
-CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/check-unity-adapter.sh
-CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/unity/perf-probe.sh
-UNITY_EDITOR=/path/to/Unity scripts/unity/run-unity-tests.sh
-UNITY_EDITOR=/path/to/Unity RECITE_UNITY_PLAYER_MODE=mono scripts/unity/run-unity-tests.sh
-UNITY_EDITOR=/path/to/Unity RECITE_UNITY_PLAYER_MODE=il2cpp scripts/unity/run-unity-tests.sh
-UNITY_EDITOR=/path/to/Unity-6.7 RECITE_UNITY_PLAYER_MODE=coreclr scripts/unity/run-unity-tests.sh
+CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/engines/check-unity-adapter.sh
+CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/engines/unity/perf-probe.sh
+UNITY_EDITOR=/path/to/Unity scripts/engines/unity/run-unity-tests.sh
+UNITY_EDITOR=/path/to/Unity RECITE_UNITY_PLAYER_MODE=mono scripts/engines/unity/run-unity-tests.sh
+UNITY_EDITOR=/path/to/Unity RECITE_UNITY_PLAYER_MODE=il2cpp scripts/engines/unity/run-unity-tests.sh
+UNITY_EDITOR=/path/to/Unity-6.7 RECITE_UNITY_PLAYER_MODE=coreclr scripts/engines/unity/run-unity-tests.sh
 ```
 
 The first check builds the native library and CLI, tests the managed service through real FFI, and

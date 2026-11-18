@@ -36,8 +36,8 @@ own the required observations. See [performance](#performance) for the headless 
 ## Installing and upgrading
 
 Until the Recite crates are published, use this repository as a path dependency.
-`scripts/check-bevy-package.sh` prepares real Cargo `.crate` archives for `recite-bevy` and its
-unpublished Recite dependencies. It uses temporary Cargo patches for dependency resolution, then
+`scripts/engines/check-bevy-package.sh` prepares real Cargo `.crate` archives for `recite-bevy` and
+its unpublished Recite dependencies. It uses temporary Cargo patches for dependency resolution, then
 runs the example from the Bevy archive in a separate project using only extracted archives. The
 archives and SHA-256 manifest, license texts, and replayable consumer are under
 `target/recite-bevy-probe/cargo-packages/`. Run `cargo fetch --locked` from the repository first if
@@ -54,11 +54,11 @@ upgrade.
 
 ## Performance
 
-Run `CARGO_TARGET_DIR=<disk-backed target> scripts/probe-bevy-performance.sh` from the repository
-root. The script builds the CPU-only Bevy example once, compiles the published runtime-surface
-fixture outside the measured commands, then times separate child processes with Python's external
-wall timer and `wait4` resource usage. There are no CI thresholds. The report is retained at
-`$CARGO_TARGET_DIR/recite-bevy-probe/performance.txt`.
+Run `CARGO_TARGET_DIR=<disk-backed target> scripts/engines/probe-bevy-performance.sh` from the
+repository root. The script builds the CPU-only Bevy example once, compiles the published
+runtime-surface fixture outside the measured commands, then times separate child processes with
+Python's external wall timer and `wait4` resource usage. There are no CI thresholds. The report is
+retained at `$CARGO_TARGET_DIR/recite-bevy-probe/performance.txt`.
 
 The
 [September 2026 observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#bevy-performance)

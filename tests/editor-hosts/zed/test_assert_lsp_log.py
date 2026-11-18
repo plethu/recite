@@ -31,7 +31,7 @@ class CodeActionEvidenceTests(unittest.TestCase):
 
 class HostFixtureIsolationTests(unittest.TestCase):
     def test_incomplete_fixture_is_excluded_from_project_stable_id_planning(self) -> None:
-        script = (Path(__file__).parents[3] / "scripts/check-zed-host.sh").read_text(
+        script = (Path(__file__).parents[3] / "scripts/editors/check-zed-host.sh").read_text(
             encoding="utf-8"
         )
         self.assertIn('excludes = ["host-fixtures/**"]', script)

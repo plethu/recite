@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location("check_runner", ROOT / "scripts/run-checks.py")
+spec = importlib.util.spec_from_file_location("check_runner", ROOT / "scripts/ci/run-checks.py")
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
 
@@ -104,7 +104,7 @@ class NativeCacheTests(unittest.TestCase):
             root = Path(temporary) / "source"
             root.mkdir()
             (root / ".config/mise").mkdir(parents=True)
-            (root / "scripts").mkdir()
+            (root / "scripts/ci").mkdir(parents=True)
             shutil.copy(ROOT / "bunfig.toml", root / "bunfig.toml")
             config = json.loads((ROOT / "turbo.json").read_text())
             config["tasks"]["//#check:late"] = {
@@ -112,7 +112,7 @@ class NativeCacheTests(unittest.TestCase):
                 "cache": False,
             }
             (root / "turbo.json").write_text(json.dumps(config))
-            shutil.copy(ROOT / "scripts/run-checks.py", root / "scripts/run-checks.py")
+            shutil.copy(ROOT / "scripts/ci/run-checks.py", root / "scripts/ci/run-checks.py")
             (root / ".config/mise/config.quality.toml").write_text("[tools]\n")
             import tomllib
 
@@ -191,7 +191,7 @@ class NativeCacheTests(unittest.TestCase):
 
             def run(directory, *, success=True):
                 result = subprocess.run(
-                    ["python3", "scripts/run-checks.py", "spelling"],
+                    ["python3", "scripts/ci/run-checks.py", "spelling"],
                     cwd=directory,
                     env=environment,
                     text=True,
@@ -237,7 +237,7 @@ class NativeCacheTests(unittest.TestCase):
                     "typos@system",
                     "--",
                     "python3",
-                    "scripts/run-checks.py",
+                    "scripts/ci/run-checks.py",
                     "spelling",
                 ],
                 cwd=root,

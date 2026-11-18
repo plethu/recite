@@ -16,7 +16,7 @@ measurements establish only the workloads and platforms they actually cover.
 | Background execution          | `server/workers.rs`                                                              | Analysis and queries have separate workers; worker input uses bounded standard channels and selectable results use Crossbeam |
 | Project and query snapshots   | `workspace/`                                                                     | Share unchanged immutable analyses; retain project authority for operations such as rename                                   |
 | Incremental semantic analysis | `recite-compiler` authoring and validation modules                               | Reuse unchanged regions, relocate final output spans and rebuild when dependencies require it                                |
-| External measurements         | `scripts/lsp_tools/`, invoked through `just perf`                                | Separate process latency, resource accounting and report validation from production server code                              |
+| External measurements         | `scripts/lsp/lsp_tools/`, invoked through `just perf`                            | Separate process latency, resource accounting and report validation from production server code                              |
 
 A text or protocol acceptance change starts at `text_sync.rs` and the stdio transaction tests.
 Scheduling changes start at the coordinator and final-handoff cancellation tests. Semantic

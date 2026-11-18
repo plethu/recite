@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.lsp_tools import faults
-from scripts.lsp_tools.health import assess, recovery_tail
+from scripts.lsp.lsp_tools import faults
+from scripts.lsp.lsp_tools.health import assess, recovery_tail
 
 
 def rows():

@@ -19,7 +19,7 @@ conventions.
 - Do not put `#[test]` bodies inline in production source files, or use source-side
   `*_test.rs`/`*_tests.rs` files.
 - Keep shared cross-crate fixtures under top-level `tests/support`.
-- Run `scripts/check-test-organization.sh` when test files move or new tests are added.
+- Run `scripts/quality/check-test-organization.sh` when test files move or new tests are added.
 
 ## Fixtures and snapshots
 
@@ -52,7 +52,7 @@ hypothesis and focused checks for an individual fix rather than repeating the br
 
 When adding a cost case, extend its target under `tools/recite-perf/benches/` and the required cases
 in `tools/recite-perf/src/lib.rs` together. Register new targets in `Cargo.toml` and
-`scripts/check-workflow-performance.sh`. Run `mise exec -- just perf regression BASE pr OUTPUT` with
-a fresh output directory; missing cases, controls or counters must fail. Use `authoring` or `writer`
-instead of `pr` for focused work. Run `mise exec -- just writer heap` when changing the Writer
-fixed-corpus allocation contracts.
+`scripts/perf/check-workflow-performance.sh`. Run `mise exec -- just perf regression BASE pr OUTPUT`
+with a fresh output directory; missing cases, controls or counters must fail. Use `authoring` or
+`writer` instead of `pr` for focused work. Run `mise exec -- just writer heap` when changing the
+Writer fixed-corpus allocation contracts.

@@ -11,7 +11,7 @@ trap 'rm -rf "$test_root"' EXIT
 fixture_repo="$test_root/target/repo"
 mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/fixtures/recite/valid" "$fixture_repo/fixtures/recite/invalid" \
-  "$fixture_repo/fixtures/schema/valid" "$fixture_repo/scripts" \
+  "$fixture_repo/fixtures/schema/valid" "$fixture_repo/scripts/editors" \
   "$fixture_repo/editors/recite-tree-sitter" \
   "$fixture_repo/editors/recite-neovim" \
   "$fixture_repo/crates/recite-lsp/tests" \
@@ -19,15 +19,15 @@ mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/crates/recite-compiler/tests/authoring_build"
 mkdir -p "$fixture_repo/tests/editor-hosts/neovim" \
   "$fixture_repo/tests/editor-hosts/zed"
-cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
-cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
-cp "$repo_root/scripts/check-neovim.sh" "$fixture_repo/scripts/"
-cp "$repo_root/scripts/check-vscode.sh" "$fixture_repo/scripts/"
-cp "$repo_root/scripts/check-zed.sh" "$fixture_repo/scripts/"
-cp "$repo_root/scripts/check-neovim-host.sh" "$fixture_repo/scripts/"
-cp "$repo_root/scripts/check-vscode-host.sh" "$fixture_repo/scripts/"
-cp "$repo_root/scripts/check-zed-host.sh" "$fixture_repo/scripts/"
-cp -R "$repo_root/scripts/editor_parity" "$fixture_repo/scripts/"
+cp "$repo_root/scripts/editors/check-editor-parity.sh" "$fixture_repo/scripts/editors/"
+cp "$repo_root/scripts/editors/check-tree-sitter.sh" "$fixture_repo/scripts/editors/"
+cp "$repo_root/scripts/editors/check-neovim.sh" "$fixture_repo/scripts/editors/"
+cp "$repo_root/scripts/editors/check-vscode.sh" "$fixture_repo/scripts/editors/"
+cp "$repo_root/scripts/editors/check-zed.sh" "$fixture_repo/scripts/editors/"
+cp "$repo_root/scripts/editors/check-neovim-host.sh" "$fixture_repo/scripts/editors/"
+cp "$repo_root/scripts/editors/check-vscode-host.sh" "$fixture_repo/scripts/editors/"
+cp "$repo_root/scripts/editors/check-zed-host.sh" "$fixture_repo/scripts/editors/"
+cp -R "$repo_root/scripts/editors/editor_parity" "$fixture_repo/scripts/editors/"
 cp "$repo_root/editors/recite-tree-sitter/grammar.js" "$fixture_repo/editors/recite-tree-sitter/"
 cp -R "$repo_root/editors/recite-neovim/." "$fixture_repo/editors/recite-neovim/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
@@ -44,7 +44,7 @@ cp "$repo_root/AGENTS.md" "$fixture_repo/AGENTS.md"
 mkdir -p "$fixture_repo/.claude"
 ln -s ../.agents/skills "$fixture_repo/.claude/skills"
 ln -s AGENTS.md "$fixture_repo/CLAUDE.md"
-chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh" "$fixture_repo/scripts/check-zed.sh" "$fixture_repo/scripts/check-neovim-host.sh" "$fixture_repo/scripts/check-vscode-host.sh" "$fixture_repo/scripts/check-zed-host.sh"
+chmod +x "$fixture_repo/scripts/editors/check-editor-parity.sh" "$fixture_repo/scripts/editors/check-tree-sitter.sh" "$fixture_repo/scripts/editors/check-neovim.sh" "$fixture_repo/scripts/editors/check-vscode.sh" "$fixture_repo/scripts/editors/check-zed.sh" "$fixture_repo/scripts/editors/check-neovim-host.sh" "$fixture_repo/scripts/editors/check-vscode-host.sh" "$fixture_repo/scripts/editors/check-zed-host.sh"
 
 git -C "$fixture_repo" init -q -b main
 git -C "$fixture_repo" config user.name Fixture
@@ -74,7 +74,7 @@ assert_no_hashed_targets() {
 }
 
 run_checker() {
-  (cd "$fixture_repo" && scripts/check-editor-parity.sh)
+  (cd "$fixture_repo" && scripts/editors/check-editor-parity.sh)
 }
 
 mutate_fixture() {
@@ -105,7 +105,7 @@ expect_target_failure() {
 }
 
 assert_portable_lock_source() {
-  python3 - "$repo_root/scripts/editor_parity/portable_lock.py" <<'PY'
+  python3 - "$repo_root/scripts/editors/editor_parity/portable_lock.py" <<'PY'
 import ast
 import sys
 from pathlib import Path
@@ -183,7 +183,7 @@ import sys
 from pathlib import Path
 
 repo = Path(sys.argv[1])
-sys.path.insert(0, str(repo / "scripts"))
+sys.path.insert(0, str(repo / "scripts/editors"))
 from editor_parity.content_digest import selected_target_digest, workspace_files
 from editor_parity.model import Context
 
@@ -292,7 +292,7 @@ shutil.rmtree(nested_repo)
 # Python bytecode is also ignored/excluded, including bytecode created by the
 # checker itself.
 before_bytecode = selected_target_digest(context, "recite-lsp")
-bytecode = repo / "scripts/editor_parity/__pycache__"
+bytecode = repo / "scripts/editors/editor_parity/__pycache__"
 bytecode.mkdir(parents=True, exist_ok=True)
 (bytecode / "checker.cpython-314.pyc").write_bytes(b"bytecode")
 (repo / "checker-output.pyo").write_bytes(b"bytecode")
@@ -346,6 +346,6 @@ python3 "$repo_root/tests/editor-parity/diagnostic_probes.py" "$fixture_repo"
 source "$repo_root/tests/editor-parity/hostile_cases.sh"
 
 if [[ -L "$repo_root/.claude/skills" && -L "$repo_root/CLAUDE.md" ]]; then
-  CARGO_TARGET_DIR="$test_root/source-checkout-target" "$repo_root/scripts/check-editor-parity.sh" "$repo_root"
+  CARGO_TARGET_DIR="$test_root/source-checkout-target" "$repo_root/scripts/editors/check-editor-parity.sh" "$repo_root"
   echo "editor parity source-checkout metadata symlink fixture passed"
 fi

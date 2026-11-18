@@ -15,7 +15,7 @@ color = "0.3.3"
 kurbo = "0.13.1"
 recite-core.workspace = true
 recite-compiler.workspace = true
-recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }
+recite-config = { path = "../../../../crates/recite-config" }
 recite-runtime.workspace = true
 recite-writer-model.workspace = true
 recite-writer-session.workspace = true

@@ -4,13 +4,14 @@ Warnings are design signals. Prefer correcting the ownership or implementation b
 one. A local exception needs the narrowest scope and a reason a reviewer can assess.
 
 ```sh
-scripts/check-lint-suppressions.sh origin/main HEAD
-scripts/check-lint-suppressions.sh --full
+scripts/quality/check-lint-suppressions.sh origin/main HEAD
+scripts/quality/check-lint-suppressions.sh --full
 ```
 
 The first command checks changes against the base; `--full` reports current debt without failing it.
-The complete local gate includes the check. The [checker](../scripts/check-lint-suppressions.sh),
-[structural parser](../scripts/lint_suppression_ast.py) and their tests own matching and
+The complete local gate includes the check. The
+[checker](../scripts/quality/check-lint-suppressions.sh),
+[structural parser](../scripts/quality/lint_suppression_ast.py) and their tests own matching and
 classification.
 
 ## What the gate checks
@@ -28,8 +29,8 @@ lint exists or whether a reason is true. Rustc and human review retain those res
 ## Scoped exceptional categories
 
 Tests, fixtures and benchmarks may have local exceptions without production reason requirements.
-Generated exclusions come only from the exact [allowlist](../scripts/generated-rust-allowlist.txt),
-never a filename convention.
+Generated exclusions come only from the exact
+[allowlist](../scripts/quality/generated-rust-allowlist.txt), never a filename convention.
 
 FFI reasons begin `ffi:` and name ownership at the boundary. Compatibility reasons begin
 `compatibility:` and name the preserved public contract. An adjacent `recite-lint-suppression: ffi`

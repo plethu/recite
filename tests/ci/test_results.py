@@ -13,8 +13,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts"))
-spec = importlib.util.spec_from_file_location("ci_results", ROOT / "scripts/check-ci-results.py")
+sys.path.insert(0, str(ROOT / "scripts/ci"))
+spec = importlib.util.spec_from_file_location("ci_results", ROOT / "scripts/ci/check-ci-results.py")
 results = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(results)
 
@@ -113,7 +113,7 @@ class ResultsTests(unittest.TestCase):
             self.assertIn(f"      - {lane}\n", jobs["required-check"])
         self.assertIn("if: always()", jobs["required-check"])
         self.assertIn("${{ toJSON(needs) }}", jobs["required-check"])
-        self.assertIn("scripts/check-ci-results.py", jobs["required-check"])
+        self.assertIn("scripts/ci/check-ci-results.py", jobs["required-check"])
         installed = re.findall(r"install_args: ([^\n]+)", jobs["git-policy"])
         self.assertTrue({"just", "aqua:jqlang/jq"} <= set(" ".join(installed).split()))
         self.assertNotIn("      - edited", workflow)

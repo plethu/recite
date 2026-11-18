@@ -8,12 +8,12 @@ trap '[[ -z "$test_root" ]] || rm -rf "$test_root"' EXIT
 fixture() {
   [[ -z "$test_root" ]] || rm -rf "$test_root"
   test_root="$(mktemp -d)"
-  mkdir -p "$test_root/repo/scripts/maintainability" "$test_root/repo/crates/demo/src" "$test_root/repo/crates/demo/tests"
-  cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/"
-  cp "$repo_root/scripts/check-source-policy.sh" "$repo_root/scripts/check-lint-suppressions.sh" \
-    "$repo_root/scripts/check-lint-suppressions.py" "$repo_root/scripts/"lint_suppression_*.py "$test_root/repo/scripts/"
-  cp "$repo_root/scripts/maintainability"/{*.sh,*.py} "$test_root/repo/scripts/maintainability/"
-  cat >"$test_root/repo/scripts/maintainability/exceptions.toml" <<'TOML'
+  mkdir -p "$test_root/repo/scripts/quality/maintainability" "$test_root/repo/crates/demo/src" "$test_root/repo/crates/demo/tests"
+  cp "$repo_root/scripts/quality/check-maintainability.sh" "$test_root/repo/scripts/quality/"
+  cp "$repo_root/scripts/quality/check-source-policy.sh" "$repo_root/scripts/quality/check-lint-suppressions.sh" \
+    "$repo_root/scripts/quality/check-lint-suppressions.py" "$repo_root/scripts/quality/"lint_suppression_*.py "$test_root/repo/scripts/quality/"
+  cp "$repo_root/scripts/quality/maintainability"/{*.sh,*.py} "$test_root/repo/scripts/quality/maintainability/"
+  cat >"$test_root/repo/scripts/quality/maintainability/exceptions.toml" <<'TOML'
 [[exceptions]]
 path = "crates/demo/src/excepted.rs"
 max_lines = 403
@@ -40,7 +40,7 @@ save() {
 }
 
 check() {
-  (cd "$test_root/repo" && env -u RECITE_BASE_REF -u RECITE_HEAD_REF scripts/check-maintainability.sh "$1" HEAD)
+  (cd "$test_root/repo" && env -u RECITE_BASE_REF -u RECITE_HEAD_REF scripts/quality/check-maintainability.sh "$1" HEAD)
 }
 
 assert_check() {
@@ -99,13 +99,13 @@ assert_check fail 'expired exception below follow-up threshold' "$(previous)"
 
 fixture
 save
-sed -i 's/#164/#0/' "$test_root/repo/scripts/maintainability/exceptions.toml"
+sed -i 's/#164/#0/' "$test_root/repo/scripts/quality/maintainability/exceptions.toml"
 save
 assert_check fail 'malformed issue' "$(previous)"
 
 fixture
 save
-cat >>"$test_root/repo/scripts/maintainability/exceptions.toml" <<'TOML'
+cat >>"$test_root/repo/scripts/quality/maintainability/exceptions.toml" <<'TOML'
 [[exceptions]]
 path = "crates/demo/src/excepted.rs"
 max_lines = 403
@@ -187,14 +187,14 @@ assert_check pass 'initial push exception' 0000000000000000000000000000000000000
 
 fixture
 save
-policy() { (cd "$test_root/repo" && RECITE_BASE_REF=HEAD env -u RECITE_HEAD_REF scripts/check-source-policy.sh); }
+policy() { (cd "$test_root/repo" && RECITE_BASE_REF=HEAD env -u RECITE_HEAD_REF scripts/quality/check-source-policy.sh); }
 lines crates/demo/src/new.rs 401
 if policy >"$test_root/result" 2>&1; then
   echo 'untracked oversized source escaped policy' >&2
   exit 1
 fi
 rg -q 'follow-up threshold exceeded' "$test_root/result"
-(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD scripts/check-source-policy.sh)
+(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD scripts/quality/check-source-policy.sh)
 git -C "$test_root/repo" add crates/demo/src/new.rs
 index_before="$(git -C "$test_root/repo" write-tree)"
 lines crates/demo/src/new.rs 300

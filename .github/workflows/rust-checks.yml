@@ -49,25 +49,92 @@ jobs:
       - name: Check selected contracts
         env:
           LANE: ${{ inputs.lane }}
-          FULL: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.ref != '' }}
         run: |
           case "$LANE" in
             core) just core-check; just coverage ;;
             hosts) just host-check ;;
             editor-native) just editor-native-check ;;
-            writer) just writer check; just writer coverage; just writer probe target/writer-native/specimen.json specimen; just writer probe target/writer-native/frame-timing.json frame-timing
-              # Optimized large-project timings and memory run on scheduled, manual and release verification (#109).
-              if [[ "$FULL" == true ]]; then just writer probe target/writer-native/large-project.json large-project; fi ;;
+            # Coverage and optimized timing probes run beside this job; see writer-coverage and writer-timing.
+            writer) just writer check; just writer probe target/writer-native/specimen.json specimen ;;
             *) echo "Unknown contract lane: $LANE" >&2; exit 1 ;;
           esac
       - name: Retain coverage evidence
-        if: always() && (inputs.lane == 'core' || inputs.lane == 'writer')
+        if: always() && inputs.lane == 'core'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: test-assurance-${{ inputs.lane }}
+          name: test-assurance-core
+          path: target/coverage/
+          retention-days: 14
+
+  # The Writer lane's three builds use different profiles. Separate jobs keep each on its own
+  # cached target directory instead of rebuilding in sequence on one runner.
+  writer-coverage:
+    name: writer coverage
+    if: inputs.lane == 'writer'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
+      PROPTEST_CASES: "256"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust just cargo:cargo-llvm-cov
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: writer-coverage
+          workspaces: apps/writer -> target
+      - name: Install native Writer dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config gettext cmake libgtk-3-dev libclang-dev libxkbcommon-x11-0 cage wtype grim wl-clipboard libvulkan1 mesa-vulkan-drivers dbus-x11 python3-gi gir1.2-atspi-2.0 at-spi2-core
+      - name: Check Writer coverage floors
+        run: just writer coverage
+      - name: Retain coverage evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-assurance-writer
+          path: apps/writer/target/coverage/
+          retention-days: 14
+
+  writer-timing:
+    name: writer optimized timing
+    if: inputs.lane == 'writer'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust just python
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: writer-timing
+          workspaces: |
+            apps/writer -> target
+            . -> target
+      - name: Install native Writer dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config gettext cmake libgtk-3-dev libclang-dev libxkbcommon-x11-0 cage wtype grim wl-clipboard libvulkan1 mesa-vulkan-drivers dbus-x11 python3-gi gir1.2-atspi-2.0 at-spi2-core
+      - name: Check optimized frame pacing
+        run: just writer probe target/writer-native/frame-timing.json frame-timing
+      # Optimized large-project timings and memory run on scheduled, manual and release verification (#109).
+      - name: Check optimized large-project timings
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.ref != ''
+        run: just writer probe target/writer-native/large-project.json large-project
+      - name: Retain timing evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: writer-timing
           path: |
-            target/coverage/
-            apps/writer/target/coverage/
             target/writer-native/frame-timing*
             target/writer-native/large-project*
           retention-days: 14

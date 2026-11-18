@@ -22,7 +22,7 @@ build: wasm
 
 # Run the full documentation gate, including built links.
 verify:
-    ../scripts/check-docs.sh
+    ../scripts/docs/check-docs.sh
 
 # Serve the existing static build locally.
 preview *args:

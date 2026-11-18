@@ -42,7 +42,7 @@ run = "just check"
 [tasks.check-tree-sitter]
 description = "Check the Recite Tree-sitter grammar and editor captures"
 env = { XDG_CACHE_HOME = "{{config_root}}/target/tree-sitter-cache" }
-run = "scripts/check-tree-sitter.sh"
+run = "scripts/editors/check-tree-sitter.sh"
 
 [tasks.watch-stress]
 description = "Measure real watch rebuilds on generated fixture scales"

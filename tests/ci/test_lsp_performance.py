@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.lsp_tools import measurement, performance, regression
+from scripts.lsp.lsp_tools import measurement, performance, regression
 
 
 def pairs():
@@ -131,7 +131,7 @@ class ConfirmationTests(unittest.TestCase):
         self.control.write_bytes(b"control")
         self.candidate.write_bytes(b"candidate")
         self.output = directory / "report.json"
-        self.policy = json.loads(Path("scripts/lsp-performance-policy.json").read_text())
+        self.policy = json.loads(Path("scripts/lsp/lsp-performance-policy.json").read_text())
         self.calls = []
 
     def compare(self, slow_rounds, *, interrupt=False, corrupt=False, mutate=False):

@@ -2,14 +2,25 @@
 #[cfg(target_os = "linux")]
 mod linux;
 
-pub use linux::{ActivationHost, ActivationInbox};
 #[cfg(target_os = "linux")]
-use std::sync::atomic;
-use std::sync::mpsc;
+pub use linux::{ActivationHost, ActivationInbox};
+use std::sync::{atomic, mpsc};
 
 #[cfg(not(target_os = "linux"))]
 #[derive(Clone)]
 pub struct ActivationInbox;
+
+// Only Linux forwards a second invocation to the owning window.
+#[cfg(not(target_os = "linux"))]
+impl ActivationInbox {
+    pub fn new(_receiver: mpsc::Receiver<IncomingRoute>) -> Self {
+        Self
+    }
+
+    pub fn try_next(&self) -> Option<IncomingRoute> {
+        None
+    }
+}
 
 #[cfg(not(target_os = "linux"))]
 pub struct ActivationHost;

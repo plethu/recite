@@ -44,9 +44,9 @@ class DocumentScopeTests(unittest.TestCase):
             selected("scripts/install-js-dependencies.sh"), scope.JS | {"maintainability"}
         )
         for path in (
-            "scripts/check-docs.sh",
-            "scripts/check-schema-manifest.mjs",
-            "scripts/check-site-links.py",
+            "scripts/docs/check-docs.sh",
+            "scripts/docs/check-schema-manifest.mjs",
+            "scripts/docs/check-site-links.py",
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
@@ -59,9 +59,11 @@ class DocumentScopeTests(unittest.TestCase):
             ".config/just/stress.just": scope.JUST | {"workflow-performance"},
         }.items():
             self.assertEqual(selected(path), lanes)
-        for path in ("scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"):
+        for path in ("scripts/check-project-gates.sh", "scripts/engines/check-ffi-header.sh"):
             self.assertEqual(selected(path), scope.RUST)
-        self.assertEqual(selected("scripts/check-zed.sh"), {"editor-native", "maintainability"})
+        self.assertEqual(
+            selected("scripts/editors/check-zed.sh"), {"editor-native", "maintainability"}
+        )
         self.assertEqual(selected("justfile"), scope.JUST)
         self.assertEqual(
             selected("docs-site/src/content/docs/index.md", "justfile", "apps/writer/justfile"),

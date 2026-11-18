@@ -3,7 +3,7 @@
 This contract defines what Recite's first-class text clients can rely on. The
 [capability fixture](../fixtures/editor-parity/contract.json) owns client, platform, artifact and
 evidence status. A package or partial client does not establish publication or support.
-`scripts/check-editor-parity.sh` and the complete gate verify that fixture.
+`scripts/editors/check-editor-parity.sh` and the complete gate verify that fixture.
 
 ## Ownership
 
@@ -54,8 +54,8 @@ evidence remain separate; see the [LSP architecture](lsp-cancellation-design.md)
 Evidence is tied to Git-enumerated source content and modes, not mtimes. Ignored generated output is
 excluded; compiler inputs must be tracked or nonignored. Nested repositories and submodules are
 unsupported inputs. The exact metadata exclusions, digest algorithm and hostile cases belong to
-[`content_digest.py`](../scripts/editor_parity/content_digest.py) and the parity checker, rather
-than a second algorithm specification here.
+[`content_digest.py`](../scripts/editors/editor_parity/content_digest.py) and the parity checker,
+rather than a second algorithm specification here.
 
 ## Structured commands and watch
 
@@ -67,7 +67,7 @@ cancellation controls belong to each client.
 The [VS Code](../editors/vscode/README.md), [Neovim](../editors/recite-neovim/README.md) and
 [Zed](../editors/zed/README.md) guides own their concrete command surfaces. VS Code and Neovim
 consume structured records; Zed's static tasks display them in a terminal without claiming a
-structured diagnostic or cancellation controller. Run `scripts/run-editor-host-check.sh
+structured diagnostic or cancellation controller. Run `scripts/editors/run-editor-host-check.sh
 {vscode|neovim|zed}` for the bounded native lanes.
 
 ## Capability and evidence authority

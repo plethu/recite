@@ -58,8 +58,8 @@ git_policy_validate_pr_context_inputs() {
     return 1
   fi
 
-  if ((pr_context)) && [[ "$branch_name" == "main" ]]; then
-    echo "pull-request head branch must not be protected main" >&2
+  if ((pr_context)) && { [[ "$branch_name" == "main" ]] || git_policy_is_maintenance_branch_name "$branch_name"; }; then
+    echo "pull-request head branch must not be a protected branch: $branch_name" >&2
     return 1
   fi
 }

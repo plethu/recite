@@ -13,11 +13,11 @@ wrapper="$repo_root/scripts/check-trusted-pr-policy.sh"
 fixture="$repo_root/tests/trusted-policy/fixtures/base-policy.sh"
 metadata="$repo_root/scripts/git-policy/metadata.sh"
 lint_fixture="$repo_root/tests/trusted-policy/fixtures/base-lint-suppression-policy.sh"
-lint_checker="$repo_root/scripts/check-lint-suppressions.py"
-lint_ast="$repo_root/scripts/lint_suppression_ast.py"
-lint_scan="$repo_root/scripts/lint_suppression_scan.py"
-lint_meta="$repo_root/scripts/lint_suppression_meta.py"
-lint_allowlist="$repo_root/scripts/generated-rust-allowlist.txt"
+lint_checker="$repo_root/scripts/quality/check-lint-suppressions.py"
+lint_ast="$repo_root/scripts/quality/lint_suppression_ast.py"
+lint_scan="$repo_root/scripts/quality/lint_suppression_scan.py"
+lint_meta="$repo_root/scripts/quality/lint_suppression_meta.py"
+lint_allowlist="$repo_root/scripts/quality/generated-rust-allowlist.txt"
 for required_file in "$workflow" "$wrapper" "$fixture" "$metadata" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_scan" "$lint_meta" "$lint_allowlist"; do
   [[ -f "$required_file" ]] || {
     echo "missing trusted-policy fixture file: $required_file" >&2
@@ -93,28 +93,28 @@ before_parse_probe="$(sha256sum "$parse_probe")"
 }
 git init --bare --quiet "$origin"
 git clone --quiet "$origin" "$repo"
-mkdir -p "$repo/scripts/git-policy" "$repo/crates/demo/src"
+mkdir -p "$repo/scripts/git-policy" "$repo/scripts/quality" "$repo/crates/demo/src"
 cp -- "$fixture" "$repo/scripts/check-git-policy.sh"
 cp -- "$metadata" "$repo/scripts/git-policy/metadata.sh"
-cp -- "$lint_fixture" "$repo/scripts/check-lint-suppressions.sh"
-cp -- "$lint_checker" "$repo/scripts/check-lint-suppressions.py"
-cp -- "$lint_ast" "$repo/scripts/lint_suppression_ast.py"
-cp -- "$lint_scan" "$repo/scripts/lint_suppression_scan.py"
-cp -- "$lint_meta" "$repo/scripts/lint_suppression_meta.py"
-cp -- "$lint_allowlist" "$repo/scripts/generated-rust-allowlist.txt"
+cp -- "$lint_fixture" "$repo/scripts/quality/check-lint-suppressions.sh"
+cp -- "$lint_checker" "$repo/scripts/quality/check-lint-suppressions.py"
+cp -- "$lint_ast" "$repo/scripts/quality/lint_suppression_ast.py"
+cp -- "$lint_scan" "$repo/scripts/quality/lint_suppression_scan.py"
+cp -- "$lint_meta" "$repo/scripts/quality/lint_suppression_meta.py"
+cp -- "$lint_allowlist" "$repo/scripts/quality/generated-rust-allowlist.txt"
 cp -- "$wrapper" "$repo/scripts/check-trusted-pr-policy.sh"
 chmod +x "$repo/scripts/check-git-policy.sh"
-chmod +x "$repo/scripts/check-lint-suppressions.sh"
+chmod +x "$repo/scripts/quality/check-lint-suppressions.sh"
 chmod +x "$repo/scripts/check-trusted-pr-policy.sh"
 git -C "$repo" switch --quiet -c main
 git -C "$repo" config user.name 'Trusted policy fixture'
 git -C "$repo" config user.email 'trusted-policy-fixture@example.invalid'
 git -C "$repo" config commit.gpgsign false
-git -C "$repo" add scripts/check-git-policy.sh scripts/check-lint-suppressions.sh \
+git -C "$repo" add scripts/check-git-policy.sh scripts/quality/check-lint-suppressions.sh \
   scripts/git-policy/metadata.sh \
-  scripts/check-lint-suppressions.py scripts/lint_suppression_ast.py \
-  scripts/lint_suppression_meta.py scripts/lint_suppression_scan.py \
-  scripts/generated-rust-allowlist.txt \
+  scripts/quality/check-lint-suppressions.py scripts/quality/lint_suppression_ast.py \
+  scripts/quality/lint_suppression_meta.py scripts/quality/lint_suppression_scan.py \
+  scripts/quality/generated-rust-allowlist.txt \
   scripts/check-trusted-pr-policy.sh
 git -C "$repo" commit --quiet -m '[REC-164] ci: fixture base policy'
 git -C "$repo" push --quiet origin HEAD:refs/heads/main
@@ -124,9 +124,9 @@ git -C "$repo" switch --quiet -c pr
 untrusted_policy_line="printf 'untrusted-policy\\n' > \"\${UNTRUSTED_POLICY_MARKER:?}\""
 printf '%s\n' '# untrusted policy replacement must never execute' "$untrusted_policy_line" >"$repo/scripts/check-git-policy.sh"
 untrusted_lint_line="printf 'untrusted-lint-policy\\n' > \"\${UNTRUSTED_LINT_POLICY_MARKER:?}\""
-printf '%s\n' '# untrusted lint policy replacement must never execute' "$untrusted_lint_line" >"$repo/scripts/check-lint-suppressions.sh"
+printf '%s\n' '# untrusted lint policy replacement must never execute' "$untrusted_lint_line" >"$repo/scripts/quality/check-lint-suppressions.sh"
 git -C "$repo" add scripts/check-git-policy.sh
-git -C "$repo" add scripts/check-lint-suppressions.sh
+git -C "$repo" add scripts/quality/check-lint-suppressions.sh
 git -C "$repo" commit --quiet -m '[REC-164] ci: malicious policy fixture'
 head_sha="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" push --quiet origin HEAD:refs/pull/164/head
@@ -172,6 +172,17 @@ if ! PATH="$clean_path" \
   UNTRUSTED_LINT_POLICY_MARKER="$untrusted_lint_marker" \
   bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null; then
   echo 'valid trusted-policy fixture was rejected' >&2
+  exit 1
+fi
+
+# A protected maintenance branch is the only other accepted base.
+jq '.base.ref = "release/v0-2"' "$test_root/live.json" >"$test_root/maintenance-live.json"
+if ! PATH="$clean_path" GH_FIXTURE_JSON="$test_root/maintenance-live.json" \
+  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
+  GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/maintenance.marker" \
+  TRUSTED_POLICY_EXPECTED_BASE=release/v0-2 TRUSTED_LINT_POLICY_MARKER="$test_root/maintenance-lint.marker" \
+  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
+  echo 'maintenance base branch was rejected' >&2
   exit 1
 fi
 [[ "$(<"$marker")" == base-policy ]] || {
@@ -225,8 +236,8 @@ cat >"$repo/crates/demo/src/generated.rs" <<'EOF'
 #[allow(dead_code)]
 fn fake_generated_from_pr() {}
 EOF
-printf '%s\n' 'crates/demo/src/generated.rs' >"$repo/scripts/generated-rust-allowlist.txt"
-git -C "$repo" add crates/demo/src/generated.rs scripts/generated-rust-allowlist.txt
+printf '%s\n' 'crates/demo/src/generated.rs' >"$repo/scripts/quality/generated-rust-allowlist.txt"
+git -C "$repo" add crates/demo/src/generated.rs scripts/quality/generated-rust-allowlist.txt
 git -C "$repo" commit --quiet -m '[REC-185] fixture: tamper with generated allowlist'
 tampered_head_sha="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" push --quiet --force origin HEAD:refs/pull/164/head
@@ -254,9 +265,9 @@ grep -Fq 'non-empty literal reason' "$test_root/tampered-output" || {
 # changes, proving the post-validation re-read is what rejects the run.
 git -C "$repo" switch --quiet pr
 git -C "$repo" rm -q crates/demo/src/generated.rs
-git -C "$repo" show "$base_sha:scripts/generated-rust-allowlist.txt" > \
-  "$repo/scripts/generated-rust-allowlist.txt"
-git -C "$repo" add scripts/generated-rust-allowlist.txt
+git -C "$repo" show "$base_sha:scripts/quality/generated-rust-allowlist.txt" > \
+  "$repo/scripts/quality/generated-rust-allowlist.txt"
+git -C "$repo" add scripts/quality/generated-rust-allowlist.txt
 git -C "$repo" commit --quiet -m '[REC-185] fixture: prepare metadata race'
 race_head_sha="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" push --quiet --force origin HEAD:refs/pull/164/head
@@ -282,14 +293,21 @@ grep -Fq 'policy metadata changed during validation' "$test_root/race-output" ||
   exit 1
 }
 
-jq '.base.ref = "release"' "$test_root/live.json" >"$test_root/invalid-live.json"
-if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/invalid-live.json" \
-  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
-  GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/invalid.marker" \
-  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
-  echo 'invalid base branch was accepted' >&2
-  exit 1
-fi
+for invalid_base in release release/prepare-v0-2-0 release/v0-2-1; do
+  jq --arg ref "$invalid_base" '.base.ref = $ref' "$test_root/live.json" >"$test_root/invalid-live.json"
+  if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/invalid-live.json" \
+    GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
+    GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/invalid.marker" \
+    bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >"$test_root/base-output" 2>&1; then
+    echo "invalid base branch was accepted: $invalid_base" >&2
+    exit 1
+  fi
+  grep -Fq 'pull request must target main or a release/vMAJOR-MINOR' "$test_root/base-output" || {
+    echo "invalid base branch was rejected for another reason: $invalid_base" >&2
+    cat "$test_root/base-output" >&2
+    exit 1
+  }
+done
 
 jq '.pull_request.head.sha = "0000000000000000000000000000000000000000"' "$test_root/event.json" >"$test_root/stale-event.json"
 if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/live.json" \

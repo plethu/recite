@@ -21,12 +21,12 @@ mod crate_support {
     pub(crate) mod tests;
 }
 RUST
-"$repo_root/scripts/check-test-organization.sh" "$scratch"
+"$repo_root/scripts/quality/check-test-organization.sh" "$scratch"
 
 reject() {
   local name="$1" expected="$2"
   cat >"$source_file"
-  if "$repo_root/scripts/check-test-organization.sh" "$scratch" >"$scratch/result" 2>&1; then
+  if "$repo_root/scripts/quality/check-test-organization.sh" "$scratch" >"$scratch/result" 2>&1; then
     echo "test organization accepted $name" >&2
     exit 1
   fi

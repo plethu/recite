@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.lsp_tools import comparison
-from scripts.lsp_tools.workload import Session
+from scripts.lsp.lsp_tools import comparison
+from scripts.lsp.lsp_tools.workload import Session
 
 
 class ServerComparisonTests(unittest.TestCase):

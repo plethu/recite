@@ -218,7 +218,7 @@ def switch_scenes(window, lines, files):
         query = f"{Path(target['file']).stem} {target['block'].removeprefix('block_')}"
         fill(window, "Search query", query)
         key("Return")
-        header = f"{target['file']}  ::  {target['block']}"
+        header = f"{target['file']} · {target['block']}"
         _, elapsed = timed(
             window, lambda header=header: window.find_text(header, prefix=True), "scene switch"
         )

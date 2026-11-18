@@ -140,8 +140,8 @@ if [[ "$base_repo" != "$repository" ]]; then
   echo "pull request base repository mismatch: $base_repo" >&2
   exit 1
 fi
-if [[ "$base_ref" != main ]]; then
-  echo "pull request must target main: $base_ref" >&2
+if [[ "$base_ref" != main && ! "$base_ref" =~ ^release/v[0-9]+-[0-9]+$ ]]; then
+  echo "pull request must target main or a release/vMAJOR-MINOR maintenance branch: $base_ref" >&2
   exit 1
 fi
 if [[ ! "$base_sha" =~ ^[0-9a-fA-F]{40}$ || ! "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]]; then
@@ -207,7 +207,7 @@ RECITE_PR_TITLE="$title" \
 # suppression policy that evaluates its own Rust changes.
 RECITE_BASE_REF="$base_sha" \
   RECITE_HEAD_REF=refs/recite/trusted-pr-head \
-  "$repo_root/scripts/check-lint-suppressions.sh" "$base_sha" refs/recite/trusted-pr-head \
+  "$repo_root/scripts/quality/check-lint-suppressions.sh" "$base_sha" refs/recite/trusted-pr-head \
   --policy-revision "$base_sha"
 
 final_pr="$(read_live_pr)" || {
