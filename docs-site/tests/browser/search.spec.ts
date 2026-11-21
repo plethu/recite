@@ -34,16 +34,48 @@ test("search loads on demand and finds CLI flags and Recite syntax", async ({ pa
 });
 
 test("a failed search download can be retried without losing the page", async ({ page }) => {
-  await page.route("**/pagefind/pagefind-ui.js", (route) => route.abort());
+  await page.route("**/pagefind/pagefind.js", (route) => route.abort());
   await page.goto("/");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("status")).toContainText("could not load");
   await page.keyboard.press("Escape");
-  await page.unroute("**/pagefind/pagefind-ui.js");
+  await page.unroute("**/pagefind/pagefind.js");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await dialog.getByRole("textbox", { name: "Search", exact: true }).fill("first scene");
   await expect(
     dialog.getByRole("link", { name: "First Scene", exact: true }).first(),
   ).toBeVisible();
+});
+
+test("search reads as a picker: counted rows, arrow keys, Enter and a close icon", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const input = dialog.getByRole("textbox", { name: "Search", exact: true });
+  await input.fill("localisation");
+  await expect(dialog.getByRole("status")).toHaveText(/^\d+ results?$/);
+  const rows = dialog.getByRole("list", { name: "Results" }).getByRole("link");
+  expect(await rows.count()).toBeGreaterThan(1);
+  const heights = await rows.evaluateAll((links) =>
+    links.map((link) => link.closest("li")!.getBoundingClientRect().height),
+  );
+  for (const height of heights) expect(height).toBeLessThanOrEqual(33);
+  await page.keyboard.press("ArrowDown");
+  await expect(rows.first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(rows.nth(1)).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("ArrowUp");
+  await expect(input).toBeFocused();
+  const close = await dialog
+    .getByRole("button", { name: "Close search", exact: true })
+    .boundingBox();
+  expect(close!.width).toBeGreaterThanOrEqual(24);
+  expect(close!.height).toBeGreaterThanOrEqual(24);
+  const target = await rows.first().getAttribute("href");
+  await input.press("Enter");
+  await expect(page).toHaveURL(new RegExp(`${target!.replaceAll("/", "\\/")}$`));
 });

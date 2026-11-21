@@ -41,6 +41,10 @@
     /* Wordmark letters: plum on paper, warm paper on dark paper (the reversed wordmark). */
     --color-wordmark: light-dark(oklch(42.7% 0.079 332deg), oklch(93.9% 0.017 68deg));
 
+    /* The hero's display line: plum on paper; on dark paper a low-chroma plum-tinted paper, so the
+       large type reads as ink rather than lilac. */
+    --color-display: light-dark(oklch(42.7% 0.079 332deg), oklch(88% 0.03 340deg));
+
     /* Plum multiplied by teal: the darkest ink. */
     --color-overprint: oklch(23.3% 0.055 242deg);
 
@@ -82,6 +86,7 @@
     --offset-slip: 4px;
     --rule-section: 1px solid var(--color-hairline);
     --focus-ring: 2px solid var(--color-plum);
+    --focus-offset: 2px;
   }
 
   :root[data-theme="light"] {

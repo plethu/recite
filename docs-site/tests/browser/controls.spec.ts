@@ -30,12 +30,12 @@ test("skip link and both mobile menus work with a keyboard", async ({ page }) =>
   const referenceMenu = page.getByRole("button", { name: "Reference menu", exact: true });
   await referenceMenu.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator("#reference-menu")).toBeVisible();
+  await expect(page.locator("#section-menu")).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.locator("#reference-menu")).toBeHidden();
+  await expect(page.locator("#section-menu")).toBeHidden();
   await expect(referenceMenu).toBeFocused();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator("#reference-menu")).toBeVisible();
+  await expect(page.locator("#section-menu")).toBeVisible();
 });
 
 test("search recovers after a miss and leads to the manual", async ({ page }) => {
@@ -47,7 +47,7 @@ test("search recovers after a miss and leads to the manual", async ({ page }) =>
   await input.fill("first scene");
   await expect(result).toBeVisible();
   await input.fill("qzxvbnmplkjhgfdsa987654");
-  await expect(dialog.locator(".pagefind-ui__result-link")).toHaveCount(0);
+  await expect(dialog.locator("[data-search-results] a")).toHaveCount(0);
   await input.fill("first scene");
   await expect(result).toBeVisible();
   await result.focus();

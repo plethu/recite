@@ -30,7 +30,7 @@ language coverage.
 
 The example's `runtime-fixture.toml` selects it explicitly:
 
-```toml
+```toml title="runtime-fixture.toml"
 [dialogue]
 locale = "en-US"
 [dialogue.catalogs]
@@ -65,7 +65,7 @@ corresponding adapter guide.
 
 Name the line metadata that directs a performance in `recite.project.toml`:
 
-```toml
+```toml title="recite.project.toml"
 [recording]
 direction = ["tone"]
 ```

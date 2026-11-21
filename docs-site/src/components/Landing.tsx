@@ -1,6 +1,6 @@
 import { text } from "../content/messages.ts";
 import { Playground, type PlaygroundProps } from "./Playground.tsx";
-import { LandingHero } from "./landing/Hero.tsx";
+import { LandingHero, ReleaseNotice } from "./landing/Hero.tsx";
 import { Workflow } from "./landing/Workflow.tsx";
 
 const links = [
@@ -14,8 +14,9 @@ const links = [
 export function Landing({ playground }: { playground: PlaygroundProps }) {
   return (
     <div class="recite-landing site-content" data-pagefind-body>
-      <LandingHero />
+      <ReleaseNotice />
       <div class="sheet">
+        <LandingHero />
         <section aria-labelledby="scene-heading">
           <h2 id="scene-heading">{text("landing.scene.title")}</h2>
           <Playground {...playground} />

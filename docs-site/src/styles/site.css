@@ -77,9 +77,12 @@
     text-underline-offset: 0.2em;
   }
 
+  /* One focus ring everywhere: 2px plum on the control radius. Controls whose ring would meet a
+     neighbour or a rule draw it inside their edge instead. */
   :focus-visible {
     outline: var(--focus-ring);
-    outline-offset: 0.2rem;
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-control);
   }
 
   h1, h2, h3 {
@@ -259,6 +262,11 @@
       background: var(--tint-hover);
     }
 
+    /* The ring sits inside the tab's edge, clear of the rule under the words. */
+    nav a:focus-visible {
+      outline-offset: -2px;
+    }
+
     /* A pseudo-element rather than a gradient keeps the words on a plain, measurable fill. */
     nav a[aria-current] {
       position: relative;
@@ -267,7 +275,7 @@
     nav a[aria-current]::after {
       content: "";
       position: absolute;
-      inset: auto 0 0;
+      inset: auto 0.4rem 0.375rem;
       block-size: 2px;
       background: var(--color-teal);
     }
@@ -412,8 +420,8 @@
     text-transform: uppercase;
   }
 
-  /* The one display line on a sheet. */
-  .sheet h1 {
+  /* The one display line on a sheet; the landing hero sets its own. */
+  :where(.sheet) h1 {
     font-family: var(--font-display);
     font-size: clamp(2.2rem, 4.5vw, 3.2rem);
     font-weight: 550;
@@ -427,8 +435,12 @@
       grid-template-columns: 1.25fr 0.8fr;
       gap: var(--space-step);
       align-items: center;
-      padding-block: clamp(2rem, 6vw, 5rem);
+      padding-block: 0 clamp(2rem, 5vw, 3.5rem);
       isolation: isolate;
+    }
+
+    .errata {
+      margin-block-start: 1.5rem;
     }
 
     /* The site's one misregistration: a teal offset beneath plum, as in the print wordmark. */
@@ -439,7 +451,7 @@
       font-variation-settings: "opsz" 72, "SOFT" 50;
       letter-spacing: -0.03em;
       position: relative;
-      color: var(--color-plum);
+      color: var(--color-display);
       max-inline-size: min(16ch, 46rem);
       margin-block: 0.5rem 1.5rem;
     }
@@ -571,20 +583,14 @@
       padding-block-end: 0.75rem;
     }
 
+    /* The hero opens the landing sheet, so its lead reads on paper rather than on the grain. */
     .sheet {
-      margin-block-start: clamp(2rem, 5vw, 3.5rem);
+      margin-block-start: 1.5rem;
     }
 
     .sheet > section {
       padding-block: clamp(1.5rem, 4vw, 3rem);
-    }
-
-    .sheet > section + section {
       border-block-start: var(--rule-section);
-    }
-
-    .sheet > section:first-child {
-      padding-block-start: 0;
     }
 
     /* Section headings are Literata semibold, like Writer's beat headings, below the hero's
@@ -632,11 +638,12 @@
       }
     }
 
+    /* The leaf keeps room for its teal offset, so both gutters match at phone width. */
     @media (width < 30rem) {
       .scene-leaf {
         --print-bleed: 1rem;
 
-        margin-inline: 0;
+        margin-inline: 0 0.5rem;
         padding-inline: 0.75rem;
       }
     }
@@ -709,7 +716,7 @@
 
     .file-pick:has(input:focus-visible) label {
       outline: var(--focus-ring);
-      outline-offset: 0.2rem;
+      outline-offset: var(--focus-offset);
     }
 
     .file-pick:has(input:disabled) label {
@@ -891,7 +898,7 @@
     pre {
       overflow: auto;
       padding: 1rem;
-      border: 1px solid var(--color-hairline);
+      border-block-end: 1px solid var(--color-ink);
       background: var(--color-inset);
     }
 
@@ -918,7 +925,8 @@
   .markdown-content .script-samples {
     padding: 1rem 1.25rem;
     background: var(--color-inset);
-    border: 1px solid var(--color-hairline);
+    border-block-end: 1px solid var(--color-ink);
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
   }
 
   .markdown-content .script-samples p {
