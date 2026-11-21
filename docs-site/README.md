@@ -55,6 +55,34 @@ interface messages live in `src/content/i18n/en.json`; additional locales requir
 search and script-layout support rather than an implicit fallback. Set `SITE_URL` to the public
 origin when preparing deployment; the default is localhost.
 
+## Design
+
+The site follows Writer's signed-off design (`apps/writer/design/decisions.md`, #256) so the two
+read as one product. Tokens mirror Writer's palette in OKLCH. Pages are a grained desk with chrome
+on it; reading content sits on solid paper sheets with a hairline edge and a 3px stock offset, so
+grain never shows behind prose or code. Below a 30rem viewport the sheet goes full-bleed.
+
+- **Structure.** The header carries a search field, the top-level modes as tabs with a teal rule
+  under the current one, and the theme as a System | Light | Dark segment track (radios; hidden
+  without JavaScript, when the OS decides). The footer is the ink status bar.
+- **Sheets.** A document sheet has a running head (section › page), one Fraunces display title,
+  Literata semibold section headings, and a folio with the page path and Back to top. Body text
+  stays in Plex Sans: documentation is the tool speaking, dense with inline code, flags and tables,
+  and Writer's own tool sheets set such text in Plex Sans. Literata is kept for headings and for
+  dialogue: script samples, quotations and the playground transcript, which sets speakers as
+  margin labels.
+- **Printer's marks, not leading bars.** The current reference page and menu row is a plate with a
+  2px ink underscore under its words. A heading reached through a fragment link gets crop marks in
+  the sheet pad. The release notice is an errata slip with a plum caps lead-in.
+- **Slips and backdrop.** Menus and the search picker are floating paper with a 1px ink edge and a
+  hard stock offset. The picker opens 72px from the top over a static overprint dim with a
+  paper-toned dot screen; nothing blurs or animates. Controls are tonal fills without borders;
+  Run is the one primary action.
+- **Not carried over.** Code blocks keep the literal source in Plex Mono on an inset well; margin
+  speaker labels would change what readers copy. The landing hero keeps the print offset, which
+  Writer allows on identity surfaces. Unsaved-work dots and the sticky running head have no
+  meaning on a static page.
+
 Before changing generators or browser behavior, preserve routes, heading links, no-JavaScript
 reading and playground limits. Run `just web verify` and the browser suite across pages, themes and
 engines, then inspect desktop and narrow-screen renders. Do not retain parallel generator
