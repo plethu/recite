@@ -9,7 +9,7 @@ mod tests;
 
 mod excerpts;
 mod human;
-pub(crate) use human::{Subject, display_path, report_success};
+pub(crate) use human::{Subject, display_path, report_note, report_success};
 
 /// Render human diagnostics in a rustc-like layout, then a one-line count.
 pub(crate) fn report_diagnostics<'a>(

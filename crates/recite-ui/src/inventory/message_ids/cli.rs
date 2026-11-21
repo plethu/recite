@@ -141,6 +141,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliHelpGroupRunning => Some("cli-help-group-running"),
         super::MsgId::CliHelpGroupHelp => Some("cli-help-group-help"),
         super::MsgId::CliSuccessOk => Some("cli-success-ok"),
+        super::MsgId::CliNoteLabel => Some("cli-note-label"),
         super::MsgId::CliSuccessFiles => Some("cli-success-files"),
         super::MsgId::CliSuccessProject => Some("cli-success-project"),
         super::MsgId::CliSuccessCompiled => Some("cli-success-compiled"),

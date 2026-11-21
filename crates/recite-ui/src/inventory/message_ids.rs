@@ -278,7 +278,7 @@ message_ids! {
     CliHelpArgKeymap, CliHelpArgDialogueLocale, CliHelpArgDialogueCatalog, CliHelpArgBenchScale, CliHelpArgBenchGroup,
     CliHelpArgBenchFormat, CliHelpArgBenchOutput, CliHelpArgBenchBaseline, CliHelpArgBenchSamples, ExplainCode,
     ExplainCategory, ExplainMeaning, ExplainCommonCauses, ExplainHowToFix, ExplainListItem,
-    CliHelpCommandSchemaCheckFresh, CliHelpGroupAuthoring, CliHelpGroupBuilding, CliHelpGroupLocalisation, CliHelpGroupRunning, CliHelpGroupHelp, CliSuccessOk, CliSuccessFiles, CliSuccessProject, CliSuccessCompiled, CliSuccessExtracted, CliDiagnosticErrors, CliDiagnosticWarnings, CliDiagnosticNotes, CliDiagnosticSummary,
+    CliHelpCommandSchemaCheckFresh, CliHelpGroupAuthoring, CliHelpGroupBuilding, CliHelpGroupLocalisation, CliHelpGroupRunning, CliHelpGroupHelp, CliSuccessOk, CliNoteLabel, CliSuccessFiles, CliSuccessProject, CliSuccessCompiled, CliSuccessExtracted, CliDiagnosticErrors, CliDiagnosticWarnings, CliDiagnosticNotes, CliDiagnosticSummary,
     WatchBuilding, WatchWaitingForChanges, WatchRebuilding, WatchBuildSucceeded, WatchBuildDurationMicroseconds, WatchBuildDurationMilliseconds, WatchBuildFailedWaiting, WatchStatusOk, WatchStatusError, WatchStatusFixed,
     WatchBuildFailed,
     WatchBuildFailedPartial, WatchBuildFailedIndeterminate, WatchBuildFailedRefused,

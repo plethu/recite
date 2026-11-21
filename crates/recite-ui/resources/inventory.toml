@@ -475,6 +475,7 @@ resource_ids = [
     "cli-help-group-running",
     "cli-help-group-help",
     "cli-success-ok",
+    "cli-note-label",
     "cli-success-files",
     "cli-success-project",
     "cli-success-compiled",

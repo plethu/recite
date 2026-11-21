@@ -322,6 +322,21 @@ impl Layout {
                 textwrap::Options::new(measure).break_words(false),
             )
         };
+        // A token too long for the measure (a call with long arguments) keeps its row whole; the
+        // result then gets a right-aligned line of its own rather than breaking mid-word.
+        if !row.trailing.is_empty() && wrapped.iter().any(|text| text.width() > measure) {
+            for (index, text) in wrapped.iter().enumerate() {
+                let lead = if index == 0 {
+                    format!("{label}{pad}")
+                } else {
+                    indent.clone()
+                };
+                writeln!(writer, "{lead}{text}")?;
+            }
+            let fill = columns.saturating_sub(trailing_width);
+            writeln!(writer, "{}{trailing}", " ".repeat(fill))?;
+            return Ok(());
+        }
         for (index, text) in wrapped.iter().enumerate() {
             if index == 0 {
                 let fill = if row.trailing.is_empty() {

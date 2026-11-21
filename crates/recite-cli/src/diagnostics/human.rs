@@ -50,9 +50,48 @@ pub(super) fn write_diagnostic(
         )?;
     }
     if let Some(help) = &rendered.help {
-        writeln!(writer, "{gutter} {} {help}", paint.teal_strong("= help:"))?;
+        let label = format!("{gutter} = help:");
+        let rows = wrap_after(&label, help);
+        for (index, row) in rows.iter().enumerate() {
+            if index == 0 {
+                writeln!(writer, "{gutter} {} {row}", paint.teal_strong("= help:"))?;
+            } else {
+                writeln!(writer, "{} {row}", " ".repeat(label.len()))?;
+            }
+        }
     }
     writeln!(writer)?;
+    Ok(())
+}
+
+/// Text that follows a label, wrapped to the terminal under its own first word.
+fn wrap_after<'a>(label: &str, text: &'a str) -> Vec<std::borrow::Cow<'a, str>> {
+    let prefix = label.len() + 1;
+    match crate::ink::stderr_columns() {
+        Some(columns) if columns > prefix + 20 => textwrap::wrap(
+            text,
+            textwrap::Options::new(columns - prefix).break_words(false),
+        ),
+        _ => vec![std::borrow::Cow::Borrowed(text)],
+    }
+}
+
+/// A notice that is neither a diagnostic nor a success: `note  text`, wrapped under its words.
+pub(crate) fn report_note(
+    writer: &mut dyn Write,
+    messages: &Messages,
+    text: &str,
+) -> Result<(), CliError> {
+    let paint = Paint::stderr();
+    let label = messages.text(MsgId::CliNoteLabel);
+    let padded = format!("{label} ");
+    for (index, row) in wrap_after(&padded, text).iter().enumerate() {
+        if index == 0 {
+            writeln!(writer, "{}  {row}", paint.teal_strong(&label))?;
+        } else {
+            writeln!(writer, "{}  {row}", " ".repeat(label.len()))?;
+        }
+    }
     Ok(())
 }
 

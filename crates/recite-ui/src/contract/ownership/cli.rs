@@ -133,6 +133,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpGroupRunning
         | MsgId::CliHelpGroupHelp
         | MsgId::CliSuccessOk
+        | MsgId::CliNoteLabel
         | MsgId::CliSuccessFiles
         | MsgId::CliSuccessProject
         | MsgId::CliSuccessCompiled

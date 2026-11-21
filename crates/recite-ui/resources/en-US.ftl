@@ -67,6 +67,7 @@ cli-help-group-localisation = Localisation
 cli-help-group-running = Running
 cli-help-group-help = Help
 cli-success-ok = ok
+cli-note-label = note
 cli-success-files = { $count ->
         [one] { $count } file
        *[other] { $count } files
@@ -131,10 +132,10 @@ cli-help-arg-recording-output = Write the handoff here; without it nothing is wr
 cli-help-arg-recording-file = Returned handoff file
 cli-help-arg-recording-apply = Update the recording sidecar; without it the import is only validated
 cli-recording-source-language = source language
-cli-recording-summary = {$language}: {$recorded} recorded, {$approved} approved, {$unvoiced} unvoiced, {$not_ready} not ready; { $attention ->
-        [one] {$attention} item needs attention
-       *[other] {$attention} items need attention
-    }
+cli-recording-summary = {$language} · { $attention ->
+        [one] {$attention} needs attention
+       *[other] {$attention} need attention
+    } · {$recorded} recorded · {$approved} approved · {$unvoiced} unvoiced · {$not_ready} not ready
 cli-recording-entry = {"  "}{$reference}  {$state}  {$id}  {$block}
 cli-recording-obsolete = {"  "}obsolete  `{$id}` is no longer in the source
 cli-recording-state-to-record = to record
@@ -340,7 +341,7 @@ tui-transcript-effect = effect
 tui-transcript-ack = ack
 tui-transcript-deferred = deferred
 tui-transcript-end = end
-tui-transcript-completed = completed
+tui-transcript-completed = acknowledged
 tui-transcript-deferred-effects = deferred effects
 tui-transcript-effect-text = {$function}{$args} · {$mode}
 tui-transcript-deferred-effect-text = {$function}{$args}
