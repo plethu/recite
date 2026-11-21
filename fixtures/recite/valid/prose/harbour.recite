@@ -1,0 +1,48 @@
+# Prose-checking fixture. Comments are not prose: recieve teh speling here.
+:: harbour_arrival default
+
+> speaker=rhea portrait=concerned caption="Teh door creaks open" @rhea_arrival
+  I recieved your letter this morning.
+
+  The lamps in Vexmoor were already lit
+  when the ferry docked.
+
+> speaker=narrator bind=(count:int=$letters_remaining) @letters_left
+  You have one letter left.
+  | You have {count} letters left.
+
+> speaker=rhea bind=(name:string=$player_name) @greet_player
+  [slow]Welcome back, {name}.[/slow] The tide turned an hour ago.
+
+> speaker=hazel bind=(item:string=$item_name) @hazel_offer
+  Take a {item} for the road.
+
+> speaker=hazel @hazel_ledger
+  Keep the \{ braces \} out of the ledger.
+
+> speaker=hazel @hazel_cafe
+  The café serves naïve tourists — Zoë pours the coffee herself. 🙂
+
+> speaker=rhea @rhea_prompt
+  Where should we go first?
+
+  ? @go_market
+    To the market. It is an short walk.
+    -> market
+
+  ? @go_inn
+    The inn by the quay.
+    -> END
+
+:: market
+> @market_stalls
+  [The stalls are shuttered. A gull watches from the awning.]
+
+:if baker_open()
+  ? @buy_bread
+    Buy bread from the baker.
+    -> END
+:else
+  ? @leave_market
+    Leave the market befre dark.
+    -> END

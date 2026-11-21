@@ -1,0 +1,57 @@
+---
+source: crates/recite-parser/tests/prose_regions.rs
+expression: actual
+---
+metadata id=rhea_arrival speaker=rhea key=caption
+  4:44 ¶ "Teh door creaks open"
+  checked "Teh door creaks open"
+line id=rhea_arrival speaker=rhea key=-
+  5:3 ¶ "I recieved your letter this morning."
+  7:3 ¶ "The lamps in Vexmoor were already lit"
+  8:3 "when the ferry docked."
+  checked "I recieved your letter this morning.\n\nThe lamps in Vexmoor were already lit\nwhen the ferry docked."
+    Break "\n\n" <- "\n\n  "
+    Break "\n" <- "\n  "
+line id=letters_left speaker=narrator key=-
+  11:3 ¶ "You have one letter left."
+  checked "You have one letter left."
+plural_line id=letters_left speaker=narrator key=-
+  12:5 ¶ "You have {count} letters left."
+  checked "You have {count} letters left."
+    Placeholder "{count}" <- "{count}"
+line id=greet_player speaker=rhea key=-
+  15:3 ¶ "[slow]Welcome back, {name}.[/slow] The tide turned an hour ago."
+  checked "Welcome back, {name}. The tide turned an hour ago."
+    Markup "" <- "[slow]"
+    Placeholder "{name}" <- "{name}"
+    Markup "" <- "[/slow]"
+line id=hazel_offer speaker=hazel key=-
+  18:3 ¶ "Take a {item} for the road."
+  checked "Take a {item} for the road."
+    Placeholder "{item}" <- "{item}"
+line id=hazel_ledger speaker=hazel key=-
+  21:3 ¶ "Keep the \\{ braces \\} out of the ledger."
+  checked "Keep the { braces } out of the ledger."
+    Escape "{" <- "\\{"
+    Escape "}" <- "\\}"
+line id=hazel_cafe speaker=hazel key=-
+  24:3 ¶ "The café serves naïve tourists — Zoë pours the coffee herself. 🙂"
+  checked "The café serves naïve tourists — Zoë pours the coffee herself. 🙂"
+line id=rhea_prompt speaker=rhea key=-
+  27:3 ¶ "Where should we go first?"
+  checked "Where should we go first?"
+choice id=go_market speaker=- key=-
+  30:5 ¶ "To the market. It is an short walk."
+  checked "To the market. It is an short walk."
+choice id=go_inn speaker=- key=-
+  34:5 ¶ "The inn by the quay."
+  checked "The inn by the quay."
+line id=market_stalls speaker=- key=-
+  39:3 ¶ "[The stalls are shuttered. A gull watches from the awning.]"
+  checked "[The stalls are shuttered. A gull watches from the awning.]"
+choice id=buy_bread speaker=- key=-
+  43:5 ¶ "Buy bread from the baker."
+  checked "Buy bread from the baker."
+choice id=leave_market speaker=- key=-
+  47:5 ¶ "Leave the market befre dark."
+  checked "Leave the market befre dark."
