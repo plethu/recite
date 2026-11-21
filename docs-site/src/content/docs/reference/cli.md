@@ -21,6 +21,7 @@ exists where a thing has two or more operations of its own, so related work sits
 | Group              | Commands                                                                                        |
 | ------------------ | ----------------------------------------------------------------------------------------------- |
 | `id`               | `check`, `assign`, `rename`, `reassign`                                                         |
+| `prose`            | `check`                                                                                         |
 | `catalog`          | `status`, `refresh`                                                                             |
 | `recording`        | `status`, `export`, `import`                                                                    |
 | `schema`           | `inspect`, `export`, `check-fresh`                                                              |
@@ -44,6 +45,13 @@ Validates dialogue source without writing compiled output: syntax, structure, an
 With `--schema`, it also checks metadata, markup and declarations against a schema manifest. `--only
 markup` or `--only metadata` reports just that diagnostic category; syntax errors are always
 reported because they stop validation. `--only metadata` needs a schema, passed or declared.
+
+### `recite prose check <PATHS>...`
+
+Checks spelling and grammar in line and choice prose with the settings in the nearest
+`recite.project.toml` `[prose]` table, and never flags headers, IDs, conditions or other syntax.
+Findings are warnings with `RECITE_PROSE` codes; the command exits 1 when it reports any, while
+`validate` and `compile` ignore prose. See [checking spelling and grammar](/guides/prose-checking/).
 
 ### `recite id check [--since <REF>] [--allow-removed <ID>]... <PATHS>...`
 
@@ -244,6 +252,7 @@ accept typed values, and blocking effects accept Enter or `ack`.
 ```bash
 recite validate dialogue/
 recite id check dialogue/
+recite prose check dialogue/
 recite validate dialogue/ --only metadata --schema schema/recite.schema.json
 recite compile dialogue/ -o build/scenes.recitec --schema schema/recite.schema.json
 recite project check-fresh .
