@@ -4,6 +4,7 @@ Recite's non-interactive commands support an opt-in machine-output boundary:
 
 ```text
 recite validate [--schema SCHEMA] [--only markup|metadata] --output-format structured [--invocation-id ID] PATHS...
+recite prose check --output-format structured [--invocation-id ID] PATHS...
 recite compile --output OUTPUT --output-format structured [--invocation-id ID] PATHS...
 recite extract --output-format structured [--output OUTPUT] [--invocation-id ID] PATHS...
 recite schema export --schema SCHEMA --output OUTPUT [--producer-kind KIND --producer-id ID] --output-format structured [--invocation-id ID]
@@ -12,8 +13,8 @@ recite trace --output-format structured [--invocation-id ID] ASSET --block BLOCK
 recite watch --output-format structured [--invocation-id ID] PROJECT-ROOT
 ```
 
-The `command` field in every record is the command path as typed: `validate`, `compile`, `extract`,
-`schema export`, `run`, `trace` or `watch`.
+The `command` field in every record is the command path as typed: `validate`, `prose check`,
+`compile`, `extract`, `schema export`, `run`, `trace` or `watch`.
 
 The default output format remains the existing human CLI surface. `watch` is a streaming lifecycle
 and does not use the finite two-record result contract.
@@ -44,15 +45,18 @@ existing process and presentation behavior.
 ## Result data
 
 The data object is selected by command, and its shape is coupled to the result status. A successful
-`validate` contains typed `diagnostics`. A successful `compile` contains diagnostics and required
-`artifact` metadata; a compile with content diagnostics contains diagnostics and no artifact. A
-successful `extract` contains diagnostics and exactly one of artifact metadata (when `--output` is
-supplied) or typed `entries`; an extract with content diagnostics contains diagnostics only. A
-successful `schema export` contains diagnostics and required `artifact` metadata; invalid schema
-input returns content diagnostics without an artifact and preserves any existing output. `run` and
-`trace` return the deterministic runtime `trace` model; they do not return localized human run
-lines. The protocol does not add redundant `valid`, `compiled`, or `extracted` booleans: `status`
-and the command-specific data shape identify the outcome phase.
+`validate` contains typed `diagnostics`. `prose check` contains `diagnostics` and `fixes`; each fix
+has the `diagnostic` index it resolves, its `file`, UTF-8 `start_byte` and `end_byte`, and the
+`replacement` text, and any prose finding makes the status `content_diagnostics`. A successful
+`compile` contains diagnostics and required `artifact` metadata; a compile with content diagnostics
+contains diagnostics and no artifact. A successful `extract` contains diagnostics and exactly one of
+artifact metadata (when `--output` is supplied) or typed `entries`; an extract with content
+diagnostics contains diagnostics only. A successful `schema export` contains diagnostics and
+required `artifact` metadata; invalid schema input returns content diagnostics without an artifact
+and preserves any existing output. `run` and `trace` return the deterministic runtime `trace` model;
+they do not return localized human run lines. The protocol does not add redundant `valid`,
+`compiled`, or `extracted` booleans: `status` and the command-specific data shape identify the
+outcome phase.
 
 Artifact metadata contains an exact machine path projection and `size_bytes`. It never contains
 artifact bytes. Paths use `utf8` when representable and an exact platform byte or wide-unit encoding

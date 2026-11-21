@@ -262,6 +262,7 @@ verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun to
 | `validate`, `compile`, `extract`, `watch`                  | top-level; source and project pipeline             |
 | `run`, `trace`, `play`, `bench`                            | top-level; running compiled assets                 |
 | `import`, `explain`                                        | top-level; migration and diagnostic help           |
+| `prose check`                                              | spelling and grammar in dialogue prose             |
 | `id check`, `id assign`, `id rename`, `id reassign`        | stable line and choice IDs                         |
 | `schema inspect`, `schema export`, `schema check-fresh`    | schema manifests and their producers               |
 | `project validate`, `project check-fresh`                  | `recite.project.toml` and compiled-asset freshness |
@@ -468,6 +469,24 @@ concern (§13.10).
 state. It prints the selection's size and IDs and writes the handoff only to `--output`. `import`
 validates the returned file and reports every refusal; it changes the sidecar only with `--apply`
 and only when no row is refused.
+
+### 13.12 `prose check`
+
+```text
+recite prose check [--output-format human|structured] [--invocation-id ID] PATHS...
+```
+
+Checks spelling and grammar in the prose regions of the given files and directories (§14.1). Each
+file uses the `[prose]` settings of the nearest `recite.project.toml`, whether or not `enabled`
+is set; files outside a project use the defaults. Findings are warnings or information, and the
+command exits 1 when it reports any, so CI can require clean prose; `validate` and `compile` never
+run prose checks. An unsupported language or unreadable dictionary is a `RECITE_PROSE1xx` error at
+the manifest. Structured output adds a `fixes` array of byte-exact replacements, each naming its
+diagnostic by index.
+
+The command is a noun group so that further prose operations, such as a dictionary listing, have a
+home; `validate --only prose` was rejected because prose findings are not validation results and
+must not fail `validate`.
 
 ### 13.9 Future: `generate-bindings`
 
