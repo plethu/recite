@@ -60,6 +60,8 @@ macro_rules! lsp_message_ids {
         | MsgId::LspCodeActionAddEffect
         | MsgId::LspCodeActionSchemaAction
         | MsgId::LspCodeActionSchemaDisabled
+        | MsgId::LspCodeActionProseReplace
+        | MsgId::LspCodeActionProseAddWord
         | MsgId::LspWarningUiConfig
     };
 }

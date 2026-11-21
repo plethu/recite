@@ -88,6 +88,7 @@ pub(crate) enum ErrorCode {
 #[serde(rename_all = "snake_case")]
 pub(crate) enum ErrorOperation {
     Validate,
+    CheckProse,
     Compile,
     Extract,
     Run,

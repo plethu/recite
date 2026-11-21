@@ -95,6 +95,8 @@ fn diagnostic_codes_classify_stable_categories() {
         ("RECITE_ID001", DiagnosticCategory::Identifier),
         ("RECITE_PARSE001", DiagnosticCategory::Parse),
         ("RECITE_PROJECT001", DiagnosticCategory::Project),
+        ("RECITE_PROSE001", DiagnosticCategory::Prose),
+        ("RECITE_PROSE101", DiagnosticCategory::Prose),
         ("RECITE_FRESH001", DiagnosticCategory::Freshness),
         ("RECITE_SCHEMA001", DiagnosticCategory::Schema),
         ("RECITE_VALIDATE021", DiagnosticCategory::Validation),

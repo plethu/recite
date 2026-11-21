@@ -8,6 +8,7 @@ mod identifiers;
 mod import;
 mod parse;
 mod project;
+mod prose;
 mod schema;
 mod validation;
 
@@ -151,6 +152,7 @@ const GROUPS: &[&[DiagnosticExplanation]] = &[
     import::EXPLANATIONS,
     parse::EXPLANATIONS,
     project::EXPLANATIONS,
+    prose::EXPLANATIONS,
     schema::EXPLANATIONS,
     validation::EXPLANATIONS,
 ];

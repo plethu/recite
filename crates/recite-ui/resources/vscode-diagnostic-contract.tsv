@@ -434,6 +434,18 @@ diagnostic-schema-001-projection-metadata-target	target	string
 diagnostic-import-001	detail	string
 diagnostic-import-002	detail	string
 diagnostic-import-003	detail	string
+diagnostic-prose-001	detail	string
+diagnostic-prose-001	rule	string
+diagnostic-prose-001	text	string
+diagnostic-prose-002	detail	string
+diagnostic-prose-002	rule	string
+diagnostic-prose-002	text	string
+diagnostic-prose-003	detail	string
+diagnostic-prose-003	rule	string
+diagnostic-prose-003	text	string
+diagnostic-prose-101	detail	string
+diagnostic-prose-102	detail	string
+diagnostic-prose-103	detail	string
 diagnostic-validate-012-help
 diagnostic-validate-013-related
 diagnostic-validate-013-help
@@ -606,6 +618,29 @@ diagnostic-project-007-remediation-001
 diagnostic-project-008-meaning
 diagnostic-project-008-cause-001
 diagnostic-project-008-remediation-001
+diagnostic-prose-001-meaning
+diagnostic-prose-001-cause-001
+diagnostic-prose-001-cause-002
+diagnostic-prose-001-remediation-001
+diagnostic-prose-001-remediation-002
+diagnostic-prose-002-meaning
+diagnostic-prose-002-cause-001
+diagnostic-prose-002-cause-002
+diagnostic-prose-002-remediation-001
+diagnostic-prose-002-remediation-002
+diagnostic-prose-003-meaning
+diagnostic-prose-003-cause-001
+diagnostic-prose-003-remediation-001
+diagnostic-prose-101-meaning
+diagnostic-prose-101-cause-001
+diagnostic-prose-101-remediation-001
+diagnostic-prose-102-meaning
+diagnostic-prose-102-cause-001
+diagnostic-prose-102-cause-002
+diagnostic-prose-102-remediation-001
+diagnostic-prose-103-meaning
+diagnostic-prose-103-cause-001
+diagnostic-prose-103-remediation-001
 diagnostic-schema-001-meaning
 diagnostic-schema-001-cause-001
 diagnostic-schema-001-remediation-001
