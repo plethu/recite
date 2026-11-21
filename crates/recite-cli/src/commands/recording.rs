@@ -158,10 +158,10 @@ fn write_attention_table(
             .and_then(|item| item.speaker.as_deref())
             .map_or(0, |speaker| speaker.width())
     }));
-    let block_width = width(
+    let line_width = width(
         &mut attention
             .iter()
-            .map(|entry| entry.item.map_or(0, |item| item.block.width())),
+            .map(|entry| entry.item.map_or(0, |item| item.line.to_string().len())),
     );
     let mut file = None;
     for entry in attention {
@@ -182,13 +182,13 @@ fn write_attention_table(
         let row = messages.format(
             MsgId::CliRecordingEntry,
             [
+                ("reference", format!("{:>line_width$}", item.line)),
                 ("state", format!("{state:<state_width$}")),
                 ("id", format!("{:<id_width$}", entry.id)),
                 (
                     "block",
-                    format!("{speaker:<speaker_width$}  {:<block_width$}", item.block),
+                    format!("{speaker:<speaker_width$}  {}", item.block),
                 ),
-                ("reference", format!("{}:{}", item.file, item.line)),
             ],
         );
         writeln!(stdout, "{}", row.trim_end())?;

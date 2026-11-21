@@ -79,9 +79,15 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
         |_| TuiSettings::default().color_enabled(),
         |settings| settings.color_enabled(),
     );
+    let stderr_columns = io::stderr()
+        .is_terminal()
+        .then(|| crossterm::terminal::size().ok())
+        .flatten()
+        .map(|(width, _)| usize::from(width));
     ink::configure(
         color && io::stdout().is_terminal(),
         color && io::stderr().is_terminal(),
+        stderr_columns,
     );
     let result = commands::run_command(cli.command, &mut stdout, &mut stderr, &error_messages);
 

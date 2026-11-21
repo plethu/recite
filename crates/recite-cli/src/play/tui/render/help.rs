@@ -10,6 +10,8 @@ use super::super::state::TuiState;
 use super::controls::controls_for_prompt;
 
 const GAP: usize = 3;
+/// Choice IDs are letters, digits and underscores; numbers pick by position.
+const TYPED_SELECTION_KEYS: &str = "a-z 0-9";
 
 /// A two-column key table: each key, then what it does, wrapped under its own column so a long
 /// key never pushes the description out of line.
@@ -26,9 +28,10 @@ pub(super) fn help_overlay_lines(
         ));
     }
     for control in controls_for_prompt(&state.prompt, state.keymap) {
-        // A phrase such as "an ID or number" reads as a key only after its verb, as in the footer.
+        // The footer's phrase "an ID or number" names what to type rather than a key; the key
+        // column shows the keys themselves.
         let key = if control.action == MsgId::TuiHelpActionInput && control.keys.contains(' ') {
-            format!("{} {}", messages.text(control.action), control.keys)
+            TYPED_SELECTION_KEYS.to_owned()
         } else {
             control.keys.to_owned()
         };

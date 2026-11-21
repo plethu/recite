@@ -312,11 +312,16 @@ fn text_status_groups_items_by_file_in_aligned_columns() -> Result<(), Box<dyn E
     assert!(heading.ends_with(".recite"), "{text}");
     let rows: Vec<&str> = lines.take_while(|line| line.starts_with("  ")).collect();
     assert!(!rows.is_empty(), "{text}");
-    let reference = |row: &str| row.find(&format!("{heading}:"));
-    let first = reference(rows[0]).expect("row ends with its file and line");
+    // Rows lead with the line number under the file heading, then aligned state and ID columns.
+    let column = |row: &str| row.find("to record").or_else(|| row.find("stale"));
+    let first = column(rows[0]).expect("a state column");
     assert!(
-        rows.iter().all(|row| reference(row) == Some(first)),
+        rows.iter().all(|row| column(row) == Some(first)),
         "columns align: {text}"
+    );
+    assert!(
+        !rows[0].contains(heading),
+        "the heading names the file once: {text}"
     );
     assert!(!text.contains('`'), "no literal backticks in rows: {text}");
     Ok(())
