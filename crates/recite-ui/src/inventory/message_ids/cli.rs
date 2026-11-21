@@ -23,6 +23,8 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliHelpCommandId => Some("cli-help-command-id"),
         super::MsgId::CliHelpCommandProject => Some("cli-help-command-project"),
         super::MsgId::CliHelpCommandSchema => Some("cli-help-command-schema"),
+        super::MsgId::CliHelpCommandProse => Some("cli-help-command-prose"),
+        super::MsgId::CliHelpCommandProseCheck => Some("cli-help-command-prose-check"),
         super::MsgId::CliHelpArgOnly => Some("cli-help-arg-only"),
         super::MsgId::CliHelpCommandIdCheck => Some("cli-help-command-id-check"),
         super::MsgId::CliHelpCommandIdAssign => Some("cli-help-command-id-assign"),

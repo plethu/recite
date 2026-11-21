@@ -11,12 +11,13 @@
 use serde::{Serialize, Serializer};
 
 use super::errors::ErrorOperation;
-use crate::args::{Command, IdCommand, OutputFormat, ProjectCommand, SchemaCommand};
+use crate::args::{Command, IdCommand, OutputFormat, ProjectCommand, ProseCommand, SchemaCommand};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(test, derive(strum::EnumIter))]
 pub(crate) enum StructuredCommand {
     Validate,
+    ProseCheck,
     Compile,
     Extract,
     SchemaExport,
@@ -30,6 +31,7 @@ impl StructuredCommand {
     pub(crate) const fn wire_name(self) -> &'static str {
         match self {
             Self::Validate => "validate",
+            Self::ProseCheck => "prose check",
             Self::Compile => "compile",
             Self::Extract => "extract",
             Self::SchemaExport => "schema export",
@@ -44,6 +46,7 @@ impl StructuredCommand {
     pub(crate) const fn operation(self) -> ErrorOperation {
         match self {
             Self::Validate => ErrorOperation::Validate,
+            Self::ProseCheck => ErrorOperation::CheckProse,
             Self::Compile => ErrorOperation::Compile,
             Self::Extract => ErrorOperation::Extract,
             Self::SchemaExport => ErrorOperation::ExportSchema,
@@ -77,6 +80,11 @@ impl Command {
         let (command, output_format, invocation_id) = match self {
             Self::Validate(args) => (
                 StructuredCommand::Validate,
+                args.output_format,
+                &args.invocation_id,
+            ),
+            Self::Prose(ProseCommand::Check(args)) => (
+                StructuredCommand::ProseCheck,
                 args.output_format,
                 &args.invocation_id,
             ),

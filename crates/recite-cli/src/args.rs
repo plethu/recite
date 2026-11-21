@@ -19,6 +19,9 @@ pub(crate) struct Cli {
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
     Validate(ValidateArgs),
+    /// Spelling and grammar in dialogue prose.
+    #[command(subcommand)]
+    Prose(ProseCommand),
     Compile(CompileArgs),
     Extract(ExtractArgs),
     /// Dialogue PO catalogues and their review state.
@@ -44,6 +47,23 @@ pub(crate) enum Command {
     Bench(BenchArgs),
     /// Inspect a bounded migration; write only with --output-dir.
     Import(crate::migration::ImportArgs),
+}
+
+#[derive(Debug, Subcommand)]
+pub(crate) enum ProseCommand {
+    Check(ProseCheckArgs),
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct ProseCheckArgs {
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
+    #[arg(required = true)]
+    pub(crate) paths: Vec<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]

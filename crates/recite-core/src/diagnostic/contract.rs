@@ -10,6 +10,7 @@ mod import;
 mod parser;
 mod po;
 mod project;
+mod prose;
 mod registry;
 mod schema;
 

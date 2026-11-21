@@ -15,6 +15,7 @@ pub enum DiagnosticCategory {
     Metadata,
     Parse,
     Project,
+    Prose,
     Schema,
     Validation,
     Unknown,
@@ -31,6 +32,7 @@ impl DiagnosticCategory {
             Self::Metadata => "metadata",
             Self::Parse => "parse",
             Self::Project => "project",
+            Self::Prose => "prose",
             Self::Schema => "schema",
             Self::Validation => "validation",
             Self::Unknown => "unknown",
@@ -169,6 +171,8 @@ const fn diagnostic_category(value: &[u8]) -> DiagnosticCategory {
         DiagnosticCategory::Parse
     } else if starts_with(value, b"RECITE_PROJECT") {
         DiagnosticCategory::Project
+    } else if starts_with(value, b"RECITE_PROSE") {
+        DiagnosticCategory::Prose
     } else if starts_with(value, b"RECITE_FRESH") {
         DiagnosticCategory::Freshness
     } else if starts_with(value, b"RECITE_SCHEMA") {

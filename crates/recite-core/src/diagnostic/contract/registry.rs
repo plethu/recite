@@ -1,6 +1,6 @@
 use super::{
     DiagnosticAuxiliaryPresentationContract, DiagnosticCode, DiagnosticPresentationContract,
-    compiler, config, freshness, import, parser, po, project, schema,
+    compiler, config, freshness, import, parser, po, project, prose, schema,
 };
 use std::sync::OnceLock;
 
@@ -33,6 +33,7 @@ pub fn migrated_diagnostic_presentation_contracts()
         .chain(freshness::contracts())
         .chain(schema::contracts())
         .chain(import::contracts())
+        .chain(prose::contracts())
 }
 
 /// Return the central contract for a config/discovery diagnostic.

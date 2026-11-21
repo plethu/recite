@@ -20,7 +20,7 @@ fn names<T: Serialize>(variants: impl Iterator<Item = T>) -> Vec<String> {
 
 #[test]
 fn error_vocabulary_projections_are_current() {
-    // The editors expose finite dialogue commands and watch, not import or
+    // The editors expose finite dialogue commands and watch, not import, prose or
     // schema export. Dispatch is an unreachable CLI routing fallback.
     let vocabularies = [
         ("errorCategories", names(ErrorCategory::iter())),
@@ -36,7 +36,9 @@ fn error_vocabulary_projections_are_current() {
             names(ErrorOperation::iter().filter(|operation| {
                 !matches!(
                     operation,
-                    ErrorOperation::ExportSchema | ErrorOperation::Dispatch
+                    ErrorOperation::ExportSchema
+                        | ErrorOperation::CheckProse
+                        | ErrorOperation::Dispatch
                 )
             })),
         ),
