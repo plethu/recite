@@ -18,9 +18,8 @@ const MAX_COLUMNS: usize = 100;
 const LABEL_MIN: usize = 9;
 const LABEL_MAX: usize = 14;
 const GAP: usize = 2;
-/// The right-hand column is sized for its longest entry up to this width; longer IDs borrow
-/// from the words on their own row only.
-const TRAILING_MAX: usize = 24;
+/// The narrowest column of words worth wrapping into.
+const MIN_MEASURE: usize = 20;
 
 #[derive(Debug, Default)]
 pub(crate) struct RunTranscript {
@@ -133,15 +132,7 @@ impl RunTranscript {
             .iter()
             .flat_map(|entry| self.rows(entry, messages))
             .collect();
-        // IDs set the right-hand column; results and effect modes borrow from their own row.
-        let trailing = rows
-            .iter()
-            .filter(|row| !matches!(row.label, Label::Kind(_)))
-            .map(|row| row.trailing.width())
-            .max()
-            .unwrap_or(0)
-            .min(TRAILING_MAX);
-        let layout = Layout::new(self.label_width(messages), trailing, columns);
+        let layout = Layout::new(self.label_width(messages), columns);
         for row in &rows {
             layout.write(writer, ink, row)?;
         }
@@ -278,18 +269,14 @@ impl Row {
 
 struct Layout {
     label: usize,
-    trailing: usize,
     columns: Option<usize>,
 }
 
 impl Layout {
-    fn new(label: usize, trailing: usize, columns: Option<usize>) -> Self {
-        let columns = columns.map(|columns| columns.min(MAX_COLUMNS));
+    fn new(label: usize, columns: Option<usize>) -> Self {
         Self {
             label,
-            // A narrow terminal keeps most of its width for the words.
-            trailing: columns.map_or(trailing, |columns| trailing.min(columns / 5)),
-            columns,
+            columns: columns.map(|columns| columns.min(MAX_COLUMNS)),
         }
     }
 
@@ -308,8 +295,11 @@ impl Layout {
             writeln!(writer, "{}", line.trim_end())?;
             return Ok(());
         };
-        // A result or mode wider than the ID column follows its words instead of squeezing them.
-        if matches!(row.label, Label::Kind(_)) && row.trailing.width() > self.trailing {
+        // Each row keeps the terminal's width for its words and sets its own ID or result at the
+        // right edge; one too wide to leave a usable measure follows its words instead.
+        let room = columns.saturating_sub(self.label + GAP);
+        if !row.trailing.is_empty() && room.saturating_sub(row.trailing.width() + GAP) < MIN_MEASURE
+        {
             let joined = Row {
                 label: Label::Kind(label_text),
                 text: format!("{} · {}", row.text, row.trailing),
@@ -317,11 +307,13 @@ impl Layout {
             };
             return self.write(writer, ink, &joined);
         }
-        let trailing_width = row.trailing.width().max(self.trailing);
-        let measure = columns
-            .saturating_sub(self.label + GAP)
-            .saturating_sub(trailing_width + GAP)
-            .max(20);
+        let trailing_width = row.trailing.width();
+        let measure = if row.trailing.is_empty() {
+            room
+        } else {
+            room.saturating_sub(trailing_width + GAP)
+        }
+        .max(MIN_MEASURE);
         let wrapped = if row.text.is_empty() {
             vec![std::borrow::Cow::Borrowed("")]
         } else {
@@ -335,9 +327,7 @@ impl Layout {
                 let fill = if row.trailing.is_empty() {
                     0
                 } else {
-                    measure.saturating_sub(text.width())
-                        + GAP
-                        + trailing_width.saturating_sub(row.trailing.width())
+                    measure.saturating_sub(text.width()) + GAP
                 };
                 let line = format!("{label}{pad}{text}{}{trailing}", " ".repeat(fill));
                 writeln!(writer, "{}", line.trim_end())?;

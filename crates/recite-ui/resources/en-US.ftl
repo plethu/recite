@@ -1,4 +1,4 @@
-cli-help-about = Recite dialogue compiler and validation CLI.
+cli-help-about = Compile, check and preview branching dialogue.
 cli-help-usage-heading = Usage:
 cli-help-commands-heading = Commands
 cli-help-arguments-heading = Arguments
@@ -135,7 +135,7 @@ cli-recording-summary = {$language}: {$recorded} recorded, {$approved} approved,
         [one] {$attention} item needs attention
        *[other] {$attention} items need attention
     }
-cli-recording-entry = {"  "}{$state}  {$id}  {$block}  {$reference}
+cli-recording-entry = {"  "}{$reference}  {$state}  {$id}  {$block}
 cli-recording-obsolete = {"  "}obsolete  `{$id}` is no longer in the source
 cli-recording-state-to-record = to record
 cli-recording-state-stale = stale
@@ -342,8 +342,8 @@ tui-transcript-deferred = deferred
 tui-transcript-end = end
 tui-transcript-completed = completed
 tui-transcript-deferred-effects = deferred effects
-tui-transcript-effect-text = {$mode} {$function} {$args}
-tui-transcript-deferred-effect-text = {$function} {$args}
+tui-transcript-effect-text = {$function}{$args} · {$mode}
+tui-transcript-deferred-effect-text = {$function}{$args}
 
 tui-help-title = Help
 tui-help-key-heading = Key

@@ -22,14 +22,7 @@ pub(super) fn write_diagnostic(
 ) -> Result<(), CliError> {
     let line = record.span.start.line();
     let gutter = " ".repeat(line.to_string().len());
-    writeln!(
-        writer,
-        "{}{}{} {}",
-        severity(paint, record.severity),
-        paint.strong(format!("[{}]", record.code.as_str())),
-        paint.strong(":"),
-        rendered.primary_text
-    )?;
+    write_headline(writer, paint, record, &rendered.primary_text)?;
     writeln!(
         writer,
         "{gutter} {} {}",
@@ -60,6 +53,40 @@ pub(super) fn write_diagnostic(
         writeln!(writer, "{gutter} {} {help}", paint.teal_strong("= help:"))?;
     }
     writeln!(writer)?;
+    Ok(())
+}
+
+/// `error[CODE]: message`, with the message in bold. On a terminal a long message wraps at word
+/// boundaries under its own first word, so paths and quoted names are never split.
+fn write_headline(
+    writer: &mut dyn Write,
+    paint: Paint,
+    record: &DiagnosticRecord,
+    message: &str,
+) -> Result<(), CliError> {
+    let code = format!("[{}]", record.code.as_str());
+    let prefix = severity_name(record.severity).len() + code.len() + 2;
+    let rows = match crate::ink::stderr_columns() {
+        Some(columns) if columns > prefix + 20 => textwrap::wrap(
+            message,
+            textwrap::Options::new(columns - prefix).break_words(false),
+        ),
+        _ => vec![std::borrow::Cow::Borrowed(message)],
+    };
+    let indent = " ".repeat(prefix);
+    for (index, row) in rows.iter().enumerate() {
+        if index == 0 {
+            writeln!(
+                writer,
+                "{}{code}{} {}",
+                severity(paint, record.severity),
+                paint.strong(":"),
+                paint.strong(row)
+            )?;
+        } else {
+            writeln!(writer, "{indent}{}", paint.strong(row))?;
+        }
+    }
     Ok(())
 }
 

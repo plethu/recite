@@ -6,15 +6,31 @@
 //! fails contrast on light terminal themes. Colour follows each stream's terminal check and the
 //! shared `NO_COLOR`/`CLICOLOR` settings; structured output never passes through here.
 use std::fmt::Display;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 static STDOUT: AtomicBool = AtomicBool::new(false);
 static STDERR: AtomicBool = AtomicBool::new(false);
+static STDERR_COLUMNS: AtomicUsize = AtomicUsize::new(0);
 
-/// Set once by the binary. Library callers and tests keep the plain default.
-pub(crate) fn configure(stdout: bool, stderr: bool) {
+/// Lines wrap to the terminal up to this width; wider lines stop being comfortable to read.
+const MAX_COLUMNS: usize = 100;
+
+/// Set once by the binary. Library callers and tests keep the plain, unwrapped default.
+pub(crate) fn configure(stdout: bool, stderr: bool, stderr_columns: Option<usize>) {
     STDOUT.store(stdout, Ordering::Relaxed);
     STDERR.store(stderr, Ordering::Relaxed);
+    STDERR_COLUMNS.store(
+        stderr_columns.map_or(0, |columns| columns.min(MAX_COLUMNS)),
+        Ordering::Relaxed,
+    );
+}
+
+/// The width human messages on stderr wrap to, when stderr is a terminal.
+pub(crate) fn stderr_columns() -> Option<usize> {
+    match STDERR_COLUMNS.load(Ordering::Relaxed) {
+        0 => None,
+        columns => Some(columns),
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
