@@ -27,6 +27,8 @@ use crate::documents::OpenDocument;
 use crate::features::code_action::{includes_quick_fix, ranges_intersect};
 use crate::position::{source_range_to_lsp, span_to_range};
 
+const MAX_CACHED_DOCUMENTS: usize = 256;
+
 /// Checkers per project and the latest findings per open document.
 #[derive(Debug, Default)]
 pub(crate) struct ProseService {
@@ -178,6 +180,10 @@ impl ProseService {
                 .unwrap_or_else(PoisonError::into_inner)
                 .check(path, text),
         );
+        // Closed documents are not tracked; bound the cache instead.
+        if results.len() >= MAX_CACHED_DOCUMENTS {
+            results.clear();
+        }
         results.insert(
             uri.as_str().to_owned(),
             Cached {

@@ -5909,7 +5909,6 @@ dependencies = [
  "insta",
  "recite-core",
  "recite-parser",
- "tempfile",
  "thiserror 2.0.18",
 ]
 
