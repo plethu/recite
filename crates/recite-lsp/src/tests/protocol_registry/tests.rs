@@ -67,3 +67,23 @@ fn crlf_and_non_bmp_text_use_utf16_ranges() {
 fn indexed_edit_ranges_preserve_crlf_and_utf16_boundaries() {
     super::position::indexed_edit_ranges_preserve_crlf_and_utf16_boundaries();
 }
+
+#[test]
+fn prose_diagnostics_are_opt_in_per_project() {
+    super::prose::prose_diagnostics_are_opt_in_per_project();
+}
+
+#[test]
+fn prose_diagnostics_cover_prose_only() {
+    super::prose::prose_diagnostics_cover_prose_only();
+}
+
+#[test]
+fn prose_quick_fixes_use_utf16_ranges_and_edit_prose_only() {
+    super::prose::prose_quick_fixes_use_utf16_ranges_and_edit_prose_only();
+}
+
+#[test]
+fn add_word_creates_a_missing_dictionary() {
+    super::prose::add_word_creates_a_missing_dictionary();
+}

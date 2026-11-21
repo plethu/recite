@@ -10,6 +10,7 @@ mod lsp_features;
 mod project_index;
 #[path = "project_refresh.rs"]
 mod project_refresh;
+mod prose;
 mod query_index;
 mod schema_index;
 mod schema_lifecycle;
@@ -59,6 +60,8 @@ pub(crate) struct LspWorkspace {
     generation: SnapshotGeneration,
     next_partition_build_id: PartitionBuildId,
     pub(crate) ui_catalog: std::sync::Arc<UiCatalog>,
+    /// Shared across workspace clones so checkers and findings are reused.
+    prose: std::sync::Arc<prose::ProseService>,
 }
 
 impl LspWorkspace {

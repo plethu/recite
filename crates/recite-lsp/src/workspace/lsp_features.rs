@@ -184,14 +184,24 @@ impl LspWorkspace {
         let schema_document = schema
             .as_ref()
             .and_then(|schema| schema.code_action_document());
-        features::code_action(
+        let actions = features::code_action(
             params,
             &partition_state.kernel.snapshot().query(control),
             &documents,
             schema_document,
             schema_summary,
             &self.ui_catalog,
-        )
+        );
+        control.checkpoint().ok()?;
+        let prose = self.prose_code_actions(params);
+        match actions {
+            Some(mut actions) => {
+                actions.extend(prose);
+                Some(actions)
+            }
+            None if prose.is_empty() => None,
+            None => Some(prose),
+        }
     }
 
     pub(super) fn navigation_documents(

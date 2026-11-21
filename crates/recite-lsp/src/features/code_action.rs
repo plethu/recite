@@ -104,6 +104,10 @@ pub(crate) fn code_action(
     Some(actions)
 }
 
+pub(crate) fn includes_quick_fix(params: &CodeActionParams) -> bool {
+    includes_kind(params, &CodeActionKind::QUICKFIX)
+}
+
 fn includes_kind(params: &CodeActionParams, kind: &CodeActionKind) -> bool {
     params
         .context
@@ -185,7 +189,7 @@ fn full_document_range(text: &str) -> Range {
     }
 }
 
-fn ranges_intersect(left: Range, right: Range) -> bool {
+pub(crate) fn ranges_intersect(left: Range, right: Range) -> bool {
     position_le(left.start, right.end) && position_le(right.start, left.end)
 }
 

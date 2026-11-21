@@ -12,6 +12,7 @@ mod navigation_corrections;
 mod navigation_ranges;
 mod position;
 mod project_indexes;
+mod prose;
 #[path = "tests/protocol_registry/tests.rs"]
 mod protocol_registry;
 mod stable_id_rename;
