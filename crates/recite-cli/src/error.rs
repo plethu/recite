@@ -380,7 +380,12 @@ impl CliError {
     pub(crate) fn is_broken_pipe(&self) -> bool {
         match self {
             Self::Io(error) => error.kind() == io::ErrorKind::BrokenPipe,
-            Self::TraceJson(error) => error.io_error_kind() == Some(io::ErrorKind::BrokenPipe),
+            Self::TraceJson(error) | Self::BenchJson(error) => {
+                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
+            }
+            Self::SchemaInspection(error::SchemaInspectionError::Json(error)) => {
+                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
+            }
             _ => false,
         }
     }
