@@ -58,7 +58,7 @@ impl ProseChecker {
     /// long-lived clients should keep one per project.
     pub fn new(settings: ProseSettings) -> Result<Self, ProseSetupError> {
         let words = crate::dictionary::load_words(settings.dictionaries())?;
-        let engine = default_engine(&settings, &words)?;
+        let engine = default_engine(&settings, &words).ok_or(ProseSetupError::Unavailable)?;
         Ok(Self::with_engine(settings, engine))
     }
 
@@ -119,28 +119,26 @@ impl ProseChecker {
     }
 }
 
+/// The Harper engine with the project's language, words and suppressed rules.
 #[cfg(feature = "harper")]
-#[allow(
-    clippy::unnecessary_wraps,
-    reason = "matches the build without an engine"
-)]
 fn default_engine(
     settings: &ProseSettings,
     words: &BTreeSet<String>,
-) -> Result<Box<dyn ProseEngine>, ProseSetupError> {
-    Ok(Box::new(crate::HarperEngine::new(
+) -> Option<Box<dyn ProseEngine>> {
+    Some(Box::new(crate::HarperEngine::new(
         settings.language(),
         words.iter().map(String::as_str),
         settings.ignored_rules(),
     )))
 }
 
+/// Builds without the `harper` feature have no engine.
 #[cfg(not(feature = "harper"))]
 fn default_engine(
     _settings: &ProseSettings,
     _words: &BTreeSet<String>,
-) -> Result<Box<dyn ProseEngine>, ProseSetupError> {
-    Err(ProseSetupError::Unavailable)
+) -> Option<Box<dyn ProseEngine>> {
+    None
 }
 
 fn map_finding(

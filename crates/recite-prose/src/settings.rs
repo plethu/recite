@@ -121,11 +121,8 @@ impl ProseSettings {
         self.ignore_rules.contains(rule)
     }
 
-    #[cfg_attr(
-        not(feature = "harper"),
-        allow(dead_code, reason = "used by the Harper engine")
-    )]
-    pub(crate) fn ignored_rules(&self) -> impl Iterator<Item = &str> {
+    /// Rule names suppressed project-wide, in sorted order.
+    pub fn ignored_rules(&self) -> impl Iterator<Item = &str> {
         self.ignore_rules.iter().map(String::as_str)
     }
 
