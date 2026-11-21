@@ -2,6 +2,7 @@
 use super::{assign_headings, help_arg, help_template};
 use crate::i18n::{Messages, MsgId};
 
+mod prose;
 mod recording;
 
 /// Localise `command` and, for noun groups, everything beneath it. Entries are keyed by the full
@@ -218,11 +219,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             recording::localise(command, messages, &path);
         }
         "id" => localise_group(command, messages, MsgId::CliHelpCommandId, &path),
-        "prose" => localise_group(command, messages, MsgId::CliHelpCommandProse, &path),
-        "prose check" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandProseCheck));
-            localise_paths(command, messages);
-        }
+        "prose" | "prose check" => prose::localise(command, messages, &path),
         "project" => localise_group(command, messages, MsgId::CliHelpCommandProject, &path),
         "schema" => localise_group(command, messages, MsgId::CliHelpCommandSchema, &path),
         "explain" => {

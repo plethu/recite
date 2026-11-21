@@ -21,11 +21,11 @@
 //! # #[cfg(feature = "harper")] {
 //! use recite_prose::{ProseChecker, ProseSettings};
 //!
-//! let source = ":: start default\n> speaker=rhea @intro\n  I recieved it.\n";
+//! let source = ":: start default\n> speaker=rhea @intro\n  The lantern flickerd.\n";
 //! let mut checker = ProseChecker::new(ProseSettings::default()).unwrap();
 //! let findings = checker.check("start.recite", source);
-//! assert_eq!(findings[0].text, "recieved");
-//! assert_eq!(&source[findings[0].fixes[0].range.clone()], "recieved");
+//! assert_eq!(findings[0].text, "flickerd");
+//! assert_eq!(&source[findings[0].fixes[0].range.clone()], "flickerd");
 //! # }
 //! ```
 

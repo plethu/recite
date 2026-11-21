@@ -67,6 +67,16 @@ abord = "abord"
 passagers = "passagers"
 sur = "sur"
 
+[workspace.metadata.typos.files]
+# Prose-checking fixtures and tests misspell words on purpose.
+extend-exclude = [
+    "fixtures/recite/*/prose/",
+    "crates/recite-cli/tests/prose_check.rs",
+    "crates/recite-lsp/src/tests/prose.rs",
+    "crates/recite-parser/tests/snapshots/prose_regions__*",
+    "crates/recite-prose/tests/",
+]
+
 [workspace.metadata.typos.default.extend-identifiers]
 # Published crate name in archived dependency-probe lockfile evidence.
 writeable = "writeable"

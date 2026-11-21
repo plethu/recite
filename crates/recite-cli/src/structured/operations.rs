@@ -10,6 +10,7 @@ use crate::args::{
     Command, CompileArgs, ExportSchemaArgs, ExtractArgs, IdCommand, ProjectCommand, ProseCheckArgs,
     ProseCommand, RuntimeArgs, SchemaCommand, ValidateArgs,
 };
+use crate::commands::prose::check_prose;
 use crate::error::CliError;
 use crate::fs::{
     collect_input_files, compile_options, load_schema, read_compile_inputs_for_output,
@@ -125,7 +126,7 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
 }
 
 fn prose_check(args: &ProseCheckArgs) -> Result<StructuredOutcome, CliError> {
-    let report = crate::commands::prose::check_prose(&args.paths)?;
+    let report = check_prose(&args.paths)?;
     let diagnostics = diagnostic_records(&report.diagnostics)?;
     let fixes = report
         .fixes
