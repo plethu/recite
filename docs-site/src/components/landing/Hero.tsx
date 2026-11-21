@@ -26,8 +26,13 @@ export function LandingHero() {
           <pre>{example}</pre>
         </figure>
       </div>
-      <aside class="note-band" aria-label={text("landing.release.label")}>
-        <p class="release">{text("landing.release")}</p>
+      <aside class="errata" aria-labelledby="release-heading">
+        <p class="release">
+          <strong class="lead-in" id="release-heading">
+            {text("landing.release.label")}
+          </strong>{" "}
+          {text("landing.release")}
+        </p>
         <p class="release-links">
           <a href="/getting-started/install/">{text("landing.release.install")}</a>
           <a href="/guides/distribution/">{text("landing.release.packages")}</a>

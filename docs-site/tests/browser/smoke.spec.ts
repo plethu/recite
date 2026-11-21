@@ -65,7 +65,7 @@ test("source and manual remain available without JavaScript", async ({ browser }
         ":: junction default",
       );
       await expect(page.getByRole("button", { name: "Run scene" })).toBeHidden();
-      await expect(page.getByRole("combobox", { name: "Select theme", exact: true })).toBeHidden();
+      await expect(page.getByRole("group", { name: "Theme", exact: true })).toBeHidden();
       colors.add(await page.locator("body").evaluate((body) => getComputedStyle(body).color));
       await page.getByRole("button", { name: "Site menu", exact: true }).click();
       await expect(page.locator("#global-menu")).toBeVisible();
