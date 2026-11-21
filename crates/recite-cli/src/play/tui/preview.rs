@@ -176,11 +176,21 @@ impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> PreviewPlayUi
         self.read_effect_acknowledgement()
     }
 
+    /// The acknowledgement completes its request's row, as `recite run` shows it.
     fn acknowledged(&mut self, effect_id: &EffectId) -> Result<(), CliError> {
+        let completed = self.messages.text(MsgId::TuiTranscriptCompleted);
+        let request = self.state.transcript.iter_mut().rev().find(|entry| {
+            entry.kind == TuiTranscriptKind::Effect
+                && entry.id.as_deref() == Some(effect_id.as_str())
+        });
+        if let Some(request) = request {
+            request.text = format!("{}, {completed}", request.text);
+            return self.render();
+        }
         self.push(
             TuiTranscriptKind::Ack,
             Some(effect_id.as_str().to_owned()),
-            self.messages.text(MsgId::TuiTranscriptCompleted),
+            completed,
         )
     }
 

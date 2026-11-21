@@ -93,7 +93,11 @@ pub(super) fn run(
                 )
             )?;
             if project.catalogs.is_empty() {
-                writeln!(stderr, "{}", messages.text(MsgId::CliIdsNoCatalogs))?;
+                crate::diagnostics::report_note(
+                    stderr,
+                    messages,
+                    &messages.text(MsgId::CliIdsNoCatalogs),
+                )?;
             }
         }
         _ => {}
