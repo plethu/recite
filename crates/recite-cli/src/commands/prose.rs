@@ -54,7 +54,7 @@ pub(crate) struct ProseReport {
 pub(crate) fn check_prose(paths: &[PathBuf]) -> Result<ProseReport, CliError> {
     let files = collect_input_files(paths)?;
     let mut projects = BTreeMap::<PathBuf, Option<Project>>::new();
-    let mut checkers = BTreeMap::<Option<PathBuf>, Result<ProseChecker, Option<Diagnostic>>>::new();
+    let mut checkers = BTreeMap::<Option<PathBuf>, Result<ProseChecker, Vec<Diagnostic>>>::new();
     let mut setup = Vec::new();
     let mut findings = Vec::new();
     for file in &files {
@@ -67,11 +67,11 @@ pub(crate) fn check_prose(paths: &[PathBuf]) -> Result<ProseReport, CliError> {
         let checker = checkers.entry(key).or_insert_with(|| checker_for(project));
         let checker = match checker {
             Ok(checker) => checker,
-            Err(diagnostic) => {
-                if let Some(diagnostic) = diagnostic
-                    && !setup.contains(diagnostic)
-                {
-                    setup.push(diagnostic.clone());
+            Err(diagnostics) => {
+                for diagnostic in diagnostics.iter() {
+                    if !setup.contains(diagnostic) {
+                        setup.push(diagnostic.clone());
+                    }
                 }
                 continue;
             }
@@ -133,7 +133,7 @@ fn project_for(directory: &Path) -> Result<Option<Project>, CliError> {
     }
 }
 
-fn checker_for(project: Option<&Project>) -> Result<ProseChecker, Option<Diagnostic>> {
+fn checker_for(project: Option<&Project>) -> Result<ProseChecker, Vec<Diagnostic>> {
     let (settings, manifest) = match project {
         Some(project) => (
             ProseSettings::from_project(&project.root, &project.prose),
@@ -147,6 +147,6 @@ fn checker_for(project: Option<&Project>) -> Result<ProseChecker, Option<Diagnos
         } else {
             &manifest
         };
-        error.diagnostic(file)
+        error.diagnostic(file).into_iter().collect()
     })
 }
