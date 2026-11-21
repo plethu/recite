@@ -46,6 +46,15 @@ export async function createMarkdown(languages: string[]) {
         .replace("<pre ", '<pre tabindex="0" ');
     },
   }).use(anchor, { slugify: slug, tabIndex: false });
+  // A fence may name its file (```toml title="runtime-fixture.toml"); the name becomes a caption
+  // row above the unchanged source.
+  const fence = md.renderer.rules.fence!;
+  md.renderer.rules.fence = (tokens, index, options, env, renderer) => {
+    const html = fence(tokens, index, options, env, renderer);
+    const title = /(?:^|\s)title="([^"]+)"/.exec(tokens[index]!.info)?.[1];
+    if (!title) return html;
+    return `<figure class="source"><figcaption>${md.utils.escapeHtml(title)}</figcaption>${html.trimEnd()}</figure>\n`;
+  };
   const table = md.renderer.rules.table_open;
   md.renderer.rules.table_open = (tokens, index, options, env, renderer) => {
     tokens[index]!.attrSet("tabindex", "0");

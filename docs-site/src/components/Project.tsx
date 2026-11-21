@@ -5,7 +5,7 @@ import { RenderedMarkdown } from "./RenderedMarkdown.tsx";
 export function Project({ project }: { project: ProjectContent }) {
   return (
     <div class="site-content">
-      <div class="recite-showcase sheet" data-pagefind-body>
+      <div class="recite-showcase sheet" data-pagefind-body data-pagefind-meta="section:Showcase">
         <PageTitle>{project.title}</PageTitle>
         <article class="recite-article">
           <p>{project.summary}</p>

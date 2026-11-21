@@ -1,17 +1,10 @@
-// Top-level modes, as in Writer's tab row. Learn owns every manual section outside Reference.
-const links = [
-  {
-    href: "/getting-started/",
-    title: "Learn",
-    sections: ["/getting-started/", "/guides/", "/examples/", "/migration/", "/adapters/"],
-  },
-  { href: "/showcase/", title: "Showcase", sections: ["/showcase/"] },
-  { href: "/reference/", title: "Reference", sections: ["/reference/"] },
-];
+import { text } from "../content/messages.ts";
+import { modes as links } from "./modes.ts";
+
 const themes = [
-  ["auto", "System"],
-  ["light", "Light"],
-  ["dark", "Dark"],
+  ["auto", text("ui.system")],
+  ["light", text("ui.light")],
+  ["dark", text("ui.dark")],
 ] as const;
 
 function current(url: string, href: string, sections: string[]) {
@@ -23,7 +16,7 @@ function current(url: string, href: string, sections: string[]) {
 function ThemeSelector({ name }: { name: string }) {
   return (
     <fieldset class="theme-control segments" data-theme-select>
-      <legend class="visually-hidden">Theme</legend>
+      <legend class="visually-hidden">{text("ui.theme")}</legend>
       {themes.map(([value, label]) => (
         <label>
           <input type="radio" name={name} value={value} checked={value === "auto"} />
@@ -42,7 +35,7 @@ function SearchField() {
         <circle cx="6.75" cy="6.75" r="4.75" />
         <path d="m10.25 10.25 4 4" />
       </svg>
-      <span>Search</span>
+      <span>{text("search.label")}</span>
     </button>
   );
 }
