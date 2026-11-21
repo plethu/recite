@@ -108,6 +108,8 @@ pub(crate) trait OutputExt {
     fn assert_stdout(&self, expected: &str) -> &Self;
     fn assert_stderr(&self, expected: &str) -> &Self;
     fn assert_stdout_contains(&self, expected: &str);
+    /// A `recite run` transcript marks the fixture's pick with `>` on that choice's row.
+    fn assert_run_selected(&self, choice_id: &str);
     fn assert_stderr_contains(&self, expected: &str);
     fn assert_stderr_not_contains(&self, unexpected: &str);
 }
@@ -159,6 +161,17 @@ impl OutputExt for Output {
         assert!(
             stdout(self).contains(expected),
             "stdout did not contain {expected:?}\nstdout:\n{}",
+            stdout(self)
+        );
+    }
+
+    fn assert_run_selected(&self, choice_id: &str) {
+        let suffix = format!("  {choice_id}");
+        assert!(
+            stdout(self)
+                .lines()
+                .any(|line| line.trim_start().starts_with('>') && line.ends_with(&suffix)),
+            "no selected choice {choice_id:?}\nstdout:\n{}",
             stdout(self)
         );
     }

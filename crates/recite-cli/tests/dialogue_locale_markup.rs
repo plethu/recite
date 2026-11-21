@@ -47,5 +47,5 @@ fr = ["locale/fr.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line ffee6p8: [slow]Monde [em]bonjour[/em][/slow]");
+    output.assert_stdout_contains("[slow]Monde [em]bonjour[/em][/slow]  ffee6p8");
 }

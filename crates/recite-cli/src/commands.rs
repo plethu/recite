@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{IsTerminal, Write};
 
 use crate::args::{Command, CompileArgs, ExplainArgs, ExtractArgs, RuntimeArgs, TraceArgs};
 use crate::diagnostics::{Subject, report_diagnostics, report_success};
@@ -9,6 +9,7 @@ use crate::fs::{
     warn_schema_choice, write_staged,
 };
 use crate::i18n::{Messages, MsgId};
+use crate::ink::Ink;
 use crate::play::run_play_command;
 use crate::runtime_fixture::{
     RuntimeFixtureOptions, dialogue_preview_from_fixture, execute_runtime_fixture,
@@ -72,22 +73,21 @@ fn explain_command(
             code: args.code.clone(),
         })?;
 
+    // A heading line, the meaning as a paragraph, then two short lists the reader can act on.
+    let ink = Ink::stdout();
     writeln!(
         stdout,
-        "{}",
-        messages.format(
+        "{}  {}",
+        ink.strong(messages.format(
             MsgId::ExplainCode,
             [("code", explanation.code.as_str().to_owned())]
-        )
-    )?;
-    writeln!(
-        stdout,
-        "{}",
-        messages.format(
+        )),
+        ink.teal(messages.format(
             MsgId::ExplainCategory,
             [("category", explanation.category.as_str().to_owned())]
-        )
+        ))
     )?;
+    writeln!(stdout)?;
     writeln!(
         stdout,
         "{}",
@@ -96,21 +96,19 @@ fn explain_command(
             [("meaning", explanation.meaning.to_owned())]
         )
     )?;
-    writeln!(stdout, "{}", messages.text(MsgId::ExplainCommonCauses))?;
-    for cause in explanation.common_causes {
-        writeln!(
-            stdout,
-            "{}",
-            messages.format(MsgId::ExplainListItem, [("item", cause.to_string())])
-        )?;
-    }
-    writeln!(stdout, "{}", messages.text(MsgId::ExplainHowToFix))?;
-    for remediation in explanation.remediation {
-        writeln!(
-            stdout,
-            "{}",
-            messages.format(MsgId::ExplainListItem, [("item", remediation.to_string())])
-        )?;
+    for (heading, items) in [
+        (MsgId::ExplainCommonCauses, explanation.common_causes),
+        (MsgId::ExplainHowToFix, explanation.remediation),
+    ] {
+        writeln!(stdout)?;
+        writeln!(stdout, "{}", ink.teal_strong(messages.text(heading)))?;
+        for item in items {
+            writeln!(
+                stdout,
+                "{}",
+                messages.format(MsgId::ExplainListItem, [("item", item.to_string())])
+            )?;
+        }
     }
     Ok(())
 }
@@ -146,7 +144,14 @@ fn compile_command(
 
     write_staged(&args.output, &messagepack)?;
     if reported == 0 {
-        report_success(stderr, messages, Subject::Files(file_count))?;
+        report_success(
+            stderr,
+            messages,
+            Subject::Compiled {
+                files: file_count,
+                output: &args.output,
+            },
+        )?;
     }
     Ok(())
 }
@@ -172,7 +177,7 @@ fn extract_command(
     };
     sources.relocate(&mut report.diagnostics);
 
-    report_diagnostics(stderr, messages, report.diagnostics.iter())?;
+    let reported = report_diagnostics(stderr, messages, report.diagnostics.iter())?;
     let Some(catalog) = report.catalog else {
         return Err(CliError::Diagnostics);
     };
@@ -180,6 +185,16 @@ fn extract_command(
     let pot = catalog.to_pot_string();
     if let Some(output) = args.output {
         write_staged(&output, pot.as_bytes())?;
+        if reported == 0 {
+            report_success(
+                stderr,
+                messages,
+                Subject::Extracted {
+                    entries: catalog.entries.len(),
+                    output: &output,
+                },
+            )?;
+        }
     } else {
         stdout.write_all(pot.as_bytes())?;
     }
@@ -245,9 +260,13 @@ fn runtime_command_with_options(
 
     match output {
         RuntimeOutput::Run => {
-            for line in execution.run_lines {
-                writeln!(stdout, "{line}")?;
-            }
+            let ink = Ink::stdout();
+            let columns = std::io::stdout()
+                .is_terminal()
+                .then(|| crossterm::terminal::size().ok())
+                .flatten()
+                .map(|(width, _)| usize::from(width));
+            execution.run.write(stdout, messages, ink, columns)?;
         }
         RuntimeOutput::Trace => {
             serde_json::to_writer_pretty(&mut *stdout, &execution.trace)

@@ -32,6 +32,10 @@ impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> TuiPlayUi<'_, B
             .collect::<Vec<_>>();
         self.state.prompt = TuiPrompt::Choice {
             line: prompt.line().map(|line| TuiPromptLine {
+                speaker: line
+                    .speaker
+                    .as_ref()
+                    .map(|speaker| speaker.as_str().to_owned()),
                 id: line.id.as_str().to_owned(),
                 text: line.text.clone(),
             }),

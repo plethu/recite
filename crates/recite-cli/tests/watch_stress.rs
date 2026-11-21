@@ -18,7 +18,7 @@ use recite_core::compiled::{
 use serde::Serialize;
 use tempfile::{NamedTempFile, TempDir};
 
-const WATCH_SUCCESS: &str = "watch: build succeeded";
+const WATCH_SUCCESS: &str = " built ";
 const POLL_INTERVAL: Duration = Duration::from_millis(25);
 const REBUILD_TIMEOUT: Duration = Duration::from_secs(120);
 

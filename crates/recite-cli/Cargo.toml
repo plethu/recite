@@ -32,6 +32,8 @@ same-file = "1.0.6"
 serde.workspace = true
 serde_json.workspace = true
 textwrap = { version = "0.16.2", default-features = false, features = ["unicode-width"] }
+# Local wall-clock time for human `watch` status lines.
+time = { version = "0.3.55", default-features = false, features = ["std", "local-offset"] }
 toml.workspace = true
 unic-langid.workspace = true
 unicode-width.workspace = true

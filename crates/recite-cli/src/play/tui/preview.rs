@@ -67,11 +67,16 @@ impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> PreviewPlayUi
 
     fn line(&mut self, line: &DialogueLine) -> Result<(), CliError> {
         self.state.prompt = TuiPrompt::None;
-        self.push(
-            TuiTranscriptKind::Line,
-            Some(line.id.as_str().to_owned()),
-            line.text.clone(),
-        )
+        self.state.transcript.push(TuiTranscriptEntry {
+            kind: TuiTranscriptKind::Line,
+            id: Some(line.id.as_str().to_owned()),
+            speaker: line
+                .speaker
+                .as_ref()
+                .map(|speaker| speaker.as_str().to_owned()),
+            text: line.text.clone(),
+        });
+        self.render()
     }
 
     fn choice(&mut self, prompt: &PreviewPrompt) -> Result<ChoiceId, CliError> {
@@ -86,15 +91,25 @@ impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> PreviewPlayUi
         } = &self.state.prompt
         {
             self.state.transcript.push(TuiTranscriptEntry {
+                speaker: line.speaker.clone(),
                 kind: TuiTranscriptKind::Prompt,
                 id: Some(line.id.clone()),
                 text: line.text.clone(),
             });
         }
+        // The transcript shows what the player said, not only which ID they picked.
+        let chosen = match &self.state.prompt {
+            TuiPrompt::Choice { choices, .. } => choices
+                .iter()
+                .find(|choice| choice.id == choice_id.as_str())
+                .map(|choice| choice.text.clone()),
+            _ => None,
+        }
+        .unwrap_or_default();
         self.push(
             TuiTranscriptKind::Choice,
             Some(choice_id.as_str().to_owned()),
-            String::new(),
+            chosen,
         )
     }
 
@@ -198,12 +213,14 @@ impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> PreviewPlayUi
         self.push(TuiTranscriptKind::End, None, String::new())?;
         if !deferred_effects.is_empty() {
             self.state.transcript.push(TuiTranscriptEntry {
+                speaker: None,
                 kind: TuiTranscriptKind::Deferred,
                 id: None,
                 text: self.messages.text(MsgId::TuiTranscriptDeferredEffects),
             });
             for effect in deferred_effects {
                 self.state.transcript.push(TuiTranscriptEntry {
+                    speaker: None,
                     kind: TuiTranscriptKind::Deferred,
                     id: Some(effect.id.as_str().to_owned()),
                     text: self.messages.format(

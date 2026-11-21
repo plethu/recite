@@ -73,15 +73,13 @@ recite run crossroads.recitec --block which_way --fixture fixture.toml
 ```
 
 ```text
-line alice_way_001: Would you tell me, please, which way I ought to go from here?
-line cat_way_001: That depends a good deal on where you want to get to.
-prompt
-  [1] answer_anywhere: I don't much care where.
-selected choice answer_anywhere
-line cat_anywhere_001: Then it doesn't matter which way you go.
-end
-deferred effects:
-  mark_thread (alice_crossroads, direction_unsettled)
+ALICE         Would you tell me, please, which way I ought to go from here?  alice_way_001
+CHESHIRE_CAT  That depends a good deal on where you want to get to.  cat_way_001
+choose
+        >  1  I don't much care where.  answer_anywhere
+CHESHIRE_CAT  Then it doesn't matter which way you go.  cat_anywhere_001
+end           end of the conversation
+deferred      mark_thread(alice_crossroads, direction_unsettled)
 ```
 
 If the fixture is missing an answer for a prompt, `run` tells you the exact key it expected. `recite

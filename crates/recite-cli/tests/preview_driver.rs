@@ -31,7 +31,7 @@ fn run_and_trace_project_the_preview_event_sequence() {
         .arg(&fixture));
     run_output
         .assert_success()
-        .assert_stdout_contains("line m3ffvrt: Hello from preview.");
+        .assert_stdout_contains("Hello from preview.  m3ffvrt");
 
     let trace_output = run(recite()
         .arg("trace")

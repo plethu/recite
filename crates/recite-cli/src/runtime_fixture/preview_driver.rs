@@ -12,6 +12,7 @@ use super::metrics::{RuntimeMetricsCollector, record_session_size};
 use super::projection::{RuntimeExecution, project_event};
 use super::prompt::{PromptCardinality, PromptIdentity, select_fixture_choice};
 use super::trace::{TraceDocument, trace_effect};
+use super::transcript::RunTranscript;
 use crate::dialogue_locale::DialogueTraversalPreview;
 use crate::error::CliError;
 use crate::i18n::Messages;
@@ -53,7 +54,7 @@ pub(crate) fn execute_runtime_fixture(
     let mut metrics = options.metrics.then(RuntimeMetricsCollector::default);
     record_session_size(metrics.as_mut(), session.session())?;
     let metrics_started_at = options.metrics.then(metrics_now);
-    let mut run_lines = Vec::new();
+    let mut run = RunTranscript::default();
     let mut trace_events = Vec::new();
     let mut final_deferred_effects = Vec::new();
     let mut choice_in_flight = false;
@@ -75,7 +76,7 @@ pub(crate) fn execute_runtime_fixture(
                     &event,
                     session.trace(),
                     &prompt_cardinality,
-                    &mut run_lines,
+                    &mut run,
                     &mut trace_events,
                     metrics.as_mut(),
                     messages,
@@ -138,7 +139,7 @@ pub(crate) fn execute_runtime_fixture(
                             &condition,
                             session.trace(),
                             &prompt_cardinality,
-                            &mut run_lines,
+                            &mut run,
                             &mut trace_events,
                             metrics.as_mut(),
                             messages,
@@ -174,7 +175,7 @@ pub(crate) fn execute_runtime_fixture(
         )
     });
     Ok(RuntimeExecution {
-        run_lines,
+        run,
         trace: TraceDocument::new(
             asset.header.asset_id.as_str().to_owned(),
             block.to_owned(),

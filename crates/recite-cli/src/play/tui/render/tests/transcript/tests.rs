@@ -4,21 +4,25 @@ use super::*;
 fn transcript_entries_render_as_separated_stacked_blocks() {
     let entries = [
         TuiTranscriptEntry {
+            speaker: None,
             kind: TuiTranscriptKind::Prompt,
             id: Some("intro_001".to_owned()),
             text: "The relay board is lit up. What do you check first?".to_owned(),
         },
         TuiTranscriptEntry {
+            speaker: None,
             kind: TuiTranscriptKind::Effect,
             id: Some("effect:intro:1".to_owned()),
             text: "immediate play_sfx (panel_open)".to_owned(),
         },
         TuiTranscriptEntry {
+            speaker: None,
             kind: TuiTranscriptKind::Choice,
             id: Some("ask_mira".to_owned()),
             text: String::new(),
         },
         TuiTranscriptEntry {
+            speaker: None,
             kind: TuiTranscriptKind::End,
             id: None,
             text: String::new(),
@@ -34,8 +38,10 @@ fn transcript_entries_render_as_separated_stacked_blocks() {
     assert!(debug.contains("  | The relay board is lit up."));
     assert!(debug.contains("effect"));
     assert!(debug.contains("immediate play_sfx"));
-    assert!(debug.contains("effect:intro:1"));
-    assert!(!debug.contains("id effect:intro:1"));
+    assert!(
+        !debug.contains("effect:intro:1"),
+        "runtime effect IDs stay out of the transcript"
+    );
     assert!(debug.contains("ask_mira"));
     assert!(!debug.contains("selected"));
     assert!(!debug.contains("end end"));
@@ -47,12 +53,14 @@ fn tui_render_includes_header_and_choice_prompt() {
         asset: "asset".to_owned(),
         block: "start".to_owned(),
         transcript: vec![TuiTranscriptEntry {
+            speaker: None,
             kind: TuiTranscriptKind::Line,
             id: Some("intro".to_owned()),
             text: "Welcome.".to_owned(),
         }],
         prompt: TuiPrompt::Choice {
             line: Some(TuiPromptLine {
+                speaker: None,
                 id: "intro".to_owned(),
                 text: "Welcome.".to_owned(),
             }),
@@ -92,6 +100,7 @@ fn active_choice_prompt_uses_transcript_prompt_header_and_wrapped_text() {
         block: "start".to_owned(),
         prompt: TuiPrompt::Choice {
             line: Some(TuiPromptLine {
+                speaker: None,
                 id: "intro_001".to_owned(),
                 text: "The relay board is lit up. What do you check first?".to_owned(),
             }),
@@ -127,6 +136,7 @@ fn wrapped_choice_prompt_allocates_height_for_visible_choices() {
         block: "start".to_owned(),
         prompt: TuiPrompt::Choice {
             line: Some(TuiPromptLine {
+                speaker: None,
                 id: "intro_001".to_owned(),
                 text: "The relay board is lit up beside a blinking maintenance console while Mira waits for a quick decision.".to_owned(),
             }),
@@ -184,6 +194,7 @@ fn typed_choice_input_renders_only_in_status_footer() {
         block: "start".to_owned(),
         prompt: TuiPrompt::Choice {
             line: Some(TuiPromptLine {
+                speaker: None,
                 id: "intro_001".to_owned(),
                 text: "The relay board is lit up.".to_owned(),
             }),
@@ -217,16 +228,19 @@ fn tui_render_finished_state_without_inactive_prompt_filler() {
         block: "start".to_owned(),
         transcript: vec![
             TuiTranscriptEntry {
+                speaker: None,
                 kind: TuiTranscriptKind::Choice,
                 id: Some("help".to_owned()),
                 text: "selected".to_owned(),
             },
             TuiTranscriptEntry {
+                speaker: None,
                 kind: TuiTranscriptKind::Line,
                 id: Some("helped".to_owned()),
                 text: "Helped.".to_owned(),
             },
             TuiTranscriptEntry {
+                speaker: None,
                 kind: TuiTranscriptKind::End,
                 id: None,
                 text: "end".to_owned(),

@@ -33,7 +33,7 @@ fn run_separates_an_unavailable_choice_marker_from_its_text() -> Result<(), Box<
     assert!(run.status.success(), "{run:?}");
     let stdout = String::from_utf8(run.stdout)?;
     assert!(
-        stdout.contains("  [1] answer: Answer. (unavailable)\n"),
+        stdout.contains("1  Answer. (unavailable)  answer\n"),
         "{stdout}"
     );
     Ok(())

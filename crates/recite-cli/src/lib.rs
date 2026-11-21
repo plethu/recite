@@ -31,6 +31,7 @@ mod dialogue_locale;
 mod error;
 mod fs;
 mod i18n;
+mod ink;
 mod migration;
 mod play;
 mod runtime_fixture;
@@ -72,19 +73,21 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
         };
     }
 
-    // Human diagnostics are coloured only on a terminal, under the same NO_COLOR/CLICOLOR and
+    // Human output is coloured only on a terminal, under the same NO_COLOR/CLICOLOR and
     // configured colour mode as the TUI.
-    diagnostics::set_color(
-        io::stderr().is_terminal()
-            && TuiSettings::load(None).map_or_else(
-                |_| TuiSettings::default().color_enabled(),
-                |settings| settings.color_enabled(),
-            ),
+    let color = TuiSettings::load(None).map_or_else(
+        |_| TuiSettings::default().color_enabled(),
+        |settings| settings.color_enabled(),
+    );
+    ink::configure(
+        color && io::stdout().is_terminal(),
+        color && io::stderr().is_terminal(),
     );
     let result = commands::run_command(cli.command, &mut stdout, &mut stderr, &error_messages);
 
     match result {
         Ok(()) => SUCCESS,
+        Err(error) if error.is_broken_pipe() => SUCCESS,
         Err(CliError::Diagnostics) => ExitCode::from(1),
         Err(error) => {
             let message = error.to_user_message(&error_messages);

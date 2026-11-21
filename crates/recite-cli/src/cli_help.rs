@@ -1,6 +1,8 @@
 mod subcommands;
 use std::ffi::OsString;
+use std::io::IsTerminal;
 
+use clap::builder::styling::{AnsiColor, Style, Styles};
 use clap::{Arg, ArgAction, CommandFactory, Error, FromArgMatches};
 
 use crate::args::Cli;
@@ -37,6 +39,8 @@ fn localise_command(command: &mut clap::Command, messages: &Messages) {
         .help_template(help_template(messages))
         .subcommand_help_heading(messages.text(MsgId::CliHelpCommandsHeading))
         .next_help_heading(messages.text(MsgId::CliHelpOptionsHeading))
+        .styles(styles())
+        .term_width(help_wrap_width())
         .disable_help_flag(true)
         .disable_version_flag(true)
         .arg(help_arg(messages))
@@ -91,11 +95,15 @@ fn group_subcommands(command: &mut clap::Command, messages: &Messages) {
         .max()
         .unwrap_or(0);
     let mut groups = String::new();
-    let columns = crossterm::terminal::size()
-        .map(|(width, _)| usize::from(width))
-        .unwrap_or(80);
+    let columns = columns();
+    let header = header_style();
     for (heading, names) in COMMAND_GROUPS {
-        groups.push_str(&format!("{}:\n", messages.text(heading)));
+        groups.push_str(&format!(
+            "{}{}:{}\n",
+            header.render(),
+            messages.text(heading),
+            header.render_reset()
+        ));
         for name in names {
             groups.push_str(&grouped_command(name, &about(name), width, columns));
             groups.push('\n');
@@ -120,6 +128,43 @@ fn group_subcommands(command: &mut clap::Command, messages: &Messages) {
     ));
 }
 
+/// Help wraps to the terminal, capped where lines stop being comfortable to read.
+const MAX_HELP_COLUMNS: usize = 100;
+
+fn columns() -> usize {
+    crossterm::terminal::size()
+        .map(|(width, _)| usize::from(width))
+        .unwrap_or(80)
+        .min(MAX_HELP_COLUMNS)
+}
+
+/// Option help wraps on a terminal; piped help keeps one line per option for grep (clap reads 0
+/// as no wrapping).
+fn help_wrap_width() -> usize {
+    if std::io::stdout().is_terminal() {
+        columns()
+    } else {
+        0
+    }
+}
+
+/// Headings take the teal label ink and commands stay in the reader's own foreground, matching
+/// the human diagnostics. Clap strips these styles when colour is off.
+fn styles() -> Styles {
+    Styles::styled()
+        .header(header_style())
+        .usage(header_style())
+        .literal(Style::new().bold())
+        .placeholder(Style::new())
+        .error(AnsiColor::Red.on_default().bold())
+        .valid(AnsiColor::Cyan.on_default().bold())
+        .invalid(AnsiColor::Yellow.on_default().bold())
+}
+
+fn header_style() -> Style {
+    AnsiColor::Cyan.on_default().bold()
+}
+
 fn grouped_command(name: &str, about: &str, name_width: usize, columns: usize) -> String {
     let (prefix, indent) = if columns < name_width + 28 {
         ("    ".to_owned(), "    ".to_owned())
@@ -142,12 +187,19 @@ fn grouped_command(name: &str, about: &str, name_width: usize, columns: usize) -
     }
 }
 
+/// Options that only matter to editors, CI and other tools, listed after the ones people type.
+const MACHINE_OUTPUT_ARGS: [&str; 2] = ["output_format", "invocation_id"];
+
 /// Give every argument an explicit localised heading. An argument without one lands in clap's
 /// built-in "Options" section, which printed a second, identically named heading.
 fn assign_headings(command: &mut clap::Command, messages: &Messages) {
     let arguments = messages.text(MsgId::CliHelpArgumentsHeading);
     let options = messages.text(MsgId::CliHelpOptionsHeading);
+    let tools = messages.text(MsgId::CliHelpMachineOutputHeading);
     *command = std::mem::take(command).mut_args(|arg| {
+        if MACHINE_OUTPUT_ARGS.contains(&arg.get_id().as_str()) {
+            return arg.help_heading(tools.clone());
+        }
         if arg.get_help_heading().is_some() {
             return arg;
         }
@@ -160,11 +212,13 @@ fn assign_headings(command: &mut clap::Command, messages: &Messages) {
     });
     // Clap orders custom headings by argument order, and `mut_arg` moves an argument to the end.
     // Touch every option once more so the Arguments section prints before Options.
-    let option_ids: Vec<String> = command
+    // Touching the tool-facing options last keeps their heading after the everyday options.
+    let mut option_ids: Vec<String> = command
         .get_arguments()
         .filter(|arg| !arg.is_positional())
         .map(|arg| arg.get_id().to_string())
         .collect();
+    option_ids.sort_by_key(|id| MACHINE_OUTPUT_ARGS.contains(&id.as_str()));
     for id in option_ids {
         *command = std::mem::take(command).mut_arg(id, |arg| arg);
     }

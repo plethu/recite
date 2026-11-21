@@ -84,9 +84,9 @@ locale = "fr-FR"
         .arg("--fixture")
         .arg(&default_fixture));
     default_run.assert_success().assert_stderr("");
-    default_run.assert_stdout_contains("prompt intro: Hello.");
-    default_run.assert_stdout_contains("  [1] help: Help me.");
-    default_run.assert_stdout_contains("line helped: Done.");
+    default_run.assert_stdout_contains("Hello.  intro");
+    default_run.assert_stdout_contains("1  Help me.  help");
+    default_run.assert_stdout_contains("Done.  helped");
 
     let run_output = run(recite()
         .arg("run")
@@ -96,9 +96,9 @@ locale = "fr-FR"
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("prompt intro: Bonjour.");
-    run_output.assert_stdout_contains("  [1] help: Aidez-moi.");
-    run_output.assert_stdout_contains("line helped: Done.");
+    run_output.assert_stdout_contains("Bonjour.  intro");
+    run_output.assert_stdout_contains("1  Aidez-moi.  help");
+    run_output.assert_stdout_contains("Done.  helped");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -237,7 +237,7 @@ fr = ["locale/fr.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line ffee6p8: Salut.");
+    output.assert_stdout_contains("Salut.  ffee6p8");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -294,7 +294,7 @@ zh = ["locale/zh.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line ffee6p8: Ni hao.");
+    output.assert_stdout_contains("Ni hao.  ffee6p8");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -366,7 +366,7 @@ remaining = { int = 2 }
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("line rthh7ab: Vous avez 2 lettres.");
+    run_output.assert_stdout_contains("Vous avez 2 lettres.  rthh7ab");
 
     let trace_output = run(recite()
         .arg("trace")

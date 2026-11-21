@@ -36,7 +36,11 @@ fn assign_ids_appends_generated_ids_and_keeps_existing_ones() {
         .args(["id", "assign"])
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("assigned 3 stable IDs\n");
+        .assert_stderr(&format!(
+            "ok  assigned 3 stable IDs in {}, {}\n",
+            other.display(),
+            scene.display()
+        ));
 
     let scene_source = fs::read_to_string(&scene).expect("scene");
     assert!(scene_source.contains("  ? @keep_me\n"));

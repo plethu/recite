@@ -32,7 +32,7 @@ remaining = { int = 3 }
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line ffee6p8: Hello Ada, you have 3.");
+    output.assert_stdout_contains("Hello Ada, you have 3.  ffee6p8");
 }
 
 #[test]
@@ -65,7 +65,7 @@ remaining = { int = 2 }
         .arg("--fixture")
         .arg(&plural_fixture));
     plural_output.assert_success().assert_stderr("");
-    plural_output.assert_stdout_contains("line ffee6p8: You have 2 letters.");
+    plural_output.assert_stdout_contains("You have 2 letters.  ffee6p8");
 
     let singular_fixture = write_file(
         temp.path(),

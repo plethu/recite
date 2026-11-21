@@ -17,10 +17,14 @@ pub(super) fn render_transcript<'a>(
         return Text::from(Vec::<Line<'a>>::new());
     }
     let mut lines = Vec::new();
+    let mut previous_spoken = false;
     for entry in entries.rev() {
-        if !lines.is_empty() {
+        // Spoken lines are separated like paragraphs; events between them stay together.
+        let spoken = is_spoken(entry.kind);
+        if !lines.is_empty() && (spoken || previous_spoken) {
             lines.push(Line::from(""));
         }
+        previous_spoken = spoken;
         lines.extend(
             render_transcript_entry(entry, width as usize, messages, palette)
                 .into_iter()
@@ -35,32 +39,46 @@ pub(super) fn render_transcript<'a>(
     Text::from(lines)
 }
 
+fn is_spoken(kind: TuiTranscriptKind) -> bool {
+    matches!(kind, TuiTranscriptKind::Line | TuiTranscriptKind::Prompt)
+}
+
 fn render_transcript_entry<'a>(
     entry: &'a TuiTranscriptEntry,
     width: usize,
     messages: &'a Messages,
     palette: TuiPalette,
 ) -> Vec<Line<'a>> {
-    let mut spans = vec![transcript_label_span(entry.kind, messages, palette)];
+    let mut spans = vec![match entry.speaker.as_deref() {
+        Some(speaker) if is_spoken(entry.kind) => speaker_span(speaker, palette),
+        _ => transcript_label_span(entry.kind, messages, palette),
+    }];
     match entry.kind {
-        TuiTranscriptKind::Condition | TuiTranscriptKind::Choice | TuiTranscriptKind::Ack => {
+        // The runtime's effect IDs belong to the acknowledgement panel and `recite trace`;
+        // the transcript says what was asked and what happened.
+        TuiTranscriptKind::Effect | TuiTranscriptKind::Deferred | TuiTranscriptKind::Ack => {
+            if !entry.text.is_empty() {
+                spans.push(Span::raw(" "));
+                spans.push(Span::raw(entry.text.as_str()));
+            }
+            vec![Line::from(spans)]
+        }
+        TuiTranscriptKind::Choice if !entry.text.is_empty() => {
+            spans.push(Span::raw(" "));
+            spans.push(Span::raw(entry.text.as_str()));
+            if let Some(id) = entry.id.as_deref() {
+                spans.push(Span::raw("  "));
+                spans.push(Span::styled(id.to_owned(), palette.muted()));
+            }
+            vec![Line::from(spans)]
+        }
+        TuiTranscriptKind::Condition | TuiTranscriptKind::Choice => {
             if let Some(id) = entry.id.as_deref() {
                 spans.push(Span::raw(" "));
                 spans.push(Span::styled(id.to_owned(), palette.muted()));
             }
             if !entry.text.is_empty() {
                 spans.push(Span::raw(" -> "));
-                spans.push(Span::raw(entry.text.as_str()));
-            }
-            vec![Line::from(spans)]
-        }
-        TuiTranscriptKind::Effect | TuiTranscriptKind::Deferred => {
-            if let Some(id) = entry.id.as_deref() {
-                spans.push(Span::raw(" "));
-                spans.push(Span::styled(id.to_owned(), palette.muted()));
-            }
-            if !entry.text.is_empty() {
-                spans.push(Span::raw(" "));
                 spans.push(Span::raw(entry.text.as_str()));
             }
             vec![Line::from(spans)]
@@ -172,13 +190,22 @@ pub(super) fn transcript_label(
     (label, style)
 }
 
+/// A speaker's name in capitals, as Writer's margin labels set it.
+fn speaker_span(speaker: &str, palette: TuiPalette) -> Span<'static> {
+    Span::styled(speaker.to_uppercase(), palette.title())
+}
+
 pub(super) fn prompt_header_line<'a>(
     kind: TuiTranscriptKind,
     id: Option<&'a str>,
+    speaker: Option<&str>,
     messages: &Messages,
     palette: TuiPalette,
 ) -> Line<'a> {
-    let mut spans = vec![transcript_label_span(kind, messages, palette)];
+    let mut spans = vec![match speaker {
+        Some(speaker) => speaker_span(speaker, palette),
+        None => transcript_label_span(kind, messages, palette),
+    }];
     if let Some(id) = id {
         spans.push(Span::raw(" "));
         spans.push(Span::styled(id.to_owned(), palette.muted()));
