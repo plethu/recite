@@ -38,6 +38,10 @@ mod layout;
 mod lower;
 mod markers;
 mod parser;
+mod prose;
+pub use prose::{
+    ProseLine, ProsePiece, ProsePieceKind, ProseRegion, ProseRegionKind, ProseText, prose_regions,
+};
 mod regions;
 pub use regions::{SourceRegion, source_regions};
 mod source;
