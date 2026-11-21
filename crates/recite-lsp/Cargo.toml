@@ -20,6 +20,7 @@ recite-compiler.workspace = true
 recite-config.workspace = true
 recite-core.workspace = true
 recite-parser.workspace = true
+recite-prose.workspace = true
 recite-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -33,8 +34,10 @@ proptest.workspace = true
 tempfile.workspace = true
 
 [features]
-default = []
+default = ["prose"]
 bench-support = []
+# Built-in offline spelling and grammar diagnostics for projects with [prose] enabled.
+prose = ["recite-prose/harper"]
 
 [lints]
 workspace = true

@@ -121,6 +121,10 @@ pub(crate) fn code_action(
     Some(actions)
 }
 
+pub(crate) fn includes_quick_fix(params: &CodeActionParams) -> bool {
+    includes_kind(params, &CodeActionKind::QUICKFIX)
+}
+
 /// The schema-style identifier (letters, digits, `_`, `-`, `.`) touching an LSP position.
 fn identifier_at(text: &str, position: Position) -> Option<String> {
     let (line, _) = recite_core::source_lines(text).nth(usize::try_from(position.line).ok()?)?;
@@ -228,7 +232,7 @@ fn full_document_range(text: &str) -> Range {
     }
 }
 
-fn ranges_intersect(left: Range, right: Range) -> bool {
+pub(crate) fn ranges_intersect(left: Range, right: Range) -> bool {
     position_le(left.start, right.end) && position_le(right.start, left.end)
 }
 
