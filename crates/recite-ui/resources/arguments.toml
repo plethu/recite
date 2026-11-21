@@ -18,6 +18,7 @@ count = "integer"
 
 [arguments."cli-ids-assigned"]
 count = "integer"
+files = "string"
 
 [arguments."cli-diagnostic-errors"]
 count = "integer"
@@ -180,7 +181,6 @@ function = "string"
 args = "string"
 
 [arguments."run-effect"]
-mode = "string"
 function = "string"
 args = "string"
 
@@ -801,3 +801,17 @@ detail = "string"
 [arguments."cli-error-recording-handoff"]
 file = "string"
 detail = "string"
+
+[arguments."cli-success-compiled"]
+count = "integer"
+output = "string"
+
+[arguments."cli-success-extracted"]
+count = "integer"
+output = "string"
+
+[arguments."run-effect-acknowledged"]
+mode = "string"
+
+[arguments."run-effect-mode"]
+mode = "string"

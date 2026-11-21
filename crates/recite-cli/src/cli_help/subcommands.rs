@@ -245,6 +245,12 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
         "trace" => {
             set_about(command, messages.text(MsgId::CliHelpCommandTrace));
             localise_runtime_args(command, messages, MsgId::CliHelpArgAssetRun);
+            set_arg_help(
+                command,
+                "metrics",
+                messages.text(MsgId::CliHelpArgMetrics),
+                messages,
+            );
         }
         "play" => {
             set_about(command, messages.text(MsgId::CliHelpCommandPlay));

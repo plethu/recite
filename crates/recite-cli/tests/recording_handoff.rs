@@ -295,3 +295,29 @@ fn import_refuses_rows_with_unknown_ids_and_missing_media() -> Result<(), Box<dy
     assert!(!root.join("recording/fr.toml").exists());
     Ok(())
 }
+
+#[test]
+fn text_status_groups_items_by_file_in_aligned_columns() -> Result<(), Box<dyn Error>> {
+    let project = team_project()?;
+    let output = recite(project.path(), &["recording", "status"])?;
+    assert!(output.status.success(), "{}", stderr(&output));
+    let text = String::from_utf8(output.stdout)?;
+    let mut lines = text.lines();
+    assert!(
+        lines
+            .next()
+            .is_some_and(|summary| summary.contains("need attention"))
+    );
+    let heading = lines.next().expect("a file heading");
+    assert!(heading.ends_with(".recite"), "{text}");
+    let rows: Vec<&str> = lines.take_while(|line| line.starts_with("  ")).collect();
+    assert!(!rows.is_empty(), "{text}");
+    let reference = |row: &str| row.find(&format!("{heading}:"));
+    let first = reference(rows[0]).expect("row ends with its file and line");
+    assert!(
+        rows.iter().all(|row| reference(row) == Some(first)),
+        "columns align: {text}"
+    );
+    assert!(!text.contains('`'), "no literal backticks in rows: {text}");
+    Ok(())
+}

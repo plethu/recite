@@ -3,6 +3,7 @@ use std::cell::Cell;
 
 fn entry(text: &str) -> TuiTranscriptEntry {
     TuiTranscriptEntry {
+        speaker: None,
         kind: TuiTranscriptKind::Line,
         id: Some("line_id".into()),
         text: text.into(),

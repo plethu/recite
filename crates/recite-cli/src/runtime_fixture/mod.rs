@@ -5,6 +5,7 @@ mod preview_driver;
 mod projection;
 mod prompt;
 mod trace;
+mod transcript;
 
 pub(crate) use trace::TraceDocument;
 

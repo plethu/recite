@@ -7,18 +7,21 @@ fn active_prompt_labels_reuse_transcript_label_styles() {
     let condition = transcript::prompt_header_line(
         TuiTranscriptKind::Condition,
         Some("trusts(mira)"),
+        None,
         &messages,
         palette,
     );
     let prompt = transcript::prompt_header_line(
         TuiTranscriptKind::Prompt,
         Some("intro_001"),
+        None,
         &messages,
         palette,
     );
     let effect = transcript::prompt_header_line(
         TuiTranscriptKind::Effect,
         Some("effect:intro#1"),
+        None,
         &messages,
         palette,
     );
@@ -44,11 +47,13 @@ fn colorless_render_omits_foreground_colors_and_keeps_choice_affordances() {
         block: "start".to_owned(),
         transcript: vec![
             TuiTranscriptEntry {
+                speaker: None,
                 kind: TuiTranscriptKind::Prompt,
                 id: Some("intro".to_owned()),
                 text: "Welcome.".to_owned(),
             },
             TuiTranscriptEntry {
+                speaker: None,
                 kind: TuiTranscriptKind::Effect,
                 id: Some("grant#1".to_owned()),
                 text: "blocking grant_item (map)".to_owned(),
@@ -56,6 +61,7 @@ fn colorless_render_omits_foreground_colors_and_keeps_choice_affordances() {
         ],
         prompt: TuiPrompt::Choice {
             line: Some(TuiPromptLine {
+                speaker: None,
                 id: "intro".to_owned(),
                 text: "Welcome.".to_owned(),
             }),
@@ -102,7 +108,7 @@ fn colorless_render_omits_foreground_colors_and_keeps_choice_affordances() {
     assert!(content.contains("locked"));
     assert!(content.contains("unavailable: needs key"));
     assert!(content.contains("prompt intro"));
-    assert!(content.contains("effect grant#1"));
+    assert!(content.contains("effect blocking grant_item (map)"));
     assert!(content.contains("choice id/index>"));
     assert!(content.contains("type an ID or number"));
 }

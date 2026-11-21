@@ -179,8 +179,11 @@ when nothing is refused, does it record the takes in `recording/<locale>.toml` (
 ### `recite run --block <BLOCK> --fixture <FIXTURE> <ASSET>`
 
 Runs a compiled asset headlessly. The TOML fixture supplies condition results, prompt answers, and
-effect acknowledgement policy; output lists lines, prompts, selections, endings, and collected
-deferred effects. A missing fixture entry fails with the exact key the prompt expects.
+effect acknowledgement policy. The output reads as a script: each line under its speaker, every
+choice of a prompt with the fixture's pick marked `>`, and effects, conditions, the ending and
+collected deferred effects labelled in the same column. Stable IDs and results sit on the right. On
+a terminal the words wrap under their column; piped output keeps one entry per line. A missing
+fixture entry fails with the exact key the prompt expects.
 
 ### `recite trace [--metrics] --block <BLOCK> --fixture <FIXTURE> <ASSET>`
 

@@ -413,3 +413,38 @@ fn debounced_rebuild_count(
     }
     batches
 }
+
+#[test]
+fn status_lines_mark_a_recovered_build_as_fixed() {
+    let messages = Messages::load(&UiLocale::default()).expect("messages");
+    let mut status = super::StatusLine::new(crate::ink::Ink::default());
+    let mut output = Vec::new();
+    let telemetry = || BuildTelemetry::from_duration(Duration::from_millis(12));
+    for result in [
+        BuildStatus::Fresh {
+            asset_count: 1,
+            telemetry: telemetry(),
+        },
+        BuildStatus::Diagnostics {
+            telemetry: telemetry(),
+        },
+        BuildStatus::Fresh {
+            asset_count: 2,
+            telemetry: telemetry(),
+        },
+    ] {
+        status
+            .report(&mut output, Ok(result), &messages)
+            .expect("report");
+    }
+    let text = String::from_utf8(output).expect("utf-8");
+    let lines: Vec<&str> = text.lines().map(|line| &line[8..]).collect();
+    assert_eq!(
+        lines,
+        [
+            "  ok     built 1 asset · 12 ms",
+            "  error  build failed; the last good asset is kept · 12 ms",
+            "  fixed  built 2 assets · 12 ms",
+        ]
+    );
+}

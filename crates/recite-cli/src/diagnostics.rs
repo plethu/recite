@@ -9,7 +9,7 @@ mod tests;
 
 mod excerpts;
 mod human;
-pub(crate) use human::{Subject, report_success, set_color};
+pub(crate) use human::{Subject, display_path, report_success};
 
 /// Render human diagnostics in a rustc-like layout, then a one-line count.
 pub(crate) fn report_diagnostics<'a>(
@@ -17,7 +17,7 @@ pub(crate) fn report_diagnostics<'a>(
     messages: &Messages,
     diagnostics: impl Iterator<Item = &'a Diagnostic>,
 ) -> Result<usize, CliError> {
-    let paint = human::Paint::current();
+    let paint = human::Paint::stderr();
     let mut summary = human::Summary::default();
     let diagnostics = diagnostics.collect::<Vec<_>>();
     let mut excerpts =

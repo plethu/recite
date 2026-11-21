@@ -152,6 +152,7 @@ fn tui_render_help_overlay_replaces_prompt_with_table() {
         asset: "asset".to_owned(),
         block: "start".to_owned(),
         transcript: vec![TuiTranscriptEntry {
+            speaker: None,
             kind: TuiTranscriptKind::Line,
             id: Some("intro".to_owned()),
             text: "Welcome.".to_owned(),
@@ -170,7 +171,6 @@ fn tui_render_help_overlay_replaces_prompt_with_table() {
 
     assert!(content.contains("Help"));
     assert!(content.contains("Key"));
-    assert!(content.contains("Action"));
     assert!(content.contains("Description"));
     assert!(content.contains("move between yes and no"));
     assert!(content.contains("? / Esc close"));
@@ -186,7 +186,7 @@ fn standard_help_overlay_hides_vim_only_commands() {
     assert!(!content.contains(":q"));
     assert!(!content.contains("enter command mode"));
     assert!(!content.contains("j / k"));
-    assert!(!content.contains("i           "));
+    assert!(!content.contains("i         type a choice"));
 }
 
 #[test]
@@ -196,7 +196,7 @@ fn vim_help_overlay_includes_vim_only_commands() {
 
     assert!(content.contains(":q"));
     assert!(content.contains("j / k"));
-    assert!(content.contains("i           "));
+    assert!(content.contains("i         type a choice"), "{content}");
 }
 
 #[test]
@@ -269,6 +269,7 @@ fn tui_render_stays_structured_on_narrow_terminal() {
         asset: "/tmp/recite-play.recitec".to_owned(),
         block: "start".to_owned(),
         transcript: vec![TuiTranscriptEntry {
+            speaker: None,
             kind: TuiTranscriptKind::Effect,
             id: Some("grant#1".to_owned()),
             text: "blocking grant_item (map)".to_owned(),

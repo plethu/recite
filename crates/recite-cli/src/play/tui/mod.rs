@@ -90,6 +90,7 @@ impl<'a, B: Backend<Error: Send + Sync + 'static>> TuiPlayUi<'a, B> {
         text: impl Into<String>,
     ) -> Result<(), CliError> {
         self.state.transcript.push(TuiTranscriptEntry {
+            speaker: None,
             kind,
             id,
             text: text.into(),

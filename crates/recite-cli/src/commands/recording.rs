@@ -8,7 +8,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use recite_compiler::authoring::{
-    RecordingItem, RecordingState, handoff_rows, recording_items, recording_report,
+    RecordingEntry, RecordingItem, RecordingState, handoff_rows, recording_items, recording_report,
 };
 use recite_compiler::compile::{compile_inputs, compile_inputs_with_schema};
 use recite_core::recording::{HandoffRow, RecordingSidecar};
@@ -22,7 +22,9 @@ use crate::diagnostics::report_diagnostics;
 use crate::error::{CliError, LocalisationError};
 use crate::fs::{compile_options, display_path, write_staged};
 use crate::i18n::{Messages, MsgId};
+use crate::ink::Ink;
 use recite_ui::UiArg;
+use unicode_width::UnicodeWidthStr;
 
 use super::project_files::ProjectFiles;
 
@@ -135,6 +137,65 @@ impl Recording {
     }
 }
 
+/// Items needing attention grouped under their file, one row each with aligned state, ID,
+/// speaker and block columns, so a long handoff list scans like a recording script.
+fn write_attention_table(
+    stdout: &mut dyn Write,
+    attention: &[&RecordingEntry<'_>],
+    messages: &Messages,
+) -> Result<(), CliError> {
+    let ink = Ink::stdout();
+    let width = |values: &mut dyn Iterator<Item = usize>| values.max().unwrap_or(0);
+    let state_width = width(
+        &mut attention
+            .iter()
+            .map(|entry| state_label(entry.state, messages).width()),
+    );
+    let id_width = width(&mut attention.iter().map(|entry| entry.id.width()));
+    let speaker_width = width(&mut attention.iter().map(|entry| {
+        entry
+            .item
+            .and_then(|item| item.speaker.as_deref())
+            .map_or(0, |speaker| speaker.width())
+    }));
+    let block_width = width(
+        &mut attention
+            .iter()
+            .map(|entry| entry.item.map_or(0, |item| item.block.width())),
+    );
+    let mut file = None;
+    for entry in attention {
+        let Some(item) = entry.item else {
+            writeln!(
+                stdout,
+                "{}",
+                messages.format(MsgId::CliRecordingObsolete, [("id", entry.id.clone())])
+            )?;
+            continue;
+        };
+        if file != Some(item.file.as_str()) {
+            file = Some(item.file.as_str());
+            writeln!(stdout, "{}", ink.teal_strong(&item.file))?;
+        }
+        let state = state_label(entry.state, messages);
+        let speaker = item.speaker.as_deref().unwrap_or("").to_uppercase();
+        let row = messages.format(
+            MsgId::CliRecordingEntry,
+            [
+                ("state", format!("{state:<state_width$}")),
+                ("id", format!("{:<id_width$}", entry.id)),
+                (
+                    "block",
+                    format!("{speaker:<speaker_width$}  {:<block_width$}", item.block),
+                ),
+                ("reference", format!("{}:{}", item.file, item.line)),
+            ],
+        );
+        writeln!(stdout, "{}", row.trim_end())?;
+    }
+    Ok(())
+}
+
 fn reference(item: &RecordingItem) -> String {
     format!("{}:{}", item.file, item.line)
 }
@@ -174,23 +235,7 @@ fn status(
                     ],
                 )
             )?;
-            for entry in &attention {
-                let line = match entry.item {
-                    Some(item) => messages.format(
-                        MsgId::CliRecordingEntry,
-                        [
-                            ("state", state_label(entry.state, messages)),
-                            ("id", entry.id.clone()),
-                            ("block", item.block.clone()),
-                            ("reference", reference(item)),
-                        ],
-                    ),
-                    None => {
-                        messages.format(MsgId::CliRecordingObsolete, [("id", entry.id.clone())])
-                    }
-                };
-                writeln!(stdout, "{line}")?;
-            }
+            write_attention_table(stdout, &attention, messages)?;
         }
         ReportFormat::Json => {
             let mut counts = BTreeMap::new();

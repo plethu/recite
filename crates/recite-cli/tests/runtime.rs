@@ -66,15 +66,15 @@ auto_ack_blocking = true
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("prompt h3nt0d7: Welcome.");
-    run_output.assert_stdout_contains("condition trusts(player) = true");
-    run_output.assert_stdout_contains("selected choice rkj778k");
-    run_output.assert_stdout_contains("effect blocking grant_item (map)");
-    run_output.assert_stdout_contains("acknowledged effect");
-    run_output.assert_stdout_contains("condition has_bonus(player) = false");
-    run_output.assert_stdout_contains("line ntz2ny0: Helped.");
-    run_output.assert_stdout_contains("deferred effects:");
-    run_output.assert_stdout_contains("finish (help)");
+    run_output.assert_stdout_contains("Welcome.  h3nt0d7");
+    run_output.assert_stdout_contains("trusts(player)  true");
+    run_output.assert_run_selected("rkj778k");
+    run_output.assert_stdout_contains("grant_item(map)  blocking");
+    run_output.assert_stdout_contains(", acknowledged");
+    run_output.assert_stdout_contains("has_bonus(player)  false");
+    run_output.assert_stdout_contains("Helped.  ntz2ny0");
+    run_output.assert_stdout_contains("deferred   ");
+    run_output.assert_stdout_contains("finish(help)");
 
     let index_fixture = write_file(
         temp.path(),
@@ -98,8 +98,8 @@ auto_ack_blocking = true
         .arg("--fixture")
         .arg(&index_fixture));
     index_output.assert_success().assert_stderr("");
-    index_output.assert_stdout_contains("selected choice rkj778k");
-    index_output.assert_stdout_contains("line ntz2ny0: Helped.");
+    index_output.assert_run_selected("rkj778k");
+    index_output.assert_stdout_contains("Helped.  ntz2ny0");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -381,9 +381,9 @@ tired_line = "rest"
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("condition thread_stage(thread) = enum tired");
-    run_output.assert_stdout_contains("prompt tired_line: Tired.");
-    run_output.assert_stdout_contains("selected choice rest");
+    run_output.assert_stdout_contains("thread_stage(thread)  enum tired");
+    run_output.assert_stdout_contains("Tired.  tired_line");
+    run_output.assert_run_selected("rest");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -653,5 +653,5 @@ dqqhcve = "g2mnzyz"
         .env("RECITE_CONFIG", &bad_config));
 
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("selected choice g2mnzyz");
+    output.assert_run_selected("g2mnzyz");
 }
