@@ -54,6 +54,7 @@ impl LspWorkspace {
             generation,
             next_partition_build_id: super::PartitionBuildId::default(),
             ui_catalog,
+            prose: std::sync::Arc::default(),
         };
         workspace.rebuild_for_documents_with_schemas(saved, documents, schemas)?;
         Ok(workspace)

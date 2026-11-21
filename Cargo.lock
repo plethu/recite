@@ -5847,6 +5847,7 @@ dependencies = [
  "recite-config",
  "recite-core",
  "recite-parser",
+ "recite-prose",
  "recite-ui",
  "serde",
  "serde_json",
