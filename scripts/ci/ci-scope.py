@@ -147,6 +147,7 @@ def lanes_for_path(path, *, base=None, head=None):
                 "lsp",
                 "compiler",
                 "parser",
+                "prose",
                 "core",
                 "config",
                 "schema",

@@ -7,8 +7,8 @@ use recite_compiler::{
 use recite_core::schema::ProjectSchema;
 
 use crate::args::{
-    Command, CompileArgs, ExportSchemaArgs, ExtractArgs, IdCommand, ProjectCommand, RuntimeArgs,
-    SchemaCommand, ValidateArgs,
+    Command, CompileArgs, ExportSchemaArgs, ExtractArgs, IdCommand, ProjectCommand, ProseCheckArgs,
+    ProseCommand, RuntimeArgs, SchemaCommand, ValidateArgs,
 };
 use crate::error::CliError;
 use crate::fs::{
@@ -24,8 +24,8 @@ use super::command::StructuredCommand;
 use super::errors::ErrorOperation;
 
 use super::data::{
-    CatalogEntry, ContentDiagnosticData, StructuredOutcome, SuccessData, artifact_metadata,
-    diagnostic_records,
+    CatalogEntry, ContentDiagnosticData, ProseFixRecord, StructuredOutcome, SuccessData,
+    artifact_metadata, diagnostic_records,
 };
 
 pub(super) struct CommandFailure {
@@ -46,6 +46,12 @@ impl CommandFailure {
 
 pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFailure> {
     match command {
+        Command::Prose(ProseCommand::Check(args)) => {
+            let path = args.paths.first().cloned();
+            prose_check(&args).map_err(|error| {
+                CommandFailure::new(error, StructuredCommand::ProseCheck.operation(), path)
+            })
+        }
         Command::Validate(args) => {
             let path = args.paths.first().cloned();
             validate(args).map_err(|error| {
@@ -116,6 +122,30 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
             None,
         )),
     }
+}
+
+fn prose_check(args: &ProseCheckArgs) -> Result<StructuredOutcome, CliError> {
+    let report = crate::commands::prose::check_prose(&args.paths)?;
+    let diagnostics = diagnostic_records(&report.diagnostics)?;
+    let fixes = report
+        .fixes
+        .into_iter()
+        .map(|(diagnostic, file, edit)| ProseFixRecord {
+            diagnostic,
+            file,
+            start_byte: edit.range.start,
+            end_byte: edit.range.end,
+            replacement: edit.replacement,
+        })
+        .collect();
+    Ok(if diagnostics.is_empty() {
+        StructuredOutcome::success(SuccessData::ProseCheck { diagnostics, fixes })
+    } else {
+        StructuredOutcome::content_diagnostics(ContentDiagnosticData::ProseCheck {
+            diagnostics,
+            fixes,
+        })
+    })
 }
 
 fn export_schema(args: ExportSchemaArgs) -> Result<StructuredOutcome, CliError> {

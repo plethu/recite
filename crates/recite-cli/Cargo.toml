@@ -12,6 +12,11 @@ license.workspace = true
 name = "recite"
 path = "src/main.rs"
 
+[features]
+default = ["prose"]
+# Built-in offline spelling and grammar checking for `recite prose check`.
+prose = ["recite-prose/harper"]
+
 [dependencies]
 clap.workspace = true
 crossterm.workspace = true
@@ -26,6 +31,7 @@ recite-config.workspace = true
 recite-core.workspace = true
 recite-import.workspace = true
 recite-parser.workspace = true
+recite-prose.workspace = true
 recite-runtime.workspace = true
 recite-ui.workspace = true
 same-file = "1.0.6"

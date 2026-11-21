@@ -351,6 +351,14 @@ diagnostic-config-116 = project source root is not a directory: {$detail}
 diagnostic-config-117 = project source has an invalid document key: {$detail}
 diagnostic-config-118 = invalid project catalogue pattern: {$detail}
 
+# RECITE_PROSE001-103
+diagnostic-prose-001 = possible spelling mistake '{$text}': {$detail} ({$rule})
+diagnostic-prose-002 = possible grammar problem in '{$text}': {$detail} ({$rule})
+diagnostic-prose-003 = style suggestion for '{$text}': {$detail} ({$rule})
+diagnostic-prose-101 = unsupported prose language: {$detail}
+diagnostic-prose-102 = could not read prose dictionary: {$detail}
+diagnostic-prose-103 = prose checking is unavailable: {$detail}
+
 # RECITE_FRESH001
 diagnostic-fresh-001-meaning = A compiled asset was built from an older version of one or more source files.
 diagnostic-fresh-001-cause-001 = The source dialogue changed after the asset was compiled.
@@ -525,6 +533,41 @@ diagnostic-project-007-remediation-001 = Recompile the asset from source with th
 diagnostic-project-008-meaning = A project participant reference does not match the declared participant contract.
 diagnostic-project-008-cause-001 = The scene manifest omits the participant, or the compiled asset and schema participant sets differ.
 diagnostic-project-008-remediation-001 = Declare the participant in the manifest and schema, or recompile the asset from the current participant contract.
+
+# RECITE_PROSE001
+diagnostic-prose-001-meaning = A word in dialogue or choice prose is not in the prose dictionary.
+diagnostic-prose-001-cause-001 = The word is misspelled.
+diagnostic-prose-001-cause-002 = The word is a character name, place or invented term missing from the project dictionary.
+diagnostic-prose-001-remediation-001 = Apply a suggested spelling, or add the word to a `[prose].dictionaries` file.
+diagnostic-prose-001-remediation-002 = Add the line's speaker or stable ID to `[prose]` ignore settings for intentional nonstandard speech.
+
+# RECITE_PROSE002
+diagnostic-prose-002-meaning = The prose checker found a likely grammar, usage or punctuation problem in dialogue or choice prose.
+diagnostic-prose-002-cause-001 = A typo, agreement or article error in author-facing text.
+diagnostic-prose-002-cause-002 = Intentional dialogue grammar that the checker cannot distinguish from a mistake.
+diagnostic-prose-002-remediation-001 = Apply the suggested correction or rewrite the sentence.
+diagnostic-prose-002-remediation-002 = Suppress the reported rule with `[prose].ignore_rules`, or the speaker or stable ID with `[prose].ignore_speakers` or `[prose].ignore_ids`.
+
+# RECITE_PROSE003
+diagnostic-prose-003-meaning = The prose checker suggests a style or readability improvement in dialogue or choice prose.
+diagnostic-prose-003-cause-001 = Redundant, wordy or unusually formatted phrasing.
+diagnostic-prose-003-remediation-001 = Apply the suggestion, or suppress the reported rule with `[prose].ignore_rules`.
+
+# RECITE_PROSE101
+diagnostic-prose-101-meaning = The project's `[prose].language` is not a language the prose checker supports.
+diagnostic-prose-101-cause-001 = The language tag is misspelled or names a language without a bundled dictionary.
+diagnostic-prose-101-remediation-001 = Use `en-US`, `en-GB`, `en-AU`, `en-CA` or `en-IN`.
+
+# RECITE_PROSE102
+diagnostic-prose-102-meaning = A project prose dictionary could not be read.
+diagnostic-prose-102-cause-001 = The file is not UTF-8 text, is a directory, or is not readable.
+diagnostic-prose-102-cause-002 = The path escapes the project root.
+diagnostic-prose-102-remediation-001 = Point `[prose].dictionaries` at project-relative UTF-8 text files with one word per line.
+
+# RECITE_PROSE103
+diagnostic-prose-103-meaning = This Recite build does not include a prose checker.
+diagnostic-prose-103-cause-001 = The binary was built without the `prose` Cargo feature.
+diagnostic-prose-103-remediation-001 = Use an official Recite build, or rebuild with the default features enabled.
 
 # RECITE_SCHEMA001
 diagnostic-schema-001-meaning = A schema manifest has a malformed shape.

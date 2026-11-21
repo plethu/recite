@@ -9,6 +9,8 @@ cli-help-command-extract = Extract gettext POT entries
 cli-help-command-id = Check, assign and rename stable line and choice IDs
 cli-help-command-project = Validate a project manifest and check compiled-asset freshness
 cli-help-command-schema = Inspect, export and freshness-check schema manifests
+cli-help-command-prose = Check spelling and grammar in dialogue prose
+cli-help-command-prose-check = Report spelling and grammar findings in dialogue and choice prose
 cli-help-arg-only = Report only this diagnostic category; syntax errors are always reported
 cli-help-command-id-check = Report stable line and choice ID diagnostics
 cli-help-command-id-assign = Append generated stable IDs to line and choice headers that have none
@@ -551,6 +553,8 @@ lsp-code-action-schema-disabled = Schema capability unavailable: { $reason ->
     [producer-capability] producer capability is unavailable
    *[other] schema action is not supported by this client
 }.
+lsp-code-action-prose-replace = Replace with “{$replacement}”
+lsp-code-action-prose-add-word = Add “{$word}” to the project dictionary
 lsp-warning-ui-config = UI configuration could not be loaded (code {$code}): {$detail}; using embedded en-US UI text.
 lsp-client-start-failed = Recite language server could not be started: {$detail}.
 lsp-client-error = Recite language server error: {$detail}.

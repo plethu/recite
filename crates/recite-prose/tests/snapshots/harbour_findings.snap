@@ -1,0 +1,16 @@
+---
+source: crates/recite-prose/tests/support/mod.rs
+expression: actual
+---
+RECITE_PROSE002 Warning 4:44-4:46 "Teh" rule=The region=metadata id=rhea_arrival
+  fix "Teh" -> "The"
+RECITE_PROSE001 Warning 5:5-5:12 "recieved" rule=SpellCheck region=line id=rhea_arrival
+  fix "recieved" -> "received"
+  fix "recieved" -> "relieved"
+  fix "recieved" -> "receive"
+RECITE_PROSE002 Warning 30:26-30:27 "an" rule=AnA region=choice id=go_market
+  fix "an" -> "a"
+RECITE_PROSE001 Warning 47:22-47:26 "befre" rule=SpellCheck region=choice id=leave_market
+  fix "befre" -> "before"
+  fix "befre" -> "bare"
+  fix "befre" -> "barre"

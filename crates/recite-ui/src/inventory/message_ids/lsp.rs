@@ -76,6 +76,8 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspCodeActionAddEffect => Some("lsp-code-action-add-effect"),
         super::MsgId::LspCodeActionSchemaAction => Some("lsp-code-action-schema-action"),
         super::MsgId::LspCodeActionSchemaDisabled => Some("lsp-code-action-schema-disabled"),
+        super::MsgId::LspCodeActionProseReplace => Some("lsp-code-action-prose-replace"),
+        super::MsgId::LspCodeActionProseAddWord => Some("lsp-code-action-prose-add-word"),
         super::MsgId::LspWarningUiConfig => Some("lsp-warning-ui-config"),
         super::MsgId::LspClientStartFailed => Some("lsp-client-start-failed"),
         super::MsgId::LspClientError => Some("lsp-client-error"),

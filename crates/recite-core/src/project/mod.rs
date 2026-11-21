@@ -40,7 +40,31 @@ pub struct ProjectManifest {
     /// Filesystem discovery configuration for project-owned source files.
     pub discovery: ProjectDiscovery,
     pub recording: ProjectRecording,
+    pub prose: ProjectProse,
     pub scenes: Vec<ProjectScene>,
+}
+
+/// `[prose]`: spelling and grammar checking of author-facing prose (spec §14.1).
+///
+/// Checking never changes validation or compilation. Editors publish findings
+/// only when `enabled` is set; `recite prose check` always reads these settings.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ProjectProse {
+    /// Whether editors check prose as it is typed.
+    pub enabled: bool,
+    /// BCP 47 tag of the prose language; `None` means the checker default.
+    pub language: Option<String>,
+    /// Project-relative word lists in declared order. The first one receives
+    /// words that editors add.
+    pub dictionaries: Vec<String>,
+    /// Checker rule names reported nowhere in the project.
+    pub ignore_rules: Vec<String>,
+    /// Speakers whose lines are not checked, for intentional nonstandard speech.
+    pub ignore_speakers: Vec<String>,
+    /// Stable line or choice IDs whose prose is not checked.
+    pub ignore_ids: Vec<String>,
+    /// Metadata keys whose quoted string values are checked as prose.
+    pub metadata_keys: Vec<String>,
 }
 
 /// `[recording]`: production settings for recording handoffs (spec §9.9).

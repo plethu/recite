@@ -26,6 +26,7 @@ mod catalog;
 mod id;
 mod project;
 mod project_files;
+pub(crate) mod prose;
 mod recording;
 mod schema;
 mod validate;
@@ -39,6 +40,7 @@ pub(crate) fn run_command(
 ) -> Result<(), CliError> {
     match command {
         Command::Validate(args) => validate::run(args, stderr, messages),
+        Command::Prose(command) => prose::run(command, stderr, messages),
         Command::Compile(args) => compile_command(args, stderr, messages),
         Command::Extract(args) => extract_command(args, stdout, stderr, messages),
         Command::Catalog(command) => catalog::run(command, stdout, stderr, messages),

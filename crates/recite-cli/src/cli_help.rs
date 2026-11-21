@@ -51,7 +51,10 @@ fn localise_command(command: &mut clap::Command, messages: &Messages) {
 /// Top-level commands grouped as on the documentation's CLI page. Clap prints one subcommand
 /// heading, so the groups are rendered into the template and the flat list is hidden.
 const COMMAND_GROUPS: [(MsgId, &[&str]); 5] = [
-    (MsgId::CliHelpGroupAuthoring, &["validate", "id", "import"]),
+    (
+        MsgId::CliHelpGroupAuthoring,
+        &["validate", "prose", "id", "import"],
+    ),
     (
         MsgId::CliHelpGroupBuilding,
         &["compile", "project", "schema", "watch"],
