@@ -20,11 +20,13 @@ export function Layout({ page, chrome, scripts = [], children }: LayoutProps) {
           Skip to content
         </a>
         <header class="site-header" data-pagefind-ignore>
-          <Header wordmark={chrome.wordmark} />
+          <Header wordmark={chrome.wordmark} url={page.url} />
         </header>
         <main id="content">{children}</main>
-        <footer class="site-footer site-content" data-pagefind-ignore>
-          Recite · MIT OR Apache-2.0 · <a href="https://github.com/plethu/recite">Source</a>
+        <footer class="site-footer" data-pagefind-ignore>
+          <p>
+            Recite · MIT OR Apache-2.0 · <a href="https://github.com/plethu/recite">Source</a>
+          </p>
         </footer>
         <SearchDialog />
       </body>

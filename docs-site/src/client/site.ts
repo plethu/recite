@@ -1,6 +1,6 @@
 import { setupSearch } from "./search.ts";
 const media = matchMedia("(prefers-color-scheme: dark)");
-const selects = document.querySelectorAll<HTMLSelectElement>("[data-theme-select]");
+const options = document.querySelectorAll<HTMLInputElement>("[data-theme-select] input");
 let selection = "auto";
 try {
   selection = localStorage.getItem("theme") ?? "auto";
@@ -11,11 +11,12 @@ if (!["light", "dark"].includes(selection)) selection = "auto";
 function applyTheme() {
   document.documentElement.dataset.theme =
     selection === "auto" ? (media.matches ? "dark" : "light") : selection;
-  for (const select of selects) select.value = selection;
+  for (const option of options) option.checked = option.value === selection;
 }
-for (const select of selects)
-  select.addEventListener("change", () => {
-    selection = select.value;
+for (const option of options)
+  option.addEventListener("change", () => {
+    if (!option.checked) return;
+    selection = option.value;
     try {
       localStorage.setItem("theme", selection);
     } catch {

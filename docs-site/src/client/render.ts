@@ -11,21 +11,36 @@ interface View {
 
 export function renderOutput(output: Output, view: View) {
   const { messages, status } = view;
-  const append = (text: string) => {
+  // Lines are set as a manuscript: the speaker in a margin label, the words beside it. Effects
+  // and diagnostics read as quiet source notes.
+  const append = (text: string, speaker?: string, notice = false) => {
     const item = document.createElement("li");
-    item.textContent = text;
+    if (speaker) {
+      const label = document.createElement("span");
+      label.className = "speaker";
+      label.textContent = speaker;
+      const separator = document.createElement("span");
+      separator.className = "visually-hidden";
+      separator.textContent = ": ";
+      item.append(label, separator);
+    }
+    const words = document.createElement("span");
+    words.textContent = text;
+    if (notice) words.className = "notice";
+    item.append(words);
     view.transcript.append(item);
     // A looping dialogue can emit indefinitely; this is a view, not a save log.
     if (view.transcript.children.length > 100) view.transcript.firstElementChild?.remove();
     view.transcript.scrollTop = view.transcript.scrollHeight;
   };
-  const line = (value: Line) =>
-    append(value.speaker ? `${value.speaker}: ${value.text}` : value.text);
+  const line = (value: Line) => append(value.text, value.speaker ?? undefined);
   const effect = (value: Effect) =>
     append(
       `${messages.effect} ${value.mode} ${value.function}(${value.args
         .map((arg) => (arg.type === "string" ? JSON.stringify(arg.value) : String(arg.value)))
         .join(", ")})`,
+      undefined,
+      true,
     );
   const button = (label: string, command: Command, disabled = false) => {
     const control = document.createElement("button");
@@ -72,6 +87,8 @@ export function renderOutput(output: Output, view: View) {
           `${diagnostic.code} · ${diagnostic.span.start.line}:${diagnostic.span.start.column} · ${
             diagnostic.compatibility_message ?? diagnostic.code
           }`,
+          undefined,
+          true,
         );
       }
       status.textContent = messages.invalid;
