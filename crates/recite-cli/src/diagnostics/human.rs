@@ -290,7 +290,7 @@ fn excerpt(span: &SourceSpan, text: &str) -> Option<(String, usize, usize)> {
         .and_then(|end| usize::try_from(end.column()).ok())
         .map_or_else(
             || unended_width(text, start),
-            |end| end.saturating_sub(start + 1).max(1),
+            |end| end.saturating_sub(start).max(1),
         );
     let width = width.min(length.saturating_sub(start).max(1));
     Some((text.replace('\t', " "), start.min(length), width))
@@ -306,4 +306,9 @@ fn unended_width(text: &str, start: usize) -> usize {
         .chars()
         .count()
         .max(1)
+}
+
+#[cfg(test)]
+pub(super) fn excerpt_for_tests(span: &SourceSpan, text: &str) -> (String, usize, usize) {
+    excerpt(span, text).expect("excerpt")
 }
