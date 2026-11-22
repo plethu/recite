@@ -209,3 +209,30 @@ fn project_dictionary_and_suppressions_apply() {
                 && finding.stable_id.as_deref() != Some("rhea_arrival"))
     );
 }
+
+#[test]
+fn spelling_fixes_that_keep_the_typo_letters_come_first_and_code_spans_are_quoted() {
+    let source =
+        ":: start default\n> @ffee6p8\n  The lantern flickerd. Nobody stampd it.\n-> END\n";
+    let findings = project_checker()
+        .lock()
+        .expect("checker lock")
+        .check("dropped.recite", source);
+    for (typo, expected) in [("flickerd", "flickered"), ("stampd", "stamped")] {
+        let finding = findings
+            .iter()
+            .find(|finding| finding.text == typo)
+            .unwrap_or_else(|| panic!("{typo} finding: {findings:#?}"));
+        assert_eq!(finding.kind, ProseFindingKind::Spelling);
+        assert_eq!(
+            finding.fixes.first().map(|fix| fix.replacement.as_str()),
+            Some(expected)
+        );
+        assert!(!finding.message.contains('`'), "{}", finding.message);
+        assert!(
+            !finding.diagnostic.message.contains('`'),
+            "{}",
+            finding.diagnostic.message
+        );
+    }
+}

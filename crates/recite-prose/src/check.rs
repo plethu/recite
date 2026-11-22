@@ -28,6 +28,8 @@ pub struct ProseFinding {
     pub rule: String,
     /// The flagged source text.
     pub text: String,
+    /// The engine's explanation, with code spans set in quotation marks.
+    pub message: String,
     /// The flagged source byte range.
     pub range: Range<usize>,
     pub region: ProseRegionKind,
@@ -161,6 +163,12 @@ fn map_finding(
             fixes.push(edit);
         }
     }
+    if finding.kind == ProseFindingKind::Spelling {
+        // A dropped letter is the commonest slip, so words that keep every letter of the typo in
+        // order come first; the engine's order is kept within each group.
+        fixes.sort_by_key(|fix| !keeps_letters(&flagged, &fix.replacement));
+    }
+    let explanation = quoted(&finding.message);
     let code = match finding.kind {
         ProseFindingKind::Spelling => codes::SPELLING,
         ProseFindingKind::Grammar => codes::GRAMMAR,
@@ -170,7 +178,7 @@ fn map_finding(
         ProseFindingKind::Spelling | ProseFindingKind::Grammar => DiagnosticSeverity::Warning,
         ProseFindingKind::Style => DiagnosticSeverity::Information,
     };
-    let message = format!("{flagged}: {} ({})", finding.message, finding.rule);
+    let message = format!("{flagged}: {explanation} ({})", finding.rule);
     let diagnostic = diagnostic(
         &code,
         severity,
@@ -182,19 +190,46 @@ fn map_finding(
                 "rule",
                 DiagnosticArgumentValue::String(finding.rule.clone()),
             ),
-            ("detail", DiagnosticArgumentValue::String(finding.message)),
+            (
+                "detail",
+                DiagnosticArgumentValue::String(explanation.clone()),
+            ),
         ],
     )?;
     Some(ProseFinding {
         kind: finding.kind,
         rule: finding.rule,
         text: flagged,
+        message: explanation,
         range,
         region: region.kind(),
         stable_id: region.stable_id().map(ToOwned::to_owned),
         diagnostic,
         fixes,
     })
+}
+
+/// Whether `word`'s letters appear in `candidate` in the same order, ignoring case.
+fn keeps_letters(word: &str, candidate: &str) -> bool {
+    let mut letters = candidate.chars().flat_map(char::to_lowercase);
+    word.chars()
+        .flat_map(char::to_lowercase)
+        .all(|letter| letters.any(|candidate| candidate == letter))
+}
+
+/// Engines mark code spans with backticks; prose readers expect quotation marks.
+fn quoted(message: &str) -> String {
+    let mut open = true;
+    message
+        .chars()
+        .map(|character| match character {
+            '`' => {
+                open = !open;
+                if open { '\u{201d}' } else { '\u{201c}' }
+            }
+            other => other,
+        })
+        .collect()
 }
 
 pub(crate) fn diagnostic<const N: usize>(
