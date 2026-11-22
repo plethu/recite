@@ -3,8 +3,8 @@ use super::{closest, edit_distance};
 #[test]
 fn typos_find_their_name_and_distant_names_find_nothing() {
     let blocks = ["arrival", "arrival_return", "effects", "objects"];
-    assert_eq!(closest("arival", blocks), Some("arrival"));
-    assert_eq!(closest("efects", blocks), Some("effects"));
+    assert_eq!(closest("arrivl", blocks), Some("arrival"));
+    assert_eq!(closest("effectz", blocks), Some("effects"));
     assert_eq!(closest("station", blocks), None);
     assert_eq!(
         closest("arrival", blocks),

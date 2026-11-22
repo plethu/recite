@@ -455,7 +455,7 @@ fn header_prose_plan_moves_the_words_into_the_body() {
 
 #[test]
 fn suggestion_plan_replaces_only_the_misspelt_reference() {
-    let source = ":: start default\n> @a1\n  Hi.\n-> arival\n\n:: arrival\n> @a2\n  There.\n";
+    let source = ":: start default\n> @a1\n  Hi.\n-> arrivl\n\n:: arrival\n> @a2\n  There.\n";
     let mut kernel = AuthoringKernel::new();
     kernel
         .apply(AuthoringRequest::new(
