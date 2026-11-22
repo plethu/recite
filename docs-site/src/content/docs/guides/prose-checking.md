@@ -6,8 +6,8 @@ description: Check dialogue and choice prose for spelling and grammar in editors
 Recite checks the prose authors write, the bodies of lines and choices, and leaves headers, stable
 IDs, speakers, conditions, effects, diverts and comments alone. Checking runs locally with the
 bundled [Harper](https://github.com/automattic/harper) engine: no prose leaves your machine, and no
-account, server or network connection is needed. Findings are warnings and never stop `validate`
-or `compile`.
+account, server or network connection is needed. Findings are warnings and never stop `validate` or
+`compile`.
 
 ## Turn it on for a project
 
