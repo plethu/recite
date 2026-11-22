@@ -2,7 +2,7 @@ use std::io::Write;
 
 use crate::args::ProducerFreshnessArgs;
 use crate::diagnostics::report_diagnostics;
-use crate::error::CliError;
+use crate::error::{CliError, ProjectDefaultError};
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
 
@@ -25,7 +25,7 @@ pub(crate) fn check(
             load_schema_for_freshness(&actual)?,
         ),
         (None, None) => project_exports(args.project_root.as_deref().unwrap_or(Path::new(".")))?,
-        _ => return Err(CliError::SchemaFreshPair),
+        _ => return Err(ProjectDefaultError::SchemaFreshPair.into()),
     };
     if !expected.diagnostics.is_empty() || !actual.diagnostics.is_empty() {
         report_diagnostics(
@@ -66,17 +66,17 @@ fn project_exports(root: &Path) -> Result<(LoadedSchema, LoadedSchema), CliError
         .schema_key()
         .ok()
         .flatten()
-        .ok_or(CliError::SchemaFreshNoSchema)?;
+        .ok_or(ProjectDefaultError::SchemaFreshNoSchema)?;
     let project_root = manifest.project_root();
     let expected = load_schema_for_freshness(&project_root.join(declared.as_str()))?;
     let registration_path = project_root.join(recite_config::PRODUCER_REGISTRATION_FILE);
-    let registration =
-        std::fs::read_to_string(&registration_path).map_err(|_| CliError::SchemaFreshNoProducer)?;
+    let registration = std::fs::read_to_string(&registration_path)
+        .map_err(|_| ProjectDefaultError::SchemaFreshNoProducer)?;
     let registration =
         recite_config::ProducerRegistration::parse(&registration).map_err(|error| {
-            CliError::SchemaProducer {
+            CliError::from(ProjectDefaultError::SchemaProducer {
                 detail: error.to_string(),
-            }
+            })
         })?;
     let generated = recite_config::generate_schema(
         project_root,
@@ -84,8 +84,10 @@ fn project_exports(root: &Path) -> Result<(LoadedSchema, LoadedSchema), CliError
         &AtomicBool::new(false),
         recite_config::PRODUCER_DEADLINE,
     )
-    .map_err(|error| CliError::SchemaProducer {
-        detail: error.to_string(),
+    .map_err(|error| {
+        CliError::from(ProjectDefaultError::SchemaProducer {
+            detail: error.to_string(),
+        })
     })?;
     let actual = recite_core::schema::load_schema_manifest_for_freshness_str(
         "producer output",

@@ -16,7 +16,7 @@ use recite_core::Diagnostic;
 
 use super::inputs::{collect_input_files, common_path_prefix, compile_path_root};
 use super::paths::display_path;
-use crate::error::CliError;
+use crate::error::{CliError, ProjectDefaultError};
 
 /// How sources are keyed when no project contains them.
 #[derive(Clone, Copy)]
@@ -71,7 +71,7 @@ impl SourceSet {
         let project = match discover_project(&start) {
             Ok(project) => project,
             Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
-                return Err(CliError::NoInputsOutsideProject);
+                return Err(ProjectDefaultError::NoInputsOutsideProject.into());
             }
             Err(source) => return Err(CliError::ProjectDiscovery { source }),
         };

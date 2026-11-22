@@ -7,14 +7,16 @@ use std::path::Path;
 use recite_config::discover_project;
 
 use super::paths::{display_path, resolve_project_path};
-use crate::error::CliError;
+use crate::error::{CliError, ProjectDefaultError};
 
 pub(crate) fn start_block(asset: &Path, explicit: Option<&str>) -> Result<String, CliError> {
     if let Some(block) = explicit {
         return Ok(block.to_owned());
     }
-    let missing = || CliError::BlockRequired {
-        asset: display_path(asset),
+    let missing = || {
+        CliError::from(ProjectDefaultError::BlockRequired {
+            asset: display_path(asset),
+        })
     };
     let start = asset
         .parent()
@@ -38,9 +40,10 @@ pub(crate) fn start_block(asset: &Path, explicit: Option<&str>) -> Result<String
     match (blocks.next(), blocks.next()) {
         (Some(block), None) => Ok(block),
         (None, _) => Err(missing()),
-        (Some(first), Some(second)) => Err(CliError::BlockAmbiguous {
+        (Some(first), Some(second)) => Err(ProjectDefaultError::BlockAmbiguous {
             asset: display_path(&asset),
             blocks: [first, second].into_iter().chain(blocks).collect(),
-        }),
+        }
+        .into()),
     }
 }

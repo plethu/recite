@@ -7,7 +7,7 @@ use crate::args::ValidateOnly;
 use crate::diagnostics::{
     Subject, report_diagnostics, report_success, report_targeted_diagnostics,
 };
-use crate::error::CliError;
+use crate::error::{CliError, ProjectDefaultError};
 use crate::fs::{LooseKeys, SourceSet, load_optional_schema, validate_sources, warn_schema_choice};
 use crate::i18n::Messages;
 
@@ -19,7 +19,7 @@ pub(super) fn run(
     let sources = SourceSet::read(&args.paths, LooseKeys::AsTyped)?;
     let choice = sources.effective_schema(args.schema.as_deref());
     if choice.path.is_none() && matches!(args.only, Some(ValidateOnly::Metadata)) {
-        return Err(CliError::SchemaRequired);
+        return Err(ProjectDefaultError::SchemaRequired.into());
     }
     warn_schema_choice(stderr, messages, &choice)?;
     let schema = load_optional_schema(choice.path.as_deref(), stderr, messages)?;

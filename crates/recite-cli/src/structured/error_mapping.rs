@@ -191,25 +191,8 @@ pub(crate) fn structured_error(
                 prompt_keys: prompt_keys.clone(),
             },
         ),
-        CliError::BlockRequired { .. } | CliError::BlockAmbiguous { .. } => input(
-            ErrorCode::ProjectDiscovery,
-            ErrorOperation::DiscoverProject,
-            fallback_path,
-        ),
-        CliError::SchemaFreshPair
-        | CliError::SchemaFreshNoSchema
-        | CliError::SchemaFreshNoProducer
-        | CliError::SchemaProducer { .. } => input(
-            ErrorCode::ProjectSchema,
-            ErrorOperation::DiscoverProject,
-            fallback_path,
-        ),
-        CliError::SchemaRequired => input(
-            ErrorCode::ProjectSchema,
-            ErrorOperation::Validate,
-            fallback_path,
-        ),
-        CliError::NoInputs | CliError::NoInputsOutsideProject => input(
+        CliError::ProjectDefault(error) => project::default(error, fallback_path),
+        CliError::NoInputs => input(
             ErrorCode::NoInputs,
             ErrorOperation::CollectInputs,
             fallback_path,

@@ -7,10 +7,12 @@ use std::path::PathBuf;
 
 mod conversions;
 mod localisation;
+mod project_defaults;
 mod stable_id_edit;
 mod user_message;
 
 pub(crate) use localisation::LocalisationError;
+pub(crate) use project_defaults::ProjectDefaultError;
 pub(crate) use stable_id_edit::StableIdEditError;
 
 #[derive(Debug)]
@@ -99,29 +101,8 @@ pub(crate) enum CliError {
         prompt_keys: Vec<String>,
     },
     NoInputs,
-    /// A command that defaults to the project's sources ran where no project manifest exists.
-    NoInputsOutsideProject,
-    /// No `--block` and no single project scene that uses the asset.
-    BlockRequired {
-        asset: String,
-    },
-    /// No `--block`, and several project scenes start the asset at different blocks.
-    BlockAmbiguous {
-        asset: String,
-        blocks: Vec<String>,
-    },
-    /// `schema check-fresh` was given only one of `--expected` and `--actual`.
-    SchemaFreshPair,
-    /// `schema check-fresh` in a project whose manifest declares no schema.
-    SchemaFreshNoSchema,
-    /// `schema check-fresh` in a project with no registered producer.
-    SchemaFreshNoProducer,
-    /// The registered producer failed to export a schema to compare.
-    SchemaProducer {
-        detail: String,
-    },
-    /// `--only metadata` found neither `--schema` nor a project schema.
-    SchemaRequired,
+    /// Something a command takes from the project when it is not passed.
+    ProjectDefault(ProjectDefaultError),
     StableIdBaseline {
         reference: String,
         detail: String,
@@ -335,34 +316,7 @@ impl std::fmt::Display for CliError {
                 prompt_keys.join("|")
             ),
             Self::NoInputs => formatter.write_str("no .recite inputs found"),
-            Self::BlockRequired { asset } => write!(
-                formatter,
-                "pass --block: no scene in recite.project.toml uses {asset}"
-            ),
-            Self::BlockAmbiguous { asset, blocks } => write!(
-                formatter,
-                "pass --block: scenes in recite.project.toml start {asset} at {}",
-                blocks.join(", ")
-            ),
-            Self::SchemaFreshPair => formatter.write_str(
-                "pass both --expected and --actual, or neither to check the project here",
-            ),
-            Self::SchemaFreshNoSchema => {
-                formatter.write_str("recite.project.toml declares no [project].schema to check")
-            }
-            Self::SchemaFreshNoProducer => formatter.write_str(
-                "no recite.producer.toml registers a schema producer here; pass --expected and --actual to compare two exports",
-            ),
-            Self::SchemaProducer { detail } => write!(
-                formatter,
-                "the schema producer could not export a schema: {detail}"
-            ),
-            Self::SchemaRequired => formatter.write_str(
-                "--only metadata needs a schema: pass --schema, or declare [project].schema in recite.project.toml",
-            ),
-            Self::NoInputsOutsideProject => formatter.write_str(
-                "no paths given and no recite.project.toml found here or above; pass the .recite files or directories to read",
-            ),
+            Self::ProjectDefault(error) => error.fmt(formatter),
             Self::StableIdBaseline { reference, detail } => write!(
                 formatter,
                 "cannot read stable IDs at `{reference}`: {detail}"

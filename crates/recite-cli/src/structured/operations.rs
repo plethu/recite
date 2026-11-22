@@ -10,7 +10,7 @@ use crate::args::{
     Command, CompileArgs, ExportSchemaArgs, ExtractArgs, IdCommand, ProjectCommand, RuntimeArgs,
     SchemaCommand, ValidateArgs,
 };
-use crate::error::CliError;
+use crate::error::{CliError, ProjectDefaultError};
 use crate::fs::{
     LooseKeys, SourceSet, compile_options, load_schema, reject_output_input_alias,
     validate_sources, write_staged,
@@ -154,7 +154,7 @@ fn validate(args: ValidateArgs) -> Result<StructuredOutcome, CliError> {
     let sources = SourceSet::read(&args.paths, LooseKeys::AsTyped)?;
     let choice = sources.effective_schema(args.schema.as_deref());
     if choice.path.is_none() && matches!(args.only, Some(crate::args::ValidateOnly::Metadata)) {
-        return Err(CliError::SchemaRequired);
+        return Err(ProjectDefaultError::SchemaRequired.into());
     }
     let schema = match schema_or_diagnostics(choice.path.as_deref())? {
         SchemaLoad::Loaded(schema) => schema,
