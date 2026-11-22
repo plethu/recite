@@ -2,6 +2,7 @@ use super::{
     BuildStatus, alternate_messages, build_once_with_post_publish_hook, project, run_hook,
     run_hook_with_messages, schema_project, source, write,
 };
+use crate::watch::tests::report_build_result;
 use tempfile::TempDir;
 
 #[test]
@@ -83,8 +84,7 @@ fn post_publish_rejection_uses_localized_waiting_message() {
         )
     });
     let mut rendered = stderr.into_bytes();
-    crate::watch::report_build_result(&mut rendered, Ok(status), &messages)
-        .expect("localized status report");
+    report_build_result(&mut rendered, Ok(status), &messages).expect("localized status report");
 
     assert!(
         String::from_utf8(rendered)
@@ -111,8 +111,7 @@ fn post_publish_recheck_error_updates_shared_state_and_keeps_localized_error() {
         })
         .expect_err("recheck error");
     let mut rendered = Vec::new();
-    crate::watch::report_build_result(&mut rendered, Err(result), &messages)
-        .expect("localized report");
+    report_build_result(&mut rendered, Err(result), &messages).expect("localized report");
     assert!(
         String::from_utf8(rendered)
             .expect("utf8")

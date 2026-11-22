@@ -41,7 +41,7 @@ use build::{
 use events::{WatchState, drain_debounce, watch_error};
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub(super) const PROJECT_MANIFEST_FILE: &str = "recite.project.toml";
 
@@ -176,16 +176,6 @@ impl StatusLine {
         let now = OffsetDateTime::now_utc().to_offset(self.offset);
         format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second())
     }
-}
-
-/// Reports one build as the human watch loop does, without colour, for tests.
-#[cfg(test)]
-pub(crate) fn report_build_result(
-    stderr: &mut dyn Write,
-    result: Result<BuildStatus, CliError>,
-    messages: &Messages,
-) -> Result<(), CliError> {
-    StatusLine::new(Ink::default()).report(stderr, result, messages)
 }
 
 /// Status words share one column; `error` is the longest English word.

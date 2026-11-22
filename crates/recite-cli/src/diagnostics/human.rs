@@ -309,6 +309,4 @@ fn unended_width(text: &str, start: usize) -> usize {
 }
 
 #[cfg(test)]
-pub(super) fn excerpt_for_tests(span: &SourceSpan, text: &str) -> (String, usize, usize) {
-    excerpt(span, text).expect("excerpt")
-}
+pub(super) mod tests;
