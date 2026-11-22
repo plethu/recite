@@ -17,6 +17,7 @@ export default Object.freeze({
   "diagnostic-parse-016": {"template":":case must appear inside a :match body","arguments":[]},
   "diagnostic-parse-017": {"template":"prose cannot follow nested statements in the same body","arguments":[]},
   "diagnostic-parse-018": {"template":"old trailing choice if syntax is not valid Recite v1 syntax","arguments":[]},
+  "diagnostic-parse-019": {"template":"dialogue text is on the header line","arguments":[]},
   "diagnostic-parse-034-expected-directive": {"template":"expected PO directive","arguments":[]},
   "diagnostic-parse-034-expected-quoted-string": {"template":"expected quoted PO string","arguments":[]},
   "diagnostic-parse-034-missing-field": {"template":"entry is missing {$field}","arguments":[{"name":"field","type":"string"}]},

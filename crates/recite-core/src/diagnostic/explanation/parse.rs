@@ -114,6 +114,17 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         &["Use Recite's supported `requires` availability clause instead."],
     ),
     DiagnosticExplanation::new(
+        "RECITE_PARSE019",
+        DiagnosticCategory::Parse,
+        "Dialogue text was written on a line or choice header, where only fields belong.",
+        &[
+            "The words a character says, or a reply's text, were typed after `>` or `?` instead of on the next line.",
+        ],
+        &[
+            "put the text on the next line, indented under the header; the header keeps `key=value` fields and the `@id`",
+        ],
+    ),
+    DiagnosticExplanation::new(
         "RECITE_PARSE034",
         DiagnosticCategory::Parse,
         "A gettext PO record is not structurally valid.",

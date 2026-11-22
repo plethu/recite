@@ -1,4 +1,5 @@
 mod block_stub;
+mod header_prose;
 mod missing_id;
 pub(crate) mod schema_capability;
 mod schema_entry;
@@ -73,6 +74,13 @@ pub(crate) fn code_action(
         }));
     }
     if include_quick_fix {
+        actions.extend(header_prose::actions(
+            params,
+            document,
+            snapshot,
+            &edit_documents,
+            catalog,
+        ));
         actions.extend(block_stub::actions(
             params,
             document,

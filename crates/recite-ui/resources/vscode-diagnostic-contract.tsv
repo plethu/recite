@@ -17,6 +17,7 @@ diagnostic-parse-015
 diagnostic-parse-016
 diagnostic-parse-017
 diagnostic-parse-018
+diagnostic-parse-019
 diagnostic-parse-034-expected-directive
 diagnostic-parse-034-expected-quoted-string
 diagnostic-parse-034-missing-field	field	string
@@ -564,6 +565,9 @@ diagnostic-parse-017-remediation-001
 diagnostic-parse-018-meaning
 diagnostic-parse-018-cause-001
 diagnostic-parse-018-remediation-001
+diagnostic-parse-019-meaning
+diagnostic-parse-019-cause-001
+diagnostic-parse-019-remediation-001
 diagnostic-parse-034-meaning
 diagnostic-parse-034-cause-001
 diagnostic-parse-034-remediation-001

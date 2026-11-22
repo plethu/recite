@@ -1,12 +1,12 @@
 use recite_core::{
-    BlockId, SourceRecoveryClass, SpeakerId,
+    BlockId, SourcePosition, SourceRecoveryClass, SourceSpan, SpeakerId,
     ast::{
         BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
         InterpolationType, SourceMetadata, SourceMetadataEntry,
     },
 };
 
-use crate::diagnostics::{malformed_divert_target, malformed_header};
+use crate::diagnostics::{header_prose, malformed_divert_target, malformed_header};
 use crate::header::{HeaderField, HeaderKeyValue};
 use crate::source::span_for_text;
 
@@ -14,10 +14,40 @@ use super::Lowerer;
 use super::metadata_values::{choice_echo, is_placeholder_name, metadata_entry};
 
 impl Lowerer<'_, '_> {
+    /// An author who writes dialogue on the header line produces a run of bare words. Report the
+    /// run once, as text that belongs on the indented line below, and lower only the real
+    /// `key=value` fields. A single bare word stays a malformed field, as a mistyped key usually is.
+    fn without_header_prose<'f>(&mut self, fields: &[HeaderField<'f>]) -> Vec<HeaderField<'f>> {
+        let bare = fields
+            .iter()
+            .filter(|field| !field.text.contains('='))
+            .collect::<Vec<_>>();
+        let (Some(first), Some(last)) = (bare.first(), bare.last()) else {
+            return fields.to_vec();
+        };
+        if bare.len() < 2 {
+            return fields.to_vec();
+        }
+        let end = last.column + last.text.chars().count() - 1;
+        let span = SourceSpan::new(
+            self.path,
+            source_position(first.line, first.column),
+            Some(source_position(last.line, end)),
+        );
+        self.mark(SourceRecoveryClass::Metadata);
+        self.diagnostics.push(header_prose(span));
+        fields
+            .iter()
+            .filter(|field| field.text.contains('='))
+            .copied()
+            .collect()
+    }
+
     pub(super) fn lower_speaker_metadata(
         &mut self,
         fields: &[HeaderField<'_>],
     ) -> (Option<SpeakerId>, SourceMetadata, Vec<InterpolationBinding>) {
+        let fields = &self.without_header_prose(fields);
         let mut speaker = None;
         let mut metadata = SourceMetadata::new();
         let mut bindings = Vec::new();
@@ -51,6 +81,7 @@ impl Lowerer<'_, '_> {
         &mut self,
         fields: &[HeaderField<'_>],
     ) -> (SourceMetadata, ChoiceEcho, Vec<InterpolationBinding>) {
+        let fields = &self.without_header_prose(fields);
         let mut metadata = SourceMetadata::new();
         let mut echo = ChoiceEcho::None;
         let mut bindings = Vec::new();
@@ -235,4 +266,9 @@ pub(super) fn effect_mode(value: &str) -> Option<EffectMode> {
         "blocking" => Some(EffectMode::Blocking),
         _ => None,
     }
+}
+
+fn source_position(line: u32, column: usize) -> SourcePosition {
+    SourcePosition::new(line, u32::try_from(column).unwrap_or(u32::MAX))
+        .expect("parser line and column positions are 1-based")
 }

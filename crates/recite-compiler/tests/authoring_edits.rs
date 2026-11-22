@@ -397,3 +397,58 @@ fn edit_plans_refuse_stale_generation_collisions_and_partial_recovery() {
 
 #[path = "authoring_edits/noop.rs"]
 mod noop;
+
+#[test]
+fn header_prose_plan_moves_the_words_into_the_body() {
+    let source = concat!(
+        ":: station\n",
+        "> mood=tired The clerk looks up. @a2\n",
+        "  ? Ask about the train. @c1\n",
+        "    -> END\n",
+    );
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key("main.recite"), source)],
+            [],
+        ))
+        .expect("source accepted");
+    let snapshot = kernel.snapshot();
+    let line = snapshot
+        .plan_move_header_prose_in_range(&key("main.recite"), SourceRange::point(position(2, 1)))
+        .expect("the line header's prose is planable");
+    assert!(matches!(
+        line.operation(),
+        recite_compiler::authoring::AuthoringEditOperation::MoveHeaderProse { line: 2, .. }
+    ));
+    let applied = apply_plan(&line, &saved_sources(&[("main.recite", source)]));
+    let rewritten = applied.get(&key("main.recite")).expect("rewritten source");
+    assert_eq!(
+        rewritten,
+        concat!(
+            ":: station\n",
+            "> mood=tired @a2\n",
+            "  The clerk looks up.\n",
+            "  ? Ask about the train. @c1\n",
+            "    -> END\n",
+        )
+    );
+
+    let choice = snapshot
+        .plan_move_header_prose_in_range(&key("main.recite"), SourceRange::point(position(3, 5)))
+        .expect("the choice header's prose is planable");
+    let applied = apply_plan(&choice, &saved_sources(&[("main.recite", source)]));
+    let rewritten = applied.get(&key("main.recite")).expect("rewritten source");
+    assert!(rewritten.contains("  ? @c1\n    Ask about the train.\n    -> END\n"));
+
+    assert!(
+        snapshot
+            .plan_move_header_prose_in_range(
+                &key("main.recite"),
+                SourceRange::point(position(1, 1)),
+            )
+            .is_err(),
+        "a range without the diagnostic plans nothing"
+    );
+}

@@ -76,6 +76,9 @@ diagnostic-parse-017 = prose cannot follow nested statements in the same body
 # RECITE_PARSE018
 diagnostic-parse-018 = old trailing choice if syntax is not valid Recite v1 syntax
 
+# RECITE_PARSE019
+diagnostic-parse-019 = dialogue text is on the header line
+
 # RECITE_PARSE034
 diagnostic-parse-034-expected-directive = expected PO directive
 diagnostic-parse-034-expected-quoted-string = expected quoted PO string
@@ -480,6 +483,11 @@ diagnostic-parse-017-remediation-001 = Move the prose before the nested statemen
 diagnostic-parse-018-meaning = A choice has a trailing `if` clause that is not valid Recite syntax.
 diagnostic-parse-018-cause-001 = Condition syntax from another dialogue format was used after a choice.
 diagnostic-parse-018-remediation-001 = Use Recite's supported `requires` availability clause instead.
+
+# RECITE_PARSE019
+diagnostic-parse-019-meaning = Dialogue text was written on a line or choice header, where only fields belong.
+diagnostic-parse-019-cause-001 = The words a character says, or a reply's text, were typed after `>` or `?` instead of on the next line.
+diagnostic-parse-019-remediation-001 = put the text on the next line, indented under the header; the header keeps `key=value` fields and the `@id`
 
 # RECITE_PARSE034
 diagnostic-parse-034-meaning = A gettext PO record is not structurally valid.

@@ -26,6 +26,7 @@ pub(crate) const MISPLACED_CASE: DiagnosticCode = DiagnosticCode::new_static("RE
 pub(crate) const PROSE_AFTER_NESTED_STATEMENT: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_PARSE017");
 pub(crate) const TRAILING_CHOICE_IF: DiagnosticCode = DiagnosticCode::new_static("RECITE_PARSE018");
+pub(crate) const HEADER_PROSE: DiagnosticCode = DiagnosticCode::new_static("RECITE_PARSE019");
 
 pub(crate) fn expected_statement_or_prose(span: SourceSpan) -> Diagnostic {
     static_diagnostic(
@@ -128,6 +129,15 @@ pub(crate) fn trailing_choice_if(span: SourceSpan) -> Diagnostic {
         span,
     );
     if let Some(help) = explanation_remediation(TRAILING_CHOICE_IF) {
+        diagnostic = diagnostic.with_help_presentation(help);
+    }
+    diagnostic
+}
+
+pub(crate) fn header_prose(span: SourceSpan) -> Diagnostic {
+    let mut diagnostic =
+        static_diagnostic(HEADER_PROSE, "dialogue text is on the header line", span);
+    if let Some(help) = explanation_remediation(HEADER_PROSE) {
         diagnostic = diagnostic.with_help_presentation(help);
     }
     diagnostic

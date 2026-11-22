@@ -522,6 +522,7 @@ lsp-completion-label = presentation label template
 lsp-code-action-insert-missing-id = Insert missing stable ID
 lsp-code-action-insert-all-missing-ids = Insert all missing stable IDs in file
 lsp-code-action-create-block-stub = Create block stub `{$block}`
+lsp-code-action-move-header-prose = Move the text to the next line
 lsp-code-action-add-condition = Add condition `{$name}` to schema
 lsp-code-action-add-effect = Add effect `{$name}` to schema
 lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
