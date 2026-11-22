@@ -65,6 +65,31 @@ impl SourceSpan {
     }
 }
 
+/// A span's positions without its file, kept beside an AST node that already names the file so
+/// the parser does not copy the path for every field it records.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct SourceExtent {
+    pub start: SourcePosition,
+    /// Inclusive, as in [`SourceSpan`].
+    pub end: Option<SourcePosition>,
+}
+
+impl SourceExtent {
+    #[must_use]
+    pub fn of(span: &SourceSpan) -> Self {
+        Self {
+            start: span.start,
+            end: span.end,
+        }
+    }
+
+    /// The span in `file`, for a diagnostic.
+    #[must_use]
+    pub fn in_file(self, file: impl Into<String>) -> SourceSpan {
+        SourceSpan::new(file, self.start, self.end)
+    }
+}
+
 /// Source lines as (content, terminator), recognizing LF, CRLF and CR.
 /// Retains each terminator and includes the final empty line after a terminator.
 pub fn source_lines(source: &str) -> impl Iterator<Item = (&str, &str)> {

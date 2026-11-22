@@ -127,7 +127,9 @@ pub use source_id::{
     is_valid_stable_id,
 };
 pub use source_line_index::SourceLineIndex;
-pub use source_location::{SourcePosition, SourceSpan, byte_offset_for_position, source_lines};
+pub use source_location::{
+    SourceExtent, SourcePosition, SourceSpan, byte_offset_for_position, source_lines,
+};
 pub use source_recovery::{SourceRecovery, SourceRecoveryClass};
 pub use statement_header::{STABLE_ID_FIELD_PREFIX, StableIdField, StatementHeader};
 pub use text::{

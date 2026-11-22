@@ -1,5 +1,5 @@
 use recite_core::{
-    BlockId, SourceRecoveryClass,
+    BlockId, SourceExtent, SourceRecoveryClass,
     ast::{Block, SourceMetadata, Statement},
 };
 
@@ -107,7 +107,7 @@ impl Lowerer<'_, '_> {
             if kv.key == "speaker" {
                 default_speaker = self
                     .speaker_from_value(&kv)
-                    .map(|speaker| (speaker, kv.value_span.clone()));
+                    .map(|speaker| (speaker, SourceExtent::of(&kv.value_span)));
                 continue;
             }
 
@@ -187,7 +187,7 @@ impl BlockHeader {
         if let Some((speaker, span)) = self.default_speaker {
             block = block
                 .with_default_speaker(speaker)
-                .with_default_speaker_span(span);
+                .with_default_speaker_extent(span);
         }
         block
     }

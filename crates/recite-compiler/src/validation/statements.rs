@@ -37,11 +37,7 @@ impl<'a> Validator<'a> {
         if self.participation.metadata() == ValidationCompleteness::Complete
             && let Some(speaker) = &block.default_speaker
         {
-            self.validate_speaker(
-                speaker.as_str(),
-                block.default_speaker_span.as_ref(),
-                &block.span,
-            );
+            self.validate_speaker(speaker.as_str(), block.default_speaker_extent, &block.span);
         }
     }
 
@@ -49,7 +45,7 @@ impl<'a> Validator<'a> {
     fn validate_speaker(
         &mut self,
         speaker: &str,
-        value_span: Option<&recite_core::SourceSpan>,
+        value: Option<recite_core::SourceExtent>,
         fallback: &recite_core::SourceSpan,
     ) {
         let Some(schema) = self.schema else {
@@ -62,7 +58,10 @@ impl<'a> Validator<'a> {
             super::suggest::closest(speaker, schema.speakers.keys().map(String::as_str));
         self.diagnostics.push(diagnostics::unknown_speaker(
             speaker,
-            value_span.unwrap_or(fallback).clone(),
+            value.map_or_else(
+                || fallback.clone(),
+                |value| value.in_file(fallback.file.clone()),
+            ),
             suggestion,
         ));
     }
@@ -183,7 +182,7 @@ impl<'a> Validator<'a> {
         if self.participation.metadata() == ValidationCompleteness::Complete
             && let Some(speaker) = &line.speaker
         {
-            self.validate_speaker(speaker.as_str(), line.speaker_span.as_ref(), &line.span);
+            self.validate_speaker(speaker.as_str(), line.speaker_extent, &line.span);
         }
 
         if self.participation.stable_ids() == ValidationCompleteness::Complete {

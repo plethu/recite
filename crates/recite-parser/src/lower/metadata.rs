@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use recite_core::{
-    BlockId, SourceRecoveryClass, SourceSpan, SpeakerId,
+    BlockId, SourceExtent, SourceRecoveryClass, SourceSpan, SpeakerId,
     ast::{
         BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
         InterpolationType, SourceMetadata, SourceMetadataEntry,
@@ -17,35 +19,36 @@ impl Lowerer<'_, '_> {
     /// An author who writes dialogue on the header line produces a run of bare words. Report the
     /// run once, as text that belongs on the indented line below, and lower only the real
     /// `key=value` fields. A single bare word stays a malformed field, as a mistyped key usually is.
-    fn without_header_prose<'f>(&mut self, fields: &[HeaderField<'f>]) -> Vec<HeaderField<'f>> {
-        let bare = fields
-            .iter()
-            .filter(|field| !field.text.contains('='))
-            .collect::<Vec<_>>();
-        let (Some(first), Some(last)) = (bare.first(), bare.last()) else {
-            return fields.to_vec();
+    fn without_header_prose<'h, 'f>(
+        &mut self,
+        fields: &'h [HeaderField<'f>],
+    ) -> Cow<'h, [HeaderField<'f>]> {
+        // Headers almost never carry prose, so look before allocating anything. A single bare
+        // word has no last field distinct from its first and stays a malformed field.
+        let mut bare = fields.iter().filter(|field| !field.text.contains('='));
+        let (Some(first), Some(last)) = (bare.next(), bare.next_back()) else {
+            return Cow::Borrowed(fields);
         };
-        if bare.len() < 2 {
-            return fields.to_vec();
-        }
         let span = SourceSpan {
             end: span_for_text(self.path, last.line, last.column, last.text).end,
             ..span_for_text(self.path, first.line, first.column, first.text)
         };
         self.mark(SourceRecoveryClass::Metadata);
         self.diagnostics.push(header_prose(span));
-        fields
-            .iter()
-            .filter(|field| field.text.contains('='))
-            .copied()
-            .collect()
+        Cow::Owned(
+            fields
+                .iter()
+                .filter(|field| field.text.contains('='))
+                .copied()
+                .collect(),
+        )
     }
 
     pub(super) fn lower_speaker_metadata(
         &mut self,
         fields: &[HeaderField<'_>],
     ) -> (
-        Option<(SpeakerId, SourceSpan)>,
+        Option<(SpeakerId, SourceExtent)>,
         SourceMetadata,
         Vec<InterpolationBinding>,
     ) {
@@ -62,7 +65,7 @@ impl Lowerer<'_, '_> {
             if kv.key == "speaker" {
                 speaker = self
                     .speaker_from_value(&kv)
-                    .map(|value| (value, kv.value_span.clone()));
+                    .map(|value| (value, SourceExtent::of(&kv.value_span)));
                 continue;
             }
 
