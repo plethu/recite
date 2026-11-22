@@ -604,6 +604,18 @@ word = "string"
 [arguments."writer-prose-dictionary-failed"]
 detail = "string"
 
+[arguments."writer-prose-spelling"]
+line = "integer"
+text = "string"
+
+[arguments."writer-prose-note"]
+line = "integer"
+text = "string"
+detail = "string"
+
+[arguments."writer-prose-count"]
+count = "integer"
+
 [arguments."lsp-code-action-add-condition"]
 name = "string"
 

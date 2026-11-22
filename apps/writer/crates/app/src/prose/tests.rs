@@ -46,7 +46,8 @@ fn first_prose(writer: &Writer) -> Option<(CheckGeneration, usize)> {
 }
 
 #[test]
-fn enabled_projects_list_count_and_place_prose_findings() -> Result<(), Box<dyn Error>> {
+fn enabled_projects_list_prose_findings_as_notes_that_never_mark_beats()
+-> Result<(), Box<dyn Error>> {
     let (_directory, mut writer, mut requests) = writer(PROSE)?;
     let own = writer
         .session
@@ -63,10 +64,8 @@ fn enabled_projects_list_count_and_place_prose_findings() -> Result<(), Box<dyn 
     let prose = problem.prose.ok_or("prose finding")?;
     assert_eq!(prose.finding.text, "flickerd");
     assert!(prose.can_add_word);
-    assert_eq!(
-        writer.beat_problems(),
-        [("start".to_owned(), problem.diagnostic.message.clone())]
-    );
+    // Notes are listed with the document's problems but never mark a beat.
+    assert!(writer.beat_problems().is_empty());
     // An unchanged source is not checked again.
     writer.check_prose_if_needed();
     assert!(requests.try_recv().is_err());

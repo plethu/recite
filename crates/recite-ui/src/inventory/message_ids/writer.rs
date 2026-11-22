@@ -375,6 +375,9 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WriterProseWordAdded => Some("writer-prose-word-added"),
         super::MsgId::WriterProseWordListed => Some("writer-prose-word-listed"),
         super::MsgId::WriterProseDictionaryFailed => Some("writer-prose-dictionary-failed"),
+        super::MsgId::WriterProseSpelling => Some("writer-prose-spelling"),
+        super::MsgId::WriterProseNote => Some("writer-prose-note"),
+        super::MsgId::WriterProseCount => Some("writer-prose-count"),
         _ => None,
     }
 }

@@ -350,6 +350,9 @@ resource_ids = [
     "writer-prose-word-added",
     "writer-prose-word-listed",
     "writer-prose-dictionary-failed",
+    "writer-prose-spelling",
+    "writer-prose-note",
+    "writer-prose-count",
 
     "cli-help-about",
     "cli-help-usage-heading",

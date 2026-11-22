@@ -112,14 +112,18 @@ impl Writer {
         }
         self.attention.request_problem_focus();
     }
-    /// The first problem in each beat of the open scene, by beat id: the document's own
-    /// diagnostics in their order, then prose findings in source order. A problem belongs to the
-    /// last beat that starts at or before its line.
+    /// The first problem in each beat of the open scene, by beat id, in source order. A problem
+    /// belongs to the last beat that starts at or before its line. Prose findings are notes, not
+    /// problems: they are listed under the manuscript but never mark a beat.
     pub fn beat_problems(&self) -> Vec<(String, String)> {
         let blocks = self.session.model().document().block_summaries();
         let all = self.problems();
         let mut problems: Vec<(String, String)> = Vec::new();
-        for diagnostic in all.iter().map(|problem| problem.diagnostic) {
+        for diagnostic in all
+            .iter()
+            .filter(|problem| problem.prose.is_none())
+            .map(|problem| problem.diagnostic)
+        {
             let line = diagnostic.span.start.line();
             let Some(block) = blocks
                 .iter()

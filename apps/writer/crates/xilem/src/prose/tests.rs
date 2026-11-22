@@ -21,18 +21,18 @@ fn prose_findings_are_counted_listed_and_offer_their_fixes()
     let checked = requests.try_recv()?.execute(&mut Checker::default());
     writer.accept_prose(checked);
     let labels = support::labels(&mut writer)?;
-    for label in ["1 problem", ADD] {
+    // Prose findings are notes: counted apart from problems, which there are none of.
+    for label in [
+        "no problems",
+        "1 spelling or grammar note",
+        "Line 3 · Possible misspelling “flickerd”",
+        ADD,
+    ] {
         assert!(
             labels.iter().any(|name| name == label),
             "{label}: {labels:?}"
         );
     }
-    assert!(
-        labels
-            .iter()
-            .any(|name| name.starts_with("Line 3 · flickerd")),
-        "{labels:?}"
-    );
     assert!(
         labels.iter().any(|name| name.starts_with("Replace with “")),
         "{labels:?}"

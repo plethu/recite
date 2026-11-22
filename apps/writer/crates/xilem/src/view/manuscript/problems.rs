@@ -2,7 +2,8 @@
 //! spelling, adding the word to the project dictionary, as the language server's quick fixes do.
 use super::*;
 use recite_writer_app::prose::{Problem, ProseProblem};
-use recite_writer_session::messages::{MsgId, format};
+use recite_writer_session::messages::{MsgId, UiArg, format};
+use recite_writer_session::prose::ProseFindingKind;
 
 /// Problems listed in full; the status line counts the rest and reveals the first.
 const LISTED: usize = 3;
@@ -21,16 +22,31 @@ pub(super) fn problems(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .gap(space::SIBLINGS.px())
 }
 
-fn row(state: &Writer, problem: &Problem<'_>) -> impl WidgetView<Writer> + use<> {
-    let line = paragraph(
-        state.ui_scale(),
-        format!(
-            "Line {} · {}",
-            problem.diagnostic.span.start.line(),
-            problem.diagnostic.message
+/// A prose finding reads as plain wording, not the checker's message and rule name.
+fn wording(problem: &Problem<'_>) -> String {
+    let line = problem.diagnostic.span.start.line();
+    match &problem.prose {
+        None => format!("Line {line} · {}", problem.diagnostic.message),
+        Some(prose) if prose.finding.kind == ProseFindingKind::Spelling => format(
+            MsgId::WriterProseSpelling,
+            [
+                ("line", UiArg::from(line)),
+                ("text", UiArg::from(prose.finding.text.as_str())),
+            ],
         ),
-        state.script_width(),
-    );
+        Some(prose) => format(
+            MsgId::WriterProseNote,
+            [
+                ("line", UiArg::from(line)),
+                ("text", UiArg::from(prose.finding.text.as_str())),
+                ("detail", UiArg::from(prose.finding.message.as_str())),
+            ],
+        ),
+    }
+}
+
+fn row(state: &Writer, problem: &Problem<'_>) -> impl WidgetView<Writer> + use<> {
+    let line = paragraph(state.ui_scale(), wording(problem), state.script_width());
     match &problem.prose {
         None => Either::A(line),
         Some(prose) => Either::B(

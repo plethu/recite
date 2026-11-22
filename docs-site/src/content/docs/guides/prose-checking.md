@@ -74,10 +74,11 @@ of saving it, save it to refresh the findings. Turn off other spell-checking ext
 
 ## In Writer
 
-When the open project enables `[prose]`, Writer checks the open document in the background and
-counts its findings with the document's other problems: in the status line, at the beat they belong
-to and in the list under the manuscript. A finding listed there offers its suggested replacements
-and, for a spelling, adding the word to the project's first dictionary. A replacement is one
+When the open project enables `[prose]`, Writer checks the open document in the background. Its
+findings are notes rather than problems: the status line counts them apart from the document's
+problems, beats are not marked for them, and the list under the manuscript shows each one in plain
+wording with its suggested replacements and, for a spelling, adding the word to the project's first
+dictionary. Suggestions that keep every letter of a misspelling come first. A replacement is one
 undoable edit; apply or discard a pending draft first. A setup problem, such as an unsupported
 language, appears as one warning.
 

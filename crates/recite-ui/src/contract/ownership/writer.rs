@@ -10,5 +10,8 @@ macro_rules! writer_prose_message_ids {
         | MsgId::WriterProseWordAdded
         | MsgId::WriterProseWordListed
         | MsgId::WriterProseDictionaryFailed
+        | MsgId::WriterProseSpelling
+        | MsgId::WriterProseNote
+        | MsgId::WriterProseCount
     };
 }
