@@ -157,6 +157,12 @@ impl CliError {
             Self::NoInputs => messages.text(MsgId::CliErrorNoInputs),
             Self::NoInputsOutsideProject => messages.text(MsgId::CliErrorNoInputsOutsideProject),
             Self::SchemaRequired => messages.text(MsgId::CliErrorSchemaRequired),
+            Self::SchemaFreshPair => messages.text(MsgId::CliErrorSchemaFreshPair),
+            Self::SchemaFreshNoSchema => messages.text(MsgId::CliErrorSchemaFreshNoSchema),
+            Self::SchemaFreshNoProducer => messages.text(MsgId::CliErrorSchemaFreshNoProducer),
+            Self::SchemaProducer { detail } => {
+                messages.format(MsgId::CliErrorSchemaProducer, [("detail", detail.clone())])
+            }
             Self::BlockRequired { asset } => {
                 messages.format(MsgId::CliErrorBlockRequired, [("asset", asset.clone())])
             }

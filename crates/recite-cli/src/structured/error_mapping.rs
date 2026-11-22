@@ -196,6 +196,14 @@ pub(crate) fn structured_error(
             ErrorOperation::DiscoverProject,
             fallback_path,
         ),
+        CliError::SchemaFreshPair
+        | CliError::SchemaFreshNoSchema
+        | CliError::SchemaFreshNoProducer
+        | CliError::SchemaProducer { .. } => input(
+            ErrorCode::ProjectSchema,
+            ErrorOperation::DiscoverProject,
+            fallback_path,
+        ),
         CliError::SchemaRequired => input(
             ErrorCode::ProjectSchema,
             ErrorOperation::Validate,

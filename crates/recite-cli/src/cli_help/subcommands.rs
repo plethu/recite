@@ -180,6 +180,12 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
                 command,
                 messages.text(MsgId::CliHelpCommandSchemaCheckFresh),
             );
+            set_positional_arg_help(
+                command,
+                "project_root",
+                messages.text(MsgId::CliHelpArgSchemaFreshRoot),
+                messages,
+            );
         }
         "catalog status" | "catalog refresh" => {
             let about = if path == "catalog status" {

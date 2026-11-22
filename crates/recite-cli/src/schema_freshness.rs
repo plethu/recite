@@ -3,7 +3,10 @@ use std::io::Write;
 use crate::args::ProducerFreshnessArgs;
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
-use crate::fs::load_schema_for_freshness;
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+
+use crate::fs::{LoadedSchema, load_schema_for_freshness};
 use crate::i18n::Messages;
 use recite_core::schema::{
     ContentFingerprintFreshness, ProducerFingerprint, ProducerFingerprintMismatch,
@@ -16,8 +19,14 @@ pub(crate) fn check(
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<(), CliError> {
-    let expected = load_schema_for_freshness(&args.expected)?;
-    let actual = load_schema_for_freshness(&args.actual)?;
+    let (expected, actual) = match (args.expected, args.actual) {
+        (Some(expected), Some(actual)) => (
+            load_schema_for_freshness(&expected)?,
+            load_schema_for_freshness(&actual)?,
+        ),
+        (None, None) => project_exports(args.project_root.as_deref().unwrap_or(Path::new(".")))?,
+        _ => return Err(CliError::SchemaFreshPair),
+    };
     if !expected.diagnostics.is_empty() || !actual.diagnostics.is_empty() {
         report_diagnostics(
             stderr,
@@ -44,6 +53,51 @@ pub(crate) fn check(
     } else {
         Err(CliError::Diagnostics)
     }
+}
+
+/// The project's declared schema, and a fresh export from its registered producer. Running the
+/// producer is this command's explicit purpose; the export stays in a staged directory and the
+/// live schema is never written.
+fn project_exports(root: &Path) -> Result<(LoadedSchema, LoadedSchema), CliError> {
+    let project = recite_config::discover_project(root)
+        .map_err(|source| CliError::ProjectDiscovery { source })?;
+    let manifest = project.manifest();
+    let declared = manifest
+        .schema_key()
+        .ok()
+        .flatten()
+        .ok_or(CliError::SchemaFreshNoSchema)?;
+    let project_root = manifest.project_root();
+    let expected = load_schema_for_freshness(&project_root.join(declared.as_str()))?;
+    let registration_path = project_root.join(recite_config::PRODUCER_REGISTRATION_FILE);
+    let registration =
+        std::fs::read_to_string(&registration_path).map_err(|_| CliError::SchemaFreshNoProducer)?;
+    let registration =
+        recite_config::ProducerRegistration::parse(&registration).map_err(|error| {
+            CliError::SchemaProducer {
+                detail: error.to_string(),
+            }
+        })?;
+    let generated = recite_config::generate_schema(
+        project_root,
+        &registration,
+        &AtomicBool::new(false),
+        recite_config::PRODUCER_DEADLINE,
+    )
+    .map_err(|error| CliError::SchemaProducer {
+        detail: error.to_string(),
+    })?;
+    let actual = recite_core::schema::load_schema_manifest_for_freshness_str(
+        "producer output",
+        &generated.text,
+    );
+    Ok((
+        expected,
+        LoadedSchema {
+            schema: actual.schema,
+            diagnostics: actual.diagnostics,
+        },
+    ))
 }
 
 fn freshness_json(evidence: &SchemaProducerFreshness) -> (&'static str, serde_json::Value) {

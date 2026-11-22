@@ -268,3 +268,68 @@ fn speakers_are_free_without_a_schema_registry() {
     );
     run(recite().arg("validate").arg(source)).assert_success();
 }
+
+#[test]
+fn schema_check_fresh_runs_the_registered_producer_for_a_project() {
+    let temp = TempDir::new().expect("tempdir");
+    let root = temp.path().join("team");
+    copy_dir(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/realistic/team-pack"),
+        &root,
+    );
+    // The CLI's own exporter stands in for an engine producer.
+    fs::write(
+        root.join("recite.producer.toml"),
+        format!(
+            concat!(
+                "version = 1\n\n[producer]\nkind = \"standalone\"\nid = \"team-pack\"\n\n",
+                "[generate]\nprogram = {:?}\nargs = [\"schema\", \"export\", \"--schema\", ",
+                "\"schema/team.schema.toml\", \"--producer-kind\", \"standalone\", ",
+                "\"--producer-id\", \"team-pack\", \"--output\", \"{{output}}\"]\n",
+            ),
+            env!("CARGO_BIN_EXE_recite")
+        ),
+    )
+    .expect("write producer registration");
+
+    let fresh = run(recite().current_dir(&root).args(["schema", "check-fresh"]));
+    fresh.assert_success();
+    fresh.assert_stdout_contains("\"status\":\"fresh\"");
+
+    let source = root.join("schema/team.schema.toml");
+    let text = fs::read_to_string(&source).expect("read schema source");
+    fs::write(
+        &source,
+        text.replace("[conditions.trust_of]", "[conditions.clerk_trust]"),
+    )
+    .expect("edit schema source");
+    let stale = run(recite()
+        .current_dir(&root)
+        .args(["schema", "check-fresh", "."]));
+    assert!(!stale.status.success());
+    stale.assert_stdout_contains("\"status\":\"mismatch\"");
+    assert!(
+        !fs::read_dir(&root)
+            .expect("project directory")
+            .any(|entry| entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".recite-schema-stage-")),
+        "the staged export is removed"
+    );
+
+    let half = run(recite().current_dir(&root).args([
+        "schema",
+        "check-fresh",
+        "--expected",
+        "schema/generated/team.schema.json",
+    ]));
+    assert!(!half.status.success());
+    half.assert_stderr_contains("pass both --expected and --actual");
+
+    fs::remove_file(root.join("recite.producer.toml")).expect("remove registration");
+    let none = run(recite().current_dir(&root).args(["schema", "check-fresh"]));
+    assert!(!none.status.success());
+    none.assert_stderr_contains("no recite.producer.toml registers a schema producer here");
+}

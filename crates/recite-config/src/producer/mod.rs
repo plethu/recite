@@ -6,6 +6,12 @@ use std::{
     path::{Component, Path},
 };
 
+mod run;
+pub use run::{
+    GeneratedSchema, PRODUCER_DEADLINE, ProducerRunError, configured_process, generate_schema,
+    producer_command,
+};
+
 pub const PRODUCER_REGISTRATION_FILE: &str = "recite.producer.toml";
 
 #[derive(Debug, thiserror::Error)]

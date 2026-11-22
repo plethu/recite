@@ -11,8 +11,9 @@ mod path;
 mod producer;
 mod project;
 pub use producer::{
-    DeclarationSource, PRODUCER_REGISTRATION_FILE, ProducerCommand, ProducerRegistration,
-    ProducerRegistrationError,
+    DeclarationSource, GeneratedSchema, PRODUCER_DEADLINE, PRODUCER_REGISTRATION_FILE,
+    ProducerCommand, ProducerRegistration, ProducerRegistrationError, ProducerRunError,
+    configured_process, generate_schema, producer_command,
 };
 mod user;
 

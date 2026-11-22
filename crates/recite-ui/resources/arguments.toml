@@ -815,3 +815,6 @@ blocks = "string"
 
 [arguments."lsp-code-action-apply-suggestion"]
 suggestion = "string"
+
+[arguments."cli-error-schema-producer"]
+detail = "string"

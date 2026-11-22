@@ -110,6 +110,16 @@ pub(crate) enum CliError {
         asset: String,
         blocks: Vec<String>,
     },
+    /// `schema check-fresh` was given only one of `--expected` and `--actual`.
+    SchemaFreshPair,
+    /// `schema check-fresh` in a project whose manifest declares no schema.
+    SchemaFreshNoSchema,
+    /// `schema check-fresh` in a project with no registered producer.
+    SchemaFreshNoProducer,
+    /// The registered producer failed to export a schema to compare.
+    SchemaProducer {
+        detail: String,
+    },
     /// `--only metadata` found neither `--schema` nor a project schema.
     SchemaRequired,
     StableIdBaseline {
@@ -333,6 +343,19 @@ impl std::fmt::Display for CliError {
                 formatter,
                 "pass --block: scenes in recite.project.toml start {asset} at {}",
                 blocks.join(", ")
+            ),
+            Self::SchemaFreshPair => formatter.write_str(
+                "pass both --expected and --actual, or neither to check the project here",
+            ),
+            Self::SchemaFreshNoSchema => {
+                formatter.write_str("recite.project.toml declares no [project].schema to check")
+            }
+            Self::SchemaFreshNoProducer => formatter.write_str(
+                "no recite.producer.toml registers a schema producer here; pass --expected and --actual to compare two exports",
+            ),
+            Self::SchemaProducer { detail } => write!(
+                formatter,
+                "the schema producer could not export a schema: {detail}"
             ),
             Self::SchemaRequired => formatter.write_str(
                 "--only metadata needs a schema: pass --schema, or declare [project].schema in recite.project.toml",

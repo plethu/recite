@@ -108,10 +108,14 @@ output path that aliases its input and replaces the output only after validation
 structured` reports versioned command records with diagnostics or artifact metadata for authoring
 tools; their `command` field is `schema export`.
 
-### `recite schema check-fresh --expected <EXPECTED> --actual <ACTUAL>`
+### `recite schema check-fresh [PROJECT_ROOT]` or `--expected <EXPECTED> --actual <ACTUAL>`
 
-Compares the schema producer fingerprints of a previously exported manifest with a current export
-and reports whether the producer is fresh.
+Reports whether a schema still matches what its producer exports. Given a project (the working
+directory by default), it compares the manifest's `[project].schema` with a fresh export from the
+producer registered in `recite.producer.toml`. Running that producer is the command's explicit
+purpose; its output is staged, compared and removed, and the project's schema is never written.
+Given `--expected` and `--actual`, it compares those two exports instead, as CI does when it keeps
+both files.
 
 ## Building
 

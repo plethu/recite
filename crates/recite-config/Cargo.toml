@@ -14,13 +14,14 @@ dirs.workspace = true
 recite-core.workspace = true
 recite-ui.workspace = true
 serde.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 toml_edit.workspace = true
+wait-timeout = "0.2.1"
 
 [dev-dependencies]
 serde_json.workspace = true
-tempfile.workspace = true
 
 [lints]
 workspace = true

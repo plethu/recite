@@ -128,6 +128,7 @@ macro_rules! cli_message_ids {
         | MsgId::ExplainHowToFix
         | MsgId::ExplainListItem
         | MsgId::CliHelpCommandSchemaCheckFresh
+        | MsgId::CliHelpArgSchemaFreshRoot
         | MsgId::CliHelpGroupAuthoring
         | MsgId::CliHelpGroupBuilding
         | MsgId::CliHelpGroupLocalisation
@@ -311,6 +312,10 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorSchemaRequired
         | MsgId::CliErrorBlockRequired
         | MsgId::CliErrorBlockAmbiguous
+        | MsgId::CliErrorSchemaFreshPair
+        | MsgId::CliErrorSchemaFreshNoSchema
+        | MsgId::CliErrorSchemaFreshNoProducer
+        | MsgId::CliErrorSchemaProducer
         | MsgId::CliWarningSchemaDiffers
         | MsgId::CliErrorOutputOverwritesInput
         | MsgId::CliErrorBlockingEffect

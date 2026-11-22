@@ -291,7 +291,9 @@ the project's other sources as context and reports only the named ones. With no 
 `compile` and `extract` read the project's discovered sources; outside a project they say what to
 pass. With no `--schema` they use the manifest's `[project].schema`; an explicit `--schema` wins, with
 a warning when it is a different file. With no `--block`, `run`, `trace` and `play` start at the block
-of the single manifest scene that uses the asset, and otherwise ask for `--block`. Diagnostics name
+of the single manifest scene that uses the asset, and otherwise ask for `--block`. `schema
+check-fresh [PROJECT_ROOT]` compares the manifest's schema with a staged export from the producer
+in `recite.producer.toml`; `--expected` and `--actual` compare two given exports instead. Diagnostics name
 files relative to the working directory. Outside a project, keys keep each command's earlier form.
 
 **Contracts that follow the tree.**

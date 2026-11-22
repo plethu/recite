@@ -19,7 +19,7 @@ pub(crate) use project::{check_fresh, validate_project};
 pub(crate) use project_freshness::validate_project_asset_freshness;
 pub(crate) use scene_block::start_block;
 pub(crate) use schema::{
-    load_optional_schema, load_schema, load_schema_for_freshness, warn_schema_choice,
+    LoadedSchema, load_optional_schema, load_schema, load_schema_for_freshness, warn_schema_choice,
 };
 pub(crate) use sources::{LooseKeys, SchemaChoice, SourceSet};
 pub(crate) use write::write_staged;

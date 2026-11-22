@@ -61,7 +61,8 @@ explain-common-causes = Common causes:
 explain-how-to-fix = How to fix:
 explain-list-item = - {$item}
 
-cli-help-command-schema-check-fresh = Compare current schema producer fingerprints with a previously exported manifest
+cli-help-command-schema-check-fresh = Check that the project schema matches what its producer exports now
+cli-help-arg-schema-fresh-root = Project whose declared schema is checked against a fresh export from its registered producer
 cli-help-group-authoring = Authoring checks
 cli-help-group-building = Building
 cli-help-group-localisation = Localisation
@@ -429,6 +430,10 @@ cli-error-no-inputs-outside-project = no paths given and no recite.project.toml 
 cli-error-schema-required = --only metadata needs a schema: pass --schema, or declare [project].schema in recite.project.toml
 cli-error-block-required = pass --block: no scene in recite.project.toml uses {$asset}
 cli-error-block-ambiguous = pass --block: scenes in recite.project.toml start {$asset} at {$blocks}
+cli-error-schema-fresh-pair = pass both --expected and --actual, or neither to check the project here
+cli-error-schema-fresh-no-schema = recite.project.toml declares no [project].schema to check
+cli-error-schema-fresh-no-producer = no recite.producer.toml registers a schema producer here; pass --expected and --actual to compare two exports
+cli-error-schema-producer = the schema producer could not export a schema: {$detail}
 cli-warning-schema-differs = warning: --schema {$given} is not the project schema {$declared}; checking against {$given}
 cli-error-output-overwrites-input = refusing to overwrite input {$input} with output {$output}
 cli-error-blocking-effect = blocking effect `{$effect}` requires [effects].auto_ack_blocking = true in the fixture

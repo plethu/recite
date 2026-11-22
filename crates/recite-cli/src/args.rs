@@ -166,12 +166,15 @@ pub(crate) struct ProjectRootArgs {
 
 #[derive(Debug, Args)]
 pub(crate) struct ProducerFreshnessArgs {
+    /// Project to check: its declared schema against a fresh export from its producer.
+    #[arg(conflicts_with_all = ["expected", "actual"])]
+    pub(crate) project_root: Option<PathBuf>,
     /// Previously exported manifest containing expected producer fingerprints.
     #[arg(long)]
-    pub(crate) expected: PathBuf,
+    pub(crate) expected: Option<PathBuf>,
     /// Current producer export to compare with the expected manifest.
     #[arg(long)]
-    pub(crate) actual: PathBuf,
+    pub(crate) actual: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]
