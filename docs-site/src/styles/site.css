@@ -159,7 +159,6 @@
     box-shadow: var(--offset-stock) var(--offset-stock) 0 var(--color-stock);
   }
 
-
   /* The ink status bar. */
   .site-footer {
     border-block-start: 1px solid var(--color-status-edge);

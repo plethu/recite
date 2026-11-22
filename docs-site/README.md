@@ -71,22 +71,22 @@ grain never shows behind prose or code. Below a 30rem viewport the sheet goes fu
   under the current one, and the theme as a System | Light | Dark segment track (radios; hidden
   without JavaScript, when the OS decides). The footer is the ink status bar. Every manual folder
   has a sidebar of its pages under its name in plum caps, as Writer lists a scene's beats.
-- **Sheets.** A document sheet has a sticky running head in the header's vocabulary (Learn ›
-  Guides › page; omitted on a mode's own index page), one Fraunces display title, Literata
-  semibold section headings, and a folio with the page's place ("Guides · page 4 of 6") and Back
-  to top. Body text stays in Plex Sans: documentation is the tool speaking, dense with inline code,
-  flags and tables, and Writer's own tool sheets set such text in Plex Sans. Literata is kept for
-  headings, each page's lead paragraph and dialogue: script samples, quotations and the playground
-  transcript, which sets speakers as margin labels. The landing hero opens its sheet, so its lead
-  reads on paper.
+- **Sheets.** A document sheet has a sticky running head in the header's vocabulary (Learn › Guides
+  › page; omitted on a mode's own index page), one Fraunces display title, Literata semibold section
+  headings, and a folio with the page's place ("Guides · page 4 of 6") and Back to top. Body text
+  stays in Plex Sans: documentation is the tool speaking, dense with inline code, flags and tables,
+  and Writer's own tool sheets set such text in Plex Sans. Literata is kept for headings, each
+  page's lead paragraph and dialogue: script samples, quotations and the playground transcript,
+  which sets speakers as margin labels. The landing hero opens its sheet, so its lead reads on
+  paper.
 - **Source wells.** Code blocks, script samples and the playground source share one well: inset
-  paper closed by an ink rule. A fence may name its file (`toml title="runtime-fixture.toml"`)
-  for a muted mono caption row. A well with more source beyond its end fades there until it is
-  scrolled or focused. Syntax uses the inks only: plum keywords and constants, text-safe teal
-  strings (mint in dark), ink names, muted comments and punctuation.
+  paper closed by an ink rule. A fence may name its file (`toml title="runtime-fixture.toml"`) for a
+  muted mono caption row. A well with more source beyond its end fades there until it is scrolled or
+  focused. Syntax uses the inks only: plum keywords and constants, text-safe teal strings (mint in
+  dark), ink names, muted comments and punctuation.
 - **Printer's marks, not leading bars.** The current page and menu row is a plate with a 2px ink
-  underscore under its words. A heading reached through a fragment link gets crop marks in the
-  sheet pad. The release notice is an errata slip with a plum caps lead-in.
+  underscore under its words. A heading reached through a fragment link gets crop marks in the sheet
+  pad. The release notice is an errata slip with a plum caps lead-in.
 - **Slips, pickers and focus.** Menus and the search picker are floating paper with a 1px ink edge
   and a hard stock offset, over a static overprint dim with a paper-toned dot screen; nothing blurs
   or animates. Search renders its own picker with Pagefind's search API rather than Pagefind's UI,
