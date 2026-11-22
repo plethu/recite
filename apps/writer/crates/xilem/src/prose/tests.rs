@@ -1,4 +1,4 @@
-use crate::tests::support;
+use crate::tests::support::{self, worker::Worker};
 use recite_writer_app::prose::Checker;
 use std::fs;
 use tokio::sync::mpsc::unbounded_channel;
@@ -42,5 +42,30 @@ fn prose_findings_are_counted_listed_and_offer_their_fixes()
         fs::read_to_string(directory.path().join("words.txt"))?,
         "flickerd\n"
     );
+    Ok(())
+}
+
+#[test]
+fn the_worker_checks_the_open_document_and_delivers_its_findings()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = support::project(SOURCE)?;
+    let manifest = directory.path().join("recite.project.toml");
+    let mut text = fs::read_to_string(&manifest)?;
+    text.push_str("[prose]\nenabled = true\n");
+    fs::write(&manifest, text)?;
+    // Mounting the worker stores its sender, which sends the first check at once.
+    let mut worker = Worker::new(support::open(&directory)?, super::worker());
+    worker.next();
+    let problems = worker.state.problems();
+    assert_eq!(problems.len(), 1);
+    let finding = problems
+        .get(0)
+        .and_then(|problem| problem.prose.map(|prose| prose.finding));
+    assert_eq!(
+        finding.map(|finding| finding.text.as_str()),
+        Some("flickerd")
+    );
+    assert!(format!("{:?}", super::Output(None)).contains("ProseOutput"));
+    worker.close();
     Ok(())
 }
