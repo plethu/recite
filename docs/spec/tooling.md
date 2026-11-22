@@ -40,12 +40,12 @@ comparison and the conditions for revisiting it.
   line break or markup are reported without a fix.
 - **Diagnostics.** `recite-prose` maps findings to `RECITE_PROSE001` (spelling), `002` (grammar and
   usage) and `003` (style), at warning or information severity, carrying the flagged text and the
-  engine rule. `RECITE_PROSE101`–`103` report an unsupported language, an unreadable dictionary or
-  a build without a checker.
-- **Configuration.** `[prose]` in `recite.project.toml` declares `enabled` (editor checking,
-  default `false`), `language` (`en-US` default, `en-GB`, `en-AU`, `en-CA`, `en-IN`),
-  `dictionaries` (project-relative word lists, one word per line; the first receives added words),
-  `ignore_rules`, `ignore_speakers`, `ignore_ids` (exact or `prefix*`) and `metadata_keys`.
+  engine rule. `RECITE_PROSE101`–`103` report an unsupported language, an unreadable dictionary or a
+  build without a checker.
+- **Configuration.** `[prose]` in `recite.project.toml` declares `enabled` (editor checking, default
+  `false`), `language` (`en-US` default, `en-GB`, `en-AU`, `en-CA`, `en-IN`), `dictionaries`
+  (project-relative word lists, one word per line; the first receives added words), `ignore_rules`,
+  `ignore_speakers`, `ignore_ids` (exact or `prefix*`) and `metadata_keys`.
 - **Clients.** The LSP publishes findings for open documents of enabled projects alongside other
   diagnostics and offers replacement and add-to-dictionary quick fixes; VS Code, Neovim and Zed need
   no extension changes. `recite prose check` (§13.12) runs the same checks for CLI and CI. Checking

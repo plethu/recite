@@ -67,6 +67,10 @@ abord = "abord"
 passagers = "passagers"
 sur = "sur"
 
+[workspace.metadata.typos.default.extend-identifiers]
+# Published crate name in archived dependency-probe lockfile evidence.
+writeable = "writeable"
+
 [workspace.metadata.typos.files]
 # Prose-checking fixtures and tests misspell words on purpose.
 extend-exclude = [
@@ -76,10 +80,6 @@ extend-exclude = [
     "crates/recite-parser/tests/snapshots/prose_regions__*",
     "crates/recite-prose/tests/",
 ]
-
-[workspace.metadata.typos.default.extend-identifiers]
-# Published crate name in archived dependency-probe lockfile evidence.
-writeable = "writeable"
 
 [workspace.dependencies]
 # Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.

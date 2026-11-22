@@ -496,11 +496,11 @@ recite prose check [--output-format human|structured] [--invocation-id ID] PATHS
 ```
 
 Checks spelling and grammar in the prose regions of the given files and directories (§14.1). Each
-file uses the `[prose]` settings of the nearest `recite.project.toml`, whether or not `enabled`
-is set; files outside a project use the defaults. Findings are warnings or information, and the
-command exits 1 when it reports any, so CI can require clean prose; `validate` and `compile` never
-run prose checks. An unsupported language or unreadable dictionary is a `RECITE_PROSE1xx` error at
-the manifest. Structured output adds a `fixes` array of byte-exact replacements, each naming its
+file uses the `[prose]` settings of the nearest `recite.project.toml`, whether or not `enabled` is
+set; files outside a project use the defaults. Findings are warnings or information, and the command
+exits 1 when it reports any, so CI can require clean prose; `validate` and `compile` never run prose
+checks. An unsupported language or unreadable dictionary is a `RECITE_PROSE1xx` error at the
+manifest. Structured output adds a `fixes` array of byte-exact replacements, each naming its
 diagnostic by index.
 
 The command is a noun group so that further prose operations, such as a dictionary listing, have a

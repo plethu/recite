@@ -1,7 +1,7 @@
 # Prose checking decisions
 
-[Tooling §14.1](spec/tooling.md#141-prose-checking) owns the behaviour. This note records why
-Recite embeds a checker behind parser-owned prose regions, what that costs, and when to revisit it.
+[Tooling §14.1](spec/tooling.md#141-prose-checking) owns the behaviour. This note records why Recite
+embeds a checker behind parser-owned prose regions, what that costs, and when to revisit it.
 
 ## Requirements
 
