@@ -28,4 +28,15 @@ pub enum AuthoringEditOperation {
         target: DocumentKey,
         block: BlockId,
     },
+    /// Dialogue typed on a header at `line` moves to the first body line under it.
+    MoveHeaderProse {
+        document: DocumentKey,
+        line: u32,
+    },
+    /// A misspelt name at `line` becomes the diagnostic's suggested `replacement`.
+    ApplySuggestion {
+        document: DocumentKey,
+        line: u32,
+        replacement: String,
+    },
 }

@@ -5,16 +5,16 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
     DiagnosticExplanation::new(
         "RECITE_FRESH001",
         DiagnosticCategory::Freshness,
-        "A compiled asset was built from an older version of one or more source files.",
+        "A compiled asset was built from an older version of the project's sources.",
         &["The source dialogue changed after the asset was compiled."],
-        &["Re-run `recite compile` or `recite watch` for the project."],
+        &["run `recite compile` again, or keep `recite watch .` running so it rebuilds on save"],
     ),
     DiagnosticExplanation::new(
         "RECITE_FRESH002",
         DiagnosticCategory::Freshness,
         "A compiled asset was built from an older schema fingerprint.",
         &["The schema manifest changed after the asset was compiled."],
-        &["Recompile the asset with the current schema manifest."],
+        &["run `recite compile` again so the asset is checked against the current schema"],
     ),
     DiagnosticExplanation::new(
         "RECITE_FRESH003",
@@ -23,6 +23,13 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         &[
             "The asset's compiler compatibility version is older or newer than the supported boundary.",
         ],
-        &["Recompile the source with the current Recite compiler."],
+        &["run `recite compile` again with this version of Recite"],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_FRESH004",
+        DiagnosticCategory::Freshness,
+        "A compiled asset does not include source files that were added to the project after it was built.",
+        &["A `.recite` file was created inside the project's source roots after the last compile."],
+        &["run `recite compile` again, or keep `recite watch .` running so it rebuilds on save"],
     ),
 ];

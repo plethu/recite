@@ -148,19 +148,17 @@ pub(super) fn plan_create_block_stub_in_range(
             && symbol.role() == SymbolRole::Reference
             && span_selected_by_range(symbol.span(), range)
     }) {
-        match plan_create_block_stub(snapshot, key, symbol.span().start) {
-            Ok(plan) => match &selected {
-                None => selected = Some(plan),
-                Some(existing) if existing == &plan => {}
-                Some(_) => {
-                    return Err(AuthoringEditError::AmbiguousSymbol {
-                        document: key.clone(),
-                        line: symbol.span().start.line(),
-                        column: symbol.span().start.column(),
-                    });
-                }
-            },
-            Err(error) => return Err(error),
+        let plan = plan_create_block_stub(snapshot, key, symbol.span().start)?;
+        match &selected {
+            None => selected = Some(plan),
+            Some(existing) if existing == &plan => {}
+            Some(_) => {
+                return Err(AuthoringEditError::AmbiguousSymbol {
+                    document: key.clone(),
+                    line: symbol.span().start.line(),
+                    column: symbol.span().start.column(),
+                });
+            }
         }
     }
     selected.ok_or_else(|| no_symbol(key, range.start()))

@@ -269,3 +269,60 @@ fn output_symlink_is_rejected_without_touching_its_target() {
     .assert_failure();
     assert!(!temp.path().join("imported.recite").exists());
 }
+
+#[test]
+fn unknown_speakers_are_written_only_with_partial_acceptance_and_listed_once() {
+    let temp = TempDir::new().expect("tempdir");
+    let input = write_file(
+        temp.path(),
+        "input.json",
+        r#"[{"node":"start","text":"Hello.","speaker":"operatr"},
+            {"node":"start","text":"Again.","speaker":"operatr"}]"#,
+    );
+    let mapping = write_file(
+        temp.path(),
+        "mapping.json",
+        r#"{"block":"node","text":"text","speaker":"speaker"}"#,
+    );
+    let schema = write_file(
+        temp.path(),
+        "schema.json",
+        r#"{"schema_version":1,"speakers":{"operator":{"display_name":"Operator"}}}"#,
+    );
+    let import = || {
+        let mut command = recite();
+        command
+            .arg("import")
+            .arg(&input)
+            .args(["--from", "json", "--mapping"])
+            .arg(&mapping)
+            .arg("--schema")
+            .arg(&schema);
+        command
+    };
+    let inspected = run(&mut import());
+    inspected.assert_success();
+    let report: serde_json::Value = serde_json::from_slice(&inspected.stdout).expect("report");
+    assert_eq!(report["status"], "partial");
+    let speakers = report["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .filter(|item| item["construct"] == "speaker")
+        .collect::<Vec<_>>();
+    assert_eq!(speakers.len(), 1, "one item per speaker");
+    assert_eq!(speakers[0]["action"], "unresolved");
+
+    let destination = temp.path().join("converted");
+    run(import().arg("--output-dir").arg(&destination)).assert_failure();
+    assert!(!destination.exists());
+    run(import()
+        .args(["--accept-partial", "--output-dir"])
+        .arg(&destination))
+    .assert_success();
+    assert!(
+        fs::read_to_string(destination.join("imported.recite"))
+            .expect("source")
+            .contains("speaker=operatr")
+    );
+}

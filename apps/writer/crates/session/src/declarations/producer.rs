@@ -1,18 +1,15 @@
 //! Explicit producer processes write staged output; only validated results reach publication.
-use recite_config::{ProducerCommand, ProducerRegistration};
+use recite_config::{PRODUCER_DEADLINE, ProducerCommand, ProducerRegistration, ProducerRunError};
 use recite_core::schema::ProjectSchema;
 use std::{
-    io::Read,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Command,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
         mpsc,
     },
-    time::Duration,
 };
-use wait_timeout::ChildExt;
 
 pub struct Generated {
     pub(super) text: String,
@@ -57,129 +54,51 @@ impl Job {
         }
     }
 }
+/// The configured command for an editor or producer, as `recite_config` builds it for every client.
 pub fn command(
     root: &Path,
     spec: &ProducerCommand,
     replacements: &[(&str, String)],
 ) -> Result<Command, String> {
-    let root = root.canonicalize().map_err(|e| e.to_string())?;
-    let directory = root
-        .join(spec.directory())
-        .canonicalize()
-        .map_err(|e| e.to_string())?;
-    if !directory.starts_with(&root) {
-        return Err("The producer working directory resolves outside this project.".into());
-    }
-    let program = Path::new(spec.program());
-    let program = if program.is_relative() && program.components().count() > 1 {
-        directory.join(program)
-    } else {
-        program.to_owned()
-    };
-    let in_flatpak = cfg!(target_os = "linux") && Path::new("/.flatpak-info").is_file();
-    let mut command = configured_process(&program, &directory, in_flatpak);
-    for arg in spec.args() {
-        let mut expanded = arg.clone();
-        for (key, value) in replacements {
-            expanded = expanded.replace(key, value);
+    recite_config::producer_command(root, spec, replacements).map_err(|error| match error {
+        ProducerRunError::DirectoryOutsideProject => {
+            "The producer working directory resolves outside this project.".into()
         }
-        command.arg(expanded);
-    }
-    Ok(command)
+        other => other.to_string(),
+    })
 }
 
-fn configured_process(program: &Path, directory: &Path, in_flatpak: bool) -> Command {
-    let mut command = if in_flatpak {
-        // Only explicitly configured producer/editor commands use the host.
-        // WATCH_BUS also terminates the host child when cancellation kills this proxy.
-        let mut command = Command::new("/usr/bin/flatpak-spawn");
-        let mut working_directory = std::ffi::OsString::from("--directory=");
-        working_directory.push(directory);
-        command
-            .args(["--host", "--watch-bus"])
-            .arg(working_directory)
-            .arg("--")
-            .arg(program);
-        command
-    } else {
-        Command::new(program)
-    };
-    command.current_dir(directory).stdin(Stdio::null());
-    command
-}
 fn generate(
     root: &Path,
     registration: &ProducerRegistration,
     cancel: &AtomicBool,
 ) -> Result<Generated, String> {
-    let stage = tempfile::Builder::new()
-        .prefix(".recite-schema-stage-")
-        .tempdir_in(root)
-        .map_err(|e| e.to_string())?;
-    let output = stage.path().join("schema.json");
-    let log_path = stage.path().join("producer.log");
-    let log = std::fs::File::create(&log_path).map_err(|e| e.to_string())?;
-    let mut command = command(
-        root,
-        registration.generate(),
-        &[("{output}", output.to_string_lossy().into_owned())],
-    )?;
-    command
-        .stdout(log.try_clone().map_err(|e| e.to_string())?)
-        .stderr(log);
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("Could not start {}: {e}", registration.generate().program()))?;
-    let mut wait_budget = Duration::from_secs(120);
-    let poll = Duration::from_millis(50);
-    let status = loop {
-        if cancel.load(Ordering::Relaxed) || wait_budget.is_zero() {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err("Generation cancelled or exceeded two minutes. The previous schema remains available.".into());
+    match recite_config::generate_schema(root, registration, cancel, PRODUCER_DEADLINE) {
+        Ok(generated) => Ok(Generated {
+            text: generated.text,
+            schema: generated.schema.into(),
+        }),
+        Err(ProducerRunError::Start { program, source }) => {
+            Err(format!("Could not start {program}: {source}"))
         }
-        match child.wait_timeout(poll) {
-            Ok(Some(status)) => break status,
-            Ok(None) => wait_budget = wait_budget.saturating_sub(poll),
-            Err(e) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(e.to_string());
-            }
+        Err(ProducerRunError::Stopped) => Err(
+            "Generation cancelled or exceeded two minutes. The previous schema remains available."
+                .into(),
+        ),
+        Err(ProducerRunError::Failed { status, log }) => Err(format!(
+            "Producer exited with {status}. Previous schema retained.\n{log}"
+        )),
+        Err(ProducerRunError::Output(error)) => Err(format!(
+            "Producer did not supply a regular schema output: {error}"
+        )),
+        Err(ProducerRunError::Invalid(diagnostics)) => {
+            Err(crate::diagnostic_messages(&diagnostics))
         }
-    };
-    if !status.success() {
-        let mut log = Vec::new();
-        std::fs::File::open(log_path)
-            .map_err(|e| e.to_string())?
-            .take(64 * 1024)
-            .read_to_end(&mut log)
-            .map_err(|e| e.to_string())?;
-        return Err(format!(
-            "Producer exited with {status}. Previous schema retained.\n{}",
-            String::from_utf8_lossy(&log)
-        ));
-    }
-    let text = crate::project::read_regular(&output)
-        .map_err(|e| format!("Producer did not supply a regular schema output: {e}"))?;
-    let loaded = recite_core::schema::load_schema_manifest_str("producer output", &text);
-    let schema = loaded
-        .schema
-        .ok_or_else(|| crate::diagnostic_messages(&loaded.diagnostics))?;
-    if schema
-        .producer_metadata
-        .as_ref()
-        .and_then(|m| m.producer.as_ref())
-        != Some(registration.producer())
-    {
-        return Err(
+        Err(ProducerRunError::WrongProducer) => Err(
             "Generated schema belongs to a different producer. Previous schema retained.".into(),
-        );
+        ),
+        Err(other) => Err(other.to_string()),
     }
-    Ok(Generated {
-        text,
-        schema: schema.into(),
-    })
 }
 #[cfg(test)]
 mod tests;

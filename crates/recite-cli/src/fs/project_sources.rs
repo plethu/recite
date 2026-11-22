@@ -23,6 +23,34 @@ pub(super) fn read_project_sources(
         .collect()
 }
 
+/// Project sources, by project-relative key, that the asset was not built from. Sources are
+/// matched by the file they resolve to, so an asset built under an older key scheme still matches.
+pub(super) fn added_project_sources(
+    project_root: &Path,
+    asset_path: &Path,
+    sources: &[CompiledSourceFile],
+) -> Vec<String> {
+    let Ok(project) = recite_config::discover_project(project_root) else {
+        return Vec::new();
+    };
+    let built = sources
+        .iter()
+        .filter_map(|source| {
+            project_source_candidates(project_root, asset_path, &source.path)
+                .into_iter()
+                .find_map(|candidate| fs::canonicalize(candidate).ok())
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    project
+        .documents()
+        .iter()
+        .filter(|document| {
+            fs::canonicalize(document.path()).is_ok_and(|path| !built.contains(&path))
+        })
+        .map(|document| document.key().as_str().to_owned())
+        .collect()
+}
+
 fn read_source_candidates(candidates: Vec<PathBuf>) -> Result<Option<String>, CliError> {
     for path in candidates {
         match fs::read_to_string(&path) {

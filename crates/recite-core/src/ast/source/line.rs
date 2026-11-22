@@ -1,4 +1,4 @@
-use crate::{LineId, SourceId, SourceSpan, SpeakerId, StableId};
+use crate::{LineId, SourceExtent, SourceId, SourceSpan, SpeakerId, StableId};
 
 use super::{InterpolationBinding, SourceMetadata, Statement};
 
@@ -31,6 +31,8 @@ pub struct Line {
     pub header_fields_end: Option<SourceSpan>,
     pub id: Option<LineId>,
     pub speaker: Option<SpeakerId>,
+    /// Where the `speaker=` value sits on the header, in this line's file, for diagnostics.
+    pub speaker_extent: Option<SourceExtent>,
     pub source_text: SourceText,
     /// Optional second source form selected by gettext plural rules.
     pub plural_source_text: Option<SourceText>,
@@ -52,6 +54,7 @@ impl Line {
             header_fields_end: None,
             id,
             speaker: None,
+            speaker_extent: None,
             source_text,
             plural_source_text: None,
             interpolation_bindings: Vec::new(),
@@ -82,6 +85,12 @@ impl Line {
     #[must_use]
     pub fn with_plural_source_text(mut self, source_text: SourceText) -> Self {
         self.plural_source_text = Some(source_text);
+        self
+    }
+
+    #[must_use]
+    pub fn with_speaker_extent(mut self, extent: SourceExtent) -> Self {
+        self.speaker_extent = Some(extent);
         self
     }
 

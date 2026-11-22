@@ -29,13 +29,20 @@ records do not turn subsequent record numbers into physical line numbers.
 | Status     | Meaning                                                                                     | Writing                                                |
 | ---------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | `complete` | All encountered constructs in the documented subset converted and native validation passed. | Allowed into a new directory.                          |
-| `partial`  | Native validation passed, but the report records skipped or lossy constructs.               | Requires `--accept-partial` as well as `--output-dir`. |
+| `partial`  | Native validation passed, but the report records skipped, lossy or unresolved constructs.   | Requires `--accept-partial` as well as `--output-dir`. |
 | `invalid`  | Input/mapping errors, no supported blocks, or native validation failure.                    | Refused, including with `--accept-partial`.            |
 
 Import items carry the shared diagnostic record, provenance, construct, action and follow-up.
 `RECITE_IMPORT001` rejects bad input or mappings; `RECITE_IMPORT002` reports skipped constructs;
 `RECITE_IMPORT003` marks a lossy conversion. Native diagnostics retain their usual codes and point
 into `imported.recite`; use the generated-line mappings to relate them to the input.
+
+With a schema that declares speakers, a speaker the schema does not know is kept as written rather
+than rejecting the import. Each such name is reported once, as an `unresolved` item with
+`RECITE_VALIDATE051`, the closest declared speaker when one is a likely typo, and the provenance of
+its first use. Everything else is still validated natively, so the result is `partial`: declare the
+speakers in the schema or correct the input, or write with `--accept-partial` and fix the names in
+the generated source.
 
 Leading or trailing whitespace in dialogue and choice labels is reported as a loss before
 normalization. These conversions are partial and require review before writing, even when the

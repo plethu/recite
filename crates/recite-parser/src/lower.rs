@@ -6,7 +6,8 @@ mod metadata_values;
 mod statement;
 
 use recite_core::{
-    BlockId, Diagnostic, SourceId, SourceRecovery, SourceRecoveryClass, SourceSpan, SpeakerId,
+    BlockId, Diagnostic, SourceExtent, SourceId, SourceRecovery, SourceRecoveryClass, SourceSpan,
+    SpeakerId,
     ast::{SourceFile, SourceMetadata, Statement},
 };
 
@@ -86,7 +87,7 @@ pub(super) struct BlockHeader {
     pub(super) id: BlockId,
     pub(super) id_span: SourceSpan,
     pub(super) is_default: bool,
-    pub(super) default_speaker: Option<SpeakerId>,
+    pub(super) default_speaker: Option<(SpeakerId, SourceExtent)>,
     pub(super) metadata: SourceMetadata,
     pub(super) span: SourceSpan,
 }

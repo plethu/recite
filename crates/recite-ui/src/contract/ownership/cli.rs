@@ -14,7 +14,11 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpArgOnly
         | MsgId::CliHelpCommandIdCheck
         | MsgId::CliHelpCommandIdAssign
+        | MsgId::CliHelpArgIdsDryRun
+        | MsgId::CliHelpArgIdsCheck
         | MsgId::CliIdsAssigned
+        | MsgId::CliIdsPlanned
+        | MsgId::CliIdsMissingCheck
         | MsgId::CliIdsNoneMissing
         | MsgId::CliIdsRemoved
         | MsgId::CliHelpCommandIdRename
@@ -95,7 +99,9 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandImport
         | MsgId::CliHelpCommandBench
         | MsgId::CliHelpArgPaths
+        | MsgId::CliHelpArgPathsProject
         | MsgId::CliHelpArgSchema
+        | MsgId::CliHelpArgSchemaProject
         | MsgId::CliHelpArgSchemaInspection
         | MsgId::CliHelpArgProjectRoot
         | MsgId::CliHelpArgDiagnosticCode
@@ -107,6 +113,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpArgAssetRun
         | MsgId::CliHelpArgAssetPlay
         | MsgId::CliHelpArgBlock
+        | MsgId::CliHelpArgBlockProject
         | MsgId::CliHelpArgFixture
         | MsgId::CliHelpArgUi
         | MsgId::CliHelpArgKeymap
@@ -125,6 +132,7 @@ macro_rules! cli_message_ids {
         | MsgId::ExplainHowToFix
         | MsgId::ExplainListItem
         | MsgId::CliHelpCommandSchemaCheckFresh
+        | MsgId::CliHelpArgSchemaFreshRoot
         | MsgId::CliHelpGroupAuthoring
         | MsgId::CliHelpGroupBuilding
         | MsgId::CliHelpGroupLocalisation
@@ -304,6 +312,15 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorRecordingHandoff
         | MsgId::CliErrorMissingFixtureChoice
         | MsgId::CliErrorNoInputs
+        | MsgId::CliErrorNoInputsOutsideProject
+        | MsgId::CliErrorSchemaRequired
+        | MsgId::CliErrorBlockRequired
+        | MsgId::CliErrorBlockAmbiguous
+        | MsgId::CliErrorSchemaFreshPair
+        | MsgId::CliErrorSchemaFreshNoSchema
+        | MsgId::CliErrorSchemaFreshNoProducer
+        | MsgId::CliErrorSchemaProducer
+        | MsgId::CliWarningSchemaDiffers
         | MsgId::CliErrorOutputOverwritesInput
         | MsgId::CliErrorBlockingEffect
         | MsgId::CliErrorBenchJson

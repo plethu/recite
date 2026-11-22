@@ -124,8 +124,26 @@ pub(super) fn actions(input: Input) -> (Input, Option<lsp_types::CodeActionRespo
     (input, result)
 }
 
+/// The cursor is on an unfinished condition name that matches no declaration, and no producer can
+/// act on the schema, so no schema capability is offered there; finding that out still visits every
+/// declaration. A control revision that predates cursor-scoped actions (#313) lists every
+/// unavailable declaration instead.
 pub(super) fn validate_actions((input, actions): (Input, Option<lsp_types::CodeActionResponse>)) {
-    let actions = actions.unwrap_or_else(|| panic!("schema actions"));
+    let schema_actions = actions
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|action| match action {
+            lsp_types::CodeActionOrCommand::CodeAction(action)
+                if action.kind == Some(lsp_types::CodeActionKind::REFACTOR) =>
+            {
+                Some(action)
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if schema_actions.is_empty() {
+        return;
+    }
     let expected = std::iter::once(
         "Schema capability (schema ): unavailable schema action (no producer )".to_owned(),
     )
@@ -133,13 +151,9 @@ pub(super) fn validate_actions((input, actions): (Input, Option<lsp_types::CodeA
         format!("Schema capability (condition {name}): unavailable schema action (no producer )")
     }))
     .collect::<Vec<_>>();
-    assert_eq!(actions.len(), expected.len());
-    for (action, title) in actions.iter().zip(expected) {
-        let lsp_types::CodeActionOrCommand::CodeAction(action) = action else {
-            panic!("code action")
-        };
+    assert_eq!(schema_actions.len(), expected.len());
+    for (action, title) in schema_actions.iter().zip(expected) {
         assert_eq!(action.title, title);
-        assert_eq!(action.kind, Some(lsp_types::CodeActionKind::REFACTOR));
         assert_eq!(
             action.disabled.as_ref().map(|value| value.reason.as_str()),
             Some("Schema capability unavailable: source owner is unknown.")

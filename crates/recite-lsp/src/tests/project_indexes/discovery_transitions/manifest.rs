@@ -30,7 +30,7 @@ pub(crate) fn incomplete_discovery_recomputes_cross_file_validation() {
         "src/main.recite",
         ":: main default\n>\n  Missing line id.\n-> src/omitted.recite::missing\n",
     );
-    std::fs::write(&omitted, [b':', b':', b' ', b'\xff'])
+    std::fs::write(&omitted, b":: \xff")
         .unwrap_or_else(|error| panic!("write incomplete source: {error}"));
     let params = serde_json::from_value(json!({
         "rootUri": super::super::super::support::file_uri(temp.path()).as_str(),
@@ -119,7 +119,7 @@ pub(crate) fn incomplete_discovery_recomputes_cross_file_validation() {
             .collect::<Vec<_>>()
     );
 
-    std::fs::write(&omitted, [b':', b':', b' ', b'\xfe'])
+    std::fs::write(&omitted, b":: \xfe")
         .unwrap_or_else(|error| panic!("make source incomplete again: {error}"));
     workspace.refresh_watched_uri(&super::super::super::support::file_uri(&omitted));
     assert_eq!(

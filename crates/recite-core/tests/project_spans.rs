@@ -16,15 +16,15 @@ fn source_backed_project_spans_follow_decoded_scene_paths() {
 
     let first_id = loaded.scene_key_span(0, "id");
     assert_eq!(first_id.start, position(5, 1));
-    assert_eq!(first_id.end, Some(position(5, 3)));
+    assert_eq!(first_id.end, Some(position(5, 2)));
 
     let second_asset = loaded.scene_key_span(1, "asset");
     assert_eq!(second_asset.start, position(12, 1));
-    assert_eq!(second_asset.end, Some(position(12, 6)));
+    assert_eq!(second_asset.end, Some(position(12, 5)));
 
     let missing = loaded.scene_key_span(0, "cinematic_scene");
     assert_eq!(missing.start, position(2, 1));
-    assert_eq!(missing.end, Some(position(2, 11)));
+    assert_eq!(missing.end, Some(position(2, 10)));
 }
 
 #[test]

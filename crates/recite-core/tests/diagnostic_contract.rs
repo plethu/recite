@@ -52,6 +52,7 @@ fn migrated_parser_contracts_keep_code_and_presentation_pairs_explicit() {
             ("RECITE_PARSE016", "diagnostic-parse-016"),
             ("RECITE_PARSE017", "diagnostic-parse-017"),
             ("RECITE_PARSE018", "diagnostic-parse-018"),
+            ("RECITE_PARSE019", "diagnostic-parse-019"),
             ("RECITE_PARSE034", "diagnostic-parse-034-expected-directive",),
             (
                 "RECITE_PARSE034",

@@ -397,3 +397,85 @@ fn edit_plans_refuse_stale_generation_collisions_and_partial_recovery() {
 
 #[path = "authoring_edits/noop.rs"]
 mod noop;
+
+#[test]
+fn header_prose_plan_moves_the_words_into_the_body() {
+    let source = concat!(
+        ":: station\n",
+        "> mood=tired The clerk looks up. @a2\n",
+        "  ? Ask about the train. @c1\n",
+        "    -> END\n",
+    );
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key("main.recite"), source)],
+            [],
+        ))
+        .expect("source accepted");
+    let snapshot = kernel.snapshot();
+    let line = snapshot
+        .plan_move_header_prose_in_range(&key("main.recite"), SourceRange::point(position(2, 1)))
+        .expect("the line header's prose is planable");
+    assert!(matches!(
+        line.operation(),
+        recite_compiler::authoring::AuthoringEditOperation::MoveHeaderProse { line: 2, .. }
+    ));
+    let applied = apply_plan(&line, &saved_sources(&[("main.recite", source)]));
+    let rewritten = applied.get(&key("main.recite")).expect("rewritten source");
+    assert_eq!(
+        rewritten,
+        concat!(
+            ":: station\n",
+            "> mood=tired @a2\n",
+            "  The clerk looks up.\n",
+            "  ? Ask about the train. @c1\n",
+            "    -> END\n",
+        )
+    );
+
+    let choice = snapshot
+        .plan_move_header_prose_in_range(&key("main.recite"), SourceRange::point(position(3, 5)))
+        .expect("the choice header's prose is planable");
+    let applied = apply_plan(&choice, &saved_sources(&[("main.recite", source)]));
+    let rewritten = applied.get(&key("main.recite")).expect("rewritten source");
+    assert!(rewritten.contains("  ? @c1\n    Ask about the train.\n    -> END\n"));
+
+    assert!(
+        snapshot
+            .plan_move_header_prose_in_range(
+                &key("main.recite"),
+                SourceRange::point(position(1, 1)),
+            )
+            .is_err(),
+        "a range without the diagnostic plans nothing"
+    );
+}
+
+#[test]
+fn suggestion_plan_replaces_only_the_misspelt_reference() {
+    let source = ":: start default\n> @a1\n  Hi.\n-> arrivl\n\n:: arrival\n> @a2\n  There.\n";
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key("main.recite"), source)],
+            [],
+        ))
+        .expect("source accepted");
+    let plan = kernel
+        .snapshot()
+        .plan_apply_suggestion_in_range(&key("main.recite"), SourceRange::point(position(4, 1)))
+        .expect("the reference has a suggestion");
+    assert!(matches!(
+        plan.operation(),
+        recite_compiler::authoring::AuthoringEditOperation::ApplySuggestion { replacement, .. }
+            if replacement == "arrival"
+    ));
+    let applied = apply_plan(&plan, &saved_sources(&[("main.recite", source)]));
+    assert_eq!(
+        applied.get(&key("main.recite")).map(String::as_str),
+        Some(":: start default\n> @a1\n  Hi.\n-> arrival\n\n:: arrival\n> @a2\n  There.\n")
+    );
+}

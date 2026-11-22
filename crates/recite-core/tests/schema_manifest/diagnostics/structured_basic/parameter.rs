@@ -74,9 +74,10 @@ fn assert_primary_span(
     file: &str,
     start_line: u32,
     start_column: u32,
-    end: (u32, u32),
+    end_exclusive: (u32, u32),
 ) {
     assert_eq!(diagnostic.span.file, file);
+    // Expectations give the column after the span; `SourceSpan.end` is the last character.
     assert_eq!(
         (
             diagnostic.span.start.line(),
@@ -84,9 +85,9 @@ fn assert_primary_span(
             diagnostic
                 .span
                 .end
-                .map(|position| (position.line(), position.column()))
+                .map(|position| (position.line(), position.column() + 1))
         ),
-        (start_line, start_column, Some(end))
+        (start_line, start_column, Some(end_exclusive))
     );
 }
 

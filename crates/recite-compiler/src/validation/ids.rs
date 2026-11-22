@@ -94,9 +94,17 @@ impl<'a> Validator<'a> {
             self.resolve_block_reference(source_file, reference),
             BlockLookup::Missing
         ) {
+            let file = reference
+                .file
+                .as_deref()
+                .unwrap_or(source_file.path.as_str());
+            let suggestion = self.blocks.get(file).and_then(|blocks| {
+                super::suggest::closest(reference.block_id.as_str(), blocks.iter().copied())
+            });
             self.diagnostics.push(diagnostics::unknown_block_reference(
                 reference,
                 span.clone(),
+                suggestion,
             ));
         }
     }

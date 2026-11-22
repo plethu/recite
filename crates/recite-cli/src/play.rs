@@ -22,6 +22,7 @@ pub(crate) fn run_play_command(
     stderr: &mut dyn Write,
 ) -> Result<(), CliError> {
     let asset = load_compiled_asset(&args.asset)?;
+    let block = crate::fs::start_block(&args.asset, args.block.as_deref())?;
     let settings = TuiSettings::load(args.keymap)?;
     let messages = Messages::load(&settings.locale)?;
     let dialogue_preview =
@@ -33,14 +34,14 @@ pub(crate) fn run_play_command(
         .map(LoadedDialoguePreview::traversal_preview);
     match resolve_ui(args.ui)? {
         ResolvedUi::Plain => {
-            plain::run_plain_stdio(&asset, &args.block, stdout, &messages, dialogue_preview)
+            plain::run_plain_stdio(&asset, &block, stdout, &messages, dialogue_preview)
         }
         ResolvedUi::Tui => {
             if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
                 return Err(CliError::PlayTuiRequiresTerminal);
             }
             writeln!(stderr, "{}", messages.text(MsgId::PlayTuiStarting))?;
-            tui::run_tui_stdio(&asset, &args.block, settings, messages, dialogue_preview)
+            tui::run_tui_stdio(&asset, &block, settings, messages, dialogue_preview)
         }
     }
 }

@@ -35,6 +35,9 @@ impl SourcePosition {
 }
 
 /// A span in a source file, suitable for diagnostics and editor surfaces.
+///
+/// `end`, when present, is inclusive: it is the position of the span's last character, so a span
+/// over `asset` starts at `a` and ends at `t`. Every producer and renderer reads it that way.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct SourceSpan {
     pub file: String,
@@ -59,6 +62,31 @@ impl SourceSpan {
     #[must_use]
     pub fn point(file: impl Into<String>, position: SourcePosition) -> Self {
         Self::new(file, position, None)
+    }
+}
+
+/// A span's positions without its file, kept beside an AST node that already names the file so
+/// the parser does not copy the path for every field it records.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct SourceExtent {
+    pub start: SourcePosition,
+    /// Inclusive, as in [`SourceSpan`].
+    pub end: Option<SourcePosition>,
+}
+
+impl SourceExtent {
+    #[must_use]
+    pub fn of(span: &SourceSpan) -> Self {
+        Self {
+            start: span.start,
+            end: span.end,
+        }
+    }
+
+    /// The span in `file`, for a diagnostic.
+    #[must_use]
+    pub fn in_file(self, file: impl Into<String>) -> SourceSpan {
+        SourceSpan::new(file, self.start, self.end)
     }
 }
 
@@ -134,6 +162,30 @@ pub(crate) fn position_for_byte_offset(source: &str, offset: usize) -> SourcePos
     }
 
     source_position(line, column).expect("line and column start at one")
+}
+
+/// The byte offset of the last character in `range`, which an inclusive span end names; `None` for
+/// an empty range.
+pub(crate) fn last_character_offset(source: &str, range: &std::ops::Range<usize>) -> Option<usize> {
+    let end = range.end.min(source.len());
+    (range.start < end).then(|| {
+        source[..end]
+            .char_indices()
+            .next_back()
+            .map_or(range.start, |(index, _)| index.max(range.start))
+    })
+}
+
+/// The inclusive span covering a byte range, or a point span for an empty range.
+pub(crate) fn span_for_byte_range(
+    file: &str,
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> SourceSpan {
+    let start = position_for_byte_offset(source, range.start);
+    let end = last_character_offset(source, &range)
+        .map(|offset| position_for_byte_offset(source, offset));
+    SourceSpan::new(file, start, end)
 }
 
 // Invariant: 1:1 is the canonical valid source start position.

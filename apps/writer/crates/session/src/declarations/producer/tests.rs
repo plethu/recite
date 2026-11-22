@@ -1,4 +1,5 @@
 use super::*;
+use recite_config::configured_process;
 
 #[test]
 fn flatpak_configured_tools_keep_arguments_and_watch_the_host_child() {

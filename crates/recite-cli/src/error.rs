@@ -7,10 +7,12 @@ use std::path::PathBuf;
 
 mod conversions;
 mod localisation;
+mod project_defaults;
 mod stable_id_edit;
 mod user_message;
 
 pub(crate) use localisation::LocalisationError;
+pub(crate) use project_defaults::ProjectDefaultError;
 pub(crate) use stable_id_edit::StableIdEditError;
 
 #[derive(Debug)]
@@ -99,6 +101,8 @@ pub(crate) enum CliError {
         prompt_keys: Vec<String>,
     },
     NoInputs,
+    /// Something a command takes from the project when it is not passed.
+    ProjectDefault(ProjectDefaultError),
     StableIdBaseline {
         reference: String,
         detail: String,
@@ -312,6 +316,7 @@ impl std::fmt::Display for CliError {
                 prompt_keys.join("|")
             ),
             Self::NoInputs => formatter.write_str("no .recite inputs found"),
+            Self::ProjectDefault(error) => error.fmt(formatter),
             Self::StableIdBaseline { reference, detail } => write!(
                 formatter,
                 "cannot read stable IDs at `{reference}`: {detail}"

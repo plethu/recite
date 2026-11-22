@@ -67,6 +67,8 @@ const PARSE017: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_PARSE017", "diagnostic-parse-017", NO_ARGUMENTS);
 const PARSE018: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_PARSE018", "diagnostic-parse-018", NO_ARGUMENTS);
+const PARSE019: DiagnosticPresentationContract =
+    DiagnosticPresentationContract::new("RECITE_PARSE019", "diagnostic-parse-019", NO_ARGUMENTS);
 
 static CONTRACTS: &[&DiagnosticPresentationContract] = &[
     &PARSE001,
@@ -87,6 +89,7 @@ static CONTRACTS: &[&DiagnosticPresentationContract] = &[
     &PARSE016,
     &PARSE017,
     &PARSE018,
+    &PARSE019,
 ];
 
 pub(super) fn contracts() -> impl Iterator<Item = &'static DiagnosticPresentationContract> {

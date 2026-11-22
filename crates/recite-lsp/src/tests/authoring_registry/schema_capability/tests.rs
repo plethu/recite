@@ -95,7 +95,7 @@ pub(super) fn schema_capability_projection_keeps_producer_actions_visible_and_di
         Some(&evidence),
     )
     .expect("summary");
-    let actions = schema_capability::actions(&summary, false, &catalog);
+    let actions = schema_capability::tests::actions(&summary, false, &catalog);
     let actions = actions
         .iter()
         .filter_map(|action| match action {
@@ -151,7 +151,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
         Some(&evidence),
     )
     .expect("summary");
-    let actions = schema_capability::actions(&summary, false, &catalog);
+    let actions = schema_capability::tests::actions(&summary, false, &catalog);
     let titles = actions
         .iter()
         .filter_map(|action| match action {
@@ -223,7 +223,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
     let empty = recite_compiler::authoring::SchemaSummary::from_schema(
         &recite_core::schema::ProjectSchema::empty_v1(),
     );
-    let empty_actions = schema_capability::actions(&empty, false, &catalog);
+    let empty_actions = schema_capability::tests::actions(&empty, false, &catalog);
     let unavailable = empty_actions
         .iter()
         .filter_map(|action| match action {
@@ -256,7 +256,7 @@ pub(super) fn localized_schema_catalog() -> recite_ui::UiCatalog {
         "    [projector] projector\n",
         "    [markup] markup\n",
         "   *[schema] schema\n",
-        "} {$declaration_name}): { $action ->\n",
+        "}{$declaration_name}): { $action ->\n",
         "    [open-source] open source declaration\n",
         "    [edit-standalone] edit standalone source\n",
         "    [invoke] invoke producer\n",
@@ -266,7 +266,7 @@ pub(super) fn localized_schema_catalog() -> recite_ui::UiCatalog {
         "   *[other] schema action\n",
         "} ({ $producer_state ->\n",
         "    [present] {$producer}\n",
-        "   *[absent] no producer {$producer}\n",
+        "   *[absent] no producer{$producer}\n",
         "})"
     );
     let unavailable = concat!(
@@ -316,7 +316,7 @@ pub(super) fn localized_schema_catalog() -> recite_ui::UiCatalog {
                 "lsp-code-action-schema-action = { $declaration_kind ->\n",
                 "    [registry] REGISTRY\n",
                 "   *[schema] SCHEMA\n",
-                "} {$declaration_name} { $action ->\n",
+                "}{$declaration_name} { $action ->\n",
                 "    [invoke] INVOKE\n",
                 "    [open-source] OPEN\n",
                 "   *[other] OTHER\n",
@@ -353,4 +353,48 @@ pub(super) fn localized_schema_catalog() -> recite_ui::UiCatalog {
         ],
     )
     .expect("localized catalog")
+}
+
+#[test]
+fn scoped_schema_actions_follow_the_identifier_under_the_cursor() {
+    let catalog =
+        recite_ui::UiCatalog::load(&recite_ui::UiLocale::default()).expect("default UI catalog");
+    let source = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/realistic/v1-pack/schema/realistic.schema.json"),
+    )
+    .expect("fixture schema");
+    let schema = recite_core::schema::load_schema_manifest_str("realistic.schema.json", &source)
+        .schema
+        .expect("schema loads");
+    let summary = recite_compiler::authoring::SchemaSummary::from_schema(&schema);
+    let titles = |identifier| {
+        schema_capability::actions_at(&summary, false, &catalog, identifier)
+            .into_iter()
+            .filter_map(|action| match action {
+                lsp_types::CodeActionOrCommand::CodeAction(action) => Some(action.title),
+                lsp_types::CodeActionOrCommand::Command(_) => None,
+            })
+            .collect::<Vec<_>>()
+    };
+
+    assert!(
+        titles(None).is_empty(),
+        "no producer: nothing on plain dialogue"
+    );
+    assert!(titles(Some("Hello")).is_empty());
+    let speaker = titles(Some("operator"));
+    assert_eq!(speaker.len(), 1, "{speaker:?}");
+    assert!(speaker[0].starts_with("Schema capability (speaker operator):"));
+    assert!(!speaker[0].contains(" )"), "no stray spaces: {speaker:?}");
+    assert!(
+        schema_capability::tests::actions(&summary, false, &catalog)
+            .iter()
+            .filter_map(|action| match action {
+                lsp_types::CodeActionOrCommand::CodeAction(action) => Some(&action.title),
+                lsp_types::CodeActionOrCommand::Command(_) => None,
+            })
+            .all(|title| !title.contains("(schema )") && !title.contains("producer )")),
+        "unnamed and producer-less titles have no dangling space"
+    );
 }

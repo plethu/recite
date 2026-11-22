@@ -1,8 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_compiler::compile::{
-    CompileError, CompileInput, CompileOptions, compile_inputs_to_model,
-};
+use recite_compiler::compile::{CompileError, CompileInput, CompileOptions};
 use recite_core::compiled::{
     CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId, validate_compiled_dialogue,
 };
@@ -12,6 +10,7 @@ use recite_core::{
 
 use crate::diagnostics::{INVALID, LOSS, UNSUPPORTED, item};
 use crate::ids::{ImportedIds, block_name};
+use crate::speakers;
 use crate::{
     Action, ImportError, ImportReport, ImportStatus, Location, Provenance, SourceFamily,
     SourceMapping, TargetSource,
@@ -325,7 +324,7 @@ impl Builder {
             }
             external_sources.push((path, source));
         }
-        let mut inputs = vec![CompileInput::new("imported.recite", &self.report.source)];
+        let mut inputs = vec![CompileInput::new(speakers::GENERATED, &self.report.source)];
         if !validation_source.is_empty() {
             inputs.push(CompileInput::new(
                 "import-validation.recite",
@@ -335,7 +334,14 @@ impl Builder {
         for (path, source) in &external_sources {
             inputs.push(CompileInput::new(*path, source));
         }
-        let compiled = compile_inputs_to_model(inputs, options, schema)?;
+        let (compiled, unresolved) = speakers::compile(
+            inputs,
+            options,
+            schema,
+            &self.report.mappings,
+            &self.report.file,
+        )?;
+        self.report.items.extend(unresolved);
         let valid_output = if let Some(dialogue) = compiled.dialogue {
             validate_compiled_dialogue(&dialogue)
                 .map_err(|error| CompileError::Serialization(error.to_string()))?;

@@ -19,6 +19,8 @@ pub struct ProjectAssetFreshness<'a> {
     pub(super) asset: &'a CompiledDialogue,
     pub(super) speakers: BTreeSet<&'a str>,
     pub(super) source_issues: Vec<(&'a CompiledSourceFile, SourceIssue)>,
+    /// Project sources the asset was not built from, by project-relative path.
+    pub(super) added_sources: Vec<String>,
     pub(super) schema_stale: bool,
 }
 
@@ -53,9 +55,19 @@ impl<'a> ProjectAssetFreshness<'a> {
                 .map(|speaker| speaker.id.as_str())
                 .collect(),
             source_issues,
+            added_sources: Vec::new(),
             schema_stale: current_schema
                 .is_some_and(|current| asset.header.schema_fingerprint != current),
         }
+    }
+
+    /// Record project sources that exist now but were not part of the build; they make the asset
+    /// stale just as a changed source does.
+    #[must_use]
+    pub fn with_added_sources(mut self, added: impl IntoIterator<Item = String>) -> Self {
+        self.added_sources = added.into_iter().collect();
+        self.added_sources.sort();
+        self
     }
 
     /// Render scene-specific diagnostics in their existing order and source spans.

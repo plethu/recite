@@ -1,4 +1,4 @@
-use crate::{BlockId, SourceSpan, SpeakerId};
+use crate::{BlockId, SourceExtent, SourceSpan, SpeakerId};
 
 use super::{SourceMetadata, Statement};
 
@@ -33,6 +33,8 @@ pub struct Block {
     pub id_span: Option<SourceSpan>,
     pub is_default: bool,
     pub default_speaker: Option<SpeakerId>,
+    /// Where the block header's `speaker=` value sits, in this block's file, for diagnostics.
+    pub default_speaker_extent: Option<SourceExtent>,
     pub metadata: SourceMetadata,
     pub statements: Vec<Statement>,
     pub span: SourceSpan,
@@ -46,6 +48,7 @@ impl Block {
             id_span: None,
             is_default: false,
             default_speaker: None,
+            default_speaker_extent: None,
             metadata: SourceMetadata::new(),
             statements,
             span,
@@ -61,6 +64,12 @@ impl Block {
     #[must_use]
     pub fn with_default(mut self, is_default: bool) -> Self {
         self.is_default = is_default;
+        self
+    }
+
+    #[must_use]
+    pub fn with_default_speaker_extent(mut self, extent: SourceExtent) -> Self {
+        self.default_speaker_extent = Some(extent);
         self
     }
 

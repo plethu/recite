@@ -332,3 +332,38 @@ fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() 
         [StatementKind::Effect, StatementKind::Divert]
     );
 }
+
+#[test]
+fn dialogue_on_a_header_is_one_diagnostic_with_help() {
+    let source = concat!(
+        ":: station speaker=narrator\n",
+        "> mood=tired The clerk looks up, ink on his cuffs. @a2\n",
+        "  ? Ask about the night train. @c1\n",
+        "    -> END\n",
+        "> speaker:clerk @a3\n",
+        "  Hm.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        ["RECITE_PARSE019", "RECITE_PARSE019", "RECITE_PARSE008"],
+    );
+    let prose = &lowered.diagnostics[0];
+    assert_eq!(
+        (prose.span.start.line(), prose.span.start.column()),
+        (2, 14)
+    );
+    assert_eq!(prose.span.end.map(|end| end.column()), Some(50));
+    assert_eq!(
+        prose
+            .help_presentation
+            .as_ref()
+            .map(|presentation| presentation.id().as_str()),
+        Some("diagnostic-parse-019-remediation-001")
+    );
+    assert!(prose.record().is_ok());
+    let line = line_statement(single_block(&lowered), 0);
+    assert_eq!(line.metadata.iter().count(), 1, "mood=tired survives");
+}

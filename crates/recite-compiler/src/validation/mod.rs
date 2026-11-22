@@ -12,6 +12,7 @@ mod participation;
 mod spans;
 pub(crate) mod state;
 mod statements;
+mod suggest;
 mod values;
 
 use std::borrow::Borrow;

@@ -358,4 +358,11 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         ],
         &["Simplify the nested condition or move part of its logic into a condition function."],
     ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE051",
+        DiagnosticCategory::Validation,
+        "A line or block names a speaker that the project schema does not declare.",
+        &["The speaker's name is misspelled, or the character was never added to the schema."],
+        &["Correct the name, or declare the speaker in the schema's speakers."],
+    ),
 ];

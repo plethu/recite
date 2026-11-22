@@ -95,7 +95,43 @@ pub fn plan_create_block_stub_in_range(
         .query(&CancellationToken::new())
         .plan_create_block_stub_in_range(key, range)
 }
+/// Synchronous edit planning against a completed snapshot.
+pub fn plan_move_header_prose_in_range(
+    snapshot: &AuthoringSnapshot,
+    key: &DocumentKey,
+    range: SourceRange,
+) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot
+        .query(&CancellationToken::new())
+        .plan_move_header_prose_in_range(key, range)
+}
+/// Synchronous edit planning against a completed snapshot.
+pub fn plan_apply_suggestion_in_range(
+    snapshot: &AuthoringSnapshot,
+    key: &DocumentKey,
+    range: SourceRange,
+) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot
+        .query(&CancellationToken::new())
+        .plan_apply_suggestion_in_range(key, range)
+}
 impl AuthoringSnapshot {
+    /// Plans applying the "did you mean" suggestion of the diagnostic a range touches.
+    pub fn plan_apply_suggestion_in_range(
+        &self,
+        key: &DocumentKey,
+        range: SourceRange,
+    ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+        plan_apply_suggestion_in_range(self, key, range)
+    }
+    /// Plans moving header dialogue into the body for the diagnostic a range touches.
+    pub fn plan_move_header_prose_in_range(
+        &self,
+        key: &DocumentKey,
+        range: SourceRange,
+    ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+        plan_move_header_prose_in_range(self, key, range)
+    }
     pub fn plan_rename_stable_id(
         &self,
         target: &StableIdTarget,

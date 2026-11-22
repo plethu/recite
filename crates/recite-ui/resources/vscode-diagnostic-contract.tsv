@@ -17,6 +17,7 @@ diagnostic-parse-015
 diagnostic-parse-016
 diagnostic-parse-017
 diagnostic-parse-018
+diagnostic-parse-019
 diagnostic-parse-034-expected-directive
 diagnostic-parse-034-expected-quoted-string
 diagnostic-parse-034-missing-field	field	string
@@ -140,6 +141,7 @@ diagnostic-validate-007	reference	string
 diagnostic-validate-009	block_id	string
 diagnostic-validate-010	path	string
 diagnostic-validate-011	block_id	string
+diagnostic-validate-051	speaker	string
 diagnostic-config-101	detail	string
 diagnostic-config-102	detail	string
 diagnostic-config-103	detail	string
@@ -178,11 +180,15 @@ diagnostic-project-008-compiled-asset	asset	string
 diagnostic-project-008-compiled-asset	participant	string
 diagnostic-project-008-compiled-asset	scene_id	string
 diagnostic-fresh-001	asset	string
-diagnostic-fresh-001	source	string
+diagnostic-fresh-001	count	integer
+diagnostic-fresh-001	sources	string
 diagnostic-fresh-002	asset	string
 diagnostic-fresh-003	asset	string
 diagnostic-fresh-003	expected	integer
 diagnostic-fresh-003	version	integer
+diagnostic-fresh-004	asset	string
+diagnostic-fresh-004	count	integer
+diagnostic-fresh-004	sources	string
 diagnostic-schema-001-native-invalid	detail	string
 diagnostic-schema-001-json-parse	detail	string
 diagnostic-schema-001-toml-parse	detail	string
@@ -468,6 +474,9 @@ diagnostic-validate-031-help
 diagnostic-validate-032-help
 diagnostic-validate-033-help
 diagnostic-validate-005-help
+diagnostic-validate-007-help-suggestion	suggestion	string
+diagnostic-validate-051-help
+diagnostic-validate-051-help-suggestion	suggestion	string
 diagnostic-validate-006-related
 diagnostic-validate-006-help
 diagnostic-validate-009-related
@@ -486,6 +495,9 @@ diagnostic-fresh-002-remediation-001
 diagnostic-fresh-003-meaning
 diagnostic-fresh-003-cause-001
 diagnostic-fresh-003-remediation-001
+diagnostic-fresh-004-meaning
+diagnostic-fresh-004-cause-001
+diagnostic-fresh-004-remediation-001
 diagnostic-id-001-meaning
 diagnostic-id-001-cause-001
 diagnostic-id-001-remediation-001
@@ -564,6 +576,9 @@ diagnostic-parse-017-remediation-001
 diagnostic-parse-018-meaning
 diagnostic-parse-018-cause-001
 diagnostic-parse-018-remediation-001
+diagnostic-parse-019-meaning
+diagnostic-parse-019-cause-001
+diagnostic-parse-019-remediation-001
 diagnostic-parse-034-meaning
 diagnostic-parse-034-cause-001
 diagnostic-parse-034-remediation-001
@@ -747,4 +762,7 @@ diagnostic-validate-049-remediation-001
 diagnostic-validate-050-meaning
 diagnostic-validate-050-cause-001
 diagnostic-validate-050-remediation-001
+diagnostic-validate-051-meaning
+diagnostic-validate-051-cause-001
+diagnostic-validate-051-remediation-001
 diagnostic-legacy-message	message	string

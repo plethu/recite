@@ -191,6 +191,7 @@ pub(crate) fn structured_error(
                 prompt_keys: prompt_keys.clone(),
             },
         ),
+        CliError::ProjectDefault(error) => project::default(error, fallback_path),
         CliError::NoInputs => input(
             ErrorCode::NoInputs,
             ErrorOperation::CollectInputs,

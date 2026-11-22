@@ -35,6 +35,28 @@ pub(crate) fn load_optional_schema(
     Ok(report.schema)
 }
 
+/// Says when an explicit `--schema` is not the schema the project declares; the explicit one wins.
+pub(crate) fn warn_schema_choice(
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    choice: &super::SchemaChoice,
+) -> Result<(), CliError> {
+    if let (Some(given), Some(declared)) = (&choice.path, &choice.differs_from) {
+        writeln!(
+            stderr,
+            "{}",
+            messages.format(
+                crate::i18n::MsgId::CliWarningSchemaDiffers,
+                [
+                    ("given", display_path(given)),
+                    ("declared", display_path(declared))
+                ],
+            )
+        )?;
+    }
+    Ok(())
+}
+
 pub(crate) fn load_schema(schema_path: &Path) -> Result<LoadedSchema, CliError> {
     let source = fs::read_to_string(schema_path).map_err(|source| CliError::Read {
         path: schema_path.to_owned(),

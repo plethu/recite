@@ -54,6 +54,8 @@ macro_rules! lsp_message_ids {
         | MsgId::LspCodeActionInsertMissingId
         | MsgId::LspCodeActionInsertAllMissingIds
         | MsgId::LspCodeActionCreateBlockStub
+        | MsgId::LspCodeActionMoveHeaderProse
+        | MsgId::LspCodeActionApplySuggestion
         | MsgId::LspCodeActionAddCondition
         | MsgId::LspCodeActionAddEffect
         | MsgId::LspCodeActionSchemaAction

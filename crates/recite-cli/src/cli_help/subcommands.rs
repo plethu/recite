@@ -2,7 +2,13 @@
 use super::{assign_headings, help_arg, help_template};
 use crate::i18n::{Messages, MsgId};
 
+mod args;
 mod recording;
+
+use args::{
+    localise_paths, localise_project_defaults, localise_runtime_args, localise_schema, set_about,
+    set_arg_help, set_positional_arg_help,
+};
 
 /// Localise `command` and, for noun groups, everything beneath it. Entries are keyed by the full
 /// command path (`schema check-fresh`), so the same verb can exist under two nouns.
@@ -47,6 +53,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
                 messages,
             );
             localise_paths(command, messages);
+            localise_project_defaults(command, messages);
         }
         "compile" => {
             set_about(command, messages.text(MsgId::CliHelpCommandCompile));
@@ -58,6 +65,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             );
             localise_schema(command, messages);
             localise_paths(command, messages);
+            localise_project_defaults(command, messages);
         }
         "extract" => {
             set_about(command, messages.text(MsgId::CliHelpCommandExtract));
@@ -69,6 +77,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             );
             localise_schema(command, messages);
             localise_paths(command, messages);
+            localise_project_defaults(command, messages);
         }
         "id check" => {
             set_about(command, messages.text(MsgId::CliHelpCommandIdCheck));
@@ -89,6 +98,18 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
         "id assign" => {
             set_about(command, messages.text(MsgId::CliHelpCommandIdAssign));
             localise_paths(command, messages);
+            set_arg_help(
+                command,
+                "dry_run",
+                messages.text(MsgId::CliHelpArgIdsDryRun),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "check",
+                messages.text(MsgId::CliHelpArgIdsCheck),
+                messages,
+            );
         }
         "id rename" | "id reassign" => {
             let rename = path == "id rename";
@@ -177,6 +198,12 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
                 command,
                 messages.text(MsgId::CliHelpCommandSchemaCheckFresh),
             );
+            set_positional_arg_help(
+                command,
+                "project_root",
+                messages.text(MsgId::CliHelpArgSchemaFreshRoot),
+                messages,
+            );
         }
         "catalog status" | "catalog refresh" => {
             let about = if path == "catalog status" {
@@ -257,7 +284,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             set_arg_help(
                 command,
                 "block",
-                messages.text(MsgId::CliHelpArgBlock),
+                messages.text(MsgId::CliHelpArgBlockProject),
                 messages,
             );
             set_arg_help(command, "ui", messages.text(MsgId::CliHelpArgUi), messages);
@@ -336,63 +363,4 @@ fn localise_group(command: &mut clap::Command, messages: &Messages, about: MsgId
     for subcommand in command.get_subcommands_mut() {
         localise(subcommand, messages, path);
     }
-}
-
-fn localise_paths(command: &mut clap::Command, messages: &Messages) {
-    set_arg_help(
-        command,
-        "paths",
-        messages.text(MsgId::CliHelpArgPaths),
-        messages,
-    );
-}
-
-fn localise_schema(command: &mut clap::Command, messages: &Messages) {
-    set_arg_help(
-        command,
-        "schema",
-        messages.text(MsgId::CliHelpArgSchema),
-        messages,
-    );
-}
-
-fn localise_runtime_args(command: &mut clap::Command, messages: &Messages, asset: MsgId) {
-    set_arg_help(command, "asset", messages.text(asset), messages);
-    set_arg_help(
-        command,
-        "block",
-        messages.text(MsgId::CliHelpArgBlock),
-        messages,
-    );
-    set_arg_help(
-        command,
-        "fixture",
-        messages.text(MsgId::CliHelpArgFixture),
-        messages,
-    );
-}
-
-fn set_arg_help(command: &mut clap::Command, id: &'static str, help: String, messages: &Messages) {
-    let heading = if id == "paths" || id == "project_root" || id == "asset" || id == "code" {
-        messages.text(MsgId::CliHelpArgumentsHeading)
-    } else {
-        messages.text(MsgId::CliHelpOptionsHeading)
-    };
-    *command = std::mem::take(command).mut_arg(id, |arg| arg.help(help).help_heading(heading));
-}
-
-fn set_positional_arg_help(
-    command: &mut clap::Command,
-    id: &'static str,
-    help: String,
-    messages: &Messages,
-) {
-    *command = std::mem::take(command).mut_arg(id, |arg| {
-        arg.help(help)
-            .help_heading(messages.text(MsgId::CliHelpArgumentsHeading))
-    });
-}
-
-fn set_about(command: &mut clap::Command, about: String) {
-    *command = std::mem::take(command).about(about);
 }

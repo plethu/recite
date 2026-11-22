@@ -83,3 +83,28 @@ fn assign_ids_leaves_files_untouched_when_an_id_is_malformed() {
     output.assert_stderr_contains("RECITE_ID007");
     assert_eq!(fs::read_to_string(&scene).expect("scene"), source);
 }
+
+#[test]
+fn assign_ids_previews_and_checks_without_writing() {
+    let temp = TempDir::new().expect("tempdir");
+    let original = ":: start default\n> speaker=mara\n  Hello.\n  ?\n    Bye.\n    -> END\n";
+    let scene = write_recite(temp.path(), "scene.recite", original);
+
+    let dry_run = run(recite().args(["id", "assign", "--dry-run"]).arg(&scene));
+    dry_run.assert_success();
+    dry_run.assert_stderr_contains(":2  @");
+    dry_run.assert_stderr_contains("  > speaker=mara");
+    dry_run.assert_stderr_contains(":4  @");
+    dry_run.assert_stderr_contains("would assign 2 stable IDs; nothing was written");
+    assert_eq!(fs::read_to_string(&scene).expect("scene"), original);
+
+    let check = run(recite().args(["id", "assign", "--check"]).arg(&scene));
+    assert!(!check.status.success());
+    check.assert_stderr_contains("2 lines and choices have no stable ID");
+    assert_eq!(fs::read_to_string(&scene).expect("scene"), original);
+
+    run(recite().args(["id", "assign"]).arg(&scene)).assert_success();
+    run(recite().args(["id", "assign", "--check"]).arg(&scene))
+        .assert_success()
+        .assert_stderr("every line and choice already has a stable ID\n");
+}

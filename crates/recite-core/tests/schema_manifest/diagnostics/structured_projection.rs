@@ -212,7 +212,7 @@ fn assert_projection_type_diagnostic(
     arguments: &[(&str, &str)],
     line: u32,
     start_column: u32,
-    end_column: u32,
+    end_column_exclusive: u32,
 ) {
     assert_eq!(diagnostic.code.as_str(), "RECITE_SCHEMA004");
     assert_eq!(diagnostic.severity, DiagnosticSeverity::Error);
@@ -225,8 +225,9 @@ fn assert_projection_type_diagnostic(
         diagnostic
             .span
             .end
-            .map(|position| (position.line(), position.column())),
-        Some((line, end_column))
+            .map(|position| (position.line(), position.column() + 1)),
+        Some((line, end_column_exclusive)),
+        "expectations give the column after the span; SourceSpan.end is the last character"
     );
     let expected = arguments
         .iter()

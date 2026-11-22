@@ -73,9 +73,5 @@ fn manifest_span(file: &str) -> SourceSpan {
 }
 
 fn source_span(file: &str, source: &str, range: Range<usize>) -> SourceSpan {
-    SourceSpan::new(
-        file,
-        position_for_byte_offset(source, range.start),
-        Some(position_for_byte_offset(source, range.end)),
-    )
+    crate::source_location::span_for_byte_range(file, source, range)
 }

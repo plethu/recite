@@ -10,10 +10,10 @@ use crate::args::{
     Command, CompileArgs, ExportSchemaArgs, ExtractArgs, IdCommand, ProjectCommand, RuntimeArgs,
     SchemaCommand, ValidateArgs,
 };
-use crate::error::CliError;
+use crate::error::{CliError, ProjectDefaultError};
 use crate::fs::{
-    collect_input_files, compile_options, load_schema, read_compile_inputs_for_output,
-    read_compile_inputs_from_files, reject_output_input_alias, validate_inputs, write_staged,
+    LooseKeys, SourceSet, compile_options, load_schema, reject_output_input_alias,
+    validate_sources, write_staged,
 };
 use crate::runtime_fixture::{
     RuntimeFixtureOptions, dialogue_preview_from_fixture, execute_runtime_fixture,
@@ -151,7 +151,12 @@ fn runtime_failure_path(error: &CliError, asset: &Path, fixture: &Path) -> std::
 }
 
 fn validate(args: ValidateArgs) -> Result<StructuredOutcome, CliError> {
-    let schema = match schema_or_diagnostics(args.schema.as_deref())? {
+    let sources = SourceSet::read(&args.paths, LooseKeys::AsTyped)?;
+    let choice = sources.effective_schema(args.schema.as_deref());
+    if choice.path.is_none() && matches!(args.only, Some(crate::args::ValidateOnly::Metadata)) {
+        return Err(ProjectDefaultError::SchemaRequired.into());
+    }
+    let schema = match schema_or_diagnostics(choice.path.as_deref())? {
         SchemaLoad::Loaded(schema) => schema,
         SchemaLoad::Diagnostics(diagnostics) => {
             return Ok(StructuredOutcome::content_diagnostics(
@@ -159,7 +164,7 @@ fn validate(args: ValidateArgs) -> Result<StructuredOutcome, CliError> {
             ));
         }
     };
-    let inputs = validate_inputs(&args.paths, schema.as_deref())?;
+    let inputs = validate_sources(&sources, schema.as_deref())?;
     let diagnostics = match args.only {
         Some(only) => inputs.into_category(only.category()),
         None => inputs.into_all(),
@@ -177,10 +182,11 @@ fn validate(args: ValidateArgs) -> Result<StructuredOutcome, CliError> {
 }
 
 fn compile(args: CompileArgs) -> Result<StructuredOutcome, CliError> {
-    let input_files = collect_input_files(&args.paths)?;
-    reject_output_input_alias(&args.output, &input_files)?;
-    let inputs = read_compile_inputs_for_output(&args.output, input_files)?;
-    let schema = match schema_or_diagnostics(args.schema.as_deref())? {
+    let sources = SourceSet::read(&args.paths, LooseKeys::OutputRoot(&args.output))?;
+    reject_output_input_alias(&args.output, &sources.named_paths())?;
+    let inputs = sources.named_inputs();
+    let choice = sources.effective_schema(args.schema.as_deref());
+    let schema = match schema_or_diagnostics(choice.path.as_deref())? {
         SchemaLoad::Loaded(schema) => schema,
         SchemaLoad::Diagnostics(diagnostics) => {
             return Ok(StructuredOutcome::content_diagnostics(
@@ -189,10 +195,11 @@ fn compile(args: CompileArgs) -> Result<StructuredOutcome, CliError> {
         }
     };
     let options = compile_options(&args.output, schema.as_deref())?;
-    let report = match schema.as_deref() {
+    let mut report = match schema.as_deref() {
         Some(schema) => compile_inputs_to_messagepack_with_schema(inputs, options, schema)?,
         None => compile_inputs_to_messagepack(inputs, options)?,
     };
+    sources.relocate(&mut report.diagnostics);
     let diagnostics = diagnostic_records(&report.diagnostics)?;
     let Some(messagepack) = report.messagepack else {
         return Ok(StructuredOutcome::content_diagnostics(
@@ -209,12 +216,13 @@ fn compile(args: CompileArgs) -> Result<StructuredOutcome, CliError> {
 }
 
 fn extract(args: ExtractArgs) -> Result<StructuredOutcome, CliError> {
-    let input_files = collect_input_files(&args.paths)?;
+    let sources = SourceSet::read(&args.paths, LooseKeys::AsTyped)?;
     if let Some(output) = &args.output {
-        reject_output_input_alias(output, &input_files)?;
+        reject_output_input_alias(output, &sources.named_paths())?;
     }
-    let inputs = read_compile_inputs_from_files(input_files)?;
-    let schema = match schema_or_diagnostics(args.schema.as_deref())? {
+    let inputs = sources.named_inputs();
+    let choice = sources.effective_schema(args.schema.as_deref());
+    let schema = match schema_or_diagnostics(choice.path.as_deref())? {
         SchemaLoad::Loaded(schema) => schema,
         SchemaLoad::Diagnostics(diagnostics) => {
             return Ok(StructuredOutcome::content_diagnostics(
@@ -222,10 +230,11 @@ fn extract(args: ExtractArgs) -> Result<StructuredOutcome, CliError> {
             ));
         }
     };
-    let report = match schema.as_deref() {
+    let mut report = match schema.as_deref() {
         Some(schema) => recite_compiler::pot::extract_pot_with_schema(inputs, schema),
         None => recite_compiler::pot::extract_pot(inputs),
     };
+    sources.relocate(&mut report.diagnostics);
     extract_report(report, args.output.as_deref())
 }
 
@@ -289,7 +298,7 @@ fn runtime(
         .transpose()?;
     let execution = execute_runtime_fixture(
         &asset,
-        &args.block,
+        &crate::fs::start_block(&args.asset, args.block.as_deref())?,
         &fixture,
         dialogue_preview
             .as_ref()

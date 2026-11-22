@@ -26,7 +26,7 @@ fn non_utf8_discovery_suppresses_cross_file_ids_and_republishes_transitions() {
         ":: main default\n>\n  Missing line id.\n-> src/omitted.recite::missing\n",
     )
     .unwrap_or_else(|error| panic!("write source: {error}"));
-    std::fs::write(&omitted, [b':', b':', b' ', b'\xff'])
+    std::fs::write(&omitted, b":: \xff")
         .unwrap_or_else(|error| panic!("write incomplete source: {error}"));
 
     let manifest_uri = file_uri(&manifest);
@@ -78,7 +78,7 @@ fn non_utf8_discovery_suppresses_cross_file_ids_and_republishes_transitions() {
         ],
     );
 
-    std::fs::write(&omitted, [b':', b':', b' ', b'\xfe'])
+    std::fs::write(&omitted, b":: \xfe")
         .unwrap_or_else(|error| panic!("make source incomplete: {error}"));
     harness.notify(
         "textDocument/didSave",

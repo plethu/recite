@@ -29,15 +29,21 @@ exists where a thing has two or more operations of its own, so related work sits
 
 `recite <group>` lists its commands, and `recite <group> <command> --help` documents one.
 
+Inside a project, commands read `recite.project.toml`. `validate`, `compile` and `extract` default
+to the project's sources and its `[project].schema`, and `run`, `trace` and `play` default to the
+block of the scene that uses the asset. Cross-file targets such as `src/objects.recite::objects`
+resolve from the project root whichever path you pass, so `recite validate .`, `recite validate src`
+and `recite validate src/arrival.recite` agree. Explicit arguments always win.
+
 ## Authoring checks
 
-### `recite validate [--schema <SCHEMA>] [--only <CATEGORY>] <PATHS>...`
+### `recite validate [--schema <SCHEMA>] [--only <CATEGORY>] [PATHS]...`
 
 Validates dialogue source without writing compiled output: syntax, structure, and references.
 
 With `--schema`, it also checks metadata, markup and declarations against a schema manifest. `--only
 markup` or `--only metadata` reports just that diagnostic category; syntax errors are always
-reported because they stop validation. `--only metadata` requires `--schema`.
+reported because they stop validation. `--only metadata` needs a schema, passed or declared.
 
 ### `recite id check [--since <REF>] [--allow-removed <ID>]... <PATHS>...`
 
@@ -49,11 +55,14 @@ release tag, and pass `--allow-removed <ID>` for each line you removed on purpos
 another file keeps its ID. If the revision is not available, for example in a shallow CI clone
 without tags, the command fails instead of comparing against nothing.
 
-### `recite id assign <PATHS>...`
+### `recite id assign [--dry-run | --check] <PATHS>...`
 
 Appends a generated stable ID to every line and choice header that has none, after the header's last
 field. Existing IDs are never rewritten. If a file has syntax errors or a malformed ID, it reports
 those diagnostics and leaves every file unchanged.
+
+`--dry-run` lists each planned ID (`path:line  @id  header`) and writes nothing; a later run
+generates new IDs. `--check` writes nothing and fails while any line or choice lacks an ID, for CI.
 
 ### `recite id rename <ID|PATH:LINE> <NEW_ID> [PATHS]... [--catalog <PATH>]...`
 
@@ -102,14 +111,18 @@ output path that aliases its input and replaces the output only after validation
 structured` reports versioned command records with diagnostics or artifact metadata for authoring
 tools; their `command` field is `schema export`.
 
-### `recite schema check-fresh --expected <EXPECTED> --actual <ACTUAL>`
+### `recite schema check-fresh [PROJECT_ROOT]` or `--expected <EXPECTED> --actual <ACTUAL>`
 
-Compares the schema producer fingerprints of a previously exported manifest with a current export
-and reports whether the producer is fresh.
+Reports whether a schema still matches what its producer exports. Given a project (the working
+directory by default), it compares the manifest's `[project].schema` with a fresh export from the
+producer registered in `recite.producer.toml`. Running that producer is the command's explicit
+purpose; its output is staged, compared and removed, and the project's schema is never written.
+Given `--expected` and `--actual`, it compares those two exports instead, as CI does when it keeps
+both files.
 
 ## Building
 
-### `recite compile --output <OUTPUT> [--schema <SCHEMA>] <PATHS>...`
+### `recite compile --output <OUTPUT> [--schema <SCHEMA>] [PATHS]...`
 
 Compiles source dialogue into a deterministic MessagePack `.recitec` asset. Identical validated
 input produces identical bytes when compile options, including the output asset ID/path, are the
@@ -131,7 +144,7 @@ to editor diagnostics.
 
 ## Localisation
 
-### `recite extract [--output <OUTPUT>] [--schema <SCHEMA>] <PATHS>...`
+### `recite extract [--output <OUTPUT>] [--schema <SCHEMA>] [PATHS]...`
 
 Extracts gettext POT entries. Each entry's `msgctxt` is the stable ID, and comments carry file,
 block and speaker context for translators.
@@ -176,19 +189,19 @@ when nothing is refused, does it record the takes in `recording/<locale>.toml` (
 
 ## Running
 
-### `recite run --block <BLOCK> --fixture <FIXTURE> <ASSET>`
+### `recite run [--block <BLOCK>] --fixture <FIXTURE> <ASSET>`
 
 Runs a compiled asset headlessly. The TOML fixture supplies condition results, prompt answers, and
 effect acknowledgement policy; output lists lines, prompts, selections, endings, and collected
 deferred effects. A missing fixture entry fails with the exact key the prompt expects.
 
-### `recite trace [--metrics] --block <BLOCK> --fixture <FIXTURE> <ASSET>`
+### `recite trace [--metrics] [--block <BLOCK>] --fixture <FIXTURE> <ASSET>`
 
 Emits the same headless run as deterministic JSON, the default format for snapshot tests,
 conformance checks, and CI. `--metrics` adds instrumentation, including timing fields that are not
 snapshot-stable.
 
-### `recite play [OPTIONS] --block <BLOCK> <ASSET>`
+### `recite play [OPTIONS] [--block <BLOCK>] <ASSET>`
 
 Interactive playback for writers. `--ui auto|tui|plain` selects the surface, `--keymap standard|vim`
 the TUI bindings, and `--dialogue-locale` plus repeatable `--dialogue-catalog LOCALE=PATH` preview

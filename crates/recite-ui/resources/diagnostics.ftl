@@ -76,6 +76,9 @@ diagnostic-parse-017 = prose cannot follow nested statements in the same body
 # RECITE_PARSE018
 diagnostic-parse-018 = old trailing choice if syntax is not valid Recite v1 syntax
 
+# RECITE_PARSE019
+diagnostic-parse-019 = dialogue text is on the header line
+
 # RECITE_PARSE034
 diagnostic-parse-034-expected-directive = expected PO directive
 diagnostic-parse-034-expected-quoted-string = expected quoted PO string
@@ -108,6 +111,9 @@ diagnostic-validate-047 = translation changes attributes for inline markup tag `
 diagnostic-validate-048 = translation introduces inline markup tag `{$tag}` not present in the source value
 diagnostic-validate-049 = translation is missing required inline markup tag `{$tag}` from the source value
 diagnostic-validate-050 = condition exceeds the boolean nesting limit of {$limit}
+diagnostic-validate-051 = unknown speaker `{$speaker}`
+diagnostic-validate-051-help = declare the speaker in the schema, or correct the name
+diagnostic-validate-051-help-suggestion = did you mean `{$suggestion}`?
 
 # Compiler diagnostic primary presentations. These resources are deliberately
 # kept beside the parser presentations; their exact arguments come from the
@@ -136,6 +142,7 @@ diagnostic-validate-006 = block `{$block_id}` is another default block
 diagnostic-validate-006-related = first default block is here
 diagnostic-validate-006-help = keep exactly one block marked `default`
 diagnostic-validate-007 = unknown block reference `{$reference}`
+diagnostic-validate-007-help-suggestion = did you mean `{$suggestion}`?
 diagnostic-validate-008-file = invalid source span for { $owner ->
     [block] block
     [comment] comment
@@ -314,8 +321,15 @@ diagnostic-validate-046-missing-count = invalid plural line: plural lines requir
 diagnostic-validate-046-count-type = invalid plural line: the `count` binding must have type `int`
 
 # RECITE_FRESH001-003
-diagnostic-fresh-001 = compiled asset '{$asset}' is stale for source '{$source}'
+diagnostic-fresh-001 = compiled asset '{$asset}' is out of date: { $count ->
+        [one] {$count} source changed since it was built ({$sources})
+       *[other] {$count} sources changed since it was built ({$sources})
+    }
 diagnostic-fresh-002 = compiled asset '{$asset}' has a stale schema fingerprint
+diagnostic-fresh-004 = compiled asset '{$asset}' is out of date: { $count ->
+        [one] {$count} source was added since it was built ({$sources})
+       *[other] {$count} sources were added since it was built ({$sources})
+    }
 diagnostic-fresh-003 = compiled asset '{$asset}' uses compiler compatibility version {$version}, expected {$expected}
 
 # RECITE_PROJECT001-008
@@ -352,19 +366,24 @@ diagnostic-config-117 = project source has an invalid document key: {$detail}
 diagnostic-config-118 = invalid project catalogue pattern: {$detail}
 
 # RECITE_FRESH001
-diagnostic-fresh-001-meaning = A compiled asset was built from an older version of one or more source files.
+diagnostic-fresh-001-meaning = A compiled asset was built from an older version of the project's sources.
 diagnostic-fresh-001-cause-001 = The source dialogue changed after the asset was compiled.
-diagnostic-fresh-001-remediation-001 = Re-run `recite compile` or `recite watch` for the project.
+diagnostic-fresh-001-remediation-001 = run `recite compile` again, or keep `recite watch .` running so it rebuilds on save
 
 # RECITE_FRESH002
 diagnostic-fresh-002-meaning = A compiled asset was built from an older schema fingerprint.
 diagnostic-fresh-002-cause-001 = The schema manifest changed after the asset was compiled.
-diagnostic-fresh-002-remediation-001 = Recompile the asset with the current schema manifest.
+diagnostic-fresh-002-remediation-001 = run `recite compile` again so the asset is checked against the current schema
 
 # RECITE_FRESH003
 diagnostic-fresh-003-meaning = A compiled asset was produced with a compiler compatibility version that this Recite version cannot use.
 diagnostic-fresh-003-cause-001 = The asset's compiler compatibility version is older or newer than the supported boundary.
-diagnostic-fresh-003-remediation-001 = Recompile the source with the current Recite compiler.
+diagnostic-fresh-003-remediation-001 = run `recite compile` again with this version of Recite
+
+# RECITE_FRESH004
+diagnostic-fresh-004-meaning = A compiled asset does not include source files that were added to the project after it was built.
+diagnostic-fresh-004-cause-001 = A `.recite` file was created inside the project's source roots after the last compile.
+diagnostic-fresh-004-remediation-001 = run `recite compile` again, or keep `recite watch .` running so it rebuilds on save
 
 # RECITE_ID001
 diagnostic-id-001-meaning = A dialogue line is missing its required stable line ID.
@@ -480,6 +499,11 @@ diagnostic-parse-017-remediation-001 = Move the prose before the nested statemen
 diagnostic-parse-018-meaning = A choice has a trailing `if` clause that is not valid Recite syntax.
 diagnostic-parse-018-cause-001 = Condition syntax from another dialogue format was used after a choice.
 diagnostic-parse-018-remediation-001 = Use Recite's supported `requires` availability clause instead.
+
+# RECITE_PARSE019
+diagnostic-parse-019-meaning = Dialogue text was written on a line or choice header, where only fields belong.
+diagnostic-parse-019-cause-001 = The words a character says, or a reply's text, were typed after `>` or `?` instead of on the next line.
+diagnostic-parse-019-remediation-001 = put the text on the next line, indented under the header; the header keeps `key=value` fields and the `@id`
 
 # RECITE_PARSE034
 diagnostic-parse-034-meaning = A gettext PO record is not structurally valid.
@@ -905,6 +929,11 @@ diagnostic-validate-049-remediation-001 = Restore the missing tag occurrence in 
 diagnostic-validate-050-meaning = A condition expression exceeds the compiled nesting limit.
 diagnostic-validate-050-cause-001 = Boolean operators are nested too deeply. Parentheses alone do not add to compiled depth.
 diagnostic-validate-050-remediation-001 = Simplify the nested condition or move part of its logic into a condition function.
+
+# RECITE_VALIDATE051
+diagnostic-validate-051-meaning = A line or block names a speaker that the project schema does not declare.
+diagnostic-validate-051-cause-001 = The speaker's name is misspelled, or the character was never added to the schema.
+diagnostic-validate-051-remediation-001 = Correct the name, or declare the speaker in the schema's speakers.
 
 diagnostic-import-001 = Invalid import input: {$detail}
 diagnostic-import-002 = Unsupported import construct: {$detail}

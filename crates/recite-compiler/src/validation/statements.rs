@@ -34,6 +34,36 @@ impl<'a> Validator<'a> {
             self.validate_block_id(source_file, block);
             self.validate_default_block(block);
         }
+        if self.participation.metadata() == ValidationCompleteness::Complete
+            && let Some(speaker) = &block.default_speaker
+        {
+            self.validate_speaker(speaker.as_str(), block.default_speaker_extent, &block.span);
+        }
+    }
+
+    /// A speaker must be declared when the schema keeps a speaker registry.
+    fn validate_speaker(
+        &mut self,
+        speaker: &str,
+        value: Option<recite_core::SourceExtent>,
+        fallback: &recite_core::SourceSpan,
+    ) {
+        let Some(schema) = self.schema else {
+            return;
+        };
+        if schema.speakers.is_empty() || schema.speakers.contains_key(speaker) {
+            return;
+        }
+        let suggestion =
+            super::suggest::closest(speaker, schema.speakers.keys().map(String::as_str));
+        self.diagnostics.push(diagnostics::unknown_speaker(
+            speaker,
+            value.map_or_else(
+                || fallback.clone(),
+                |value| value.in_file(fallback.file.clone()),
+            ),
+            suggestion,
+        ));
     }
     pub(super) fn validate_statement_with_block(
         &mut self,
@@ -147,6 +177,12 @@ impl<'a> Validator<'a> {
                     metadata: &line.metadata,
                 },
             );
+        }
+
+        if self.participation.metadata() == ValidationCompleteness::Complete
+            && let Some(speaker) = &line.speaker
+        {
+            self.validate_speaker(speaker.as_str(), line.speaker_extent, &line.span);
         }
 
         if self.participation.stable_ids() == ValidationCompleteness::Complete {

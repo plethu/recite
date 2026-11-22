@@ -9,6 +9,8 @@ const MISSING_DEFAULT_BLOCK: recite_core::DiagnosticCode =
     recite_core::DiagnosticCode::new_static("RECITE_VALIDATE005");
 const AMBIGUOUS_DEFAULT_BLOCK: recite_core::DiagnosticCode =
     recite_core::DiagnosticCode::new_static("RECITE_VALIDATE006");
+const UNKNOWN_SPEAKER: recite_core::DiagnosticCode =
+    recite_core::DiagnosticCode::new_static("RECITE_VALIDATE051");
 const UNKNOWN_BLOCK_REFERENCE: recite_core::DiagnosticCode =
     recite_core::DiagnosticCode::new_static("RECITE_VALIDATE007");
 const DUPLICATE_BLOCK_ID: recite_core::DiagnosticCode =
@@ -52,8 +54,9 @@ pub(crate) fn ambiguous_default_block(block: &Block, first: &Block) -> recite_co
 pub(crate) fn unknown_block_reference(
     reference: &BlockReference,
     span: SourceSpan,
+    suggestion: Option<&str>,
 ) -> recite_core::Diagnostic {
-    compiler_diagnostic(
+    let diagnostic = compiler_diagnostic(
         diagnostic_contract(&UNKNOWN_BLOCK_REFERENCE, "diagnostic-validate-007"),
         format!("unknown block reference `{}`", display_reference(reference)),
         span,
@@ -61,7 +64,41 @@ pub(crate) fn unknown_block_reference(
             "reference".to_owned(),
             string_argument(display_reference(reference)),
         )],
-    )
+    );
+    match suggestion {
+        Some(block) => {
+            let suggested = match &reference.file {
+                Some(file) => format!("{file}::{block}"),
+                None => block.to_owned(),
+            };
+            diagnostic.with_help_presentation(super::auxiliary_presentation(
+                "diagnostic-validate-007-help-suggestion",
+                [("suggestion".to_owned(), string_argument(suggested))],
+            ))
+        }
+        None => diagnostic,
+    }
+}
+
+/// A `speaker=` value the schema's speaker registry does not declare.
+pub(crate) fn unknown_speaker(
+    speaker: &str,
+    span: SourceSpan,
+    suggestion: Option<&str>,
+) -> recite_core::Diagnostic {
+    let diagnostic = compiler_diagnostic(
+        diagnostic_contract(&UNKNOWN_SPEAKER, "diagnostic-validate-051"),
+        format!("unknown speaker `{speaker}`"),
+        span,
+        vec![("speaker".to_owned(), string_argument(speaker))],
+    );
+    diagnostic.with_help_presentation(match suggestion {
+        Some(suggestion) => super::auxiliary_presentation(
+            "diagnostic-validate-051-help-suggestion",
+            [("suggestion".to_owned(), string_argument(suggestion))],
+        ),
+        None => super::auxiliary_presentation("diagnostic-validate-051-help", []),
+    })
 }
 
 pub(crate) fn duplicate_block_id(

@@ -12,6 +12,8 @@ cli-help-command-schema = Inspect, export and freshness-check schema manifests
 cli-help-arg-only = Report only this diagnostic category; syntax errors are always reported
 cli-help-command-id-check = Report stable line and choice ID diagnostics
 cli-help-command-id-assign = Append generated stable IDs to line and choice headers that have none
+cli-help-arg-ids-dry-run = List the IDs that would be added without changing any file; a later run generates new ones
+cli-help-arg-ids-check = Change nothing; fail when any line or choice has no stable ID, listing where
 cli-help-command-project-validate = Validate recite.project.toml and referenced compiled assets
 cli-help-command-project-check-fresh = Check whether project compiled assets are fresh
 cli-help-command-schema-inspect = Inspect standalone TOML or generated schema JSON as deterministic machine-readable JSON
@@ -23,9 +25,11 @@ cli-help-command-trace = Emit deterministic JSON for a headless fixture run
 cli-help-command-play = Play a compiled asset interactively
 cli-help-command-bench = Generate benchmark scale reports for fixtures or a project root
 cli-help-arg-paths = One or more .recite files, or directories containing .recite files
+cli-help-arg-paths-project = .recite files or directories to read; defaults to the sources of the project here
 cli-help-arg-since = Git revision whose stable IDs must still exist, such as the last release tag
 cli-help-arg-allow-removed = Stable ID intentionally removed since --since; repeat for each ID
 cli-help-arg-schema = Generated schema manifest JSON
+cli-help-arg-schema-project = Generated schema manifest JSON; defaults to the project's [project].schema
 cli-help-arg-schema-inspection = Standalone Recite schema TOML or generated schema manifest JSON
 cli-help-arg-project-root = Project root containing recite.project.toml
 cli-help-arg-diagnostic-code = Stable diagnostic code, such as RECITE_PARSE001
@@ -37,6 +41,7 @@ cli-help-arg-producer-id = Stable engine registration or resource ID, independen
 cli-help-arg-asset-run = MessagePack .recitec asset to run
 cli-help-arg-asset-play = MessagePack .recitec asset to play
 cli-help-arg-block = Block ID to start from
+cli-help-arg-block-project = Block to start from; defaults to the block of the project scene that uses this asset
 cli-help-arg-fixture = TOML fixture with conditions, choices, and effect options
 cli-help-arg-ui = Interactive UI mode
 cli-help-arg-keymap = TUI keymap. Overrides [ui].keymap in the user config file
@@ -58,7 +63,8 @@ explain-common-causes = Common causes:
 explain-how-to-fix = How to fix:
 explain-list-item = - {$item}
 
-cli-help-command-schema-check-fresh = Compare current schema producer fingerprints with a previously exported manifest
+cli-help-command-schema-check-fresh = Check that the project schema matches what its producer exports now
+cli-help-arg-schema-fresh-root = Project whose declared schema is checked against a fresh export from its registered producer
 cli-help-group-authoring = Authoring checks
 cli-help-group-building = Building
 cli-help-group-localisation = Localisation
@@ -73,6 +79,14 @@ cli-success-project = project, no diagnostics
 cli-ids-assigned = { $count ->
         [one] assigned { $count } stable ID
        *[other] assigned { $count } stable IDs
+    }
+cli-ids-planned = { $count ->
+        [one] would assign {$count} stable ID; nothing was written
+       *[other] would assign {$count} stable IDs; nothing was written
+    }
+cli-ids-missing-check = { $count ->
+        [one] {$count} line or choice has no stable ID; run `recite id assign` to add it
+       *[other] {$count} lines and choices have no stable ID; run `recite id assign` to add them
     }
 cli-ids-none-missing = every line and choice already has a stable ID
 cli-ids-removed = stable ID `@{$id}` from {$reference} is missing; restore it or pass --allow-removed {$id}
@@ -422,6 +436,15 @@ cli-error-recording-sidecar = recording sidecar {$sidecar} is invalid: {$detail}
 cli-error-recording-handoff = handoff {$file} is invalid: {$detail}
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys
 cli-error-no-inputs = no .recite inputs found
+cli-error-no-inputs-outside-project = no paths given and no recite.project.toml found here or above; pass the .recite files or directories to read
+cli-error-schema-required = --only metadata needs a schema: pass --schema, or declare [project].schema in recite.project.toml
+cli-error-block-required = pass --block: no scene in recite.project.toml uses {$asset}
+cli-error-block-ambiguous = pass --block: scenes in recite.project.toml start {$asset} at {$blocks}
+cli-error-schema-fresh-pair = pass both --expected and --actual, or neither to check the project here
+cli-error-schema-fresh-no-schema = recite.project.toml declares no [project].schema to check
+cli-error-schema-fresh-no-producer = no recite.producer.toml registers a schema producer here; pass --expected and --actual to compare two exports
+cli-error-schema-producer = the schema producer could not export a schema: {$detail}
+cli-warning-schema-differs = warning: --schema {$given} is not the project schema {$declared}; checking against {$given}
 cli-error-output-overwrites-input = refusing to overwrite input {$input} with output {$output}
 cli-error-blocking-effect = blocking effect `{$effect}` requires [effects].auto_ack_blocking = true in the fixture
 cli-error-bench-json = failed to read or write benchmark JSON: {$error}
@@ -514,6 +537,8 @@ lsp-completion-label = presentation label template
 lsp-code-action-insert-missing-id = Insert missing stable ID
 lsp-code-action-insert-all-missing-ids = Insert all missing stable IDs in file
 lsp-code-action-create-block-stub = Create block stub `{$block}`
+lsp-code-action-move-header-prose = Move the text to the next line
+lsp-code-action-apply-suggestion = Change to `{$suggestion}`
 lsp-code-action-add-condition = Add condition `{$name}` to schema
 lsp-code-action-add-effect = Add effect `{$name}` to schema
 lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
@@ -529,7 +554,7 @@ lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
     [projector] projector
     [markup] markup
    *[schema] schema
-} {$declaration_name}): { $action ->
+}{$declaration_name}): { $action ->
     [open-source] open source declaration
     [edit-standalone] edit standalone source
     [invoke] invoke producer
@@ -539,7 +564,7 @@ lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
    *[other] schema action
 } ({ $producer_state ->
     [present] {$producer}
-   *[absent] no producer {$producer}
+   *[absent] no producer{$producer}
 })
 lsp-code-action-schema-disabled = Schema capability unavailable: { $reason ->
     [source-location] source location is not available
