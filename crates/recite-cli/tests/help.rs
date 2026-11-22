@@ -181,7 +181,9 @@ locale = "en-GB"
         .args(["schema", "check-fresh", "--help"])
         .env("RECITE_CONFIG", &config));
     leaf.assert_success().assert_stderr("");
-    leaf.assert_stdout_contains("Compare current schema producer fingerprints");
+    leaf.assert_stdout_contains(
+        "Check that the project schema matches what its producer exports now",
+    );
 }
 
 #[test]

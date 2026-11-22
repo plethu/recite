@@ -192,7 +192,7 @@ fn story_format_markup_and_repeated_control_flow_do_not_pass_as_plain_text() {
 }
 
 #[test]
-fn schema_backed_import_preserves_native_speaker_policy() {
+fn schema_backed_import_reports_speakers_missing_from_the_registry() {
     let schema = recite_core::schema::load_schema_manifest_str(
         "schema.json",
         r#"{"schema_version":1,"speakers":{"operator":{"display_name":"Operator"}}}"#,
@@ -212,10 +212,17 @@ fn schema_backed_import_preserves_native_speaker_policy() {
         target_sources: None,
     })
     .expect("report");
-    // Native line speakers are not constrained to the schema's speaker registry;
-    // the importer must not invent an additional compatibility rule.
-    assert_eq!(report.status, ImportStatus::Complete);
-    assert!(report.native_diagnostics.is_empty());
+    // The importer reports native validation of the schema's speaker registry and keeps the
+    // source speaker rather than inventing a mapping.
+    assert_eq!(report.status, ImportStatus::Invalid);
+    assert!(
+        report
+            .native_diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code.as_str() == "RECITE_VALIDATE051"),
+        "{:?}",
+        report.native_diagnostics
+    );
     assert!(report.source.contains("speaker=unknown"));
 }
 
