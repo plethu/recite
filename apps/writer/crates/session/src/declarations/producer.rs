@@ -1,6 +1,4 @@
 //! Explicit producer processes write staged output; only validated results reach publication.
-#[cfg(test)]
-use recite_config::configured_process;
 use recite_config::{PRODUCER_DEADLINE, ProducerCommand, ProducerRegistration, ProducerRunError};
 use recite_core::schema::ProjectSchema;
 use std::{
