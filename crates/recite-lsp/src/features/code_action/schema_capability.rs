@@ -1,4 +1,6 @@
 mod collect;
+#[cfg(test)]
+pub(crate) mod tests;
 
 use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand};
 use recite_compiler::authoring::{SchemaAction, SchemaCapabilityUnavailableReason, SchemaSummary};
@@ -9,16 +11,7 @@ use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 /// The LSP owns neither producer processes nor source locations. Consequently
 /// those actions remain visible but disabled until a future client contract
 /// supplies the missing execution or navigation authority.
-/// Every declaration's actions, for tests of the projection itself.
-#[cfg(test)]
-pub(crate) fn actions(
-    summary: &SchemaSummary,
-    editable_source_open: bool,
-    catalog: &UiCatalog,
-) -> Vec<CodeActionOrCommand> {
-    project(&collect::collect(summary), editable_source_open, catalog)
-}
-
+///
 /// Actions for what the cursor is on: the schema declaration named by the identifier under the
 /// cursor, or else the one project-level schema entry when a producer can act on it. Listing every
 /// unavailable declaration at every position would bury the fixes that apply there.

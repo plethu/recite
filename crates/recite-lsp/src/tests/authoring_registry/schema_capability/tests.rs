@@ -95,7 +95,7 @@ pub(super) fn schema_capability_projection_keeps_producer_actions_visible_and_di
         Some(&evidence),
     )
     .expect("summary");
-    let actions = schema_capability::actions(&summary, false, &catalog);
+    let actions = schema_capability::tests::actions(&summary, false, &catalog);
     let actions = actions
         .iter()
         .filter_map(|action| match action {
@@ -151,7 +151,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
         Some(&evidence),
     )
     .expect("summary");
-    let actions = schema_capability::actions(&summary, false, &catalog);
+    let actions = schema_capability::tests::actions(&summary, false, &catalog);
     let titles = actions
         .iter()
         .filter_map(|action| match action {
@@ -223,7 +223,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
     let empty = recite_compiler::authoring::SchemaSummary::from_schema(
         &recite_core::schema::ProjectSchema::empty_v1(),
     );
-    let empty_actions = schema_capability::actions(&empty, false, &catalog);
+    let empty_actions = schema_capability::tests::actions(&empty, false, &catalog);
     let unavailable = empty_actions
         .iter()
         .filter_map(|action| match action {
@@ -388,7 +388,7 @@ fn scoped_schema_actions_follow_the_identifier_under_the_cursor() {
     assert!(speaker[0].starts_with("Schema capability (speaker operator):"));
     assert!(!speaker[0].contains(" )"), "no stray spaces: {speaker:?}");
     assert!(
-        schema_capability::actions(&summary, false, &catalog)
+        schema_capability::tests::actions(&summary, false, &catalog)
             .iter()
             .filter_map(|action| match action {
                 lsp_types::CodeActionOrCommand::CodeAction(action) => Some(&action.title),
