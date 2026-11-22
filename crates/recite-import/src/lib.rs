@@ -10,6 +10,7 @@ mod diagnostics;
 mod ids;
 mod model;
 mod records;
+mod speakers;
 mod text;
 
 pub use model::{

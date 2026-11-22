@@ -73,6 +73,8 @@ pub enum Action {
     Rejected,
     Skipped,
     ConvertedWithLoss,
+    /// Kept as written for the author to resolve, such as a speaker the schema does not declare.
+    Unresolved,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -105,7 +107,8 @@ pub enum ImportStatus {
 }
 
 /// A single-file migration result. `source` remains inspectable on failure;
-/// only Complete/Partial results passed native validation.
+/// only Complete/Partial results passed native validation, except that a Partial
+/// result may keep speakers the schema does not declare as `Unresolved` items.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[non_exhaustive]
 pub struct ImportReport {

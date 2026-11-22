@@ -1,6 +1,8 @@
 #![cfg(test)]
 
-use recite_import::{FieldMapping, ImportRequest, ImportStatus, SourceFamily, import};
+use recite_import::{
+    Action, FieldMapping, ImportRequest, ImportStatus, Location, SourceFamily, import,
+};
 
 #[test]
 fn text_whitespace_loss_keeps_provenance_and_requires_review() {
@@ -191,39 +193,81 @@ fn story_format_markup_and_repeated_control_flow_do_not_pass_as_plain_text() {
     }
 }
 
-#[test]
-fn schema_backed_import_reports_speakers_missing_from_the_registry() {
+fn speaker_import(mapping: &str, records: &str) -> recite_import::ImportReport {
     let schema = recite_core::schema::load_schema_manifest_str(
         "schema.json",
         r#"{"schema_version":1,"speakers":{"operator":{"display_name":"Operator"}}}"#,
     )
     .schema
     .expect("schema");
-    let mapping: FieldMapping =
-        serde_json::from_str(r#"{"block":"node","text":"text","speaker":"speaker"}"#)
-            .expect("mapping");
-    let report = import(ImportRequest {
+    let mapping: FieldMapping = serde_json::from_str(mapping).expect("mapping");
+    import(ImportRequest {
         family: SourceFamily::Json,
         file: "input.json",
-        source: r#"[{"node":"start","text":"Hello.","speaker":"unknown"}]"#,
+        source: records,
         mapping: Some(&mapping),
         schema: Some(&schema),
         default_block: true,
         target_sources: None,
     })
-    .expect("report");
-    // The importer reports native validation of the schema's speaker registry and keeps the
-    // source speaker rather than inventing a mapping.
+    .expect("report")
+}
+
+#[test]
+fn speakers_missing_from_the_schema_are_kept_for_review_once_each() {
+    let report = speaker_import(
+        r#"{"block":"node","text":"text","speaker":"speaker"}"#,
+        r#"[{"node":"start","text":"Hello.","speaker":"operatr"},
+            {"node":"start","text":"Again.","speaker":"operatr"},
+            {"node":"start","text":"Who?","speaker":"stranger"},
+            {"node":"start","text":"Fine.","speaker":"operator"}]"#,
+    );
+    // One unmapped name must not reject the whole import: the source keeps the speakers as
+    // written, everything else still passes native validation, and each name is reported once.
+    assert_eq!(report.status, ImportStatus::Partial);
+    assert!(report.native_diagnostics.is_empty());
+    assert!(report.source.contains("speaker=operatr"));
+    let speakers = report
+        .items
+        .iter()
+        .filter(|item| item.construct == "speaker")
+        .collect::<Vec<_>>();
+    assert_eq!(speakers.len(), 2, "{speakers:#?}");
+    for item in &speakers {
+        assert_eq!(item.action, Action::Unresolved);
+        assert_eq!(item.diagnostic.code.as_str(), "RECITE_VALIDATE051");
+    }
+    assert!(speakers[0].diagnostic.help.is_some(), "suggests `operator`");
+    assert!(speakers[1].diagnostic.help.is_some(), "says to declare it");
+    assert_eq!(
+        speakers[0].provenance.location,
+        Location::Json {
+            pointer: "/0/text".into()
+        },
+        "points at the first use in the input"
+    );
+    assert_eq!(
+        speakers[1].provenance.location,
+        Location::Json {
+            pointer: "/2/text".into()
+        }
+    );
+}
+
+#[test]
+fn other_native_errors_still_reject_an_import_with_unknown_speakers() {
+    let report = speaker_import(
+        r#"{"block":"node","text":"text","speaker":"speaker","target":"next"}"#,
+        r#"[{"node":"start","text":"Hello.","speaker":"operatr","next":"nowhere"}]"#,
+    );
     assert_eq!(report.status, ImportStatus::Invalid);
     assert!(
         report
             .native_diagnostics
             .iter()
-            .any(|diagnostic| diagnostic.code.as_str() == "RECITE_VALIDATE051"),
-        "{:?}",
-        report.native_diagnostics
+            .any(|diagnostic| diagnostic.code.as_str() == "RECITE_VALIDATE051")
     );
-    assert!(report.source.contains("speaker=unknown"));
+    assert!(report.items.iter().all(|item| item.construct != "speaker"));
 }
 
 #[test]
