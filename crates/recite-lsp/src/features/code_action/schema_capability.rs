@@ -9,13 +9,53 @@ use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 /// The LSP owns neither producer processes nor source locations. Consequently
 /// those actions remain visible but disabled until a future client contract
 /// supplies the missing execution or navigation authority.
+/// Every declaration's actions, for tests of the projection itself.
+#[cfg(test)]
 pub(crate) fn actions(
     summary: &SchemaSummary,
     editable_source_open: bool,
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
-    let declared = collect::collect(summary);
+    project(&collect::collect(summary), editable_source_open, catalog)
+}
 
+/// Actions for what the cursor is on: the schema declaration named by the identifier under the
+/// cursor, or else the one project-level schema entry when a producer can act on it. Listing every
+/// unavailable declaration at every position would bury the fixes that apply there.
+pub(crate) fn actions_at(
+    summary: &SchemaSummary,
+    editable_source_open: bool,
+    catalog: &UiCatalog,
+    identifier: Option<&str>,
+) -> Vec<CodeActionOrCommand> {
+    let declared = collect::collect(summary);
+    let named = declared
+        .iter()
+        .filter(|declared| declared.context.name.is_some() && declared.context.name == identifier)
+        .copied()
+        .collect::<Vec<_>>();
+    let scoped = if named.is_empty() {
+        declared
+            .iter()
+            .filter(|declared| {
+                declared.context.name.is_none()
+                    && producer_state(declared.action, declared.producer, declared.origin)
+                        == "present"
+            })
+            .take(1)
+            .copied()
+            .collect()
+    } else {
+        named
+    };
+    project(&scoped, editable_source_open, catalog)
+}
+
+fn project(
+    declared: &[collect::DeclaredAction<'_>],
+    editable_source_open: bool,
+    catalog: &UiCatalog,
+) -> Vec<CodeActionOrCommand> {
     declared
         .iter()
         .filter_map(|declared| {
@@ -41,8 +81,15 @@ pub(crate) fn actions(
                             UiArg::from(declared.context.kind),
                         ),
                         (
+                            // Leading space included, so an unnamed schema entry has no gap.
                             "declaration_name".to_owned(),
-                            UiArg::from(declared.context.name.unwrap_or_default()),
+                            UiArg::from(
+                                declared
+                                    .context
+                                    .name
+                                    .map(|name| format!(" {name}"))
+                                    .unwrap_or_default(),
+                            ),
                         ),
                     ]),
                 ),

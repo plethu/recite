@@ -1,6 +1,7 @@
 use recite_compiler::authoring::{SchemaAction, SchemaCapability, SchemaSummary};
 use std::collections::BTreeMap;
 
+#[derive(Clone, Copy)]
 pub(super) struct DeclaredAction<'a> {
     pub(super) context: DeclarationContext<'a>,
     pub(super) action: &'a SchemaAction,

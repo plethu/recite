@@ -53,10 +53,11 @@ pub(crate) fn code_action(
     if includes_kind(params, &CodeActionKind::REFACTOR)
         && let Some(schema_summary) = schema_summary
     {
-        actions.extend(schema_capability::actions(
+        actions.extend(schema_capability::actions_at(
             schema_summary,
             schema.is_some(),
             catalog,
+            identifier_at(document.source.text, params.range.start).as_deref(),
         ));
     }
 
@@ -118,6 +119,32 @@ pub(crate) fn code_action(
     }
 
     Some(actions)
+}
+
+/// The schema-style identifier (letters, digits, `_`, `-`, `.`) touching an LSP position.
+fn identifier_at(text: &str, position: Position) -> Option<String> {
+    let (line, _) = recite_core::source_lines(text).nth(usize::try_from(position.line).ok()?)?;
+    let mut units = 0usize;
+    let mut cursor = line.len();
+    for (index, character) in line.char_indices() {
+        if units >= position.character as usize {
+            cursor = index;
+            break;
+        }
+        units += character.len_utf16();
+    }
+    let is_part = |character: char| character.is_alphanumeric() || "_-.".contains(character);
+    let start = line[..cursor]
+        .char_indices()
+        .rev()
+        .take_while(|(_, character)| is_part(*character))
+        .last()
+        .map_or(cursor, |(index, _)| index);
+    let end = line[cursor..]
+        .char_indices()
+        .find(|(_, character)| !is_part(*character))
+        .map_or(line.len(), |(index, _)| cursor + index);
+    (start < end).then(|| line[start..end].to_owned())
 }
 
 fn includes_kind(params: &CodeActionParams, kind: &CodeActionKind) -> bool {

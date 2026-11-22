@@ -539,7 +539,7 @@ lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
     [projector] projector
     [markup] markup
    *[schema] schema
-} {$declaration_name}): { $action ->
+}{$declaration_name}): { $action ->
     [open-source] open source declaration
     [edit-standalone] edit standalone source
     [invoke] invoke producer
@@ -549,7 +549,7 @@ lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
    *[other] schema action
 } ({ $producer_state ->
     [present] {$producer}
-   *[absent] no producer {$producer}
+   *[absent] no producer{$producer}
 })
 lsp-code-action-schema-disabled = Schema capability unavailable: { $reason ->
     [source-location] source location is not available
