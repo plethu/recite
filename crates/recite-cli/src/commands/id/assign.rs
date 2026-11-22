@@ -11,26 +11,29 @@ use recite_compiler::authoring::{
 };
 use recite_core::{DocumentKey, StableIdGenerator};
 
-use crate::args::InputArgs;
+use crate::args::AssignIdsArgs;
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::fs::{LooseKeys, SourceSet, validate_inputs, write_staged};
 use crate::i18n::{Messages, MsgId};
 
 pub(super) fn run(
-    args: InputArgs,
+    args: AssignIdsArgs,
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<(), CliError> {
     let mut paths = BTreeMap::new();
     let mut documents = Vec::new();
+    let preview = args.dry_run || args.check;
+    let check = args.check;
+    let args = args.inputs;
     for input in SourceSet::read(&args.paths, LooseKeys::CommonDirectory)?.named {
         let key = DocumentKey::new(input.key).map_err(|error| CliError::Read {
             path: input.path.clone(),
             source: std::io::Error::new(std::io::ErrorKind::InvalidInput, error),
         })?;
-        documents.push(SavedDocument::new(key.clone(), input.source));
-        paths.insert(key, input.path);
+        documents.push(SavedDocument::new(key.clone(), input.source.clone()));
+        paths.insert(key, (input.path, input.source));
     }
 
     let mut kernel = AuthoringKernel::new();
@@ -54,8 +57,26 @@ pub(super) fn run(
     };
 
     let assigned = plan.edits().len();
+    if preview {
+        write_planned(stderr, &plan, &paths)?;
+        let summary = if check {
+            MsgId::CliIdsMissingCheck
+        } else {
+            MsgId::CliIdsPlanned
+        };
+        writeln!(
+            stderr,
+            "{}",
+            messages.format(summary, [("count", assigned)])
+        )?;
+        return if check {
+            Err(CliError::Diagnostics)
+        } else {
+            Ok(())
+        };
+    }
     for (key, text) in plan.apply(snapshot).map_err(|_| CliError::Diagnostics)? {
-        if let Some(path) = paths.get(&key) {
+        if let Some((path, _)) = paths.get(&key) {
             write_staged(path, text.as_bytes())?;
         }
     }
@@ -64,5 +85,33 @@ pub(super) fn run(
         "{}",
         messages.format(MsgId::CliIdsAssigned, [("count", assigned)])
     )?;
+    Ok(())
+}
+
+/// One row per planned ID: where it goes, the ID, and the header it completes.
+fn write_planned(
+    stderr: &mut dyn Write,
+    plan: &recite_compiler::authoring::AuthoringEditPlan,
+    paths: &BTreeMap<DocumentKey, (std::path::PathBuf, String)>,
+) -> Result<(), CliError> {
+    for edit in plan.edits() {
+        let Some((path, source)) = paths.get(edit.document()) else {
+            continue;
+        };
+        let line = edit.range().start().line();
+        let header = recite_core::source_lines(source)
+            .nth(
+                usize::try_from(line)
+                    .unwrap_or(usize::MAX)
+                    .saturating_sub(1),
+            )
+            .map_or("", |(content, _)| content.trim());
+        writeln!(
+            stderr,
+            "  {}:{line}  {}  {header}",
+            crate::fs::display_path(path),
+            edit.replacement().trim()
+        )?;
+    }
     Ok(())
 }

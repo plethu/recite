@@ -818,3 +818,9 @@ suggestion = "string"
 
 [arguments."cli-error-schema-producer"]
 detail = "string"
+
+[arguments."cli-ids-planned"]
+count = "integer"
+
+[arguments."cli-ids-missing-check"]
+count = "integer"

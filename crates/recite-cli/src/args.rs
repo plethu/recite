@@ -49,7 +49,7 @@ pub(crate) enum Command {
 #[derive(Debug, Subcommand)]
 pub(crate) enum IdCommand {
     Check(CheckIdsArgs),
-    Assign(InputArgs),
+    Assign(AssignIdsArgs),
     Rename(RenameIdArgs),
     Reassign(ReassignIdArgs),
 }
@@ -73,6 +73,18 @@ pub(crate) enum ProjectCommand {
 pub(crate) struct InputArgs {
     #[arg(required = true)]
     pub(crate) paths: Vec<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct AssignIdsArgs {
+    #[command(flatten)]
+    pub(crate) inputs: InputArgs,
+    /// List the IDs that would be added without changing any file.
+    #[arg(long, conflicts_with = "check")]
+    pub(crate) dry_run: bool,
+    /// Change nothing; fail when any line or choice has no stable ID.
+    #[arg(long)]
+    pub(crate) check: bool,
 }
 
 #[derive(Debug, Args)]

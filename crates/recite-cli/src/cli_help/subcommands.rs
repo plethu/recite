@@ -92,6 +92,18 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
         "id assign" => {
             set_about(command, messages.text(MsgId::CliHelpCommandIdAssign));
             localise_paths(command, messages);
+            set_arg_help(
+                command,
+                "dry_run",
+                messages.text(MsgId::CliHelpArgIdsDryRun),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "check",
+                messages.text(MsgId::CliHelpArgIdsCheck),
+                messages,
+            );
         }
         "id rename" | "id reassign" => {
             let rename = path == "id rename";

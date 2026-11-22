@@ -55,11 +55,14 @@ release tag, and pass `--allow-removed <ID>` for each line you removed on purpos
 another file keeps its ID. If the revision is not available, for example in a shallow CI clone
 without tags, the command fails instead of comparing against nothing.
 
-### `recite id assign <PATHS>...`
+### `recite id assign [--dry-run | --check] <PATHS>...`
 
 Appends a generated stable ID to every line and choice header that has none, after the header's last
 field. Existing IDs are never rewritten. If a file has syntax errors or a malformed ID, it reports
 those diagnostics and leaves every file unchanged.
+
+`--dry-run` lists each planned ID (`path:line  @id  header`) and writes nothing; a later run
+generates new IDs. `--check` writes nothing and fails while any line or choice lacks an ID, for CI.
 
 ### `recite id rename <ID|PATH:LINE> <NEW_ID> [PATHS]... [--catalog <PATH>]...`
 

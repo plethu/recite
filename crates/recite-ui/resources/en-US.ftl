@@ -12,6 +12,8 @@ cli-help-command-schema = Inspect, export and freshness-check schema manifests
 cli-help-arg-only = Report only this diagnostic category; syntax errors are always reported
 cli-help-command-id-check = Report stable line and choice ID diagnostics
 cli-help-command-id-assign = Append generated stable IDs to line and choice headers that have none
+cli-help-arg-ids-dry-run = List the IDs that would be added without changing any file; a later run generates new ones
+cli-help-arg-ids-check = Change nothing; fail when any line or choice has no stable ID, listing where
 cli-help-command-project-validate = Validate recite.project.toml and referenced compiled assets
 cli-help-command-project-check-fresh = Check whether project compiled assets are fresh
 cli-help-command-schema-inspect = Inspect standalone TOML or generated schema JSON as deterministic machine-readable JSON
@@ -77,6 +79,14 @@ cli-success-project = project, no diagnostics
 cli-ids-assigned = { $count ->
         [one] assigned { $count } stable ID
        *[other] assigned { $count } stable IDs
+    }
+cli-ids-planned = { $count ->
+        [one] would assign {$count} stable ID; nothing was written
+       *[other] would assign {$count} stable IDs; nothing was written
+    }
+cli-ids-missing-check = { $count ->
+        [one] {$count} line or choice has no stable ID; run `recite id assign` to add it
+       *[other] {$count} lines and choices have no stable ID; run `recite id assign` to add them
     }
 cli-ids-none-missing = every line and choice already has a stable ID
 cli-ids-removed = stable ID `@{$id}` from {$reference} is missing; restore it or pass --allow-removed {$id}

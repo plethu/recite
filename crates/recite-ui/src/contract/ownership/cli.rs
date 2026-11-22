@@ -14,7 +14,11 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpArgOnly
         | MsgId::CliHelpCommandIdCheck
         | MsgId::CliHelpCommandIdAssign
+        | MsgId::CliHelpArgIdsDryRun
+        | MsgId::CliHelpArgIdsCheck
         | MsgId::CliIdsAssigned
+        | MsgId::CliIdsPlanned
+        | MsgId::CliIdsMissingCheck
         | MsgId::CliIdsNoneMissing
         | MsgId::CliIdsRemoved
         | MsgId::CliHelpCommandIdRename
