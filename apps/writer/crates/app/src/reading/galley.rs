@@ -97,8 +97,6 @@ impl Writer {
         self.navigate(Target::Selection(location));
     }
 
-    /// The first problem in each beat of the open scene, by beat id, in source order. A problem
-    /// belongs to the last beat that starts at or before its line.
     /// Bring the first beat with a problem into the galley and ask for focus on its wedge.
     pub fn reveal_first_problem(&mut self) {
         let Some((beat, _)) = self.beat_problems().into_iter().next() else {
@@ -114,12 +112,14 @@ impl Writer {
         }
         self.attention.request_problem_focus();
     }
+    /// The first problem in each beat of the open scene, by beat id: the document's own
+    /// diagnostics in their order, then prose findings in source order. A problem belongs to the
+    /// last beat that starts at or before its line.
     pub fn beat_problems(&self) -> Vec<(String, String)> {
-        let document = self.session.model().document();
-        let diagnostics = document.diagnostic_snapshot();
-        let blocks = document.block_summaries();
+        let blocks = self.session.model().document().block_summaries();
+        let all = self.problems();
         let mut problems: Vec<(String, String)> = Vec::new();
-        for diagnostic in (0..diagnostics.len()).filter_map(|index| diagnostics.get(index)) {
+        for diagnostic in all.iter().map(|problem| problem.diagnostic) {
             let line = diagnostic.span.start.line();
             let Some(block) = blocks
                 .iter()

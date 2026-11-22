@@ -366,6 +366,15 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WriterNoMatches => Some("writer-no-matches"),
         super::MsgId::WriterPrevious => Some("writer-previous"),
         super::MsgId::WriterNext => Some("writer-next"),
+        super::MsgId::WriterProseReplace => Some("writer-prose-replace"),
+        super::MsgId::WriterProseAddWord => Some("writer-prose-add-word"),
+        super::MsgId::WriterProseApplied => Some("writer-prose-applied"),
+        super::MsgId::WriterProseStale => Some("writer-prose-stale"),
+        super::MsgId::WriterProseDraftPending => Some("writer-prose-draft-pending"),
+        super::MsgId::WriterProseBusy => Some("writer-prose-busy"),
+        super::MsgId::WriterProseWordAdded => Some("writer-prose-word-added"),
+        super::MsgId::WriterProseWordListed => Some("writer-prose-word-listed"),
+        super::MsgId::WriterProseDictionaryFailed => Some("writer-prose-dictionary-failed"),
         _ => None,
     }
 }

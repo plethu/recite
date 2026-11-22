@@ -10,3 +10,10 @@ pub fn text(id: MsgId) -> String {
         Err(error) => format!("[UI text unavailable: {error}]"),
     })
 }
+/// Wording with named string arguments, such as a suggested replacement.
+pub fn format<const N: usize>(id: MsgId, arguments: [(&str, &str); N]) -> String {
+    MESSAGES.with(|catalogue| match catalogue {
+        Ok(catalogue) => catalogue.format_pairs(id, arguments),
+        Err(error) => format!("[UI text unavailable: {error}]"),
+    })
+}

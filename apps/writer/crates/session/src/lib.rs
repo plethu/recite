@@ -23,6 +23,7 @@ pub mod declarations;
 pub mod external;
 pub mod messages;
 pub mod navigation;
+pub mod prose;
 
 pub mod choices;
 pub mod localisation;

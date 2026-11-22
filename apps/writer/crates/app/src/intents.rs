@@ -42,6 +42,7 @@ impl Writer {
         self.refresh_map_if_needed();
         self.resume_external_notices();
         self.resume_linked_editor();
+        self.check_prose_if_needed();
     }
 }
 

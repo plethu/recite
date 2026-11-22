@@ -72,6 +72,15 @@ Adding a word edits the dictionary file through your editor. If the editor opens
 of saving it, save it to refresh the findings. Turn off other spell-checking extensions for
 `.recite` files, or they will flag syntax again.
 
+## In Writer
+
+When the open project enables `[prose]`, Writer checks the open document in the background and
+counts its findings with the document's other problems: in the status line, at the beat they belong
+to and in the list under the manuscript. A finding listed there offers its suggested replacements
+and, for a spelling, adding the word to the project's first dictionary. A replacement is one
+undoable edit; apply or discard a pending draft first. A setup problem, such as an unsupported
+language, appears as one warning.
+
 ## In CI
 
 ```bash
@@ -89,4 +98,3 @@ RECITE_PROSE001` for guidance on a code.
 - Grammar rules can misread deliberate dialogue. Suppress a rule, a speaker or a range of IDs rather
   than rewriting a character's voice.
 - There is no inline suppression for a single sentence, because comments end a prose body.
-- Writer does not show prose findings yet.

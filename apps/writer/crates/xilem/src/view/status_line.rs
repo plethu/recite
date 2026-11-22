@@ -17,7 +17,7 @@ pub(super) fn status_height(scale: f32) -> f64 {
 pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
     let (text, signal) = (state.palette.status_text, state.palette.status_signal);
-    let diagnostics = state.session.model().document().diagnostic_snapshot();
+    let problems = state.problems();
     let refusal = state.reading_refusal();
     // "Ready" says nothing the bar does not already show; a refused rename's clash is said in
     // writer words under its field, so the compiler's words are not repeated here.
@@ -40,7 +40,7 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
         if let (None, false, Some(count)) = (
             refusal,
             state.unfinished_trial_edit().is_some() && state.trial.visible,
-            (!diagnostics.is_empty()).then_some(diagnostics.len()),
+            (!problems.is_empty()).then_some(problems.len()),
         ) {
             // The count is a way to the first problem: focus moves to its wedge.
             Either::A(styled(

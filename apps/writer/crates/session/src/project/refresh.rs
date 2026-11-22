@@ -30,6 +30,7 @@ pub struct PreparedRefresh {
     documents: Vec<ProjectDocument>,
     manifest: String,
     schema: Option<String>,
+    prose: Option<Arc<crate::prose::Configuration>>,
     retired_declarations: Option<crate::declarations::Session>,
 }
 impl ProjectFiles {
@@ -94,6 +95,7 @@ impl ProjectFiles {
         std::mem::swap(&mut self.search, &mut prepared.search);
         std::mem::swap(&mut self.paths, &mut prepared.paths);
         std::mem::swap(&mut self.names, &mut prepared.names);
+        std::mem::swap(&mut self.prose, &mut prepared.prose);
         self.configuration_change = None;
         Ok(())
     }
@@ -188,6 +190,7 @@ impl RefreshRequest {
             documents,
             manifest: report.manifest().source().source_text().to_owned(),
             schema: report.manifest().source().manifest().project.schema.clone(),
+            prose: crate::prose::Configuration::capture(&report),
             retired_declarations: None,
         })
     }

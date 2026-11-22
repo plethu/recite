@@ -18,6 +18,7 @@ pub mod map;
 pub mod navigation;
 pub mod notices;
 pub mod presentation;
+pub mod prose;
 pub mod reading;
 mod reading_context;
 pub mod routes;
@@ -60,6 +61,7 @@ pub struct Writer {
     pub workspaces: workspaces::Workspaces,
     pub localisation: localisation::Localisation,
     pub notices: notices::Notices,
+    pub prose: prose::Prose,
     pub viewport: kurbo::Size,
     pub(crate) document_menu: attention::DocumentMenu,
     /// Whether the shell's Settings sheet hangs over this window, whose toolbar Workspace control
@@ -132,6 +134,7 @@ impl Writer {
             workspaces: Default::default(),
             localisation: Default::default(),
             notices: Default::default(),
+            prose: Default::default(),
             viewport: kurbo::Size::new(1280., 800.),
             document_menu: Default::default(),
             reading_context: reading_context::Context::default(),

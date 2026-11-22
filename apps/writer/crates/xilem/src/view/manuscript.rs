@@ -10,6 +10,7 @@ mod field;
 pub(in crate::view) mod folio;
 mod input;
 mod insertion;
+mod problems;
 pub(super) use field::{passage_editor, prose_editor};
 use xilem::AnyWidgetView;
 use xilem::masonry::kurbo;
@@ -31,7 +32,7 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
         // under repair has nothing to insert into, and its head holds the draft's actions.
         (!galley(state, surface) && repair.is_none())
             .then(|| retained(actions(state), !state.attention.is_focused())),
-        diagnostics(state),
+        problems::problems(state),
         (repair.is_none()
             && !matches!(
                 surface,
@@ -139,24 +140,4 @@ fn action_axis(state: &Writer) -> kurbo::Axis {
     } else {
         kurbo::Axis::Horizontal
     }
-}
-fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let diagnostics = state.session.model().document().diagnostic_snapshot();
-    flex_col(
-        (0..diagnostics.len().min(3))
-            .filter_map(|index| diagnostics.get(index))
-            .map(|diagnostic| {
-                paragraph(
-                    state.ui_scale(),
-                    format!(
-                        "Line {} · {}",
-                        diagnostic.span.start.line(),
-                        diagnostic.message
-                    ),
-                    state.script_width(),
-                )
-            })
-            .collect::<Vec<_>>(),
-    )
-    .gap(space::SIBLINGS.px())
 }

@@ -46,6 +46,7 @@ pub struct ProjectFiles {
     pub current: PathBuf,
     saved: std::sync::Arc<str>,
     root: PathBuf,
+    prose: Option<std::sync::Arc<crate::prose::Configuration>>,
     context: std::sync::Arc<ProjectContext>,
     search: std::sync::Arc<recite_writer_model::SearchIndex>,
     recovery: RecoveryStore,
@@ -65,6 +66,10 @@ impl ProjectFiles {
 impl ProjectFiles {
     pub fn root(&self) -> &Path {
         &self.root
+    }
+    /// The project's `[prose]` configuration, present only when it enables checking.
+    pub fn prose(&self) -> Option<&std::sync::Arc<crate::prose::Configuration>> {
+        self.prose.as_ref()
     }
     pub fn open_with_control(path: &Path, control: &dyn WorkControl) -> Result<Self, FileError> {
         Self::open_requested_with_control(path, None, control)
@@ -113,6 +118,7 @@ impl ProjectFiles {
             .iter()
             .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
             .collect();
+        let prose = crate::prose::Configuration::capture(&report);
         let manifest = manifest::ManifestDraft::open(&root)?;
         let watch = crate::external::Watch::new(&root);
         control.checkpoint()?;
@@ -138,6 +144,7 @@ impl ProjectFiles {
             context: context.into(),
             search,
             root,
+            prose,
         })
     }
 

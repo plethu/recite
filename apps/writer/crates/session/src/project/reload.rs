@@ -37,6 +37,7 @@ struct Snapshot {
     search: Arc<SearchIndex>,
     paths: Vec<PathBuf>,
     names: BTreeMap<PathBuf, String>,
+    prose: Option<Arc<crate::prose::Configuration>>,
     model: Workbench,
     documents: Vec<ProjectDocument>,
 }
@@ -98,6 +99,7 @@ impl ProjectFiles {
         std::mem::swap(&mut self.search, &mut next.search);
         std::mem::swap(&mut self.paths, &mut next.paths);
         std::mem::swap(&mut self.names, &mut next.names);
+        std::mem::swap(&mut self.prose, &mut next.prose);
         prepared.cleanup = Some(cleanup);
         Ok(())
     }
@@ -214,6 +216,7 @@ impl ReloadRequest {
                 search,
                 paths,
                 names,
+                prose: crate::prose::Configuration::capture(&report),
                 model,
                 documents,
             },
