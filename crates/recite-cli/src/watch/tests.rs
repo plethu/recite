@@ -13,6 +13,15 @@ use super::events::WatchState;
 use crate::error::CliError;
 use crate::i18n::{Messages, UiLocale};
 
+/// Reports one build as the human watch loop does, without colour.
+pub(crate) fn report_build_result(
+    stderr: &mut dyn std::io::Write,
+    result: Result<BuildStatus, crate::error::CliError>,
+    messages: &crate::i18n::Messages,
+) -> Result<(), crate::error::CliError> {
+    super::StatusLine::new(crate::ink::Ink::default()).report(stderr, result, messages)
+}
+
 #[path = "tests/discovery_truth/tests.rs"]
 mod discovery_truth;
 

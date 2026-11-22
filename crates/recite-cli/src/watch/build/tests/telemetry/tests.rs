@@ -6,7 +6,7 @@ use super::super::super::events::WatchState;
 use super::super::{BuildStatus, build_once_with_clock};
 use super::{alternate_messages, project, source, write};
 use crate::i18n::{Messages, UiLocale};
-use crate::watch::report_build_result;
+use crate::watch::tests::report_build_result;
 
 fn timed_build<F>(
     state: &mut WatchState,

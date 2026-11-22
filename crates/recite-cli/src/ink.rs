@@ -51,11 +51,6 @@ impl Ink {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) const fn coloured() -> Self {
-        Self { color: true }
-    }
-
     fn sgr(self, code: &str, text: impl Display) -> String {
         if self.color {
             format!("\u{1b}[{code}m{text}\u{1b}[0m")
@@ -95,3 +90,6 @@ impl Ink {
         self.sgr("4", text)
     }
 }
+
+#[cfg(test)]
+pub(crate) mod tests;

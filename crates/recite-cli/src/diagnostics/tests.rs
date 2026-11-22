@@ -166,7 +166,13 @@ fn carets_cover_the_whole_span_and_the_rest_of_an_unended_one() {
     let span = |end: Option<u32>| SourceSpan::new("scene.recite", position(3), end.map(position));
     let text = "> The clerk looks up.";
     // Span ends are inclusive, as the LSP reads them: columns 3 to 5 are `The`.
-    assert_eq!(super::human::excerpt_for_tests(&span(Some(5)), text).2, 3);
+    assert_eq!(
+        super::human::tests::excerpt_for_tests(&span(Some(5)), text).2,
+        3
+    );
     // Without an end, the caret runs to the end of the line's content.
-    assert_eq!(super::human::excerpt_for_tests(&span(None), text).2, 19);
+    assert_eq!(
+        super::human::tests::excerpt_for_tests(&span(None), text).2,
+        19
+    );
 }
