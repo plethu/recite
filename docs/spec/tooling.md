@@ -20,6 +20,37 @@ the project's catalogues and is refused with a localised `RequestFailed` reason 
 actions edit source declarations or invoke their registered producer, never generated manifests.
 Metadata completions use the compiler's domain and missing-context rules.
 
+### 14.1 Prose Checking
+
+Spelling and grammar checking covers author-facing prose only and never changes validation,
+compilation or runtime output. The [design note](../prose-checking-decisions.md) records the engine
+comparison and the conditions for revisiting it.
+
+- **Regions.** `recite_parser::prose_regions` owns which bytes are prose: `>` line bodies, `|`
+  plural forms and `?` choice bodies, at any nesting depth and in incomplete files. Headers, stable
+  IDs, speakers, metadata keys and symbols, conditions, effects, diverts and comments are never
+  prose. Quoted metadata values are regions too, checked only for keys listed in
+  `[prose].metadata_keys`.
+- **Masking.** A region's checkable text keeps multi-line sentences together and turns blank lines
+  into paragraph breaks. Inline markup tags (§5.7) are removed, placeholders (§5.10) stay opaque so
+  they are neither checked nor used as grammatical context, and `\{`/`\}` become their characters.
+  Bracketed text that is not tag-shaped, such as `[The door opens.]`, remains prose.
+- **Source map.** Findings map back to exact file bytes. A fix is offered only when its range lies
+  inside one verbatim prose piece, so applying it cannot change Recite syntax; findings crossing a
+  line break or markup are reported without a fix.
+- **Diagnostics.** `recite-prose` maps findings to `RECITE_PROSE001` (spelling), `002` (grammar and
+  usage) and `003` (style), at warning or information severity, carrying the flagged text and the
+  engine rule. `RECITE_PROSE101`–`103` report an unsupported language, an unreadable dictionary or a
+  build without a checker.
+- **Configuration.** `[prose]` in `recite.project.toml` declares `enabled` (editor checking, default
+  `false`), `language` (`en-US` default, `en-GB`, `en-AU`, `en-CA`, `en-IN`), `dictionaries`
+  (project-relative word lists, one word per line; the first receives added words), `ignore_rules`,
+  `ignore_speakers`, `ignore_ids` (exact or `prefix*`) and `metadata_keys`.
+- **Clients.** The LSP publishes findings for open documents of enabled projects alongside other
+  diagnostics and offers replacement and add-to-dictionary quick fixes; VS Code, Neovim and Zed need
+  no extension changes. `recite prose check` (§13.12) runs the same checks for CLI and CI. Checking
+  is local and offline; no prose leaves the machine.
+
 ## 15. Editor Support
 
 VS Code/VSCodium, Neovim and Zed are first-class text surfaces. Their native clients own setup,

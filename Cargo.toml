@@ -17,6 +17,7 @@ members = [
     "crates/recite-lsp",
     "crates/recite-parser",
     "crates/recite-playground",
+    "crates/recite-prose",
     "crates/recite-runtime",
     "crates/recite-ui",
     "tools/recite-perf",
@@ -70,6 +71,16 @@ sur = "sur"
 # Published crate name in archived dependency-probe lockfile evidence.
 writeable = "writeable"
 
+[workspace.metadata.typos.files]
+# Prose-checking fixtures and tests misspell words on purpose.
+extend-exclude = [
+    "fixtures/recite/*/prose/",
+    "crates/recite-cli/tests/prose_check.rs",
+    "crates/recite-lsp/src/tests/prose.rs",
+    "crates/recite-parser/tests/snapshots/prose_regions__*",
+    "crates/recite-prose/tests/",
+]
+
 [workspace.dependencies]
 # Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.
 atomic-write-file = "0.3.1"
@@ -85,6 +96,9 @@ crossterm = "0.29.0"
 dirs = "6.0.0"
 fluent-bundle = "0.15.3"
 fluent-syntax = "0.11.1"
+# Offline Apache-2.0 spelling and grammar engine behind the default `prose` features.
+# Threaded (`concurrent`) so editor workers can share one checker; no thesaurus.
+harper-core = { version = "3.2.0", default-features = false, features = ["concurrent"] }
 insta = { version = "1.47.2", default-features = false }
 language-tags = "0.3.2"
 memchr = "2.8.0"
@@ -103,6 +117,7 @@ recite-godot = { path = "crates/recite-godot", version = "0.1.0" }
 recite-import = { path = "crates/recite-import", version = "0.1.0" }
 recite-lsp = { path = "crates/recite-lsp", version = "0.1.0" }
 recite-parser = { path = "crates/recite-parser", version = "0.1.0" }
+recite-prose = { path = "crates/recite-prose", version = "0.1.0", default-features = false }
 recite-runtime = { path = "crates/recite-runtime", version = "0.1.0" }
 recite-ui = { path = "crates/recite-ui", version = "0.1.0" }
 rmp-serde = "1.3.1"

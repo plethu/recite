@@ -158,6 +158,8 @@ struct RawProjectManifest {
     #[serde(default)]
     recording: RawProjectRecording,
     #[serde(default)]
+    prose: RawProjectProse,
+    #[serde(default)]
     scenes: Vec<RawProjectScene>,
 }
 
@@ -166,6 +168,24 @@ struct RawProjectManifest {
 struct RawProjectRecording {
     #[serde(default)]
     direction: Vec<String>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawProjectProse {
+    #[serde(default)]
+    enabled: bool,
+    language: Option<String>,
+    #[serde(default)]
+    dictionaries: Vec<String>,
+    #[serde(default)]
+    ignore_rules: Vec<String>,
+    #[serde(default)]
+    ignore_speakers: Vec<String>,
+    #[serde(default)]
+    ignore_ids: Vec<String>,
+    #[serde(default)]
+    metadata_keys: Vec<String>,
 }
 
 #[derive(Default, Deserialize)]
@@ -198,6 +218,15 @@ impl RawProjectManifest {
             },
             recording: super::ProjectRecording {
                 direction: self.recording.direction,
+            },
+            prose: super::ProjectProse {
+                enabled: self.prose.enabled,
+                language: self.prose.language,
+                dictionaries: self.prose.dictionaries,
+                ignore_rules: self.prose.ignore_rules,
+                ignore_speakers: self.prose.ignore_speakers,
+                ignore_ids: self.prose.ignore_ids,
+                metadata_keys: self.prose.metadata_keys,
             },
             scenes: self
                 .scenes

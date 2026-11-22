@@ -583,6 +583,12 @@ kind = "string"
 [arguments."lsp-code-action-create-block-stub"]
 block = "string"
 
+[arguments."lsp-code-action-prose-replace"]
+replacement = "string"
+
+[arguments."lsp-code-action-prose-add-word"]
+word = "string"
+
 [arguments."lsp-code-action-add-condition"]
 name = "string"
 

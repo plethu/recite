@@ -12,6 +12,8 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandId
         | MsgId::CliHelpCommandProject
         | MsgId::CliHelpCommandSchema
+        | MsgId::CliHelpCommandProse
+        | MsgId::CliHelpCommandProseCheck
         | MsgId::CliHelpArgOnly
         | MsgId::CliHelpCommandIdCheck
         | MsgId::CliHelpCommandIdAssign

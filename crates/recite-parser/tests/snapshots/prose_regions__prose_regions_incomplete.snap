@@ -1,0 +1,13 @@
+---
+source: crates/recite-parser/tests/prose_regions.rs
+expression: actual
+---
+line id=- speaker=rhea key=-
+  4:3 ¶ "The lantern flickerd as she spoke."
+  checked "The lantern flickerd as she spoke."
+choice id=half_written speaker=- key=-
+  7:3 ¶ "Should we go"
+  checked "Should we go"
+choice id=- speaker=- key=-
+  10:3 ¶ "An unfinished choise"
+  checked "An unfinished choise"

@@ -108,11 +108,16 @@ impl Harness {
     }
 
     pub(in crate::tests) fn recv_publish_diagnostics(&self) -> PublishDiagnosticsParams {
-        match self
-            .client
-            .receiver
-            .recv_timeout(std::time::Duration::from_secs(1))
-        {
+        self.recv_publish_diagnostics_within(std::time::Duration::from_secs(1))
+    }
+
+    /// For publications that first build a prose checker, which takes
+    /// seconds in unoptimised test builds.
+    pub(in crate::tests) fn recv_publish_diagnostics_within(
+        &self,
+        timeout: std::time::Duration,
+    ) -> PublishDiagnosticsParams {
+        match self.client.receiver.recv_timeout(timeout) {
             Ok(Message::Notification(notification)) => {
                 assert_eq!(notification.method, PublishDiagnostics::METHOD);
                 from_value(notification.params)

@@ -1,0 +1,26 @@
+[package]
+name = "recite-prose"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Spelling and grammar checking of Recite dialogue prose."
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[features]
+default = ["harper"]
+# The embedded offline Harper engine. Without it, checks report RECITE_PROSE103.
+harper = ["dep:harper-core"]
+
+[dependencies]
+harper-core = { workspace = true, optional = true }
+recite-core.workspace = true
+recite-parser.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+
+[lints]
+workspace = true

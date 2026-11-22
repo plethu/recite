@@ -7,6 +7,20 @@ version = 2
 yanked = "deny"
 unmaintained = "workspace"
 unused-ignored-advisory = "deny"
+# harper-core 3.2.0 requires zip 8.x and uses it only to read and write Weirpack archives in
+# memory; it never extracts archives, and Recite never loads a Weirpack, so these zip 8.6.0
+# extraction and decoding advisories are unreachable. Remove them with the zip 9 bump in
+# Automattic/harper#4748; unused-ignored-advisory fails as soon as they stop matching (#318).
+ignore = [
+    { id = "RUSTSEC-2026-0367", reason = "zip via harper-core: extraction is never used (#318)" },
+    { id = "RUSTSEC-2026-0368", reason = "zip via harper-core: extraction is never used (#318)" },
+    { id = "RUSTSEC-2026-0369", reason = "zip via harper-core: extraction is never used (#318)" },
+    { id = "RUSTSEC-2026-0429", reason = "zip via harper-core: extraction is never used (#318)" },
+    { id = "RUSTSEC-2026-0545", reason = "zip via harper-core: no encrypted archives are read (#318)" },
+    { id = "RUSTSEC-2026-0546", reason = "zip via harper-core: extraction is never used (#318)" },
+    { id = "RUSTSEC-2026-0547", reason = "zip via harper-core: Recite reads no archives through it (#318)" },
+    { id = "RUSTSEC-2026-0548", reason = "zip via harper-core: the stream reader is never used (#318)" },
+]
 
 [bans]
 multiple-versions = "warn"
@@ -59,6 +73,17 @@ exceptions = [
         "MPL-2.0",
     ] },
     { crate = "option-ext", allow = [
+        "MPL-2.0",
+    ] },
+    # Required by harper-core for prose checking (#274): `colored` through harper-brill's burn,
+    # `cssparser` and `dtoa-short` through ammonia. Unmodified, as above.
+    { crate = "colored", allow = [
+        "MPL-2.0",
+    ] },
+    { crate = "cssparser", allow = [
+        "MPL-2.0",
+    ] },
+    { crate = "dtoa-short", allow = [
         "MPL-2.0",
     ] },
 ]

@@ -1,6 +1,6 @@
 use super::{
     DiagnosticAuxiliaryPresentationContract, DiagnosticPresentationContract, compiler, config,
-    freshness, parser, po, project, schema,
+    freshness, parser, po, project, prose, schema,
 };
 use crate::diagnostic_presentation_record::is_valid_argument_name;
 use std::collections::BTreeSet;
@@ -79,6 +79,7 @@ pub fn validate_migrated_diagnostic_presentation_contracts()
         .chain(project::contracts())
         .chain(freshness::contracts())
         .chain(schema::contracts())
+        .chain(prose::contracts())
         .collect::<Vec<_>>();
     let auxiliary =
         super::migrated_diagnostic_auxiliary_presentation_contracts().collect::<Vec<_>>();

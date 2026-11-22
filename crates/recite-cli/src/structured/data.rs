@@ -72,6 +72,10 @@ pub(super) enum SuccessData {
     Validate {
         diagnostics: Vec<DiagnosticRecord>,
     },
+    ProseCheck {
+        diagnostics: Vec<DiagnosticRecord>,
+        fixes: Vec<ProseFixRecord>,
+    },
     Compile {
         diagnostics: Vec<DiagnosticRecord>,
         artifact: ArtifactMetadata,
@@ -98,10 +102,22 @@ pub(super) enum SuccessData {
 #[derive(Serialize)]
 #[serde(untagged)]
 pub(super) enum ContentDiagnosticData {
-    Validate { diagnostics: Vec<DiagnosticRecord> },
-    Compile { diagnostics: Vec<DiagnosticRecord> },
-    ExportSchema { diagnostics: Vec<DiagnosticRecord> },
-    Extract { diagnostics: Vec<DiagnosticRecord> },
+    Validate {
+        diagnostics: Vec<DiagnosticRecord>,
+    },
+    ProseCheck {
+        diagnostics: Vec<DiagnosticRecord>,
+        fixes: Vec<ProseFixRecord>,
+    },
+    Compile {
+        diagnostics: Vec<DiagnosticRecord>,
+    },
+    ExportSchema {
+        diagnostics: Vec<DiagnosticRecord>,
+    },
+    Extract {
+        diagnostics: Vec<DiagnosticRecord>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -169,6 +185,18 @@ pub(crate) fn artifact_metadata(path: &Path) -> Result<ArtifactMetadata, CliErro
         path: machine_path(path),
         size_bytes,
     })
+}
+
+/// A safe replacement offered for one prose diagnostic. Byte offsets index
+/// the UTF-8 source file; applying the edit changes prose only.
+#[derive(Serialize)]
+pub(super) struct ProseFixRecord {
+    /// Index of the diagnostic in the same result's `diagnostics`.
+    pub(super) diagnostic: usize,
+    pub(super) file: String,
+    pub(super) start_byte: usize,
+    pub(super) end_byte: usize,
+    pub(super) replacement: String,
 }
 
 #[derive(Serialize)]

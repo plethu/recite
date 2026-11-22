@@ -82,7 +82,7 @@ impl LspWorkspace {
     }
 
     pub(crate) fn publish_open_document(&self, document: &OpenDocument) -> DiagnosticRefresh {
-        let diagnostics = self
+        let mut diagnostics = self
             .partition_id_for_open(document)
             .and_then(|id| self.partitions.get(&id))
             .and_then(|partition| {
@@ -94,6 +94,7 @@ impl LspWorkspace {
                 || self.standalone_open_diagnostics(document),
                 |doc| doc.diagnostics().to_vec(),
             );
+        diagnostics.extend(self.prose_diagnostics(document));
         DiagnosticRefresh::publish_open(document, diagnostics, self.generation)
     }
 
