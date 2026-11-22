@@ -1,26 +1,44 @@
 use std::collections::BTreeMap;
 
 use super::{CatalogError, UiCatalog};
-use crate::{ResourceId, ResourceSpec, UiArgs, UiContract};
+use crate::{MsgId, ResourceId, ResourceSpec, UiArgs, UiContract};
 
+/// Resource specs by message ID. Typed [`MsgId`] lookups use a position index: the IDs share long
+/// prefixes (`lsp-code-action-…`), so a string lookup's cost depends on which IDs sort next to the
+/// one asked for, and labels are formatted on every request.
 pub(super) struct ResourceRegistry {
-    specs: BTreeMap<String, ResourceSpec>,
+    specs: Vec<ResourceSpec>,
+    by_key: BTreeMap<String, usize>,
+    /// Indexed by `MsgId` declaration order, which is also [`MsgId::ALL`]'s order.
+    by_message: Vec<Option<usize>>,
 }
 
 impl ResourceRegistry {
     pub(super) fn from_contract(contract: &UiContract) -> Self {
+        let specs = contract.resources.clone();
+        let by_key = specs
+            .iter()
+            .enumerate()
+            .map(|(index, spec)| (spec.id.as_str().to_owned(), index))
+            .collect::<BTreeMap<_, _>>();
+        let by_message = MsgId::ALL
+            .iter()
+            .map(|id| by_key.get(id.key()).copied())
+            .collect();
         Self {
-            specs: contract
-                .resources
-                .iter()
-                .cloned()
-                .map(|spec| (spec.id.as_str().to_owned(), spec))
-                .collect(),
+            specs,
+            by_key,
+            by_message,
         }
     }
 
     pub(super) fn get(&self, id: &str) -> Option<&ResourceSpec> {
-        self.specs.get(id)
+        self.by_key.get(id).map(|index| &self.specs[*index])
+    }
+
+    pub(super) fn message(&self, id: MsgId) -> Option<&ResourceSpec> {
+        let index = (*self.by_message.get(id as usize)?)?;
+        self.specs.get(index)
     }
 
     pub(super) fn len(&self) -> usize {
@@ -73,6 +91,27 @@ impl UiCatalog {
             .resource_registry
             .get(id)
             .ok_or_else(|| CatalogError::MissingMessage(id.to_string()))?;
+        self.format_spec_checked(id, spec, args)
+    }
+
+    pub(super) fn format_message_checked(
+        &self,
+        id: MsgId,
+        args: &UiArgs,
+    ) -> Result<String, CatalogError> {
+        let spec = self
+            .resource_registry
+            .message(id)
+            .ok_or_else(|| CatalogError::MissingMessage(id.key().to_owned()))?;
+        self.format_spec_checked(id.key(), spec, args)
+    }
+
+    fn format_spec_checked(
+        &self,
+        id: &str,
+        spec: &ResourceSpec,
+        args: &UiArgs,
+    ) -> Result<String, CatalogError> {
         for name in spec.arguments.keys() {
             if !args.contains_key(name) {
                 return Err(CatalogError::MissingArgument {

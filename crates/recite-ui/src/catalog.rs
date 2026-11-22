@@ -141,7 +141,7 @@ impl UiCatalog {
     }
 
     pub fn format_checked(&self, id: MsgId, args: &UiArgs) -> Result<String, CatalogError> {
-        self.format_key_checked(id.key(), args)
+        self.format_message_checked(id, args)
     }
 
     pub fn text(&self, id: MsgId) -> String {

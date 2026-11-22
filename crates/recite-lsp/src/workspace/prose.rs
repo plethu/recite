@@ -55,6 +55,9 @@ pub(crate) enum DocumentProse {
 impl LspWorkspace {
     /// `None` when the document's project does not enable prose checking.
     pub(crate) fn document_prose(&self, document: &OpenDocument) -> Option<DocumentProse> {
+        if !self.saved.any_prose_enabled() {
+            return None;
+        }
         let partition = self.partition_id_for_open(document)?;
         let manifest = self.saved.manifest_for_partition(&partition)?;
         let prose = &manifest.source().manifest().prose;

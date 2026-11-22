@@ -113,6 +113,18 @@ impl SavedProjectIndex {
             })
     }
 
+    /// Whether any discovered project enables prose checking. Most do not, so callers ask this
+    /// before resolving a document's project, which allocates.
+    pub(super) fn any_prose_enabled(&self) -> bool {
+        self.discoveries.iter().any(|discovery| {
+            matches!(
+                &discovery.state,
+                WorkspaceDiscoveryState::Manifest(report)
+                    if report.manifest().source().manifest().prose.enabled
+            )
+        })
+    }
+
     pub(super) fn document_uris(&self) -> impl Iterator<Item = &Uri> {
         self.documents
             .values()
