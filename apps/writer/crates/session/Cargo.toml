@@ -20,6 +20,7 @@ url = "2.5"
 atomic-write-file = "0.3.1"
 recite-compiler.workspace = true
 recite-config = { path = "../../../../crates/recite-config" }
+recite-prose = { path = "../../../../crates/recite-prose" }
 recite-core.workspace = true
 recite-runtime.workspace = true
 recite-writer-model.workspace = true

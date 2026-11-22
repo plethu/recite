@@ -15,6 +15,7 @@ mod native_host;
 mod navigation;
 mod notices;
 mod presentation;
+mod prose;
 mod reading;
 mod reading_context;
 mod rules;

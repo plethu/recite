@@ -1165,6 +1165,21 @@ writer-workspace-presentation = Reading and layout
 
 writer-workspace-menu = Workspace
 writer-rules-actions = Condition actions
+writer-prose-replace = Replace with “{$replacement}”
+writer-prose-add-word = Add “{$word}” to the project dictionary
+writer-prose-applied = Suggestion applied. Save when ready.
+writer-prose-stale = The text changed since this suggestion. Try again once prose checking catches up.
+writer-prose-draft-pending = Apply or discard the draft before using a suggestion.
+writer-prose-busy = Finish the current editor action before using a suggestion.
+writer-prose-word-added = Added “{$word}” to the project dictionary.
+writer-prose-word-listed = “{$word}” is already in the project dictionary.
+writer-prose-dictionary-failed = The project dictionary could not be updated: {$detail}
+writer-prose-spelling = Line {$line} · Possible misspelling “{$text}”
+writer-prose-note = Line {$line} · “{$text}”: {$detail}
+writer-prose-count = { $count ->
+    [one] {$count} spelling or grammar note
+   *[other] {$count} spelling and grammar notes
+}
 
 cli-import-summary = { $records } generated records; { $issues } items need review.
 cli-help-command-import = Inspect migration input and optionally write validated Recite source

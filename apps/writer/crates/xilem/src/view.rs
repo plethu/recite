@@ -122,6 +122,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             crate::workspaces::worker(),
             crate::workspaces::jobs(state),
             crate::notices::worker(),
+            crate::prose::worker(),
         ),
     )
 }

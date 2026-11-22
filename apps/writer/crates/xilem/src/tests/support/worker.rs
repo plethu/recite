@@ -41,9 +41,13 @@ impl<S: 'static, V: View<S, (), ViewCtx, Element = NoElement>> Worker<S, V> {
         }
     }
     pub fn next(&mut self) {
+        self.next_within(std::time::Duration::from_secs(5));
+    }
+    /// Deliver the next response, for workers whose first result legitimately takes longer.
+    pub fn next_within(&mut self, timeout: std::time::Duration) {
         let (path, output) = self
             .responses
-            .recv_timeout(std::time::Duration::from_secs(5))
+            .recv_timeout(timeout)
             .expect("worker terminal response");
         let mut message = MessageCtx::new(
             std::mem::take(self.context.environment()),

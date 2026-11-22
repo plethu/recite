@@ -589,6 +589,33 @@ replacement = "string"
 [arguments."lsp-code-action-prose-add-word"]
 word = "string"
 
+[arguments."writer-prose-replace"]
+replacement = "string"
+
+[arguments."writer-prose-add-word"]
+word = "string"
+
+[arguments."writer-prose-word-added"]
+word = "string"
+
+[arguments."writer-prose-word-listed"]
+word = "string"
+
+[arguments."writer-prose-dictionary-failed"]
+detail = "string"
+
+[arguments."writer-prose-spelling"]
+line = "integer"
+text = "string"
+
+[arguments."writer-prose-note"]
+line = "integer"
+text = "string"
+detail = "string"
+
+[arguments."writer-prose-count"]
+count = "integer"
+
 [arguments."lsp-code-action-add-condition"]
 name = "string"
 

@@ -3,9 +3,9 @@ source: crates/recite-prose/tests/support/mod.rs
 expression: actual
 ---
 RECITE_PROSE001 Warning 4:15-4:22 "flickerd" rule=SpellCheck region=line id=-
+  fix "flickerd" -> "flickered"
   fix "flickerd" -> "flicked"
   fix "flickerd" -> "flicker"
-  fix "flickerd" -> "flickered"
 RECITE_PROSE001 Warning 10:17-10:22 "choise" rule=SpellCheck region=choice id=-
   fix "choise" -> "choice"
   fix "choise" -> "choose"

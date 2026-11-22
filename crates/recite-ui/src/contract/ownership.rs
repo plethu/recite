@@ -6,6 +6,7 @@ include!("ownership/cli.rs");
 include!("ownership/tui.rs");
 include!("ownership/lsp.rs");
 include!("ownership/neovim.rs");
+include!("ownership/writer.rs");
 
 macro_rules! vscode_command_message_ids {
     () => {
@@ -380,6 +381,7 @@ pub(super) const fn clients(id: MsgId) -> &'static [Client] {
         | MsgId::WriterRulesAddCondition
         | MsgId::WriterRulesChooseDeclaration
         | MsgId::WriterRulesNoDeclarations => &[Client::NativeGui],
+        writer_prose_message_ids!() => &[Client::NativeGui],
         tui_message_ids!() => &[Client::Tui],
         vscode_command_message_ids!() => &[Client::VsCode, Client::VsCodium],
         MsgId::LspClientDisplayName | MsgId::LspClientRestartExhausted => &[

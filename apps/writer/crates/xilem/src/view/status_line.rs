@@ -6,6 +6,7 @@ use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::print;
 use crate::presentation::sheet_text::one_line;
 use crate::presentation::space;
+use recite_writer_session::messages::{MsgId, UiArg, format};
 use xilem::masonry::properties::Dimensions;
 use xilem::view::button;
 
@@ -17,7 +18,8 @@ pub(super) fn status_height(scale: f32) -> f64 {
 pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
     let (text, signal) = (state.palette.status_text, state.palette.status_signal);
-    let diagnostics = state.session.model().document().diagnostic_snapshot();
+    let problems = state.problems();
+    let notes = problems.len() - problems.document_len();
     let refusal = state.reading_refusal();
     // "Ready" says nothing the bar does not already show; a refused rename's clash is said in
     // writer words under its field, so the compiler's words are not repeated here.
@@ -40,7 +42,8 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
         if let (None, false, Some(count)) = (
             refusal,
             state.unfinished_trial_edit().is_some() && state.trial.visible,
-            (!diagnostics.is_empty()).then_some(diagnostics.len()),
+            // Prose findings are notes, counted apart; this count leads to real problems.
+            (problems.document_len() > 0).then_some(problems.document_len()),
         ) {
             // The count is a way to the first problem: focus moves to its wedge.
             Either::A(styled(
@@ -75,6 +78,17 @@ pub(super) fn status_line(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 ),
             )
         },
+        // Spelling and grammar notes are counted beside the problems, in the quieter status ink.
+        (notes > 0).then(|| {
+            (
+                print::separator(state.ui_scale(), text),
+                print::meta(
+                    state.ui_scale(),
+                    format(MsgId::WriterProseCount, [("count", UiArg::from(notes))]),
+                )
+                .color(text),
+            )
+        }),
         // A status sentence takes the room: the Split note returns once it is read.
         (state.workspaces.screen == crate::workspaces::Screen::Write
             && !workspace::Layout::resolve(state).split_available
