@@ -1,4 +1,4 @@
-use super::{closest, edit_distance};
+use super::{Distance, closest};
 
 #[test]
 fn typos_find_their_name_and_distant_names_find_nothing() {
@@ -20,6 +20,19 @@ fn ties_resolve_by_name_order() {
 
 #[test]
 fn distance_counts_characters_not_bytes() {
-    assert_eq!(edit_distance("élise", "elise"), 1);
-    assert_eq!(edit_distance("", "abc"), 3);
+    assert_eq!(Distance::to("elise").from("élise"), 1);
+    assert_eq!(Distance::to("abc").from(""), 3);
+    let mut distance = Distance::to("kitten");
+    assert_eq!(
+        distance.from("sitting"),
+        3,
+        "rows are reset between candidates"
+    );
+    assert_eq!(distance.from("kitten"), 0);
+}
+
+#[test]
+fn length_alone_rules_out_distant_names() {
+    let blocks = ["beat_0001", "beat_0002", "beat"];
+    assert_eq!(closest("beat_", blocks), Some("beat"));
 }
