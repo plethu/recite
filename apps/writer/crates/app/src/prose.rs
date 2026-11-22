@@ -13,10 +13,20 @@ pub use recite_writer_session::prose::{Checker, Configuration, Outcome};
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
+/// Which prose check a result, problem or fix belongs to. Each request is newer than the last.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct CheckGeneration(u64);
+
+impl CheckGeneration {
+    const fn next(self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
 #[derive(Default)]
 pub struct Prose {
     pub sender: Option<UnboundedSender<Request>>,
-    generation: u64,
+    generation: CheckGeneration,
     requested: Option<Stamp>,
     checked: Option<Checked>,
 }
@@ -29,7 +39,7 @@ struct Stamp {
 
 /// One document source to check.
 pub struct Request {
-    generation: u64,
+    generation: CheckGeneration,
     configuration: Arc<Configuration>,
     key: String,
     source: Arc<str>,
@@ -37,7 +47,7 @@ pub struct Request {
 
 /// A checked source and its outcome.
 pub struct Checked {
-    generation: u64,
+    generation: CheckGeneration,
     configuration: Arc<Configuration>,
     source: Arc<str>,
     outcome: Outcome,
@@ -114,7 +124,7 @@ impl Writer {
         else {
             return;
         };
-        let generation = self.prose.generation + 1;
+        let generation = self.prose.generation.next();
         let request = Request {
             generation,
             configuration: configuration.clone(),

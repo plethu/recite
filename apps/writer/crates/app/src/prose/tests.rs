@@ -1,4 +1,4 @@
-use super::{Checker, Request};
+use super::{CheckGeneration, Checker, Request};
 use crate::Writer;
 use crate::test_support::open;
 use recite_writer_session::messages::{MsgId, text};
@@ -38,7 +38,7 @@ fn finish(writer: &mut Writer, requests: &mut UnboundedReceiver<Request>, checke
 }
 
 /// The first prose problem's check generation and index.
-fn first_prose(writer: &Writer) -> Option<(u64, usize)> {
+fn first_prose(writer: &Writer) -> Option<(CheckGeneration, usize)> {
     writer
         .problems()
         .iter()

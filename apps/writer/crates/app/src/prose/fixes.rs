@@ -3,6 +3,7 @@
 //! A replacement splices the checked source at the finding's byte range, which `recite-prose`
 //! keeps inside one verbatim prose piece, and is accepted through full-source replacement so it
 //! is one undoable step that never changes Recite syntax.
+use super::CheckGeneration;
 use crate::{Phase, Writer, feedback};
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::SourceValidation;
@@ -10,7 +11,7 @@ use recite_writer_session::messages::{MsgId, format, text};
 
 impl Writer {
     /// Replace finding `finding` of check `generation` with its fix `fix`.
-    pub fn apply_prose_fix(&mut self, generation: u64, finding: usize, fix: usize) {
+    pub fn apply_prose_fix(&mut self, generation: CheckGeneration, finding: usize, fix: usize) {
         let result = self
             .prose_fix_source(generation, finding, fix)
             .and_then(|source| self.replace_prose(source));
@@ -21,7 +22,7 @@ impl Writer {
     }
 
     /// Append the word of finding `finding` of check `generation` to the project dictionary.
-    pub fn add_prose_word(&mut self, generation: u64, finding: usize) {
+    pub fn add_prose_word(&mut self, generation: CheckGeneration, finding: usize) {
         let Some((configuration, word)) = self
             .current_prose()
             .filter(|checked| checked.generation == generation)
@@ -49,7 +50,7 @@ impl Writer {
     /// The current source with the fix applied, refused once the source has changed.
     fn prose_fix_source(
         &self,
-        generation: u64,
+        generation: CheckGeneration,
         finding: usize,
         fix: usize,
     ) -> Result<String, String> {

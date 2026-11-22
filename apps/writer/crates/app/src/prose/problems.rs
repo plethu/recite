@@ -19,7 +19,7 @@ pub struct Problem<'a> {
 
 /// A prose finding, addressed by the check that produced it.
 pub struct ProseProblem<'a> {
-    pub generation: u64,
+    pub generation: super::CheckGeneration,
     pub index: usize,
     pub finding: &'a ProseFinding,
     /// Whether the word can be added to the project dictionary.
