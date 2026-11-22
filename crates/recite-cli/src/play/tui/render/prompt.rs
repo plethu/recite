@@ -4,8 +4,11 @@ use ratatui::text::{Line, Span};
 use crate::i18n::{Messages, MsgId};
 use crate::tui::{Keymap, TextBuffer, TuiPalette};
 
+use unicode_width::UnicodeWidthStr;
+
 use super::super::state::{
-    TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiState, TuiTranscriptKind,
+    TuiChoiceRow, TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiState,
+    TuiTranscriptKind,
 };
 use super::transcript::{prompt_header_line, wrap_continuation};
 
@@ -33,6 +36,7 @@ pub(super) fn render_prompt<'a>(
                 prompt_header_line(
                     TuiTranscriptKind::Condition,
                     Some(query.as_str()),
+                    None,
                     messages,
                     palette,
                 ),
@@ -51,6 +55,7 @@ pub(super) fn render_prompt<'a>(
                 prompt_header_line(
                     TuiTranscriptKind::Condition,
                     Some(query.as_str()),
+                    None,
                     messages,
                     palette,
                 ),
@@ -79,6 +84,7 @@ pub(super) fn render_prompt<'a>(
                 prompt_header_line(
                     TuiTranscriptKind::Effect,
                     Some(id.as_str()),
+                    None,
                     messages,
                     palette,
                 ),
@@ -117,6 +123,7 @@ pub(super) fn render_prompt<'a>(
                 lines.push(prompt_header_line(
                     TuiTranscriptKind::Prompt,
                     Some(line.id.as_str()),
+                    line.speaker.as_deref(),
                     messages,
                     palette,
                 ));
@@ -126,6 +133,7 @@ pub(super) fn render_prompt<'a>(
             } else {
                 lines.push(prompt_header_line(
                     TuiTranscriptKind::Prompt,
+                    None,
                     None,
                     messages,
                     palette,
@@ -141,38 +149,32 @@ pub(super) fn render_prompt<'a>(
                 let is_selected = Some(choice.index) == selected_index;
                 let marker = if is_selected { ">" } else { " " };
                 let choice_chrome_style = palette.choice_chrome(is_selected, choice.is_available);
-                let suffix = choice
-                    .unavailable_reason
-                    .as_deref()
-                    .filter(|reason| !reason.is_empty())
-                    .map(|reason| {
-                        messages.format(
-                            MsgId::TuiChoiceUnavailableReason,
-                            [("reason", reason.to_owned())],
-                        )
-                    })
-                    .unwrap_or_else(|| {
-                        if choice.is_available {
-                            String::new()
-                        } else {
-                            messages.text(MsgId::TuiChoiceUnavailable)
-                        }
-                    });
                 let text_style = if is_selected {
                     style.add_modifier(Modifier::BOLD)
                 } else {
                     style
                 };
-                let mut spans = vec![
-                    Span::styled(marker, choice_chrome_style),
-                    Span::raw(" "),
-                    Span::styled(format!("{:>2}", choice.index), choice_chrome_style),
-                    Span::raw("  "),
-                    Span::styled(choice.text.as_str(), text_style),
-                    Span::styled(suffix, palette.muted()),
-                ];
-                spans.extend(choice_id_suffix(&spans, &choice.id, width, palette));
-                lines.push(Line::from(spans));
+                let text = choice_text(choice, messages);
+                let (rows, measure) = choice_text_rows(&text, &choice.id, width);
+                for (row_index, row) in rows.into_iter().enumerate() {
+                    if row_index == 0 {
+                        let gap = measure.saturating_sub(row.width()) + 2;
+                        lines.push(Line::from(vec![
+                            Span::styled(marker, choice_chrome_style),
+                            Span::raw(" "),
+                            Span::styled(format!("{:>2}", choice.index), choice_chrome_style),
+                            Span::raw("  "),
+                            Span::styled(row, text_style),
+                            Span::raw(" ".repeat(gap)),
+                            Span::styled(choice.id.clone(), palette.muted()),
+                        ]));
+                    } else {
+                        lines.push(Line::from(vec![
+                            Span::raw(" ".repeat(CHOICE_LEAD)),
+                            Span::styled(row, text_style),
+                        ]));
+                    }
+                }
             }
             lines.push(command_line(interaction.command(), palette));
             lines
@@ -180,27 +182,43 @@ pub(super) fn render_prompt<'a>(
     }
 }
 
-/// The choice ID trails the text in the muted ink, right-aligned when the row has room;
-/// otherwise it follows the text and may wrap.
-fn choice_id_suffix<'a>(
-    row: &[Span<'_>],
-    id: &str,
-    width: u16,
-    palette: TuiPalette,
-) -> Vec<Span<'a>> {
-    let used: usize = row.iter().map(Span::width).sum();
-    let id_width = id.chars().count();
-    let gap = (width as usize).saturating_sub(used + id_width);
-    if gap >= 2 {
-        vec![
-            Span::raw(" ".repeat(gap)),
-            Span::styled(id.to_owned(), palette.muted()),
-        ]
+/// Marker, number and their gaps before a choice's words.
+const CHOICE_LEAD: usize = 6;
+/// Wide terminals keep this measure so a choice's ID stays near its words.
+const MAX_MEASURE: usize = 100;
+
+/// A choice's words with any unavailable reason, as one wrappable sentence.
+pub(super) fn choice_text(choice: &TuiChoiceRow, messages: &Messages) -> String {
+    let suffix = choice
+        .unavailable_reason
+        .as_deref()
+        .filter(|reason| !reason.is_empty())
+        .map(|reason| {
+            messages.format(
+                MsgId::TuiChoiceUnavailableReason,
+                [("reason", reason.to_owned())],
+            )
+        })
+        .unwrap_or_else(|| {
+            if choice.is_available {
+                String::new()
+            } else {
+                messages.text(MsgId::TuiChoiceUnavailable)
+            }
+        });
+    format!("{}{suffix}", choice.text)
+}
+
+/// The words wrapped under their own column, with the ID's column kept clear on the first row;
+/// a narrow terminal wraps the words rather than dropping a choice or splitting its ID.
+pub(super) fn choice_text_rows(text: &str, id: &str, width: u16) -> (Vec<String>, usize) {
+    let width = usize::from(width).min(MAX_MEASURE);
+    let measure = width.saturating_sub(CHOICE_LEAD + id.width() + 2).max(12);
+    let rows = super::transcript::wrap_display(text, measure);
+    if rows.is_empty() {
+        (vec![String::new()], measure)
     } else {
-        vec![
-            Span::raw("  "),
-            Span::styled(id.to_owned(), palette.muted()),
-        ]
+        (rows, measure)
     }
 }
 

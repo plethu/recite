@@ -73,5 +73,19 @@
   "navigation.menu.label": "Menu",
   "navigation.learn": "Learn",
   "navigation.showcase": "Showcase",
-  "navigation.reference": "Reference"
+  "navigation.reference": "Reference",
+  "search.label": "Search",
+  "search.placeholder": "Find a page, flag or term",
+  "search.dialog": "Search documentation",
+  "search.close": "Close search",
+  "search.results": "Results",
+  "search.loading": "Loading search…",
+  "search.failed": "Search could not load. Close and reopen to retry.",
+  "search.empty": "No results",
+  "search.one": "1 result",
+  "search.many": "{count} results",
+  "search.hint": "↑↓ choose · Enter opens · Esc closes",
+  "sheet.menu": "{section} menu",
+  "sheet.place": "{section} · page {index} of {count}",
+  "sheet.top": "Back to top"
 }

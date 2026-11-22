@@ -21,6 +21,8 @@ pub(super) struct TuiState {
 pub(super) struct TuiTranscriptEntry {
     pub(super) kind: TuiTranscriptKind,
     pub(super) id: Option<String>,
+    /// Who speaks a line or prompt; the transcript labels it with the speaker's name.
+    pub(super) speaker: Option<String>,
     pub(super) text: String,
 }
 
@@ -86,6 +88,7 @@ pub(super) enum TuiPrompt {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct TuiPromptLine {
     pub(super) id: String,
+    pub(super) speaker: Option<String>,
     pub(super) text: String,
 }
 

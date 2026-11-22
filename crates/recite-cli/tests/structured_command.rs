@@ -216,7 +216,7 @@ fn structured_run_and_trace_share_deterministic_trace_data_without_run_text() {
         "Hello."
     );
     assert!(String::from_utf8_lossy(&run_output.stdout).contains("command.result"));
-    assert!(!String::from_utf8_lossy(&run_output.stdout).contains("line ffee6p8: Hello."));
+    assert!(!String::from_utf8_lossy(&run_output.stdout).contains("Hello.  ffee6p8"));
 }
 
 #[test]
@@ -444,7 +444,7 @@ fn human_run_keeps_the_existing_output_bytes() {
         .arg(&fixture));
     output
         .assert_success()
-        .assert_stdout("line ffee6p8: Hello.\nend\n")
+        .assert_stdout("           Hello.  ffee6p8\nend        end of the conversation\n")
         .assert_stderr("");
 }
 
@@ -453,9 +453,9 @@ fn structured_flags_have_useful_help_text() {
     let output = run(recite().arg("validate").arg("--help"));
     output.assert_success().assert_stderr("");
     output.assert_stdout_contains("--output-format <OUTPUT_FORMAT>");
-    output.assert_stdout_contains("version-1 newline-delimited structured output");
+    output.assert_stdout_contains("one JSON record per line for editors and CI");
     output.assert_stdout_contains("--invocation-id <INVOCATION_ID>");
-    output.assert_stdout_contains("Caller-owned identifier");
+    output.assert_stdout_contains("Identifier to copy into each structured record");
 }
 
 #[cfg(unix)]

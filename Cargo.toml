@@ -78,7 +78,7 @@ bevy_asset = { version = "=0.20.1", default-features = false }
 bevy_ecs = { version = "=0.20.1", default-features = false, features = ["std"] }
 bevy_reflect = { version = "=0.20.1", default-features = false, features = ["std"] }
 blake3 = "1.8.5"
-clap = { version = "4.5.51", features = ["derive", "string"] }
+clap = { version = "4.5.51", features = ["derive", "string", "wrap_help"] }
 compact_str = "0.8.1"
 criterion = { version = "0.8.2", default-features = false, features = ["plotters"] }
 crossterm = "0.29.0"

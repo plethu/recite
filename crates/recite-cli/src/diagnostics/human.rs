@@ -3,69 +3,15 @@
 use std::collections::BTreeSet;
 use std::io::Write;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use recite_core::{DiagnosticRecord, DiagnosticSeverity, SourceSpan};
 use recite_ui::RenderedDiagnostic;
 
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
+use crate::ink::Ink;
 
-/// Set once by the binary from the stderr terminal check and the shared colour settings.
-/// Library callers and tests keep the plain default.
-static COLOR: AtomicBool = AtomicBool::new(false);
-
-pub(crate) fn set_color(enabled: bool) {
-    COLOR.store(enabled, Ordering::Relaxed);
-}
-
-#[derive(Clone, Copy)]
-pub(super) struct Paint {
-    color: bool,
-}
-
-impl Paint {
-    pub(super) fn current() -> Self {
-        Self {
-            color: COLOR.load(Ordering::Relaxed),
-        }
-    }
-
-    fn sgr(self, code: &str, text: &str) -> String {
-        if self.color {
-            format!("\u{1b}[{code}m{text}\u{1b}[0m")
-        } else {
-            text.to_owned()
-        }
-    }
-
-    fn severity(self, severity: DiagnosticSeverity, text: &str) -> String {
-        self.sgr(
-            match severity {
-                DiagnosticSeverity::Error => "1;31",
-                DiagnosticSeverity::Warning => "1;33",
-                DiagnosticSeverity::Information | DiagnosticSeverity::Hint => "1",
-            },
-            text,
-        )
-    }
-
-    fn bold(self, text: &str) -> String {
-        self.sgr("1", text)
-    }
-
-    fn dim(self, text: &str) -> String {
-        self.sgr("2", text)
-    }
-
-    fn path(self, text: &str) -> String {
-        self.sgr("4", text)
-    }
-
-    fn caret(self, text: &str) -> String {
-        self.sgr("1;35", text)
-    }
-}
+pub(super) type Paint = Ink;
 
 pub(super) fn write_diagnostic(
     writer: &mut dyn Write,
@@ -76,50 +22,120 @@ pub(super) fn write_diagnostic(
 ) -> Result<(), CliError> {
     let line = record.span.start.line();
     let gutter = " ".repeat(line.to_string().len());
-    writeln!(
-        writer,
-        "{}{}{} {}",
-        paint.severity(record.severity, severity_name(record.severity)),
-        paint.dim(&format!("[{}]", record.code.as_str())),
-        paint.bold(":"),
-        rendered.primary_text
-    )?;
+    write_headline(writer, paint, record, &rendered.primary_text)?;
     writeln!(
         writer,
         "{gutter} {} {}",
-        paint.dim("-->"),
-        paint.path(&location(&record.span))
+        paint.teal("-->"),
+        paint.path(location(&record.span))
     )?;
     if let Some((text, start, width)) = source_line.and_then(|text| excerpt(&record.span, text)) {
-        writeln!(writer, "{gutter} {}", paint.dim("|"))?;
-        writeln!(
-            writer,
-            "{} {} {text}",
-            paint.dim(&line.to_string()),
-            paint.dim("|")
-        )?;
+        writeln!(writer, "{gutter} {}", paint.teal("|"))?;
+        writeln!(writer, "{} {} {text}", paint.teal(line), paint.teal("|"))?;
         writeln!(
             writer,
             "{gutter} {} {}{}",
-            paint.dim("|"),
+            paint.teal("|"),
             " ".repeat(start),
-            paint.caret(&"^".repeat(width))
+            paint.plum("^".repeat(width))
         )?;
     }
     for related in &rendered.related {
         writeln!(
             writer,
             "{gutter} {} {} ({})",
-            paint.dim("= related:"),
+            paint.teal("= related:"),
             related.text,
-            paint.path(&location(&related.span))
+            paint.path(location(&related.span))
         )?;
     }
     if let Some(help) = &rendered.help {
-        writeln!(writer, "{gutter} {} {help}", paint.dim("= help:"))?;
+        let label = format!("{gutter} = help:");
+        let rows = wrap_after(&label, help);
+        for (index, row) in rows.iter().enumerate() {
+            if index == 0 {
+                writeln!(writer, "{gutter} {} {row}", paint.teal_strong("= help:"))?;
+            } else {
+                writeln!(writer, "{} {row}", " ".repeat(label.len()))?;
+            }
+        }
     }
     writeln!(writer)?;
     Ok(())
+}
+
+/// Text that follows a label, wrapped to the terminal under its own first word.
+fn wrap_after<'a>(label: &str, text: &'a str) -> Vec<std::borrow::Cow<'a, str>> {
+    let prefix = label.len() + 1;
+    match crate::ink::stderr_columns() {
+        Some(columns) if columns > prefix + 20 => textwrap::wrap(
+            text,
+            textwrap::Options::new(columns - prefix).break_words(false),
+        ),
+        _ => vec![std::borrow::Cow::Borrowed(text)],
+    }
+}
+
+/// A notice that is neither a diagnostic nor a success: `note  text`, wrapped under its words.
+pub(crate) fn report_note(
+    writer: &mut dyn Write,
+    messages: &Messages,
+    text: &str,
+) -> Result<(), CliError> {
+    let paint = Paint::stderr();
+    let label = messages.text(MsgId::CliNoteLabel);
+    let padded = format!("{label} ");
+    for (index, row) in wrap_after(&padded, text).iter().enumerate() {
+        if index == 0 {
+            writeln!(writer, "{}  {row}", paint.teal_strong(&label))?;
+        } else {
+            writeln!(writer, "{}  {row}", " ".repeat(label.len()))?;
+        }
+    }
+    Ok(())
+}
+
+/// `error[CODE]: message`, with the message in bold. On a terminal a long message wraps at word
+/// boundaries under its own first word, so paths and quoted names are never split.
+fn write_headline(
+    writer: &mut dyn Write,
+    paint: Paint,
+    record: &DiagnosticRecord,
+    message: &str,
+) -> Result<(), CliError> {
+    let code = format!("[{}]", record.code.as_str());
+    let prefix = severity_name(record.severity).len() + code.len() + 2;
+    let rows = match crate::ink::stderr_columns() {
+        Some(columns) if columns > prefix + 20 => textwrap::wrap(
+            message,
+            textwrap::Options::new(columns - prefix).break_words(false),
+        ),
+        _ => vec![std::borrow::Cow::Borrowed(message)],
+    };
+    let indent = " ".repeat(prefix);
+    for (index, row) in rows.iter().enumerate() {
+        if index == 0 {
+            writeln!(
+                writer,
+                "{}{code}{} {}",
+                severity(paint, record.severity),
+                paint.strong(":"),
+                paint.strong(row)
+            )?;
+        } else {
+            writeln!(writer, "{indent}{}", paint.strong(row))?;
+        }
+    }
+    Ok(())
+}
+
+fn severity(paint: Paint, severity: DiagnosticSeverity) -> String {
+    let name = severity_name(severity);
+    match severity {
+        DiagnosticSeverity::Error => paint.error(name),
+        DiagnosticSeverity::Warning => paint.warning(name),
+        DiagnosticSeverity::Information | DiagnosticSeverity::Hint => paint.strong(name),
+    }
 }
 
 /// Counts by severity and the distinct files they came from.
@@ -171,7 +187,7 @@ impl Summary {
                 ("files", recite_ui::UiArg::from(self.files.len())),
             ],
         );
-        writeln!(writer, "{}", paint.bold(&line))?;
+        writeln!(writer, "{}", paint.strong(line))?;
         Ok(())
     }
 }
@@ -180,26 +196,58 @@ impl Summary {
 pub(crate) fn report_success(
     writer: &mut dyn Write,
     messages: &Messages,
-    subject: Subject,
+    subject: Subject<'_>,
 ) -> Result<(), CliError> {
-    let paint = Paint::current();
+    let paint = Paint::stderr();
     let rest = match subject {
         Subject::Files(count) => messages.format(MsgId::CliSuccessFiles, [("count", count)]),
         Subject::Project => messages.text(MsgId::CliSuccessProject),
+        Subject::Compiled { files, output } => messages.format(
+            MsgId::CliSuccessCompiled,
+            [
+                ("count", recite_ui::UiArg::from(files)),
+                (
+                    "output",
+                    recite_ui::UiArg::from(display_path(&output.to_string_lossy())),
+                ),
+            ],
+        ),
+        Subject::Extracted { entries, output } => messages.format(
+            MsgId::CliSuccessExtracted,
+            [
+                ("count", recite_ui::UiArg::from(entries)),
+                (
+                    "output",
+                    recite_ui::UiArg::from(display_path(&output.to_string_lossy())),
+                ),
+            ],
+        ),
+        Subject::Message(text) => text,
     };
     writeln!(
         writer,
         "{}  {}",
-        paint.bold(&messages.text(MsgId::CliSuccessOk)),
-        paint.dim(&rest)
+        paint.teal_strong(messages.text(MsgId::CliSuccessOk)),
+        rest
     )?;
     Ok(())
 }
 
-#[derive(Clone, Copy)]
-pub(crate) enum Subject {
+pub(crate) enum Subject<'a> {
     Files(usize),
     Project,
+    /// Source files compiled into one asset.
+    Compiled {
+        files: usize,
+        output: &'a Path,
+    },
+    /// POT entries written to a file.
+    Extracted {
+        entries: usize,
+        output: &'a Path,
+    },
+    /// A command-specific sentence after the `ok` label.
+    Message(String),
 }
 
 fn severity_name(severity: DiagnosticSeverity) -> &'static str {
@@ -221,7 +269,7 @@ fn location(span: &SourceSpan) -> String {
 }
 
 /// Paths under the working directory print relative to it; anything else prints as given.
-fn display_path(file: &str) -> String {
+pub(crate) fn display_path(file: &str) -> String {
     let path = Path::new(file);
     std::env::current_dir()
         .ok()
@@ -240,7 +288,25 @@ fn excerpt(span: &SourceSpan, text: &str) -> Option<(String, usize, usize)> {
         .end
         .filter(|end| end.line() == span.start.line())
         .and_then(|end| usize::try_from(end.column()).ok())
-        .map_or(1, |end| end.saturating_sub(start + 1).max(1));
+        .map_or_else(
+            || unended_width(text, start),
+            |end| end.saturating_sub(start).max(1),
+        );
     let width = width.min(length.saturating_sub(start).max(1));
     Some((text.replace('\t', " "), start.min(length), width))
 }
+
+/// A span with no end marks where something starts; underline the rest of that line's content so
+/// the reader sees the whole reference or header rather than its first character.
+fn unended_width(text: &str, start: usize) -> usize {
+    text.chars()
+        .skip(start)
+        .collect::<String>()
+        .trim_end()
+        .chars()
+        .count()
+        .max(1)
+}
+
+#[cfg(test)]
+pub(super) mod tests;

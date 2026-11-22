@@ -295,3 +295,34 @@ fn import_refuses_rows_with_unknown_ids_and_missing_media() -> Result<(), Box<dy
     assert!(!root.join("recording/fr.toml").exists());
     Ok(())
 }
+
+#[test]
+fn text_status_groups_items_by_file_in_aligned_columns() -> Result<(), Box<dyn Error>> {
+    let project = team_project()?;
+    let output = recite(project.path(), &["recording", "status"])?;
+    assert!(output.status.success(), "{}", stderr(&output));
+    let text = String::from_utf8(output.stdout)?;
+    let mut lines = text.lines();
+    assert!(
+        lines
+            .next()
+            .is_some_and(|summary| summary.contains("need attention"))
+    );
+    let heading = lines.next().expect("a file heading");
+    assert!(heading.ends_with(".recite"), "{text}");
+    let rows: Vec<&str> = lines.take_while(|line| line.starts_with("  ")).collect();
+    assert!(!rows.is_empty(), "{text}");
+    // Rows lead with the line number under the file heading, then aligned state and ID columns.
+    let column = |row: &str| row.find("to record").or_else(|| row.find("stale"));
+    let first = column(rows[0]).expect("a state column");
+    assert!(
+        rows.iter().all(|row| column(row) == Some(first)),
+        "columns align: {text}"
+    );
+    assert!(
+        !rows[0].contains(heading),
+        "the heading names the file once: {text}"
+    );
+    assert!(!text.contains('`'), "no literal backticks in rows: {text}");
+    Ok(())
+}

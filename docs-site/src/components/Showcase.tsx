@@ -3,10 +3,12 @@ import { PageTitle } from "./PageTitle.tsx";
 
 export function Showcase({ projects }: { projects: Project[] }) {
   return (
-    <div class="recite-showcase site-content" data-pagefind-body>
-      <PageTitle>Projects using Recite</PageTitle>
-      <p class="intro">Scenes, tools and games made with the language.</p>
-      <ProjectList projects={projects} />
+    <div class="site-content">
+      <div class="recite-showcase sheet" data-pagefind-body data-pagefind-meta="section:Showcase">
+        <PageTitle>Projects using Recite</PageTitle>
+        <p class="intro">Scenes, tools and games made with the language.</p>
+        <ProjectList projects={projects} />
+      </div>
     </div>
   );
 }

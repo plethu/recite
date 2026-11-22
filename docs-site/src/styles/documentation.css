@@ -1,32 +1,30 @@
+/* The width of the fade at a source well's inline end; registered so scrolling can animate it. */
+@property --source-fade {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0;
+}
+
 @layer tokens {
+  /* Syntax in the print inks only: plum for keywords and constants, text-safe teal (mint in dark)
+     for strings and links, ink for names, muted for comments and punctuation. Each holds AA on
+     the inset well in both modes. */
   :root {
     --recite-code-foreground: var(--color-ink);
-    --recite-code-background: var(--color-surface);
+    --recite-code-background: var(--color-inset);
     --recite-code-token-constant: var(--color-plum);
-    --recite-code-token-string: var(--color-success);
+    --recite-code-token-string: var(--color-teal-text);
     --recite-code-token-comment: var(--color-muted);
     --recite-code-token-keyword: var(--color-plum);
     --recite-code-token-parameter: var(--color-ink);
-    --recite-code-token-function: var(--color-plum);
-    --recite-code-token-string-expression: var(--color-success);
+    --recite-code-token-function: var(--color-ink);
+    --recite-code-token-string-expression: var(--color-teal-text);
     --recite-code-token-punctuation: var(--color-muted);
-    --recite-code-token-link: var(--color-plum);
+    --recite-code-token-link: var(--color-teal-text);
   }
 }
 
 @layer base {
-  a {
-    color: var(--color-plum);
-  }
-
-  select {
-    color: var(--color-ink);
-    background: var(--color-surface);
-    border: 1px solid var(--color-rule);
-    border-radius: var(--radius-control);
-    padding-inline: 0.5rem;
-  }
-
   summary {
     cursor: pointer;
     min-block-size: var(--target-min);
@@ -46,7 +44,7 @@
     inset-block-start: 0.5rem;
     inset-inline-start: 1rem;
     padding: 0.5rem 1rem;
-    background: var(--color-paper);
+    background: var(--color-floating);
     z-index: 20;
     transform: translateY(-200%);
   }
@@ -55,10 +53,9 @@
     transform: none;
   }
 
+  /* Chrome sits on the grained desk, like Writer's tab row; the sheets carry the separation. */
   .site-header {
-    border-block-end: var(--rule-section);
-    padding: 0.75rem var(--space-step);
-    background: var(--color-paper);
+    padding-block: 0.5rem;
   }
 
   main {
@@ -68,77 +65,111 @@
 
 @layer layout {
   .reading-panel {
-    max-inline-size: var(--measure-reading);
+    max-inline-size: calc(var(--measure-reading) + 2 * var(--sheet-pad));
     min-inline-size: 0;
     margin-inline: auto;
-    padding-block: 2.5rem 4rem;
-    background: var(--color-paper);
   }
 
-  .reference-layout {
+  .section-layout {
     display: grid;
     grid-template-columns: 13rem minmax(0, 1fr);
     gap: var(--space-step);
+    align-items: start;
   }
 
-  .reference-navigation {
-    padding-block: 2.5rem;
+  .section-navigation {
+    position: sticky;
+    inset-block-start: 0;
+    padding-block: 1.5rem;
   }
 
-  .reference-toggle {
+  .section-toggle {
     display: none;
   }
 
-  #reference-menu {
+  #section-menu {
     display: grid;
-    gap: 0.25rem;
+    gap: 2px;
   }
 
-  #reference-menu a {
-    display: block;
-    padding: 0.4rem 0.6rem;
-    border-inline-start: 2px solid transparent;
-  }
-
-  #reference-menu a[aria-current] {
-    border-color: var(--color-teal);
-    background: var(--color-surface);
+  /* The folder's name heads its rows, in plum caps like Writer's expanded scene. */
+  .menu-head {
+    margin: 0 0 0.25rem;
+    padding-inline: 0.75rem;
+    color: var(--color-plum);
+    font-size: 0.75rem;
     font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Sidebar rows, as in Writer's scene list: ink words without underlines; the current page is
+     the selected row, a plate with a 2px ink underscore under its words. */
+  #section-menu a {
+    display: flex;
+    align-items: center;
+    min-block-size: 2rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-control);
+    color: var(--color-ink);
+    font-size: 0.9375rem;
+    line-height: 1.35;
+    text-decoration: none;
+  }
+
+  #section-menu a:hover {
+    background: var(--tint-hover);
+  }
+
+  #section-menu a[aria-current] {
+    background: var(--color-plate);
+  }
+
+  #section-menu a[aria-current]:hover {
+    background: var(--tint-plate-hover);
+  }
+
+  #section-menu a[aria-current] span {
+    text-decoration: underline 2px var(--color-ink);
+    text-underline-offset: 0.35em;
   }
 
   @media (width >= 55rem) {
-    #reference-menu {
+    #section-menu {
       position: static;
       margin: 0;
       padding: 0;
       border: none;
+      background: transparent;
+      box-shadow: none;
       inline-size: auto;
       overflow: visible;
     }
   }
 
   @media (width < 55rem) {
-    .reference-layout {
+    .section-layout {
       display: block;
     }
 
-    .reference-navigation {
+    .section-navigation {
+      position: static;
       padding-block: 1rem 0;
     }
 
-    .reference-toggle {
+    .section-toggle {
       display: inline-flex;
       align-items: center;
     }
 
-    #reference-menu {
+    #section-menu {
       display: none;
       inset: 8rem 1rem auto;
       inline-size: min(22rem, calc(100% - 2rem));
-      padding: 1rem;
+      padding: 0.5rem;
     }
 
-    #reference-menu:popover-open {
+    #section-menu:popover-open {
       display: grid;
     }
   }
@@ -149,44 +180,178 @@
     overflow-wrap: anywhere;
   }
 
-  .markdown-content h1 {
-    font-family: var(--font-display);
-    font-size: clamp(2.4rem, 5vw, 3.5rem);
-    font-weight: 550;
-    letter-spacing: -0.03em;
-    margin-block: 0 1.5rem;
+  /* The running head carries the place, as at the top of Writer's galley; it stays in view while
+     the sheet scrolls, on the sheet's own paper. */
+  .running-head {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    margin-block: calc(-1 * var(--sheet-pad)) 2rem;
+    margin-inline: calc(-1 * var(--sheet-pad));
+    padding: 0.75rem var(--sheet-pad) 0.5rem;
+    border-block-end: var(--rule-section);
+    background: var(--color-paper);
+    color: var(--color-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .running-head a {
+    color: inherit;
+  }
+
+  /* The folio closes the sheet with the page's place in its section and a way back up. */
+  .folio {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem 1.5rem;
+    margin-block: 3rem 0;
+    padding-block-start: 0.5rem;
+    border-block-start: var(--rule-section);
+    color: var(--color-muted);
+    font-size: 0.8125rem;
+  }
+
+  .folio a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.5rem;
+  }
+
+  /* The lead paragraph is set in the prose face, as the manuscript is. */
+  .markdown-content .rendered > p:first-child {
+    font-family: var(--font-prose);
+    font-size: 1.15rem;
+    line-height: 1.6;
+  }
+
+  /* Section headings are Literata semibold, a face change below the one display title, as
+     Writer's beat headings are below the scene title. Arriving at one leaves room for the
+     running head. */
+  .markdown-content :is(h2, h3, h4) {
+    position: relative;
+    scroll-margin-block-start: 4rem;
   }
 
   .markdown-content h2 {
+    margin-block: 2.75rem 1rem;
+    padding-block-start: 1.5rem;
     border-block-start: var(--rule-section);
-    padding-block-start: 1.25rem;
-    margin-block-start: 2.5rem;
-    font-size: 1.8rem;
+    font-family: var(--font-prose);
+    font-size: clamp(1.45rem, 2.6vw, 1.75rem);
+    font-weight: 600;
+    letter-spacing: -0.005em;
   }
 
   .markdown-content h3 {
-    font-size: 1.3rem;
-    margin-block-start: 2rem;
+    margin-block: 2rem 0.75rem;
+    font-family: var(--font-prose);
+    font-size: 1.2rem;
+    font-weight: 600;
   }
 
-  .markdown-content p, .markdown-content li {
+  .markdown-content h4 {
+    margin-block: 1.5rem 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  /* Crop marks around the section the reader arrived at through a fragment link: at each corner
+     a pair of 2×8 ticks 4px off the corner, pointing outward, in the sheet pad. They take no room
+     or input. */
+  .markdown-content :is(h2, h3):target::before {
+    --tick: linear-gradient(var(--color-teal) 0 0);
+
+    content: "";
+    position: absolute;
+    inset-block: calc(0.75rem - 12px) -16px;
+    inset-inline: calc(-1 * min(var(--sheet-pad) - 4px, var(--sheet-pad) / 2 + 12px));
+    background:
+      var(--tick) left 10px top 0 / 2px 8px no-repeat,
+      var(--tick) left 0 top 10px / 8px 2px no-repeat,
+      var(--tick) right 10px top 0 / 2px 8px no-repeat,
+      var(--tick) right 0 top 10px / 8px 2px no-repeat,
+      var(--tick) left 10px bottom 0 / 2px 8px no-repeat,
+      var(--tick) left 0 bottom 10px / 8px 2px no-repeat,
+      var(--tick) right 10px bottom 0 / 2px 8px no-repeat,
+      var(--tick) right 0 bottom 10px / 8px 2px no-repeat;
+    pointer-events: none;
+  }
+
+  .markdown-content h3:target::before {
+    inset-block-start: -16px;
+  }
+
+  .markdown-content :is(p, li) {
     line-height: 1.75;
   }
 
+  /* Source wells, one style with the playground's source field: solid inset paper closed by an
+     ink rule, never grained, set in Plex Mono exactly as written. While a well holds more source
+     beyond its inline end, that end fades into the sheet; the fade recedes as it scrolls. */
   .markdown-content pre {
     max-inline-size: 100%;
     overflow: auto;
-    padding: 1rem;
-    border: 1px solid var(--color-rule);
-    border-radius: var(--radius-control);
+    margin-block: 1rem 1.25rem;
+    padding: 1rem 1.25rem;
+    border: 0;
+    border-block-end: 1px solid var(--color-ink);
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
     font-size: 0.85rem;
     line-height: 1.6;
     overflow-wrap: normal;
   }
 
+  @supports (animation-timeline: scroll()) {
+    .markdown-content pre {
+      animation: source-more linear both;
+      animation-timeline: scroll(self inline);
+      mask-image: linear-gradient(to left, transparent, oklch(0% 0 0deg) var(--source-fade));
+    }
+
+    /* A focused well scrolls by keyboard and keeps its whole focus ring. */
+    .markdown-content pre:focus-visible {
+      animation: none;
+      mask-image: none;
+    }
+  }
+
+  @keyframes source-more {
+    from {
+      --source-fade: 3rem;
+    }
+
+    to {
+      --source-fade: 0rem;
+    }
+  }
+
+  /* A well that names its file carries the name as a muted caption row, as the hero leaf does. */
+  .markdown-content .source {
+    margin: 1rem 0 1.25rem;
+  }
+
+  .markdown-content .source figcaption {
+    padding: 0.5rem 1.25rem 0;
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
+    background: var(--color-inset);
+    color: var(--color-muted);
+    font-family: var(--font-code);
+    font-size: 0.8125rem;
+  }
+
+  .markdown-content .source pre {
+    margin: 0;
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+  }
+
   .markdown-content :not(pre) > code {
-    background: var(--color-surface);
-    padding: 0.1em 0.25em;
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius-control);
+    background: var(--tint-well);
     font-size: 0.88em;
   }
 
@@ -199,60 +364,251 @@
   }
 
   .markdown-content th, .markdown-content td {
-    border: 1px solid var(--color-rule);
+    border: 1px solid var(--color-hairline);
     padding: 0.6rem;
     text-align: start;
   }
 
-  .markdown-content blockquote {
-    border-inline-start: 3px solid var(--color-teal);
-    margin-inline: 0;
-    padding-inline: 1.25rem;
-    color: var(--color-muted);
+  .markdown-content th {
+    background: var(--tint-well);
+    font-weight: 600;
   }
 
+  /* A quotation is set as quoted words, not a ruled box. */
+  .markdown-content blockquote {
+    margin: 1.5rem 0;
+    padding-inline-start: 1.5rem;
+    font-family: var(--font-prose);
+    font-size: 1.1rem;
+  }
+
+  /* Progressive disclosure: a tonal action that opens the page's outline. */
   .page-outline {
-    background: var(--color-surface);
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-control);
+    margin-block-end: 2rem;
   }
 
   .page-outline summary {
-    display: list-item;
-    list-style: disclosure-closed inside;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-inline: 0.75rem 0.9rem;
+    border-radius: var(--radius-control);
+    background: var(--tint-tonal);
+    font-size: 0.875rem;
+    font-weight: 500;
+    list-style: none;
   }
 
-  .page-outline details[open] > summary {
-    list-style-type: disclosure-open;
+  .page-outline summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .page-outline summary::before {
+    content: "›" / "";
+    display: inline-block;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .page-outline details[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  .page-outline summary:hover {
+    background: var(--tint-hover);
   }
 
   .page-outline ol {
-    padding-inline-start: 1.25rem;
+    margin-block: 0.75rem 0;
+    padding-inline-start: 2rem;
   }
 
-  #search-dialog {
-    --pagefind-ui-primary: var(--color-plum);
-    --pagefind-ui-text: var(--color-ink);
-    --pagefind-ui-background: var(--color-paper);
-    --pagefind-ui-border: var(--color-rule);
-    --pagefind-ui-tag: var(--color-surface);
-    --pagefind-ui-font: var(--font-reading);
+  .page-outline li {
+    line-height: 1.6;
+    margin-block: 0.25rem;
+  }
 
-    inline-size: min(44rem, calc(100% - 2rem));
-    max-block-size: 85vh;
-    padding: 1.25rem;
-    border: var(--stroke-stamp) solid var(--color-plum);
-    border-radius: var(--radius-control);
+  /* The search picker is a Writer picker: a slip opened 72px from the top over a static
+     overprint dim under a paper-toned dot screen, a field well, one 32px row per result and a hint
+     line. Pagefind supplies only the index and its search API; nothing of its UI or stylesheet
+     loads, so every rule here stays in these layers. Nothing blurs or animates. */
+  #search-dialog {
+    inline-size: min(40rem, calc(100% - 2rem));
+    max-block-size: calc(100dvh - 6rem);
+    margin: 4.5rem auto auto;
+    padding: 1rem;
+    border: 1px solid var(--color-ink);
+    border-radius: 0;
     color: var(--color-ink);
-    background: var(--color-paper);
+    background: var(--color-floating);
+    box-shadow: var(--offset-slip) var(--offset-slip) 0 var(--color-stock);
+  }
+
+  #search-dialog[open] {
+    display: flex;
+    flex-direction: column;
   }
 
   #search-dialog::backdrop {
-    background: oklch(0% 0 0deg / 55%);
+    background-color: var(--color-backdrop);
+    background-image: radial-gradient(var(--color-screen) 1px, transparent 1.5px);
+    background-size: 6px 6px;
   }
 
-  #search-dialog form {
+  .picker-head {
     display: flex;
-    justify-content: end;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .picker-field {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.5rem;
+    padding-inline: 0.75rem;
+    border-block-end: 1px solid var(--color-ink);
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
+    background: var(--tint-well);
+    color: var(--color-muted);
+  }
+
+  .picker-field:has(input:focus-visible) {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+
+  .picker-field input {
+    flex: 1;
+    min-inline-size: 0;
+    min-block-size: 2.5rem;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+  }
+
+  .picker-field input:focus-visible {
+    outline: none;
+  }
+
+  .picker-field input::placeholder {
+    color: var(--color-muted);
+    opacity: 1;
+  }
+
+  .picker-field svg, .picker-close svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+    flex: none;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.5;
+  }
+
+  .picker-close {
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    min-block-size: 2rem;
+    padding: 0;
+    background: transparent;
+  }
+
+  .picker-results {
+    flex: 1;
+    min-block-size: 0;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+
+  .picker-results li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-block-size: 2rem;
+    padding-inline: 0.75rem;
+    border-radius: var(--radius-control);
+  }
+
+  .picker-results li:hover {
+    background: var(--tint-hover);
+  }
+
+  .picker-results a {
+    flex: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    color: var(--color-ink);
+    line-height: 2rem;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The whole row opens the page; the ring sits inside the row's edge. */
+  .picker-results a::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .picker-results a:focus-visible {
+    outline: none;
+  }
+
+  .picker-results li:has(a:focus-visible) {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .picker-results span {
+    flex: none;
+    color: var(--color-muted);
+    font-size: 0.8125rem;
+  }
+
+  /* The active row, which Enter opens: the plate with an ink underscore under its words. */
+  .picker-results li:has(a:focus),
+  #search-dialog:has(input:focus) .picker-results li:first-child {
+    background: var(--color-plate);
+  }
+
+  .picker-results li:has(a:focus) a,
+  #search-dialog:has(input:focus) .picker-results li:first-child a {
+    text-decoration: underline 2px var(--color-ink);
+    text-underline-offset: 0.35em;
+  }
+
+  .picker-detail {
+    max-block-size: 6.5em;
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.75rem 0;
+    overflow: hidden;
+    border-block-start: var(--rule-section);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  /* A match is ink at weight 600 over a plum rule, distinct from the selection plate. */
+  .picker-detail mark {
+    background: none;
+    color: var(--color-ink);
+    font-weight: 600;
+    box-shadow: inset 0 -2px 0 var(--color-plum);
+  }
+
+  .picker-foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin: 0.75rem 0 0;
+    padding-block-start: 0.5rem;
+    border-block-start: var(--rule-section);
+    color: var(--color-muted);
+    font-size: 0.8125rem;
   }
 }

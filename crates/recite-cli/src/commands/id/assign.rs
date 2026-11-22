@@ -12,10 +12,11 @@ use recite_compiler::authoring::{
 use recite_core::{DocumentKey, StableIdGenerator};
 
 use crate::args::AssignIdsArgs;
-use crate::diagnostics::report_diagnostics;
+use crate::diagnostics::{Subject, report_diagnostics, report_success};
 use crate::error::CliError;
 use crate::fs::{LooseKeys, SourceSet, validate_inputs, write_staged};
 use crate::i18n::{Messages, MsgId};
+use recite_ui::UiArg;
 
 pub(super) fn run(
     args: AssignIdsArgs,
@@ -75,16 +76,21 @@ pub(super) fn run(
             Ok(())
         };
     }
+    let mut written = Vec::new();
     for (key, text) in plan.apply(snapshot).map_err(|_| CliError::Diagnostics)? {
         if let Some((path, _)) = paths.get(&key) {
             write_staged(path, text.as_bytes())?;
+            written.push(crate::diagnostics::display_path(&path.to_string_lossy()));
         }
     }
-    writeln!(
-        stderr,
-        "{}",
-        messages.format(MsgId::CliIdsAssigned, [("count", assigned)])
-    )?;
+    let message = messages.format(
+        MsgId::CliIdsAssigned,
+        [
+            ("count", UiArg::from(assigned)),
+            ("files", UiArg::from(written.join(", "))),
+        ],
+    );
+    report_success(stderr, messages, Subject::Message(message))?;
     Ok(())
 }
 

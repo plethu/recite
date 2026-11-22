@@ -26,10 +26,38 @@ export async function buildSite(root: string) {
       binaryUrl: assets.binary,
     },
     playgroundScript: assets.controller,
-    referenceLinks: documents
-      .filter((page) => page.section === "reference")
-      .map(({ title, url }) => ({ title, url })),
+    sections: sectionsOf(documents),
   };
+}
+
+/** A top-level content folder: its index page when it has one, and its pages for the sidebar. */
+export interface Section {
+  title: string;
+  url?: string;
+  links: NavigationLink[];
+}
+
+export function segmentOf(url: string) {
+  return url.split("/")[1] ?? "";
+}
+
+// Each folder's pages in file order, its index first; a folder without an index is titled from
+// its name.
+function sectionsOf(documents: { title: string; url: string }[]) {
+  const sections: Record<string, Section> = {};
+  for (const { title, url } of documents) {
+    const segment = segmentOf(url);
+    const words = segment.replaceAll("-", " ");
+    const section = (sections[segment] ??= {
+      title: words.charAt(0).toUpperCase() + words.slice(1),
+      links: [],
+    });
+    if (url === `/${segment}/`) {
+      Object.assign(section, { title, url });
+      section.links.unshift({ title, url });
+    } else section.links.push({ title, url });
+  }
+  return sections;
 }
 
 export type SiteData = Awaited<ReturnType<typeof buildSite>>;

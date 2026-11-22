@@ -161,10 +161,10 @@ pub(crate) struct ValidateArgs {
     /// Report only this diagnostic category; syntax errors are always reported.
     #[arg(long, value_enum, value_name = "CATEGORY")]
     pub(crate) only: Option<ValidateOnly>,
-    /// Select human-readable or version-1 newline-delimited structured output.
+    /// Print readable text, or one JSON record per line for editors and CI.
     #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
     pub(crate) output_format: OutputFormat,
-    /// Caller-owned identifier copied into each structured protocol record.
+    /// Identifier to copy into each structured record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
     /// Sources to read; defaults to the sources of the project here.
@@ -209,20 +209,20 @@ pub(crate) struct ExportSchemaArgs {
     /// Stable engine registration or resource ID, independent of file path.
     #[arg(long, requires = "producer_kind")]
     pub(crate) producer_id: Option<String>,
-    /// Select human-readable or version-1 newline-delimited structured output.
+    /// Print readable text, or one JSON record per line for editors and CI.
     #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
     pub(crate) output_format: OutputFormat,
-    /// Caller-owned identifier copied into each structured protocol record.
+    /// Identifier to copy into each structured record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub(crate) struct WatchArgs {
-    /// Select human-readable or version-1 newline-delimited structured output.
+    /// Print readable text, or one JSON record per line for editors and CI.
     #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
     pub(crate) output_format: OutputFormat,
-    /// Caller-owned identifier copied into each structured protocol record.
+    /// Identifier to copy into each structured record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
     pub(crate) project_root: PathBuf,
@@ -239,10 +239,10 @@ pub(crate) struct CompileArgs {
     pub(crate) output: PathBuf,
     #[arg(long)]
     pub(crate) schema: Option<PathBuf>,
-    /// Select human-readable or version-1 newline-delimited structured output.
+    /// Print readable text, or one JSON record per line for editors and CI.
     #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
     pub(crate) output_format: OutputFormat,
-    /// Caller-owned identifier copied into each structured protocol record.
+    /// Identifier to copy into each structured record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
     /// Sources to read; defaults to the sources of the project here.
@@ -255,10 +255,10 @@ pub(crate) struct ExtractArgs {
     pub(crate) output: Option<PathBuf>,
     #[arg(long)]
     pub(crate) schema: Option<PathBuf>,
-    /// Select human-readable or version-1 newline-delimited structured output.
+    /// Print readable text, or one JSON record per line for editors and CI.
     #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
     pub(crate) output_format: OutputFormat,
-    /// Caller-owned identifier copied into each structured protocol record.
+    /// Identifier to copy into each structured record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
     /// Sources to read; defaults to the sources of the project here.
@@ -272,10 +272,10 @@ pub(crate) struct RuntimeArgs {
     pub(crate) block: Option<String>,
     #[arg(long)]
     pub(crate) fixture: PathBuf,
-    /// Select human-readable or version-1 newline-delimited structured output.
+    /// Print readable text, or one JSON record per line for editors and CI.
     #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
     pub(crate) output_format: OutputFormat,
-    /// Caller-owned identifier copied into each structured protocol record.
+    /// Identifier to copy into each structured record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
 }

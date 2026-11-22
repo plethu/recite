@@ -6,7 +6,7 @@ use super::super::super::events::WatchState;
 use super::super::{BuildStatus, build_once_with_clock};
 use super::{alternate_messages, project, source, write};
 use crate::i18n::{Messages, UiLocale};
-use crate::watch::report_build_result;
+use crate::watch::tests::report_build_result;
 
 fn timed_build<F>(
     state: &mut WatchState,
@@ -169,12 +169,9 @@ fn duration_report_uses_typed_unit_messages_and_alternate_catalogue_text() {
         (Duration::from_micros(1_500), "alt-milli: 1.5 milliseconds."),
         (
             Duration::from_micros(1_000_001),
-            "alt-milli: 1000.001 milliseconds.",
+            "alt-milli: 1000 milliseconds.",
         ),
-        (
-            Duration::from_micros(1_118),
-            "alt-milli: 1.118 milliseconds.",
-        ),
+        (Duration::from_micros(1_118), "alt-milli: 1.1 milliseconds."),
     ] {
         let status = BuildStatus::Fresh {
             asset_count: 1,

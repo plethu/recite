@@ -5,6 +5,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandsHeading
         | MsgId::CliHelpArgumentsHeading
         | MsgId::CliHelpOptionsHeading
+        | MsgId::CliHelpMachineOutputHeading
         | MsgId::CliHelpCommandValidate
         | MsgId::CliHelpCommandCompile
         | MsgId::CliHelpCommandExtract
@@ -115,6 +116,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpArgBlock
         | MsgId::CliHelpArgBlockProject
         | MsgId::CliHelpArgFixture
+        | MsgId::CliHelpArgMetrics
         | MsgId::CliHelpArgUi
         | MsgId::CliHelpArgKeymap
         | MsgId::CliHelpArgDialogueLocale
@@ -139,8 +141,11 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpGroupRunning
         | MsgId::CliHelpGroupHelp
         | MsgId::CliSuccessOk
+        | MsgId::CliNoteLabel
         | MsgId::CliSuccessFiles
         | MsgId::CliSuccessProject
+        | MsgId::CliSuccessCompiled
+        | MsgId::CliSuccessExtracted
         | MsgId::CliDiagnosticErrors
         | MsgId::CliDiagnosticWarnings
         | MsgId::CliDiagnosticNotes
@@ -152,6 +157,9 @@ macro_rules! cli_message_ids {
         | MsgId::WatchBuildDurationMicroseconds
         | MsgId::WatchBuildDurationMilliseconds
         | MsgId::WatchBuildFailedWaiting
+        | MsgId::WatchStatusOk
+        | MsgId::WatchStatusError
+        | MsgId::WatchStatusFixed
         | MsgId::WatchBuildFailed
         | MsgId::WatchBuildFailedPartial
         | MsgId::WatchBuildFailedIndeterminate
@@ -335,5 +343,14 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorWrite
         | MsgId::CliErrorWatch
         | MsgId::RunEffect
+        | MsgId::RunLabelEffect
+        | MsgId::RunLabelCondition
+        | MsgId::RunLabelChoose
+        | MsgId::RunLabelEnd
+        | MsgId::RunLabelDeferred
+        | MsgId::RunEndText
+        | MsgId::RunChoiceUnavailable
+        | MsgId::RunEffectAcknowledged
+        | MsgId::RunEffectMode
     };
 }

@@ -36,11 +36,11 @@ Showcase records belong under `src/content/showcase/`. Each needs a title, summa
 `projectUrl`. Optional `image` and nonempty `imageAlt` must appear together. Drafts do not publish.
 The empty state is intentional; do not add investigation fixtures as real projects.
 
-The header, reference menu and reading content work without JavaScript. Theme controls use a small
-pre-paint script and follow the OS when set to System. Search loads Pagefind's UI and index only
-when opened. The index retains hyphens, underscores and colons for CLI flags and Recite terms;
-browser tests exercise representative queries and retry after a failed load. Index only authored
-content, excluding navigation and playground controls.
+The header, section menus and reading content work without JavaScript. Theme controls use a small
+pre-paint script and follow the OS when set to System. Search loads Pagefind's search module and
+index only when opened. The index retains hyphens, underscores and colons for CLI flags and Recite
+terms; browser tests exercise representative queries and retry after a failed load. Index only
+authored content, excluding navigation and playground controls.
 
 The playground uses `fixtures/recite/valid/landing-junction.recite` and Recite's real Rust compiler
 and runtime. `just web wasm` generates the ignored bridge and binary; keep wasm-bindgen versions
@@ -59,3 +59,41 @@ Before changing generators or browser behavior, preserve routes, heading links, 
 reading and playground limits. Run `just web verify` and the browser suite across pages, themes and
 engines, then inspect desktop and narrow-screen renders. Do not retain parallel generator
 implementations or disposable investigation output after a migration.
+
+## Design
+
+The site follows Writer's signed-off design (`apps/writer/design/decisions.md`, #256) so the two
+read as one product. Tokens mirror Writer's palette in OKLCH. Pages are a grained desk with chrome
+on it; reading content sits on solid paper sheets with a hairline edge and a 3px stock offset, so
+grain never shows behind prose or code. Below a 30rem viewport the sheet goes full-bleed.
+
+- **Structure.** The header carries a search field, the top-level modes as tabs with a teal rule
+  under the current one, and the theme as a System | Light | Dark segment track (radios; hidden
+  without JavaScript, when the OS decides). The footer is the ink status bar. Every manual folder
+  has a sidebar of its pages under its name in plum caps, as Writer lists a scene's beats.
+- **Sheets.** A document sheet has a sticky running head in the header's vocabulary (Learn › Guides
+  › page; omitted on a mode's own index page), one Fraunces display title, Literata semibold section
+  headings, and a folio with the page's place ("Guides · page 4 of 6") and Back to top. Body text
+  stays in Plex Sans: documentation is the tool speaking, dense with inline code, flags and tables,
+  and Writer's own tool sheets set such text in Plex Sans. Literata is kept for headings, each
+  page's lead paragraph and dialogue: script samples, quotations and the playground transcript,
+  which sets speakers as margin labels. The landing hero opens its sheet, so its lead reads on
+  paper.
+- **Source wells.** Code blocks, script samples and the playground source share one well: inset
+  paper closed by an ink rule. A fence may name its file (`toml title="runtime-fixture.toml"`) for a
+  muted mono caption row. A well with more source beyond its end fades there until it is scrolled or
+  focused. Syntax uses the inks only: plum keywords and constants, text-safe teal strings (mint in
+  dark), ink names, muted comments and punctuation.
+- **Printer's marks, not leading bars.** The current page and menu row is a plate with a 2px ink
+  underscore under its words. A heading reached through a fragment link gets crop marks in the sheet
+  pad. The release notice is an errata slip with a plum caps lead-in.
+- **Slips, pickers and focus.** Menus and the search picker are floating paper with a 1px ink edge
+  and a hard stock offset, over a static overprint dim with a paper-toned dot screen; nothing blurs
+  or animates. Search renders its own picker with Pagefind's search API rather than Pagefind's UI,
+  whose unlayered stylesheet would outrank these layers: a field well, a close icon, 32px rows of
+  title and section, the active row as a plate, the active row's excerpt with matches in ink over a
+  plum rule, and a hint line. Controls are tonal fills without borders; Run is the one primary
+  action. One focus ring, 2px plum on the control radius, sits inside tabs, segments and rows.
+- **Not carried over.** Code blocks keep the literal source; margin speaker labels would change what
+  readers copy. The landing hero keeps the print offset, which Writer allows on identity surfaces.
+  Unsaved-work dots have no meaning on a static page.

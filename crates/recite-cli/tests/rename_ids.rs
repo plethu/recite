@@ -87,7 +87,7 @@ fn rename_without_catalogues_says_so() {
         .assert_success()
         .assert_stderr(concat!(
             "renamed `@ask_room` to `@room_request` and 0 catalogue contexts\n",
-            "no dialogue catalogues are configured; add [discovery].catalogs to recite.project.toml or pass --catalog\n",
+            "note  no dialogue catalogues are configured; add [discovery].catalogs to recite.project.toml or pass --catalog\n",
         ));
 }
 

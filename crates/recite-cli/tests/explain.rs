@@ -10,11 +10,9 @@ fn explain_prints_known_diagnostic_guidance() {
     let output = run(recite().arg("explain").arg("RECITE_PARSE001"));
 
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("Code: RECITE_PARSE001");
-    output.assert_stdout_contains("Category: parse");
-    output.assert_stdout_contains("Meaning:");
-    output.assert_stdout_contains("Common causes:");
-    output.assert_stdout_contains("How to fix:");
+    output.assert_stdout_contains("RECITE_PARSE001  parse diagnostic");
+    output.assert_stdout_contains("Common causes\n  • ");
+    output.assert_stdout_contains("How to fix\n  • ");
     output.assert_stdout_contains("reported span");
 }
 
@@ -69,6 +67,6 @@ fn explain_with_bad_ui_locale_falls_back_to_default() {
         .env("RECITE_CONFIG", &bad_config));
 
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("Code: RECITE_PARSE001");
-    output.assert_stdout_contains("Common causes:");
+    output.assert_stdout_contains("RECITE_PARSE001  parse diagnostic");
+    output.assert_stdout_contains("Common causes\n");
 }

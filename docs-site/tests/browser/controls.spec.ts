@@ -30,12 +30,12 @@ test("skip link and both mobile menus work with a keyboard", async ({ page }) =>
   const referenceMenu = page.getByRole("button", { name: "Reference menu", exact: true });
   await referenceMenu.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator("#reference-menu")).toBeVisible();
+  await expect(page.locator("#section-menu")).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.locator("#reference-menu")).toBeHidden();
+  await expect(page.locator("#section-menu")).toBeHidden();
   await expect(referenceMenu).toBeFocused();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator("#reference-menu")).toBeVisible();
+  await expect(page.locator("#section-menu")).toBeVisible();
 });
 
 test("search recovers after a miss and leads to the manual", async ({ page }) => {
@@ -47,7 +47,7 @@ test("search recovers after a miss and leads to the manual", async ({ page }) =>
   await input.fill("first scene");
   await expect(result).toBeVisible();
   await input.fill("qzxvbnmplkjhgfdsa987654");
-  await expect(dialog.locator(".pagefind-ui__result-link")).toHaveCount(0);
+  await expect(dialog.locator("[data-search-results] a")).toHaveCount(0);
   await input.fill("first scene");
   await expect(result).toBeVisible();
   await result.focus();
@@ -61,16 +61,45 @@ test("search recovers after a miss and leads to the manual", async ({ page }) =>
   );
 });
 
+test("the header, running head and reference rows mark the current place", async ({ page }) => {
+  await page.goto("/reference/source-format/");
+  const modes = page.getByRole("navigation", { name: "Main navigation" }).first();
+  await expect(modes.getByRole("link", { name: "Reference", exact: true })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(modes.getByRole("link", { name: "Learn", exact: true })).not.toHaveAttribute(
+    "aria-current",
+  );
+  await expect(
+    page
+      .getByRole("navigation", { name: "Reference" })
+      .getByRole("link", { name: "Source Format", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await page.locator(".running-head").getByRole("link", { name: "Reference" }).click();
+  await expect(page).toHaveURL(/\/reference\/$/);
+  await page.goto("/guides/localisation/");
+  await expect(modes.getByRole("link", { name: "Learn", exact: true })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+});
+
 test("manual theme persists and system theme follows the OS", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const theme = page.getByRole("combobox", { name: "Select theme", exact: true });
-  await theme.selectOption("dark");
+  const theme = page.getByRole("group", { name: "Theme", exact: true });
+  await theme.getByRole("radio", { name: "Dark", exact: true }).check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
-  await expect(theme).toHaveValue("dark");
+  await expect(theme.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await theme.selectOption("auto");
+  // A segment track is one radio group: arrow keys move the choice.
+  await theme.getByRole("radio", { name: "Dark", exact: true }).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(theme.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await theme.getByRole("radio", { name: "System", exact: true }).check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

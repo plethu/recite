@@ -137,7 +137,7 @@ fn runtime_projection_ignores_fuzzy_and_obsolete_entries() {
     );
     let output = run_fixture(&asset, &fixture);
     output.assert_success();
-    output.assert_stdout_contains("line ffee6p8: Bonjour.");
+    output.assert_stdout_contains("Bonjour.  ffee6p8");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains("Fuzzy."));
     assert!(!stdout.contains("Obsolete."));

@@ -8,16 +8,17 @@ use recite_runtime::{
 use recite_ui::UiArg;
 
 use super::metrics::RuntimeMetricsCollector;
-use super::prompt::{PromptCardinality, write_prompt_run_lines};
+use super::prompt::PromptCardinality;
 use super::trace::{
     TraceCondition, TraceConditionValue, TraceEvent, TracePrompt, TracePromptIdentity, TraceScalar,
     condition_query_text, trace_choice, trace_effect, trace_line,
 };
+use super::transcript::{RunChoice, RunLine, RunTranscript};
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 
 pub(crate) struct RuntimeExecution {
-    pub(crate) run_lines: Vec<String>,
+    pub(crate) run: RunTranscript,
     pub(crate) trace: super::trace::TraceDocument,
 }
 
@@ -25,7 +26,7 @@ pub(super) fn project_event(
     event: &PreviewEvent,
     preview_trace: &PreviewTrace,
     prompt_cardinality: &PromptCardinality,
-    run_lines: &mut Vec<String>,
+    run: &mut RunTranscript,
     trace_events: &mut Vec<TraceEvent>,
     metrics: Option<&mut RuntimeMetricsCollector>,
     messages: &Messages,
@@ -48,26 +49,14 @@ pub(super) fn project_event(
                     .collect::<Result<Vec<_>, _>>()?,
                 result: trace_condition_value(value),
             };
-            run_lines.push(messages.format(
-                MsgId::PlayConditionResult,
-                [
-                    ("query", UiArg::from(query)),
-                    ("result", UiArg::from(condition.result.to_string())),
-                ],
-            ));
+            run.condition(query, condition.result.to_string());
             trace_events.push(TraceEvent::Condition { condition });
             if let Some(metrics) = metrics.as_deref_mut() {
                 metrics.condition_evaluation_count += 1;
             }
         }
         PreviewEvent::Line(line) => {
-            run_lines.push(messages.format(
-                MsgId::PlayLine,
-                [
-                    ("id", UiArg::from(line.id.as_str())),
-                    ("text", UiArg::from(line.text.as_str())),
-                ],
-            ));
+            run.line(run_line(line));
             if let Some(metrics) = metrics.as_deref_mut() {
                 metrics.line_count += 1;
             }
@@ -76,7 +65,18 @@ pub(super) fn project_event(
             });
         }
         PreviewEvent::Prompt(prompt) => {
-            write_prompt_run_lines(run_lines, prompt.line(), prompt.choices(), messages);
+            run.prompt(
+                prompt.line().map(run_line),
+                prompt
+                    .choices()
+                    .iter()
+                    .map(|choice| RunChoice {
+                        id: choice.id.as_str().to_owned(),
+                        text: choice.text.clone(),
+                        available: choice.availability.is_available,
+                    })
+                    .collect(),
+            );
             if let Some(metrics) = metrics.as_deref_mut() {
                 metrics.prompt_count += 1;
                 metrics.choice_count += prompt.choices().len();
@@ -89,10 +89,7 @@ pub(super) fn project_event(
             });
         }
         PreviewEvent::ChoiceSelected { prompt, choice_id } => {
-            run_lines.push(messages.format(
-                MsgId::PlaySelectedChoice,
-                [("id", UiArg::from(choice_id.as_str()))],
-            ));
+            run.select(choice_id.as_str());
             trace_events.push(TraceEvent::ChoiceSelected {
                 prompt: TracePromptIdentity {
                     block: prompt.block().as_str().to_owned(),
@@ -103,17 +100,11 @@ pub(super) fn project_event(
             });
         }
         PreviewEvent::EffectRequested(effect) => {
-            run_lines.push(messages.format(
-                MsgId::RunEffect,
-                [
-                    ("mode", UiArg::from(effect.mode.to_string())),
-                    ("function", UiArg::from(effect.function.clone())),
-                    (
-                        "args",
-                        UiArg::from(super::trace::format_effect_arguments(&effect.args)),
-                    ),
-                ],
-            ));
+            run.effect(
+                effect.id.as_str().to_owned(),
+                effect_call(effect, messages),
+                effect.mode.to_string(),
+            );
             if let Some(metrics) = metrics.as_deref_mut() {
                 metrics.record_effect(effect.mode);
             }
@@ -122,33 +113,22 @@ pub(super) fn project_event(
             });
         }
         PreviewEvent::EffectAcknowledged { effect_id, .. } => {
-            run_lines.push(messages.format(
-                MsgId::PlayAckCompleted,
-                [("id", UiArg::from(effect_id.as_str()))],
-            ));
+            run.acknowledge(effect_id.as_str());
             trace_events.push(TraceEvent::Acknowledgement {
                 effect_id: effect_id.as_str().to_owned(),
                 result: "completed",
             });
         }
         PreviewEvent::End { deferred_effects } => {
-            run_lines.push(messages.text(MsgId::PlayEnd));
-            if !deferred_effects.is_empty() {
-                run_lines.push(messages.text(MsgId::PlayDeferredEffects));
+            run.end(
+                deferred_effects
+                    .iter()
+                    .map(|effect| effect_call(effect, messages))
+                    .collect(),
+            );
+            if let Some(metrics) = metrics {
                 for effect in deferred_effects {
-                    run_lines.push(messages.format(
-                        MsgId::PlayDeferredEffectRow,
-                        [
-                            ("function", UiArg::from(effect.function.clone())),
-                            (
-                                "args",
-                                UiArg::from(super::trace::format_effect_arguments(&effect.args)),
-                            ),
-                        ],
-                    ));
-                    if let Some(metrics) = metrics.as_deref_mut() {
-                        metrics.record_effect(effect.mode);
-                    }
+                    metrics.record_effect(effect.mode);
                 }
             }
             trace_events.push(TraceEvent::End {
@@ -169,6 +149,30 @@ pub(super) fn project_event(
         }
     }
     Ok(())
+}
+
+fn run_line(line: &recite_runtime::DialogueLine) -> RunLine {
+    RunLine {
+        id: line.id.as_str().to_owned(),
+        speaker: line
+            .speaker
+            .as_ref()
+            .map(|speaker| speaker.as_str().to_owned()),
+        text: line.text.clone(),
+    }
+}
+
+fn effect_call(effect: &recite_runtime::DialogueEffectRequest, messages: &Messages) -> String {
+    messages.format(
+        MsgId::RunEffect,
+        [
+            ("function", UiArg::from(effect.function.clone())),
+            (
+                "args",
+                UiArg::from(super::trace::format_effect_arguments(&effect.args)),
+            ),
+        ],
+    )
 }
 
 fn trace_prompt(

@@ -1,8 +1,9 @@
-cli-help-about = Recite dialogue compiler and validation CLI.
+cli-help-about = Compile, check and preview branching dialogue.
 cli-help-usage-heading = Usage:
 cli-help-commands-heading = Commands
 cli-help-arguments-heading = Arguments
 cli-help-options-heading = Options
+cli-help-machine-output-heading = Output for tools
 cli-help-command-validate = Validate dialogue source without writing compiled output
 cli-help-command-compile = Compile dialogue source to a MessagePack .recitec asset
 cli-help-command-extract = Extract gettext POT entries
@@ -43,6 +44,7 @@ cli-help-arg-asset-play = MessagePack .recitec asset to play
 cli-help-arg-block = Block ID to start from
 cli-help-arg-block-project = Block to start from; defaults to the block of the project scene that uses this asset
 cli-help-arg-fixture = TOML fixture with conditions, choices, and effect options
+cli-help-arg-metrics = Add timing, event counts and saved-session size to the trace; these fields are not snapshot-stable
 cli-help-arg-ui = Interactive UI mode
 cli-help-arg-keymap = TUI keymap. Overrides [ui].keymap in the user config file
 cli-help-arg-dialogue-locale = Dialogue content locale to preview through the runtime locale provider
@@ -56,12 +58,12 @@ cli-help-arg-bench-samples = Number of samples per benchmark
 cli-help-arg-help = Print help
 cli-help-arg-version = Print version
 
-explain-code = Code: {$code}
-explain-category = Category: {$category}
-explain-meaning = Meaning: {$meaning}
-explain-common-causes = Common causes:
-explain-how-to-fix = How to fix:
-explain-list-item = - {$item}
+explain-code = {$code}
+explain-category = {$category} diagnostic
+explain-meaning = {$meaning}
+explain-common-causes = Common causes
+explain-how-to-fix = How to fix
+explain-list-item = {"  "}• {$item}
 
 cli-help-command-schema-check-fresh = Check that the project schema matches what its producer exports now
 cli-help-arg-schema-fresh-root = Project whose declared schema is checked against a fresh export from its registered producer
@@ -71,14 +73,23 @@ cli-help-group-localisation = Localisation
 cli-help-group-running = Running
 cli-help-group-help = Help
 cli-success-ok = ok
+cli-note-label = note
 cli-success-files = { $count ->
         [one] { $count } file
        *[other] { $count } files
     }, no diagnostics
 cli-success-project = project, no diagnostics
+cli-success-compiled = { $count ->
+        [one] { $count } file
+       *[other] { $count } files
+    } → {$output}
+cli-success-extracted = { $count ->
+        [one] { $count } entry
+       *[other] { $count } entries
+    } → {$output}
 cli-ids-assigned = { $count ->
-        [one] assigned { $count } stable ID
-       *[other] assigned { $count } stable IDs
+        [one] assigned { $count } stable ID in {$files}
+       *[other] assigned { $count } stable IDs in {$files}
     }
 cli-ids-planned = { $count ->
         [one] would assign {$count} stable ID; nothing was written
@@ -135,12 +146,12 @@ cli-help-arg-recording-output = Write the handoff here; without it nothing is wr
 cli-help-arg-recording-file = Returned handoff file
 cli-help-arg-recording-apply = Update the recording sidecar; without it the import is only validated
 cli-recording-source-language = source language
-cli-recording-summary = {$language}: {$recorded} recorded, {$approved} approved, {$unvoiced} unvoiced, {$not_ready} not ready; { $attention ->
-        [one] {$attention} item needs attention
-       *[other] {$attention} items need attention
-    }
-cli-recording-entry = {"  "}{$state}: `{$id}` in {$block} at {$reference}
-cli-recording-obsolete = {"  "}obsolete: `{$id}` is no longer in the source
+cli-recording-summary = {$language} · { $attention ->
+        [one] {$attention} needs attention
+       *[other] {$attention} need attention
+    } · {$recorded} recorded · {$approved} approved · {$unvoiced} unvoiced · {$not_ready} not ready
+cli-recording-entry = {"  "}{$reference}  {$state}  {$id}  {$block}
+cli-recording-obsolete = {"  "}obsolete  `{$id}` is no longer in the source
 cli-recording-state-to-record = to record
 cli-recording-state-stale = stale
 cli-recording-export-selected = { $count ->
@@ -177,26 +188,32 @@ cli-diagnostic-summary = { $problems } in { $files ->
        *[other] { $files } files
     }
 
-watch-building = watch: building {$path}
-watch-waiting-for-changes = watch: waiting for changes
-watch-rebuilding = watch: rebuilding
-watch-build-succeeded = watch: build succeeded ({$count} assets)
-watch-build-duration-microseconds = watch: build completed in {$duration} µs
-watch-build-duration-milliseconds = watch: build completed in {$duration} ms
-watch-build-failed-waiting = watch: build failed; waiting for changes
-watch-build-failed = watch: build failed: {$error}
-watch-build-failed-partial = watch: build {$status}: partial publication; failed target {$failed}; recovery targets: {$recovery}{$records}
-watch-build-failed-indeterminate = watch: build {$status}: publication state is indeterminate; recovery targets: {$recovery}{$records}
-watch-build-failed-refused = watch: build {$status}: publication refused: {$reason}{$records}
-watch-build-failed-not-attempted = watch: build {$status}: publication not attempted: {$reason}{$records}
-watch-build-failed-published = watch: build {$status}: publication unexpectedly reported success{$records}
-watch-build-failed-unsupported = watch: build {$status}: publication returned an unsupported outcome{$records}
-watch-build-failed-partial-with-failure = watch: build {$status}: partial publication; failed target {$failed}; recovery targets: {$recovery}; {$failure}{$records}
-watch-build-failed-indeterminate-with-failure = watch: build {$status}: publication state is indeterminate; recovery targets: {$recovery}; {$failure}{$records}
-watch-build-failed-refused-with-failure = watch: build {$status}: publication refused: {$reason}; {$failure}{$records}
-watch-build-failed-not-attempted-with-failure = watch: build {$status}: publication not attempted: {$reason}; {$failure}{$records}
-watch-build-failed-published-with-failure = watch: build {$status}: publication unexpectedly reported success; {$failure}{$records}
-watch-build-failed-unsupported-with-failure = watch: build {$status}: publication returned an unsupported outcome; {$failure}{$records}
+watch-building = watching {$path} · Ctrl-C stops
+watch-waiting-for-changes = waiting for changes
+watch-rebuilding = rebuilding
+watch-build-succeeded = { $count ->
+        [one] built {$count} asset
+       *[other] built {$count} assets
+    }
+watch-build-duration-microseconds = {$duration} µs
+watch-build-duration-milliseconds = {$duration} ms
+watch-build-failed-waiting = build failed; the last good asset is kept
+watch-status-ok = ok
+watch-status-error = error
+watch-status-fixed = fixed
+watch-build-failed = build failed: {$error}
+watch-build-failed-partial = build {$status}: partial publication; failed target {$failed}; recovery targets: {$recovery}{$records}
+watch-build-failed-indeterminate = build {$status}: publication state is indeterminate; recovery targets: {$recovery}{$records}
+watch-build-failed-refused = build {$status}: publication refused: {$reason}{$records}
+watch-build-failed-not-attempted = build {$status}: publication not attempted: {$reason}{$records}
+watch-build-failed-published = build {$status}: publication unexpectedly reported success{$records}
+watch-build-failed-unsupported = build {$status}: publication returned an unsupported outcome{$records}
+watch-build-failed-partial-with-failure = build {$status}: partial publication; failed target {$failed}; recovery targets: {$recovery}; {$failure}{$records}
+watch-build-failed-indeterminate-with-failure = build {$status}: publication state is indeterminate; recovery targets: {$recovery}; {$failure}{$records}
+watch-build-failed-refused-with-failure = build {$status}: publication refused: {$reason}; {$failure}{$records}
+watch-build-failed-not-attempted-with-failure = build {$status}: publication not attempted: {$reason}; {$failure}{$records}
+watch-build-failed-published-with-failure = build {$status}: publication unexpectedly reported success; {$failure}{$records}
+watch-build-failed-unsupported-with-failure = build {$status}: publication returned an unsupported outcome; {$failure}{$records}
 watch-build-status-succeeded = succeeded
 watch-build-status-failed = failed
 watch-build-status-stale = stale
@@ -205,8 +222,8 @@ watch-build-status-superseded = superseded
 watch-build-status-unknown = unknown
 watch-build-recovery-targets-empty = <none>
 watch-build-recovery-targets-list = {$target}
-watch-build-recovery-required = watch: build published {$count} assets; recovery required{$records}
-watch-build-recovery-notice = watch: recovery required{$records}
+watch-build-recovery-required = build published {$count} assets; recovery required{$records}
+watch-build-recovery-notice = recovery required{$records}
 watch-build-recovery-summary = { $count ->
     [0] {$items}
    *[other] ; recovery markers: {$items}
@@ -253,7 +270,7 @@ watch-build-failure-not-attempted-no-candidates = build produced no candidates
 watch-build-failure-not-attempted-preparation-failed = build preparation failed
 watch-build-failure-not-attempted-invalid-outcome = publication outcome was invalid
 watch-build-failure-not-attempted-unknown = publication was not attempted for an unknown reason
-watch-event-error = watch: watcher event error: {$error}
+watch-event-error = watcher event error: {$error}
 
 play-tui-starting = starting recite play TUI; use --ui plain for line-oriented output
 
@@ -286,8 +303,17 @@ play-error-choice-id-invalid = invalid choice ID `{$id}`: {$error}
 play-error-choice-id-unavailable = choice ID `{$id}` is not available here
 play-error-choice-unavailable = choice `{$id}` is unavailable
 play-error-choice-unavailable-reason = choice `{$id}` is unavailable: {$reason}
-run-effect = effect {$mode} {$function} {$args}
+run-effect = {$function}{$args}
 
+run-label-effect = effect
+run-label-condition = condition
+run-label-choose = choose
+run-label-end = end
+run-label-deferred = deferred
+run-end-text = end of the conversation
+run-choice-unavailable = unavailable
+run-effect-acknowledged = {$mode}, acknowledged
+run-effect-mode = {$mode}
 tui-ready = ready
 tui-finished = finished
 tui-command = command:
@@ -329,10 +355,10 @@ tui-transcript-effect = effect
 tui-transcript-ack = ack
 tui-transcript-deferred = deferred
 tui-transcript-end = end
-tui-transcript-completed = completed
+tui-transcript-completed = acknowledged
 tui-transcript-deferred-effects = deferred effects
-tui-transcript-effect-text = {$mode} {$function} {$args}
-tui-transcript-deferred-effect-text = {$function} {$args}
+tui-transcript-effect-text = {$function}{$args} · {$mode}
+tui-transcript-deferred-effect-text = {$function}{$args}
 
 tui-help-title = Help
 tui-help-key-heading = Key

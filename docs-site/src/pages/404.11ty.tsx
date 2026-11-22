@@ -13,12 +13,14 @@ const page = {
 export default function ({ site }: { site: SiteData }) {
   return (
     <Layout page={page} chrome={site.chrome}>
-      <div class="recite-article site-content">
-        <PageTitle>Page not found</PageTitle>
-        <p>
-          This page does not exist. <a href="/">Return to Recite</a> or{" "}
-          <a href="/getting-started/first-scene/">write your first scene</a>.
-        </p>
+      <div class="site-content">
+        <div class="recite-article sheet">
+          <PageTitle>Page not found</PageTitle>
+          <p>
+            This page does not exist. <a href="/">Return to Recite</a> or{" "}
+            <a href="/getting-started/first-scene/">write your first scene</a>.
+          </p>
+        </div>
       </div>
     </Layout>
   );

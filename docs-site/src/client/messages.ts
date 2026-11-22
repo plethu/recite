@@ -19,3 +19,7 @@ export const messageNames = [
 ] as const;
 
 export type Messages = Record<(typeof messageNames)[number], string>;
+
+export const searchMessageNames = ["loading", "failed", "empty", "one", "many"] as const;
+
+export type SearchMessages = Record<(typeof searchMessageNames)[number], string>;

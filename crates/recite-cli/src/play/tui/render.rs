@@ -29,7 +29,7 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
     let area = frame.area();
     let queue_height = deferred_queue_height(state);
     let repeat_line = !prompt_line_is_last_transcript_entry(state);
-    let prompt_height = prompt_height(&state.prompt, area.width, repeat_line)
+    let prompt_height = prompt_height(&state.prompt, area.width, repeat_line, messages)
         .min(available_prompt_height(area.height, queue_height));
     // Transcript and prompt read top-down as one flow; spare rows collect above the footer.
     let transcript_room = area
@@ -151,7 +151,7 @@ fn prompt_line_is_last_transcript_entry(state: &TuiState) -> bool {
         .is_some_and(|id| id == line.id)
 }
 
-fn prompt_height(prompt: &TuiPrompt, width: u16, repeat_line: bool) -> u16 {
+fn prompt_height(prompt: &TuiPrompt, width: u16, repeat_line: bool, messages: &Messages) -> u16 {
     match prompt {
         TuiPrompt::None | TuiPrompt::Finished { .. } => 2,
         TuiPrompt::Choice { line, choices, .. } => {
@@ -160,7 +160,19 @@ fn prompt_height(prompt: &TuiPrompt, width: u16, repeat_line: bool) -> u16 {
                 .filter(|_| repeat_line)
                 .map(|line| 1 + wrapped_line_count(line.text.as_str(), width as usize, 2))
                 .unwrap_or(1);
-            let visible = choices.iter().filter(|choice| choice.is_visible).count();
+            let visible: usize = choices
+                .iter()
+                .filter(|choice| choice.is_visible)
+                .map(|choice| {
+                    prompt::choice_text_rows(
+                        &prompt::choice_text(choice, messages),
+                        &choice.id,
+                        width,
+                    )
+                    .0
+                    .len()
+                })
+                .sum();
             (prompt_lines + visible + 1).clamp(5, u16::MAX as usize) as u16
         }
         TuiPrompt::Condition { .. } => 5,
@@ -201,7 +213,7 @@ fn render_help_overlay(frame: &mut ratatui::Frame<'_>, state: &TuiState, message
         .split(frame.area());
 
     frame.render_widget(
-        Paragraph::new(help_overlay_lines(state, messages)),
+        Paragraph::new(help_overlay_lines(state, messages, chunks[0].width)),
         chunks[0],
     );
     frame.render_widget(

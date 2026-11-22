@@ -251,7 +251,7 @@ fn help_ignores_malformed_ui_config() {
         .arg("--help")
         .env("RECITE_CONFIG", &malformed_config));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("Recite dialogue compiler and validation CLI.");
+    output.assert_stdout_contains("Compile, check and preview branching dialogue.");
     assert!(
         stdout(&output)
             .split_whitespace()

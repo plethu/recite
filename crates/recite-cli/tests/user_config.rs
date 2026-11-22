@@ -193,7 +193,7 @@ fn malformed_user_config_does_not_change_compile_run_trace_or_dialogue_locale() 
     let configured_run = run(&mut configured_run);
     configured_run.assert_success().assert_stderr("");
     assert_eq!(baseline_run.stdout, configured_run.stdout);
-    assert!(stdout(&configured_run).contains("line ffee6p8: Bienvenue."));
+    assert!(stdout(&configured_run).contains("Bienvenue.  ffee6p8"));
 
     let mut baseline_trace = recite();
     baseline_trace
@@ -240,7 +240,7 @@ fn help_falls_back_without_stderr_when_config_loading_fails() {
         .env("HOME", temp.path());
     let output = run(&mut command);
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("Recite dialogue compiler and validation CLI.");
+    output.assert_stdout_contains("Compile, check and preview branching dialogue.");
 }
 
 #[test]

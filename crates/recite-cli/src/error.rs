@@ -379,3 +379,19 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {}
+
+impl CliError {
+    /// The reader of our output went away, as when piped into `head`; nothing is left to report.
+    pub(crate) fn is_broken_pipe(&self) -> bool {
+        match self {
+            Self::Io(error) => error.kind() == io::ErrorKind::BrokenPipe,
+            Self::TraceJson(error) | Self::BenchJson(error) => {
+                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
+            }
+            Self::SchemaInspection(error::SchemaInspectionError::Json(error)) => {
+                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
+            }
+            _ => false,
+        }
+    }
+}

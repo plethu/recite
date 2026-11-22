@@ -1,6 +1,6 @@
 import { text } from "../content/messages.ts";
 import { Playground, type PlaygroundProps } from "./Playground.tsx";
-import { LandingHero } from "./landing/Hero.tsx";
+import { LandingHero, ReleaseNotice } from "./landing/Hero.tsx";
 import { Workflow } from "./landing/Workflow.tsx";
 
 const links = [
@@ -14,35 +14,38 @@ const links = [
 export function Landing({ playground }: { playground: PlaygroundProps }) {
   return (
     <div class="recite-landing site-content" data-pagefind-body>
-      <LandingHero />
-      <section aria-labelledby="scene-heading">
-        <h2 id="scene-heading">{text("landing.scene.title")}</h2>
-        <Playground {...playground} />
-      </section>
-      <Workflow />
-      <ReadingSection
-        headingId="localisation-heading"
-        title={text("landing.localisation.title")}
-        paragraphs={[text("landing.localisation.body1"), text("landing.localisation.body2")]}
-        href="/guides/localisation/"
-        label={text("landing.localisation.link")}
-      />
-      <ReadingSection
-        headingId="fit-heading"
-        title={text("landing.fit.title")}
-        paragraphs={[
-          text("landing.fit.body1"),
-          text("landing.fit.body2"),
-          text("landing.fit.body3"),
-        ]}
-        href="/guides/alternatives/"
-        label={text("landing.fit.link")}
-      />
-      <nav class="site-links" aria-label={text("landing.navigation.label")}>
-        {links.map(({ href, title }) => (
-          <a href={href}>{title}</a>
-        ))}
-      </nav>
+      <ReleaseNotice />
+      <div class="sheet">
+        <LandingHero />
+        <section aria-labelledby="scene-heading">
+          <h2 id="scene-heading">{text("landing.scene.title")}</h2>
+          <Playground {...playground} />
+        </section>
+        <Workflow />
+        <ReadingSection
+          headingId="localisation-heading"
+          title={text("landing.localisation.title")}
+          paragraphs={[text("landing.localisation.body1"), text("landing.localisation.body2")]}
+          href="/guides/localisation/"
+          label={text("landing.localisation.link")}
+        />
+        <ReadingSection
+          headingId="fit-heading"
+          title={text("landing.fit.title")}
+          paragraphs={[
+            text("landing.fit.body1"),
+            text("landing.fit.body2"),
+            text("landing.fit.body3"),
+          ]}
+          href="/guides/alternatives/"
+          label={text("landing.fit.link")}
+        />
+        <nav class="site-links" aria-label={text("landing.navigation.label")}>
+          {links.map(({ href, title }) => (
+            <a href={href}>{title}</a>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }

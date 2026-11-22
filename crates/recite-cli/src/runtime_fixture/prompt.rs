@@ -5,11 +5,9 @@ use recite_core::{
     compiled::{CompiledDialogue, CompiledStatementKind, StatementRange},
 };
 use recite_runtime::preview::PreviewPrompt;
-use recite_ui::UiArg;
 
 use super::fixture::{FixtureChoice, RuntimeFixture};
 use crate::error::CliError;
-use crate::i18n::{Messages, MsgId};
 
 /// The CLI-only identity used to preserve fixture key compatibility. Runtime identity remains
 /// authoritative; this projection never scans the compiled asset.
@@ -117,35 +115,6 @@ pub(super) fn select_fixture_choice(
             }
             Ok(choices[*index - 1].id.clone())
         }
-    }
-}
-
-pub(super) fn write_prompt_run_lines(
-    run_lines: &mut Vec<String>,
-    line: Option<&recite_runtime::DialogueLine>,
-    choices: &[recite_runtime::DialogueChoice],
-    messages: &Messages,
-) {
-    match line {
-        Some(line) => run_lines.push(messages.format(
-            MsgId::PlayPromptLine,
-            [
-                ("id", UiArg::from(line.id.as_str())),
-                ("text", UiArg::from(line.text.as_str())),
-            ],
-        )),
-        None => run_lines.push(messages.text(MsgId::PlayPrompt)),
-    }
-    for (index, choice) in choices.iter().enumerate() {
-        run_lines.push(messages.format(
-            MsgId::PlayChoiceRow,
-            [
-                ("index", UiArg::from(index + 1)),
-                ("id", UiArg::from(choice.id.as_str())),
-                ("text", UiArg::from(choice.text.as_str())),
-                ("available", UiArg::from(choice.availability.is_available)),
-            ],
-        ));
     }
 }
 

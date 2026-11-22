@@ -23,27 +23,46 @@
 
 @layer base {
   :root {
-    background: var(--color-paper);
+    background: var(--color-desk);
     color: var(--color-ink);
     font-family: var(--font-reading);
   }
 
+  /* Header, main and the status bar; the bar stays at the foot of short pages. */
   body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    min-block-size: 100dvh;
     background: transparent;
     color: var(--color-ink);
     line-height: 1.65;
   }
 
-  /* Paper grain, the same fractal noise as the identity assets, painted between the page's paper
-     and its content. Code blocks and panels have solid surface fills, so it never shows behind
-     them; as a pseudo-element it also leaves contrast checks reading the solid paper colour. */
+  /* Paper grain on the desk, the same fractal noise as the identity assets. Sheets, slips and
+     source wells have solid fills, so it never shows behind prose or code; as a pseudo-element it
+     also leaves contrast checks reading the solid colours. Dark paper takes a paper-toned tile at
+     a lower peak, as `grain-dark.png` does. */
   body::before {
+    --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .25 0 0 0 0 .18 0 0 0 0 .2 0 0 0 .07 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+    --grain-dark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .95 0 0 0 0 .91 0 0 0 0 .87 0 0 0 .047 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+
     content: "";
     position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .25 0 0 0 0 .18 0 0 0 0 .2 0 0 0 .07 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+    background-image: var(--grain);
+  }
+
+  :root[data-theme="dark"] body::before {
+    background-image: var(--grain-dark);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) body::before {
+      background-image: var(--grain-dark);
+    }
   }
 
   @media (prefers-contrast: more) {
@@ -53,19 +72,17 @@
   }
 
   a {
+    color: var(--color-plum);
     text-decoration-line: underline;
     text-underline-offset: 0.2em;
   }
 
-  @scope (.site-content, .site-footer, .recite-header) {
-    a {
-      color: var(--color-plum);
-    }
-  }
-
+  /* One focus ring everywhere: 2px plum on the control radius. Controls whose ring would meet a
+     neighbour or a rule draw it inside their edge instead. */
   :focus-visible {
     outline: var(--focus-ring);
-    outline-offset: 0.2rem;
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-control);
   }
 
   h1, h2, h3 {
@@ -77,17 +94,26 @@
     text-wrap: pretty;
   }
 
-  button, select {
-    min-block-size: var(--target-min);
-  }
-
+  /* Tonal actions, as in Writer's state table: ink laid over the host, no border. */
   button {
-    border: 1px solid var(--color-rule);
+    min-block-size: var(--target-min);
+    border: 0;
     border-radius: var(--radius-control);
-    background: var(--color-surface);
+    background: var(--tint-tonal);
     color: var(--color-ink);
     cursor: pointer;
-    padding: 0.5rem 0.8rem;
+    font-weight: 500;
+    padding: 0.5rem 0.9rem;
+  }
+
+  button:hover {
+    background: var(--tint-hover);
+  }
+
+  button:disabled {
+    background: var(--tint-well);
+    color: var(--color-muted);
+    cursor: default;
   }
 
   pre, code, textarea {
@@ -98,23 +124,21 @@
     display: none;
   }
 
+  /* Menus and pickers are slips: floating paper, a 1px ink edge and a hard stock offset. */
   [popover] {
-    border: 1px solid var(--color-rule);
-    background: var(--color-paper);
+    border: 1px solid var(--color-ink);
+    border-radius: 0;
+    background: var(--color-floating);
     color: var(--color-ink);
   }
 
   [popover]:popover-open {
-    box-shadow: 0 0.75rem 2rem var(--color-shadow);
+    box-shadow: var(--offset-slip) var(--offset-slip) 0 var(--color-stock);
   }
 
   @media (scripting: none) {
     :root[data-theme] {
       color-scheme: light dark;
-    }
-
-    .theme-control {
-      display: none;
     }
   }
 }
@@ -126,10 +150,31 @@
     padding-inline: var(--space-step);
   }
 
+  /* The reading sheet: solid paper with a hairline edge and a hard stock offset. */
+  .sheet {
+    margin-block: 1.5rem 3rem;
+    padding: var(--sheet-pad);
+    border: 1px solid var(--color-hairline);
+    background: var(--color-paper);
+    box-shadow: var(--offset-stock) var(--offset-stock) 0 var(--color-stock);
+  }
+
+  /* The ink status bar. */
   .site-footer {
-    padding-block: 2rem;
-    border-block-start: var(--rule-section);
-    color: var(--color-muted);
+    border-block-start: 1px solid var(--color-status-edge);
+    background: var(--color-status-bar);
+    color: var(--color-status-text);
+    font-size: 0.8125rem;
+  }
+
+  .site-footer p {
+    inline-size: var(--measure-site);
+    margin: 0 auto;
+    padding: 0.35rem var(--space-step);
+  }
+
+  .site-footer a {
+    color: var(--color-status-signal);
   }
 }
 
@@ -139,15 +184,15 @@
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 0.5rem 1.25rem;
+      gap: 0.5rem 1.5rem;
       inline-size: var(--measure-site);
       margin-inline: auto;
+      padding-inline: var(--space-step);
     }
 
     .brand {
       display: inline-flex;
       align-items: center;
-      margin-inline-end: auto;
       min-block-size: var(--target-min);
       text-decoration: none;
     }
@@ -163,21 +208,75 @@
       display: block;
       inline-size: 100%;
       block-size: 100%;
-      fill: var(--color-plum);
+      fill: var(--color-wordmark);
       color: var(--color-teal);
     }
 
+    /* A field's well: a light ink tint closed by a bottom rule, with the place it searches. */
+    .search-field:not([hidden]) {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      inline-size: clamp(9rem, 22vw, 16rem);
+      margin-inline-end: auto;
+      padding-inline: 0.75rem;
+      border-block-end: 1px solid var(--color-ink);
+      border-radius: var(--radius-control) var(--radius-control) 0 0;
+      background: var(--tint-well);
+      color: var(--color-muted);
+      font-weight: 400;
+      text-align: start;
+    }
+
+    .search-field:hover {
+      background: var(--tint-tonal);
+    }
+
+    .search-field svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+      flex: none;
+      fill: none;
+      stroke: currentcolor;
+      stroke-width: 1.5;
+    }
+
+    /* Top-level modes are tabs: ink words, and a teal plate rule under the current one. */
     nav {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 1.25rem;
     }
 
     nav a {
       display: inline-flex;
       align-items: center;
       min-block-size: var(--target-min);
+      padding-inline: 0.8rem;
+      color: var(--color-ink);
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    nav a:hover {
+      background: var(--tint-hover);
+    }
+
+    /* The ring sits inside the tab's edge, clear of the rule under the words. */
+    nav a:focus-visible {
+      outline-offset: -2px;
+    }
+
+    /* A pseudo-element rather than a gradient keeps the words on a plain, measurable fill. */
+    nav a[aria-current] {
+      position: relative;
+    }
+
+    nav a[aria-current]::after {
+      content: "";
+      position: absolute;
+      inset: auto 0.4rem 0.375rem;
+      block-size: 2px;
+      background: var(--color-teal);
     }
 
     .menu-toggle {
@@ -186,19 +285,42 @@
 
     #global-menu {
       position: fixed;
-      inset-block: 4.5rem auto;
+      inset-block: 4rem auto;
       inset-inline: auto 1rem;
       inline-size: min(20rem, calc(100% - 2rem));
-      padding: 1rem;
+      padding: 0.5rem;
     }
 
+    /* Inside the slip the modes are rows; the current one is a selected row. */
     #global-menu nav {
       display: grid;
     }
 
-    @media (width < 55rem) {
+    #global-menu nav a {
+      padding-inline: 0.75rem;
+    }
+
+    #global-menu nav a[aria-current]::after {
+      content: none;
+    }
+
+    #global-menu nav a[aria-current] {
+      background: var(--color-plate);
+      text-decoration: underline 2px var(--color-ink);
+      text-underline-offset: 0.35em;
+    }
+
+    #global-menu .segments {
+      margin-block-start: 0.75rem;
+    }
+
+    @media (width < 64rem) {
       :scope {
         gap: 0.5rem;
+      }
+
+      .brand {
+        margin-inline-end: auto;
       }
 
       .brand span {
@@ -206,18 +328,104 @@
         block-size: 1.6rem;
       }
 
-      .desktop-nav {
-        display: none;
+      .search-field:not([hidden]) {
+        inline-size: auto;
+        margin-inline-end: 0;
       }
 
-      .desktop-theme {
+      .desktop-nav, .desktop-theme {
         display: none;
       }
 
       .menu-toggle {
         display: inline-flex;
+        align-items: center;
       }
     }
+  }
+
+  /* Every one-of choice is a segment on one tonal track; the chosen one is paper with an ink
+     underscore under its words. The radio stays the focus and hit target. */
+  .segments {
+    display: inline-flex;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--tint-tonal);
+  }
+
+  .segments label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-min);
+    padding-inline: 0.75rem;
+    border-radius: var(--radius-control);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .segments input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .segments label:hover {
+    background: var(--tint-hover);
+  }
+
+  .segments label:has(:checked) {
+    background: var(--color-floating);
+  }
+
+  .segments label:has(:checked) span {
+    text-decoration: underline 2px var(--color-ink);
+    text-underline-offset: 0.35em;
+  }
+
+  .segments label:has(:focus-visible) {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  /* Errata slips carry notices: floating paper, a closed 1px edge, a 3px stock offset and a plum
+     caps lead-in. */
+  .errata {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 1.5rem;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--color-rule);
+    background: var(--color-floating);
+    box-shadow: var(--offset-stock) var(--offset-stock) 0 var(--color-stock);
+  }
+
+  .errata p {
+    margin: 0;
+  }
+
+  .lead-in {
+    margin-inline-end: 0.5rem;
+    color: var(--color-plum);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* The one display line on a sheet; the landing hero sets its own. */
+  :where(.sheet) h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+    font-weight: 550;
+    letter-spacing: -0.03em;
+    margin-block: 0 1.5rem;
   }
 
   @scope (.recite-landing) {
@@ -226,8 +434,12 @@
       grid-template-columns: 1.25fr 0.8fr;
       gap: var(--space-step);
       align-items: center;
-      padding-block: var(--space-section);
+      padding-block: 0 clamp(2rem, 5vw, 3.5rem);
       isolation: isolate;
+    }
+
+    .errata {
+      margin-block-start: 1.5rem;
     }
 
     /* The site's one misregistration: a teal offset beneath plum, as in the print wordmark. */
@@ -238,7 +450,7 @@
       font-variation-settings: "opsz" 72, "SOFT" 50;
       letter-spacing: -0.03em;
       position: relative;
-      color: var(--color-plum);
+      color: var(--color-display);
       max-inline-size: min(16ch, 46rem);
       margin-block: 0.5rem 1.5rem;
     }
@@ -259,20 +471,9 @@
       font-size: clamp(1.1rem, 2vw, 1.3rem);
     }
 
-    .note-band {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 0.5rem 2rem;
-      border-block-start: var(--rule-section);
-      padding-block: 1rem;
-    }
-
     .release {
-      color: var(--color-muted);
-      font-size: 0.9rem;
       max-inline-size: var(--measure-reading);
-      margin: 0;
+      font-size: 0.9rem;
     }
 
     .actions {
@@ -290,16 +491,18 @@
     }
 
     .site-links {
-      padding-block: 2rem;
-      border-block-start: 1px solid var(--color-rule);
+      padding-block-start: 2rem;
+      border-block-start: var(--rule-section);
     }
 
     .primary {
       display: inline-flex;
       min-block-size: var(--target-min);
       align-items: center;
+      border-radius: var(--radius-control);
       background: var(--color-plum);
       color: var(--color-on-plum);
+      font-weight: 500;
       padding: 0.6rem 1rem;
       text-decoration: none;
     }
@@ -375,35 +578,48 @@
       background: var(--color-paper);
       font-family: var(--font-code);
       font-size: 0.9rem;
-      border-block-end: 1px dotted var(--color-rule);
+      border-block-end: 1px solid var(--color-hairline);
       padding-block-end: 0.75rem;
     }
 
-    section {
-      border-block-start: var(--rule-section);
-      padding-block: var(--space-section);
+    /* The hero opens the landing sheet, so its lead reads on paper rather than on the grain. */
+    .sheet {
+      margin-block-start: 1.5rem;
     }
 
+    .sheet > section {
+      padding-block: clamp(1.5rem, 4vw, 3rem);
+      border-block-start: var(--rule-section);
+    }
+
+    /* Section headings are Literata semibold, like Writer's beat headings, below the hero's
+       display line. */
     h2 {
-      font-family: var(--font-display);
-      font-weight: 550;
-      font-size: clamp(1.8rem, 4vw, 3.2rem);
-      letter-spacing: -0.035em;
-      margin-block: 0.25rem 1.5rem;
+      font-family: var(--font-prose);
+      font-weight: 600;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      letter-spacing: -0.01em;
+      margin-block: 0 1.25rem;
     }
 
     .workflow {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
       gap: var(--space-step);
     }
 
     .workflow h3 {
-      font-size: 1.5rem;
-      margin-block-end: 0.5rem;
+      font-family: var(--font-prose);
+      font-weight: 600;
+      font-size: 1.25rem;
+      margin-block: 0 0.5rem;
     }
 
-    .copy {
+    .workflow p {
+      margin-block: 0 0.5rem;
+    }
+
+    .copy > :not(h2) {
       max-inline-size: var(--measure-reading);
     }
 
@@ -421,11 +637,12 @@
       }
     }
 
+    /* The leaf keeps room for its teal offset, so both gutters match at phone width. */
     @media (width < 30rem) {
       .scene-leaf {
-        --print-bleed: 1.25rem;
+        --print-bleed: 1rem;
 
-        margin-inline: 0;
+        margin-inline: 0 0.5rem;
         padding-inline: 0.75rem;
       }
     }
@@ -443,17 +660,19 @@
       gap: 2rem;
     }
 
+    /* A source well: solid inset paper closed by an ink rule, never grained. */
     textarea {
       font-family: var(--font-code);
       inline-size: 100%;
       block-size: 25rem;
       resize: none;
       overflow: auto;
-      background: var(--color-surface);
+      background: var(--color-inset);
       color: var(--color-ink);
-      border: 1px solid var(--color-rule);
+      border: 0;
+      border-block-end: 1px solid var(--color-ink);
+      border-radius: var(--radius-control) var(--radius-control) 0 0;
       padding: 1rem;
-      border-radius: var(--radius-control);
       font-size: 0.9rem;
       line-height: 1.5;
       tab-size: 2;
@@ -461,11 +680,12 @@
 
     label {
       display: block;
-      font-weight: 650;
-      margin-block: 0.75rem 0.4rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-block: 0 0.4rem;
     }
 
-    /* The native file control is visually replaced by a stamp label; the input keeps focus. */
+    /* The native file control is visually replaced by a tonal label; the input keeps focus. */
     .file-pick {
       position: relative;
       margin-block: 0.75rem;
@@ -484,50 +704,46 @@
       min-block-size: var(--target-min);
       margin: 0;
       padding: 0.4rem 0.9rem;
-      border: var(--stroke-stamp) solid var(--color-ink);
       border-radius: var(--radius-control);
+      background: var(--tint-tonal);
       cursor: pointer;
-      font-weight: 500;
+    }
+
+    .file-pick label:hover {
+      background: var(--tint-hover);
     }
 
     .file-pick:has(input:focus-visible) label {
       outline: var(--focus-ring);
-      outline-offset: 0.2rem;
+      outline-offset: var(--focus-offset);
     }
 
     .file-pick:has(input:disabled) label {
-      border-color: var(--color-rule);
+      background: var(--tint-well);
       color: var(--color-muted);
       cursor: default;
     }
 
-    button {
-      border: var(--stroke-stamp) solid var(--color-ink);
-      border-radius: var(--radius-control);
-      background: transparent;
-    }
-
-    button:disabled {
-      border-color: var(--color-rule);
-      color: var(--color-muted);
-      cursor: default;
-    }
-
+    /* The run's transcript is a slip laid on the sheet, set like Writer's preview. */
     .playground-output {
       display: flex;
       flex-direction: column;
       min-block-size: 27.5rem;
-      padding: 1.25rem 1.5rem;
-      background: var(--color-paper);
+      padding: 1rem 1.25rem 1.25rem;
+      background: var(--color-floating);
       border: 1px solid var(--color-rule);
-      border-block-start: 3px solid var(--color-plum);
-      box-shadow: 0.35rem 0.35rem 0 var(--color-plate);
+      box-shadow: var(--offset-stock) var(--offset-stock) 0 var(--color-stock);
     }
 
     .playground-output h3 {
-      margin-block-start: 0;
-      border-block-end: 1px dotted var(--color-rule);
-      padding-block-end: 1rem;
+      margin-block: 0 0.5rem;
+      padding-block-end: 0.5rem;
+      border-block-end: var(--rule-section);
+      color: var(--color-plum);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .playground-actions {
@@ -547,7 +763,10 @@
     [data-run] {
       background: var(--color-plum);
       color: var(--color-on-plum);
-      border-color: var(--color-plum);
+    }
+
+    [data-run]:hover {
+      background: color-mix(in srgb, var(--color-plum) 90%, transparent);
     }
 
     [data-status] {
@@ -562,16 +781,45 @@
       text-align: center;
     }
 
+    /* Manuscript conventions: speaker labels in a margin column, lines in Literata. */
     [data-transcript] {
-      padding-inline-start: 1.5rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
       max-block-size: 30rem;
       overflow: auto;
     }
 
     [data-transcript] li {
+      display: grid;
+      grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: baseline;
       margin-block: 0.8rem;
       font-family: var(--font-prose);
       font-size: 1.1rem;
+      line-height: 1.5;
+    }
+
+    [data-transcript] li > :last-child {
+      grid-column: 2;
+    }
+
+    .speaker {
+      color: var(--color-plum);
+      font-family: var(--font-reading);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-align: end;
+      text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+
+    .notice {
+      color: var(--color-muted);
+      font-family: var(--font-code);
+      font-size: 0.85rem;
     }
 
     @container scene (width > 56rem) {
@@ -579,13 +827,27 @@
         grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
       }
     }
+
+    @container scene (width < 24rem) {
+      [data-transcript] li {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+      }
+
+      [data-transcript] li > :last-child {
+        grid-column: 1;
+      }
+
+      .speaker {
+        text-align: start;
+      }
+    }
   }
 
   @scope (.recite-showcase) {
-    h1 {
-      font-size: clamp(2.5rem, 5vw, 4.5rem);
-      margin-block: var(--space-section) 1rem;
-      letter-spacing: -0.04em;
+    :scope {
+      max-inline-size: 60rem;
+      margin-inline: auto;
     }
 
     .intro {
@@ -594,12 +856,12 @@
 
     .project-list {
       list-style: none;
-      margin: 3rem 0;
+      margin: 3rem 0 0;
       padding: 0;
     }
 
     .project {
-      border-block-start: 1px solid var(--color-rule);
+      border-block-start: var(--rule-section);
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
       gap: var(--space-step);
@@ -612,11 +874,13 @@
       inline-size: 100%;
       aspect-ratio: 4 / 3;
       object-fit: cover;
-      background: var(--color-surface);
+      background: var(--color-inset);
     }
 
     .project h2 {
-      font-size: clamp(1.5rem, 3vw, 2.3rem);
+      font-family: var(--font-prose);
+      font-weight: 600;
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
     }
 
     article {
@@ -626,21 +890,15 @@
 
   @scope (.recite-article) {
     :scope {
-      max-inline-size: var(--measure-reading);
+      max-inline-size: calc(var(--measure-reading) + 2 * var(--sheet-pad));
       margin-inline: auto;
-      padding-block: 2rem;
-    }
-
-    h1 {
-      font-size: clamp(2.4rem, 4vw, 3.5rem);
-      letter-spacing: -0.04em;
     }
 
     pre {
       overflow: auto;
       padding: 1rem;
-      border: 1px solid var(--color-rule);
-      background: var(--color-surface);
+      border-block-end: 1px solid var(--color-ink);
+      background: var(--color-inset);
     }
 
     table {
@@ -652,7 +910,7 @@
 
     th, td {
       padding: 0.6rem;
-      border: 1px solid var(--color-rule);
+      border: 1px solid var(--color-hairline);
     }
 
     td code {
@@ -662,11 +920,12 @@
 }
 
 @layer components {
-  /* Quoted dialogue in other scripts, in the reading face where it has the glyphs. */
+  /* Quoted dialogue in other scripts, in the manuscript face where it has the glyphs. */
   .markdown-content .script-samples {
     padding: 1rem 1.25rem;
-    background: var(--color-surface);
-    border-radius: var(--radius-control);
+    background: var(--color-inset);
+    border-block-end: 1px solid var(--color-ink);
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
   }
 
   .markdown-content .script-samples p {
@@ -677,6 +936,23 @@
 }
 
 @layer utilities {
+  /* Below a 30rem viewport the paper goes full-bleed, as Writer's galley does under a 480px
+     measure; this wins over any sheet's own inline margins. */
+  @media (width < 30rem) {
+    .sheet {
+      margin-inline: calc(-1 * var(--space-step));
+      border-inline: 0;
+      box-shadow: none;
+    }
+  }
+
+  /* Without scripts the theme follows the OS; the control would do nothing. */
+  @media (scripting: none) {
+    .theme-control {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;

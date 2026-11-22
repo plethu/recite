@@ -33,6 +33,23 @@ test("Markdown preserves punctuation fragments, script metadata and keyboard scr
   }
 });
 
+test("a fenced block that names its file gets an escaped caption and keeps its source", async () => {
+  const markdown = await createMarkdown(["toml"]);
+  try {
+    const { html } = markdown.render(
+      '```toml title="runtime-<fixture>.toml"\n[dialogue]\nlocale = "en-US"\n```\n\n```toml\nplain = 1\n```\n',
+    );
+    assert.match(
+      html,
+      /<figure class="source"><figcaption>runtime-&lt;fixture&gt;\.toml<\/figcaption><pre tabindex="0"/,
+    );
+    assert.equal(html.match(/<figure/g)?.length, 1);
+    assert.match(html, /locale/);
+  } finally {
+    markdown.dispose();
+  }
+});
+
 test("the build validates frontmatter context and only publishes real nondraft projects", async () => {
   const root = await mkdtemp(join(tmpdir(), "recite-site-content-"));
   const docs = join(root, "src/content/docs");

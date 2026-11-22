@@ -183,7 +183,7 @@ fn status(
 ) -> Result<(), CliError> {
     let project = Project::load(&args.project, stderr, messages)?;
     if project.catalogs.is_empty() {
-        writeln!(stderr, "{}", messages.text(MsgId::CliIdsNoCatalogs))?;
+        crate::diagnostics::report_note(stderr, messages, &messages.text(MsgId::CliIdsNoCatalogs))?;
     }
     let mut clean = true;
     let mut catalogs = Vec::new();
@@ -214,7 +214,7 @@ fn refresh(
 ) -> Result<(), CliError> {
     let project = Project::load(args, stderr, messages)?;
     if project.catalogs.is_empty() {
-        writeln!(stderr, "{}", messages.text(MsgId::CliIdsNoCatalogs))?;
+        crate::diagnostics::report_note(stderr, messages, &messages.text(MsgId::CliIdsNoCatalogs))?;
     }
     // Every catalogue refreshes in memory before any is written, so one refusal writes nothing.
     let refreshed = project
