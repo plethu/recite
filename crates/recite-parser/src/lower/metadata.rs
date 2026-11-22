@@ -274,6 +274,11 @@ pub(super) fn effect_mode(value: &str) -> Option<EffectMode> {
     }
 }
 
+// Invariant: header fields come from 1-based parser lines and columns.
+#[allow(
+    clippy::expect_used,
+    reason = "header field positions are converted from the parser's 1-based source origin"
+)]
 fn source_position(line: u32, column: usize) -> SourcePosition {
     SourcePosition::new(line, u32::try_from(column).unwrap_or(u32::MAX))
         .expect("parser line and column positions are 1-based")
