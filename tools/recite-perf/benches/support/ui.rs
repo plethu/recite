@@ -47,5 +47,12 @@ pub(super) fn format(input: Input) -> (Input, Vec<String>) {
 
 pub(super) fn validate((input, labels): (Input, Vec<String>)) {
     assert_eq!(labels.len(), 1_000);
-    assert!(labels.iter().all(|label| label == &input.expected));
+    // The control revision may still put the declaration's leading space in the message, which
+    // doubles the space the argument now carries; compare the words, not the spacing.
+    let expected = input.expected.split_whitespace();
+    assert!(
+        labels
+            .iter()
+            .all(|label| label.split_whitespace().eq(expected.clone()))
+    );
 }
