@@ -55,7 +55,9 @@ fn the_worker_checks_the_open_document_and_delivers_its_findings()
     fs::write(&manifest, text)?;
     // Mounting the worker stores its sender, which sends the first check at once.
     let mut worker = Worker::new(support::open(&directory)?, super::worker());
-    worker.next();
+    // The first check builds Harper's dictionary, which takes several seconds in a debug build
+    // on a busy runner.
+    worker.next_within(std::time::Duration::from_secs(120));
     let problems = worker.state.problems();
     assert_eq!(problems.len(), 1);
     let finding = problems
