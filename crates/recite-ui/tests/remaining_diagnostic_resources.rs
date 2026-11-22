@@ -284,9 +284,20 @@ fn cases() -> Vec<Case> {
             "diagnostic-fresh-001",
             [
                 ("asset", string("dialogue.msgpack")),
-                ("source", string("dialogue.recite")),
+                ("sources", string("a.recite, b.recite")),
+                ("count", integer(2)),
             ],
-            "compiled asset 'dialogue.msgpack' is stale for source 'dialogue.recite'",
+            "compiled asset 'dialogue.msgpack' is out of date: 2 sources changed since it was built (a.recite, b.recite)",
+        ),
+        case(
+            "RECITE_FRESH004",
+            "diagnostic-fresh-004",
+            [
+                ("asset", string("dialogue.msgpack")),
+                ("sources", string("new.recite")),
+                ("count", integer(1)),
+            ],
+            "compiled asset 'dialogue.msgpack' is out of date: 1 source was added since it was built (new.recite)",
         ),
         case(
             "RECITE_FRESH002",
@@ -316,7 +327,7 @@ fn every_remaining_resource_preserves_its_compatibility_message() {
     let catalog = UiCatalog::load(&UiLocale::default())
         .unwrap_or_else(|error| panic!("default catalog: {error}"));
     let cases = cases();
-    assert_eq!(cases.len(), 36);
+    assert_eq!(cases.len(), 37);
     for case in cases {
         let expected = case.expected.clone();
         assert_eq!(render(&catalog, case), expected);

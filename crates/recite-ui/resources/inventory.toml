@@ -912,6 +912,7 @@ diagnostic_presentation_ids = [
     "diagnostic-fresh-001",
     "diagnostic-fresh-002",
     "diagnostic-fresh-003",
+    "diagnostic-fresh-004",
     "diagnostic-id-001",
     "diagnostic-id-002",
     "diagnostic-id-003",

@@ -27,6 +27,8 @@ pub const UNSUPPORTED_ASSET_VERSION: DiagnosticCode =
 pub const UNKNOWN_PARTICIPANT: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT008");
 
 pub const STALE_SOURCE_FINGERPRINT: DiagnosticCode = DiagnosticCode::new_static("RECITE_FRESH001");
+/// A project source was added after the asset was built.
+pub const ADDED_SOURCE: DiagnosticCode = DiagnosticCode::new_static("RECITE_FRESH004");
 pub const STALE_SCHEMA_FINGERPRINT: DiagnosticCode = DiagnosticCode::new_static("RECITE_FRESH002");
 pub const STALE_COMPILER_COMPATIBILITY: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_FRESH003");

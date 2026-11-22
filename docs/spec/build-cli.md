@@ -78,6 +78,12 @@ Validation must check:
 - duplicate scene/block pairs if project policy disallows them;
 - stale compiled assets.
 
+An asset is stale when a source it was built from has changed (`RECITE_FRESH001`), or when a
+discovered project source is missing from it because it was added after the build
+(`RECITE_FRESH004`). Each is reported once per asset, listing every affected source, with help that
+names the rebuild commands. Sources match by the file they resolve to, so a deliberately partial
+asset narrows `[discovery].source_roots` or `excludes` instead.
+
 ## 12. Compiler
 
 ### 12.1 Compilation

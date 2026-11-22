@@ -179,11 +179,15 @@ diagnostic-project-008-compiled-asset	asset	string
 diagnostic-project-008-compiled-asset	participant	string
 diagnostic-project-008-compiled-asset	scene_id	string
 diagnostic-fresh-001	asset	string
-diagnostic-fresh-001	source	string
+diagnostic-fresh-001	count	integer
+diagnostic-fresh-001	sources	string
 diagnostic-fresh-002	asset	string
 diagnostic-fresh-003	asset	string
 diagnostic-fresh-003	expected	integer
 diagnostic-fresh-003	version	integer
+diagnostic-fresh-004	asset	string
+diagnostic-fresh-004	count	integer
+diagnostic-fresh-004	sources	string
 diagnostic-schema-001-native-invalid	detail	string
 diagnostic-schema-001-json-parse	detail	string
 diagnostic-schema-001-toml-parse	detail	string
@@ -487,6 +491,9 @@ diagnostic-fresh-002-remediation-001
 diagnostic-fresh-003-meaning
 diagnostic-fresh-003-cause-001
 diagnostic-fresh-003-remediation-001
+diagnostic-fresh-004-meaning
+diagnostic-fresh-004-cause-001
+diagnostic-fresh-004-remediation-001
 diagnostic-id-001-meaning
 diagnostic-id-001-cause-001
 diagnostic-id-001-remediation-001

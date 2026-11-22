@@ -84,7 +84,8 @@ fn freshness_producers_preserve_variant_arguments_and_order() {
         "diagnostic-fresh-001",
         &[
             ("asset", string("dialogue.recitec")),
-            ("source", string("dialogue.recite")),
+            ("sources", string("dialogue.recite")),
+            ("count", integer(1)),
         ],
     );
     assert_diagnostic(
@@ -156,7 +157,8 @@ fn freshness_stale_source_branch_uses_exact_span() {
         "diagnostic-fresh-001",
         &[
             ("asset", string("dialogue.recitec")),
-            ("source", string("dialogue.recite")),
+            ("sources", string("dialogue.recite")),
+            ("count", integer(1)),
         ],
     );
     assert_eq!(diagnostics[0].span.start.line(), 3);

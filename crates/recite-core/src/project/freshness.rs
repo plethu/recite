@@ -3,7 +3,7 @@ pub use assessment::ProjectAssetFreshness;
 use assessment::SourceIssue;
 
 use super::{
-    MISSING_SOURCE_ASSET, ProjectFreshnessInput, ProjectManifestSource,
+    ADDED_SOURCE, MISSING_SOURCE_ASSET, ProjectFreshnessInput, ProjectManifestSource,
     STALE_COMPILER_COMPATIBILITY, STALE_SCHEMA_FINGERPRINT, STALE_SOURCE_FINGERPRINT,
     UNKNOWN_PARTICIPANT, UNKNOWN_START_BLOCK, UNSUPPORTED_ASSET_VERSION,
     diagnostics::project_diagnostic, spans::scene_key_span,
@@ -127,96 +127,130 @@ fn validate_scene(
         }
     }
 
+    let changed = assessment
+        .source_issues
+        .iter()
+        .filter(|(_, issue)| matches!(issue, SourceIssue::Stale))
+        .map(|(source, _)| source.path.clone())
+        .collect::<Vec<_>>();
+    for (code, presentation, sources, message) in [
+        (
+            &STALE_SOURCE_FINGERPRINT,
+            "diagnostic-fresh-001",
+            &changed,
+            "changed since it was built",
+        ),
+        (
+            &ADDED_SOURCE,
+            "diagnostic-fresh-004",
+            &assessment.added_sources,
+            "added since it was built and not in it",
+        ),
+    ] {
+        if sources.is_empty() {
+            continue;
+        }
+        diagnostics.push(with_rebuild_help(
+            code,
+            project_diagnostic(
+                code,
+                presentation,
+                format!(
+                    "compiled asset '{}' is out of date: {} {message}",
+                    scene.asset,
+                    sources.join(", ")
+                ),
+                scene_key_span(file, source, spans, scene_index, "asset"),
+                [
+                    (
+                        "asset",
+                        DiagnosticArgumentValue::String(scene.asset.clone()),
+                    ),
+                    (
+                        "sources",
+                        DiagnosticArgumentValue::String(sources.join(", ")),
+                    ),
+                    ("count", count_argument(sources.len())),
+                ],
+            ),
+        ));
+    }
+
     for (compiled_source, issue) in &assessment.source_issues {
-        match issue {
-            SourceIssue::Stale => {
-                diagnostics.push(project_diagnostic(
-                    &STALE_SOURCE_FINGERPRINT,
-                    "diagnostic-fresh-001",
-                    format!(
-                        "compiled asset '{}' is stale for source '{}'",
-                        scene.asset, compiled_source.path
+        if let SourceIssue::Missing = issue {
+            diagnostics.push(project_diagnostic(
+                &MISSING_SOURCE_ASSET,
+                "diagnostic-project-006",
+                format!(
+                    "compiled asset '{}' references missing source '{}'",
+                    scene.asset, compiled_source.path
+                ),
+                scene_key_span(file, source, spans, scene_index, "asset"),
+                [
+                    (
+                        "asset",
+                        DiagnosticArgumentValue::String(scene.asset.clone()),
                     ),
-                    scene_key_span(file, source, spans, scene_index, "asset"),
-                    [
-                        (
-                            "asset",
-                            DiagnosticArgumentValue::String(scene.asset.clone()),
-                        ),
-                        (
-                            "source",
-                            DiagnosticArgumentValue::String(compiled_source.path.clone()),
-                        ),
-                    ],
-                ));
-            }
-            SourceIssue::Missing => {
-                diagnostics.push(project_diagnostic(
-                    &MISSING_SOURCE_ASSET,
-                    "diagnostic-project-006",
-                    format!(
-                        "compiled asset '{}' references missing source '{}'",
-                        scene.asset, compiled_source.path
+                    (
+                        "source",
+                        DiagnosticArgumentValue::String(compiled_source.path.clone()),
                     ),
-                    scene_key_span(file, source, spans, scene_index, "asset"),
-                    [
-                        (
-                            "asset",
-                            DiagnosticArgumentValue::String(scene.asset.clone()),
-                        ),
-                        (
-                            "source",
-                            DiagnosticArgumentValue::String(compiled_source.path.clone()),
-                        ),
-                    ],
-                ));
-            }
+                ],
+            ));
         }
     }
 
     if assessment.schema_stale {
-        diagnostics.push(project_diagnostic(
+        diagnostics.push(with_rebuild_help(
             &STALE_SCHEMA_FINGERPRINT,
-            "diagnostic-fresh-002",
-            format!(
-                "compiled asset '{}' has a stale schema fingerprint",
-                scene.asset
+            project_diagnostic(
+                &STALE_SCHEMA_FINGERPRINT,
+                "diagnostic-fresh-002",
+                format!(
+                    "compiled asset '{}' has a stale schema fingerprint",
+                    scene.asset
+                ),
+                scene_key_span(file, source, spans, scene_index, "asset"),
+                [(
+                    "asset",
+                    DiagnosticArgumentValue::String(scene.asset.clone()),
+                )],
             ),
-            scene_key_span(file, source, spans, scene_index, "asset"),
-            [(
-                "asset",
-                DiagnosticArgumentValue::String(scene.asset.clone()),
-            )],
         ));
     }
 
     if assessment.asset.header.compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0 {
-        diagnostics.push(project_diagnostic(
+        diagnostics.push(with_rebuild_help(
             &STALE_COMPILER_COMPATIBILITY,
-            "diagnostic-fresh-003",
-            format!(
-                "compiled asset '{}' uses compiler compatibility version {}, expected {}",
-                scene.asset,
-                assessment.asset.header.compiler_compatibility_version,
-                COMPILER_COMPATIBILITY_VERSION_V0
+            project_diagnostic(
+                &STALE_COMPILER_COMPATIBILITY,
+                "diagnostic-fresh-003",
+                format!(
+                    "compiled asset '{}' uses compiler compatibility version {}, expected {}",
+                    scene.asset,
+                    assessment.asset.header.compiler_compatibility_version,
+                    COMPILER_COMPATIBILITY_VERSION_V0
+                ),
+                scene_key_span(file, source, spans, scene_index, "asset"),
+                [
+                    (
+                        "asset",
+                        DiagnosticArgumentValue::String(scene.asset.clone()),
+                    ),
+                    (
+                        "version",
+                        DiagnosticArgumentValue::Integer(i64::from(
+                            assessment.asset.header.compiler_compatibility_version,
+                        )),
+                    ),
+                    (
+                        "expected",
+                        DiagnosticArgumentValue::Integer(i64::from(
+                            COMPILER_COMPATIBILITY_VERSION_V0,
+                        )),
+                    ),
+                ],
             ),
-            scene_key_span(file, source, spans, scene_index, "asset"),
-            [
-                (
-                    "asset",
-                    DiagnosticArgumentValue::String(scene.asset.clone()),
-                ),
-                (
-                    "version",
-                    DiagnosticArgumentValue::Integer(i64::from(
-                        assessment.asset.header.compiler_compatibility_version,
-                    )),
-                ),
-                (
-                    "expected",
-                    DiagnosticArgumentValue::Integer(i64::from(COMPILER_COMPATIBILITY_VERSION_V0)),
-                ),
-            ],
         ));
     }
 
@@ -245,4 +279,19 @@ fn validate_scene(
     }
 
     diagnostics
+}
+
+/// Attach the explanation's remediation as the diagnostic's help, so every client says how to
+/// rebuild.
+fn with_rebuild_help(code: &crate::DiagnosticCode, diagnostic: Diagnostic) -> Diagnostic {
+    match crate::explain_diagnostic_code(code)
+        .and_then(|explanation| explanation.presentation().remediation.into_iter().next())
+    {
+        Some(help) => diagnostic.with_help_presentation(help),
+        None => diagnostic,
+    }
+}
+
+fn count_argument(count: usize) -> DiagnosticArgumentValue {
+    DiagnosticArgumentValue::Integer(i64::try_from(count).unwrap_or(i64::MAX))
 }

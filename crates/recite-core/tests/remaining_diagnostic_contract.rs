@@ -209,7 +209,16 @@ fn project_and_freshness_contracts_match_producer_shapes() {
         signature("RECITE_FRESH001", "diagnostic-fresh-001"),
         [
             ("asset", DiagnosticArgumentType::String),
-            ("source", DiagnosticArgumentType::String),
+            ("sources", DiagnosticArgumentType::String),
+            ("count", DiagnosticArgumentType::Integer),
+        ]
+    );
+    assert_eq!(
+        signature("RECITE_FRESH004", "diagnostic-fresh-004"),
+        [
+            ("asset", DiagnosticArgumentType::String),
+            ("sources", DiagnosticArgumentType::String),
+            ("count", DiagnosticArgumentType::Integer),
         ]
     );
     assert_eq!(

@@ -98,7 +98,6 @@ export default Object.freeze({
   "diagnostic-validate-046-newline": {"template":"invalid plural line: plural lines must contain exactly one singular and one plural body line","arguments":[]},
   "diagnostic-validate-046-missing-count": {"template":"invalid plural line: plural lines require `bind=(count:int=$value)`","arguments":[]},
   "diagnostic-validate-046-count-type": {"template":"invalid plural line: the `count` binding must have type `int`","arguments":[]},
-  "diagnostic-fresh-001": {"template":"compiled asset '{$asset}' is stale for source '{$source}'","arguments":[{"name":"asset","type":"string"},{"name":"source","type":"string"}]},
   "diagnostic-fresh-002": {"template":"compiled asset '{$asset}' has a stale schema fingerprint","arguments":[{"name":"asset","type":"string"}]},
   "diagnostic-fresh-003": {"template":"compiled asset '{$asset}' uses compiler compatibility version {$version}, expected {$expected}","arguments":[{"name":"asset","type":"string"},{"name":"expected","type":"integer"},{"name":"version","type":"integer"}]},
   "diagnostic-project-001": {"template":"malformed project manifest: {$detail}","arguments":[{"name":"detail","type":"string"}]},

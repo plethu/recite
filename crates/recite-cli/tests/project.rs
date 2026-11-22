@@ -122,7 +122,10 @@ fn check_fresh_uses_project_relative_embedded_source_paths() {
     );
     write_project_manifest(
         temp.path(),
-        r#"[[scenes]]
+        r#"[discovery]
+source_roots = ["Dialogue"]
+
+[[scenes]]
 id = "scene.start"
 asset = "Dialogue/Compiled/dialogue.recitec"
 block = "start"

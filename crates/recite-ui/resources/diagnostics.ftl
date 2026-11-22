@@ -317,8 +317,15 @@ diagnostic-validate-046-missing-count = invalid plural line: plural lines requir
 diagnostic-validate-046-count-type = invalid plural line: the `count` binding must have type `int`
 
 # RECITE_FRESH001-003
-diagnostic-fresh-001 = compiled asset '{$asset}' is stale for source '{$source}'
+diagnostic-fresh-001 = compiled asset '{$asset}' is out of date: { $count ->
+        [one] {$count} source changed since it was built ({$sources})
+       *[other] {$count} sources changed since it was built ({$sources})
+    }
 diagnostic-fresh-002 = compiled asset '{$asset}' has a stale schema fingerprint
+diagnostic-fresh-004 = compiled asset '{$asset}' is out of date: { $count ->
+        [one] {$count} source was added since it was built ({$sources})
+       *[other] {$count} sources were added since it was built ({$sources})
+    }
 diagnostic-fresh-003 = compiled asset '{$asset}' uses compiler compatibility version {$version}, expected {$expected}
 
 # RECITE_PROJECT001-008
@@ -355,19 +362,24 @@ diagnostic-config-117 = project source has an invalid document key: {$detail}
 diagnostic-config-118 = invalid project catalogue pattern: {$detail}
 
 # RECITE_FRESH001
-diagnostic-fresh-001-meaning = A compiled asset was built from an older version of one or more source files.
+diagnostic-fresh-001-meaning = A compiled asset was built from an older version of the project's sources.
 diagnostic-fresh-001-cause-001 = The source dialogue changed after the asset was compiled.
-diagnostic-fresh-001-remediation-001 = Re-run `recite compile` or `recite watch` for the project.
+diagnostic-fresh-001-remediation-001 = run `recite compile` again, or keep `recite watch .` running so it rebuilds on save
 
 # RECITE_FRESH002
 diagnostic-fresh-002-meaning = A compiled asset was built from an older schema fingerprint.
 diagnostic-fresh-002-cause-001 = The schema manifest changed after the asset was compiled.
-diagnostic-fresh-002-remediation-001 = Recompile the asset with the current schema manifest.
+diagnostic-fresh-002-remediation-001 = run `recite compile` again so the asset is checked against the current schema
 
 # RECITE_FRESH003
 diagnostic-fresh-003-meaning = A compiled asset was produced with a compiler compatibility version that this Recite version cannot use.
 diagnostic-fresh-003-cause-001 = The asset's compiler compatibility version is older or newer than the supported boundary.
-diagnostic-fresh-003-remediation-001 = Recompile the source with the current Recite compiler.
+diagnostic-fresh-003-remediation-001 = run `recite compile` again with this version of Recite
+
+# RECITE_FRESH004
+diagnostic-fresh-004-meaning = A compiled asset does not include source files that were added to the project after it was built.
+diagnostic-fresh-004-cause-001 = A `.recite` file was created inside the project's source roots after the last compile.
+diagnostic-fresh-004-remediation-001 = run `recite compile` again, or keep `recite watch .` running so it rebuilds on save
 
 # RECITE_ID001
 diagnostic-id-001-meaning = A dialogue line is missing its required stable line ID.

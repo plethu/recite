@@ -1,7 +1,9 @@
 //! One asset is read and assessed per group; diagnostics retain manifest scene order.
 use super::{
-    paths::resolve_project_path, project_asset::asset_decode_diagnostic,
-    project_diagnostics::project_diagnostic, project_sources::read_project_sources,
+    paths::resolve_project_path,
+    project_asset::asset_decode_diagnostic,
+    project_diagnostics::project_diagnostic,
+    project_sources::{added_project_sources, read_project_sources},
 };
 use crate::error::CliError;
 use recite_core::{
@@ -56,11 +58,13 @@ pub(crate) fn validate_project_asset_freshness(
         };
         drop(bytes);
         let current_sources = read_project_sources(project_root, &asset_path, &asset.sources)?;
+        let added = added_project_sources(project_root, &asset_path, &asset.sources);
         let current_map = current_sources
             .iter()
             .map(|(path, text)| (path.as_str(), text.as_deref()))
             .collect();
-        let assessment = ProjectAssetFreshness::new(&asset, &current_map, current_schema.clone());
+        let assessment = ProjectAssetFreshness::new(&asset, &current_map, current_schema.clone())
+            .with_added_sources(added);
         drop(current_map);
         drop(current_sources);
         for index in group {

@@ -193,3 +193,38 @@ fn run_starts_at_the_block_of_the_scene_that_uses_the_asset() {
     assert!(!ambiguous.status.success());
     ambiguous.assert_stderr_contains("at arrival, arrival_return");
 }
+
+#[test]
+fn check_fresh_reports_changed_and_added_sources_once_each() {
+    let (_temp, root) = v1_pack();
+    run(recite()
+        .current_dir(&root)
+        .args(["compile", "-o", "build/dialogue.recitec"]))
+    .assert_success();
+    run(recite().current_dir(&root).args(["project", "check-fresh", "."]))
+        .assert_success();
+
+    for (path, from, to) in [
+        ("src/arrival.recite", "The case narrows", "The case turns"),
+        ("src/objects.recite", "The", "That"),
+    ] {
+        let file = root.join(path);
+        let text = fs::read_to_string(&file).expect("read source");
+        fs::write(&file, text.replacen(from, to, 1)).expect("edit source");
+    }
+    fs::write(
+        root.join("src/station.recite"),
+        ":: station\n> @st1\n  Hello.\n-> END\n",
+    )
+    .expect("add source");
+
+    let output = run(recite().current_dir(&root).args(["project", "check-fresh", "."]));
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(stderr.matches("RECITE_FRESH001").count(), 1, "{stderr}");
+    output.assert_stderr_contains(
+        "2 sources changed since it was built (src/arrival.recite, src/objects.recite)",
+    );
+    output.assert_stderr_contains("1 source was added since it was built (src/station.recite)");
+    output.assert_stderr_contains("= help: run `recite compile` again");
+}
