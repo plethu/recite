@@ -25,7 +25,8 @@ pub(super) fn parameterized_labels() -> Input {
             ("producer".into(), UiArg::from("godot/écrivain")),
             ("producer_state".into(), UiArg::from("present")),
             ("declaration_kind".into(), UiArg::from("condition")),
-            ("declaration_name".into(), UiArg::from("gate_000001")),
+            // The LSP passes the name with its leading space, so an unnamed entry has no gap.
+            ("declaration_name".into(), UiArg::from(" gate_000001")),
         ])),
         expected: "Schema capability (condition gate_000001): invoke producer (godot/écrivain)"
             .into(),
