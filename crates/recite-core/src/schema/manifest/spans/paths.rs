@@ -170,7 +170,8 @@ impl ManifestSpans {
         SourceSpan::new(
             file,
             self.position(range.start),
-            Some(self.position(range.end)),
+            crate::source_location::last_character_offset(self.lines.source(), &range)
+                .map(|offset| self.position(offset)),
         )
     }
 }

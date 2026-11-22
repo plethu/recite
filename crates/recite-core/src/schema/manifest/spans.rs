@@ -199,7 +199,11 @@ impl ManifestSpans {
         SourceSpan::new(
             file,
             self.position(span_range.start),
-            Some(self.position(span_range.end)),
+            crate::source_location::last_character_offset(
+                self.lines.source(),
+                &(span_range.start..span_range.end),
+            )
+            .map(|offset| self.position(offset)),
         )
     }
 
