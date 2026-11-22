@@ -1,5 +1,5 @@
 use recite_core::{
-    BlockId, SourcePosition, SourceRecoveryClass, SourceSpan, SpeakerId,
+    BlockId, SourceRecoveryClass, SourceSpan, SpeakerId,
     ast::{
         BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
         InterpolationType, SourceMetadata, SourceMetadataEntry,
@@ -28,12 +28,10 @@ impl Lowerer<'_, '_> {
         if bare.len() < 2 {
             return fields.to_vec();
         }
-        let end = last.column + last.text.chars().count() - 1;
-        let span = SourceSpan::new(
-            self.path,
-            source_position(first.line, first.column),
-            Some(source_position(last.line, end)),
-        );
+        let span = SourceSpan {
+            end: span_for_text(self.path, last.line, last.column, last.text).end,
+            ..span_for_text(self.path, first.line, first.column, first.text)
+        };
         self.mark(SourceRecoveryClass::Metadata);
         self.diagnostics.push(header_prose(span));
         fields
@@ -272,14 +270,4 @@ pub(super) fn effect_mode(value: &str) -> Option<EffectMode> {
         "blocking" => Some(EffectMode::Blocking),
         _ => None,
     }
-}
-
-// Invariant: header fields come from 1-based parser lines and columns.
-#[allow(
-    clippy::expect_used,
-    reason = "header field positions are converted from the parser's 1-based source origin"
-)]
-fn source_position(line: u32, column: usize) -> SourcePosition {
-    SourcePosition::new(line, u32::try_from(column).unwrap_or(u32::MAX))
-        .expect("parser line and column positions are 1-based")
 }
