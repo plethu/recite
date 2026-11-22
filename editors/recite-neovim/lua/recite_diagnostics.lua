@@ -347,6 +347,7 @@ return {
   ["diagnostic-validate-006-remediation-001"] = { arguments = {  } },
   ["diagnostic-validate-007"] = { arguments = { { name = "reference", type = "string" } }, template = "unknown block reference `{$reference}`" },
   ["diagnostic-validate-007-cause-001"] = { arguments = {  } },
+  ["diagnostic-validate-007-help-suggestion"] = { arguments = { { name = "suggestion", type = "string" } }, template = "did you mean `{$suggestion}`?" },
   ["diagnostic-validate-007-meaning"] = { arguments = {  } },
   ["diagnostic-validate-007-remediation-001"] = { arguments = {  } },
   ["diagnostic-validate-008-cause-001"] = { arguments = {  } },
@@ -586,4 +587,10 @@ return {
   ["diagnostic-validate-050-cause-001"] = { arguments = {  } },
   ["diagnostic-validate-050-meaning"] = { arguments = {  } },
   ["diagnostic-validate-050-remediation-001"] = { arguments = {  } },
+  ["diagnostic-validate-051"] = { arguments = { { name = "speaker", type = "string" } }, template = "unknown speaker `{$speaker}`" },
+  ["diagnostic-validate-051-cause-001"] = { arguments = {  } },
+  ["diagnostic-validate-051-help"] = { arguments = {  } },
+  ["diagnostic-validate-051-help-suggestion"] = { arguments = { { name = "suggestion", type = "string" } }, template = "did you mean `{$suggestion}`?" },
+  ["diagnostic-validate-051-meaning"] = { arguments = {  } },
+  ["diagnostic-validate-051-remediation-001"] = { arguments = {  } },
 }

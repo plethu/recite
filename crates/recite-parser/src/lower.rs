@@ -86,7 +86,7 @@ pub(super) struct BlockHeader {
     pub(super) id: BlockId,
     pub(super) id_span: SourceSpan,
     pub(super) is_default: bool,
-    pub(super) default_speaker: Option<SpeakerId>,
+    pub(super) default_speaker: Option<(SpeakerId, SourceSpan)>,
     pub(super) metadata: SourceMetadata,
     pub(super) span: SourceSpan,
 }

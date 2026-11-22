@@ -73,6 +73,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         }
         super::MsgId::LspCodeActionCreateBlockStub => Some("lsp-code-action-create-block-stub"),
         super::MsgId::LspCodeActionMoveHeaderProse => Some("lsp-code-action-move-header-prose"),
+        super::MsgId::LspCodeActionApplySuggestion => Some("lsp-code-action-apply-suggestion"),
         super::MsgId::LspCodeActionAddCondition => Some("lsp-code-action-add-condition"),
         super::MsgId::LspCodeActionAddEffect => Some("lsp-code-action-add-effect"),
         super::MsgId::LspCodeActionSchemaAction => Some("lsp-code-action-schema-action"),

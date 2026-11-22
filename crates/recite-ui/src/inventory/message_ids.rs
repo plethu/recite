@@ -354,7 +354,7 @@ message_ids! {
     LspCompletionSpeaker, LspCompletionMetadataKey, LspCompletionMetadataKeyWithDomain, LspCompletionMetadataDomain, LspCompletionCondition,
     LspCompletionConditionDocumentation, LspCompletionEffect, LspCompletionEffectDocumentation, LspCompletionProjectionQuery, LspCompletionProjectionQueryDocumentation,
     LspCompletionProjectionQueryFunction, LspCompletionProjectionQueryCall, LspCompletionProjectionInput, LspCompletionProjector, LspCompletionOutput,
-    LspCompletionLabel, LspCodeActionInsertMissingId, LspCodeActionInsertAllMissingIds, LspCodeActionCreateBlockStub, LspCodeActionMoveHeaderProse, LspCodeActionAddCondition,
+    LspCompletionLabel, LspCodeActionInsertMissingId, LspCodeActionInsertAllMissingIds, LspCodeActionCreateBlockStub, LspCodeActionMoveHeaderProse, LspCodeActionApplySuggestion, LspCodeActionAddCondition,
     LspCodeActionAddEffect, LspCodeActionSchemaAction, LspCodeActionSchemaDisabled, LspWarningUiConfig,
     LspClientStartFailed, LspClientError, LspClientExited, LspClientRestartScheduled,
     LspClientRestartExhausted,

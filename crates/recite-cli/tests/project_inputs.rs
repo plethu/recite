@@ -201,8 +201,10 @@ fn check_fresh_reports_changed_and_added_sources_once_each() {
         .current_dir(&root)
         .args(["compile", "-o", "build/dialogue.recitec"]))
     .assert_success();
-    run(recite().current_dir(&root).args(["project", "check-fresh", "."]))
-        .assert_success();
+    run(recite()
+        .current_dir(&root)
+        .args(["project", "check-fresh", "."]))
+    .assert_success();
 
     for (path, from, to) in [
         ("src/arrival.recite", "The case narrows", "The case turns"),
@@ -218,7 +220,9 @@ fn check_fresh_reports_changed_and_added_sources_once_each() {
     )
     .expect("add source");
 
-    let output = run(recite().current_dir(&root).args(["project", "check-fresh", "."]));
+    let output = run(recite()
+        .current_dir(&root)
+        .args(["project", "check-fresh", "."]));
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(stderr.matches("RECITE_FRESH001").count(), 1, "{stderr}");
@@ -227,4 +231,40 @@ fn check_fresh_reports_changed_and_added_sources_once_each() {
     );
     output.assert_stderr_contains("1 source was added since it was built (src/station.recite)");
     output.assert_stderr_contains("= help: run `recite compile` again");
+}
+
+#[test]
+fn unknown_speakers_and_blocks_suggest_the_closest_name() {
+    let (_temp, root) = v1_pack();
+    fs::write(
+        root.join("src/station.recite"),
+        concat!(
+            ":: station speaker=narator\n",
+            "> speaker=operatr @st1\n",
+            "  Hello.\n",
+            "> speaker=stranger @st2\n",
+            "  Who?\n",
+            "-> src/arrival.recite::arival\n",
+        ),
+    )
+    .expect("write scene");
+    let output = validate_in(&root, &[]);
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("error[RECITE_VALIDATE051]: unknown speaker `narator`");
+    output.assert_stderr_contains("= help: did you mean `narrator`?");
+    output.assert_stderr_contains("= help: did you mean `operator`?");
+    output.assert_stderr_contains("unknown speaker `stranger`");
+    output.assert_stderr_contains("= help: declare the speaker in the schema, or correct the name");
+    output.assert_stderr_contains("= help: did you mean `src/arrival.recite::arrival`?");
+}
+
+#[test]
+fn speakers_are_free_without_a_schema_registry() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "scene.recite",
+        ":: start default speaker=anyone\n> speaker=someone @a1\n  Hi.\n-> END\n",
+    );
+    run(recite().arg("validate").arg(source)).assert_success();
 }

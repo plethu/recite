@@ -111,6 +111,9 @@ diagnostic-validate-047 = translation changes attributes for inline markup tag `
 diagnostic-validate-048 = translation introduces inline markup tag `{$tag}` not present in the source value
 diagnostic-validate-049 = translation is missing required inline markup tag `{$tag}` from the source value
 diagnostic-validate-050 = condition exceeds the boolean nesting limit of {$limit}
+diagnostic-validate-051 = unknown speaker `{$speaker}`
+diagnostic-validate-051-help = declare the speaker in the schema, or correct the name
+diagnostic-validate-051-help-suggestion = did you mean `{$suggestion}`?
 
 # Compiler diagnostic primary presentations. These resources are deliberately
 # kept beside the parser presentations; their exact arguments come from the
@@ -139,6 +142,7 @@ diagnostic-validate-006 = block `{$block_id}` is another default block
 diagnostic-validate-006-related = first default block is here
 diagnostic-validate-006-help = keep exactly one block marked `default`
 diagnostic-validate-007 = unknown block reference `{$reference}`
+diagnostic-validate-007-help-suggestion = did you mean `{$suggestion}`?
 diagnostic-validate-008-file = invalid source span for { $owner ->
     [block] block
     [comment] comment
@@ -925,6 +929,11 @@ diagnostic-validate-049-remediation-001 = Restore the missing tag occurrence in 
 diagnostic-validate-050-meaning = A condition expression exceeds the compiled nesting limit.
 diagnostic-validate-050-cause-001 = Boolean operators are nested too deeply. Parentheses alone do not add to compiled depth.
 diagnostic-validate-050-remediation-001 = Simplify the nested condition or move part of its logic into a condition function.
+
+# RECITE_VALIDATE051
+diagnostic-validate-051-meaning = A line or block names a speaker that the project schema does not declare.
+diagnostic-validate-051-cause-001 = The speaker's name is misspelled, or the character was never added to the schema.
+diagnostic-validate-051-remediation-001 = Correct the name, or declare the speaker in the schema's speakers.
 
 diagnostic-import-001 = Invalid import input: {$detail}
 diagnostic-import-002 = Unsupported import construct: {$detail}

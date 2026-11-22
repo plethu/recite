@@ -12,6 +12,14 @@ const REFERENCE: &[DiagnosticArgumentSpec] = &[DiagnosticArgumentSpec::new(
     "reference",
     DiagnosticArgumentType::String,
 )];
+const SUGGESTION: &[DiagnosticArgumentSpec] = &[DiagnosticArgumentSpec::new(
+    "suggestion",
+    DiagnosticArgumentType::String,
+)];
+const SPEAKER: &[DiagnosticArgumentSpec] = &[DiagnosticArgumentSpec::new(
+    "speaker",
+    DiagnosticArgumentType::String,
+)];
 const PATH: &[DiagnosticArgumentSpec] = &[DiagnosticArgumentSpec::new(
     "path",
     DiagnosticArgumentType::String,
@@ -26,6 +34,20 @@ const AMBIGUOUS_DEFAULT: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_VALIDATE006", "diagnostic-validate-006", BLOCK_ID);
 const UNKNOWN_REFERENCE: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_VALIDATE007", "diagnostic-validate-007", REFERENCE);
+const UNKNOWN_REFERENCE_SUGGESTION: DiagnosticAuxiliaryPresentationContract =
+    DiagnosticAuxiliaryPresentationContract::new(
+        "diagnostic-validate-007-help-suggestion",
+        SUGGESTION,
+    );
+const UNKNOWN_SPEAKER: DiagnosticPresentationContract =
+    DiagnosticPresentationContract::new("RECITE_VALIDATE051", "diagnostic-validate-051", SPEAKER);
+const UNKNOWN_SPEAKER_HELP: DiagnosticAuxiliaryPresentationContract =
+    DiagnosticAuxiliaryPresentationContract::new("diagnostic-validate-051-help", NO_ARGUMENTS);
+const UNKNOWN_SPEAKER_SUGGESTION: DiagnosticAuxiliaryPresentationContract =
+    DiagnosticAuxiliaryPresentationContract::new(
+        "diagnostic-validate-051-help-suggestion",
+        SUGGESTION,
+    );
 const DUPLICATE_BLOCK: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_VALIDATE009", "diagnostic-validate-009", BLOCK_ID);
 const DUPLICATE_PATH: DiagnosticPresentationContract =
@@ -59,9 +81,13 @@ static CONTRACTS: &[&DiagnosticPresentationContract] = &[
     &DUPLICATE_BLOCK,
     &DUPLICATE_PATH,
     &AMBIGUOUS_COMPILED_BLOCK,
+    &UNKNOWN_SPEAKER,
 ];
 static AUXILIARY_CONTRACTS: &[&DiagnosticAuxiliaryPresentationContract] = &[
     &MISSING_DEFAULT_HELP,
+    &UNKNOWN_REFERENCE_SUGGESTION,
+    &UNKNOWN_SPEAKER_HELP,
+    &UNKNOWN_SPEAKER_SUGGESTION,
     &AMBIGUOUS_DEFAULT_RELATED,
     &AMBIGUOUS_DEFAULT_HELP,
     &DUPLICATE_BLOCK_RELATED,

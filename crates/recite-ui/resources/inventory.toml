@@ -796,6 +796,7 @@ resource_ids = [
     "lsp-code-action-insert-all-missing-ids",
     "lsp-code-action-create-block-stub",
     "lsp-code-action-move-header-prose",
+    "lsp-code-action-apply-suggestion",
     "lsp-code-action-add-condition",
     "lsp-code-action-add-effect",
     "lsp-code-action-schema-action",
@@ -999,6 +1000,7 @@ diagnostic_presentation_ids = [
     "diagnostic-validate-048",
     "diagnostic-validate-049",
     "diagnostic-validate-050",
+    "diagnostic-validate-051",
 ]
 
 [clients.cli]

@@ -812,3 +812,6 @@ asset = "string"
 [arguments."cli-error-block-ambiguous"]
 asset = "string"
 blocks = "string"
+
+[arguments."lsp-code-action-apply-suggestion"]
+suggestion = "string"

@@ -3,6 +3,7 @@ mod header_prose;
 mod missing_id;
 pub(crate) mod schema_capability;
 mod schema_entry;
+mod suggestion;
 
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, CodeActionResponse,
@@ -75,6 +76,13 @@ pub(crate) fn code_action(
     }
     if include_quick_fix {
         actions.extend(header_prose::actions(
+            params,
+            document,
+            snapshot,
+            &edit_documents,
+            catalog,
+        ));
+        actions.extend(suggestion::actions(
             params,
             document,
             snapshot,

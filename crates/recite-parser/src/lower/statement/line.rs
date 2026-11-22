@@ -26,8 +26,8 @@ impl Lowerer<'_, '_> {
         if let (Some(text), Some(span)) = (body.plural_text, body.plural_text_span) {
             line = line.with_plural_source_text(SourceText::new(text, span));
         }
-        if let Some(speaker) = speaker {
-            line = line.with_speaker(speaker);
+        if let Some((speaker, span)) = speaker {
+            line = line.with_speaker(speaker).with_speaker_span(span);
         }
 
         (line, body.next_index)

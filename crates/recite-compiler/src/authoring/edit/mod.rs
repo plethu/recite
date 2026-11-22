@@ -9,6 +9,7 @@ mod plan_stable_id_rename;
 mod plan_stable_ids;
 mod plan_stable_ids_scope;
 mod plan_stub;
+mod plan_suggestion;
 mod precondition;
 mod range;
 mod stable_id_target;
@@ -19,8 +20,8 @@ mod validate;
 mod synchronous;
 pub use stable_id_target::{StableIdOccurrence, StableIdTarget};
 pub use synchronous::{
-    plan_create_block_stub, plan_create_block_stub_in_range, plan_insert_missing_id,
-    plan_insert_missing_ids, plan_insert_missing_ids_for_document,
+    plan_apply_suggestion_in_range, plan_create_block_stub, plan_create_block_stub_in_range,
+    plan_insert_missing_id, plan_insert_missing_ids, plan_insert_missing_ids_for_document,
     plan_insert_missing_ids_in_range, plan_move_header_prose_in_range, plan_reassign_stable_id,
     plan_rename_block, plan_rename_stable_id,
 };

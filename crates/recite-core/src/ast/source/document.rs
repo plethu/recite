@@ -33,6 +33,8 @@ pub struct Block {
     pub id_span: Option<SourceSpan>,
     pub is_default: bool,
     pub default_speaker: Option<SpeakerId>,
+    /// The block header's `speaker=` value, for diagnostics about it.
+    pub default_speaker_span: Option<SourceSpan>,
     pub metadata: SourceMetadata,
     pub statements: Vec<Statement>,
     pub span: SourceSpan,
@@ -46,6 +48,7 @@ impl Block {
             id_span: None,
             is_default: false,
             default_speaker: None,
+            default_speaker_span: None,
             metadata: SourceMetadata::new(),
             statements,
             span,
@@ -61,6 +64,12 @@ impl Block {
     #[must_use]
     pub fn with_default(mut self, is_default: bool) -> Self {
         self.is_default = is_default;
+        self
+    }
+
+    #[must_use]
+    pub fn with_default_speaker_span(mut self, span: SourceSpan) -> Self {
+        self.default_speaker_span = Some(span);
         self
     }
 

@@ -46,7 +46,11 @@ impl Lowerer<'_, '_> {
     pub(super) fn lower_speaker_metadata(
         &mut self,
         fields: &[HeaderField<'_>],
-    ) -> (Option<SpeakerId>, SourceMetadata, Vec<InterpolationBinding>) {
+    ) -> (
+        Option<(SpeakerId, SourceSpan)>,
+        SourceMetadata,
+        Vec<InterpolationBinding>,
+    ) {
         let fields = &self.without_header_prose(fields);
         let mut speaker = None;
         let mut metadata = SourceMetadata::new();
@@ -58,7 +62,9 @@ impl Lowerer<'_, '_> {
             };
 
             if kv.key == "speaker" {
-                speaker = self.speaker_from_value(&kv);
+                speaker = self
+                    .speaker_from_value(&kv)
+                    .map(|value| (value, kv.value_span.clone()));
                 continue;
             }
 

@@ -452,3 +452,30 @@ fn header_prose_plan_moves_the_words_into_the_body() {
         "a range without the diagnostic plans nothing"
     );
 }
+
+#[test]
+fn suggestion_plan_replaces_only_the_misspelt_reference() {
+    let source = ":: start default\n> @a1\n  Hi.\n-> arival\n\n:: arrival\n> @a2\n  There.\n";
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key("main.recite"), source)],
+            [],
+        ))
+        .expect("source accepted");
+    let plan = kernel
+        .snapshot()
+        .plan_apply_suggestion_in_range(&key("main.recite"), SourceRange::point(position(4, 1)))
+        .expect("the reference has a suggestion");
+    assert!(matches!(
+        plan.operation(),
+        recite_compiler::authoring::AuthoringEditOperation::ApplySuggestion { replacement, .. }
+            if replacement == "arrival"
+    ));
+    let applied = apply_plan(&plan, &saved_sources(&[("main.recite", source)]));
+    assert_eq!(
+        applied.get(&key("main.recite")).map(String::as_str),
+        Some(":: start default\n> @a1\n  Hi.\n-> arrival\n\n:: arrival\n> @a2\n  There.\n")
+    );
+}

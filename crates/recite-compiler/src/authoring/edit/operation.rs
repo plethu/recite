@@ -33,4 +33,10 @@ pub enum AuthoringEditOperation {
         document: DocumentKey,
         line: u32,
     },
+    /// A misspelt name at `line` becomes the diagnostic's suggested `replacement`.
+    ApplySuggestion {
+        document: DocumentKey,
+        line: u32,
+        replacement: String,
+    },
 }

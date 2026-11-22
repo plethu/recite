@@ -105,7 +105,9 @@ impl Lowerer<'_, '_> {
             };
 
             if kv.key == "speaker" {
-                default_speaker = self.speaker_from_value(&kv);
+                default_speaker = self
+                    .speaker_from_value(&kv)
+                    .map(|speaker| (speaker, kv.value_span.clone()));
                 continue;
             }
 
@@ -182,8 +184,10 @@ impl BlockHeader {
             .with_id_span(self.id_span)
             .with_default(self.is_default)
             .with_metadata(self.metadata);
-        if let Some(speaker) = self.default_speaker {
-            block = block.with_default_speaker(speaker);
+        if let Some((speaker, span)) = self.default_speaker {
+            block = block
+                .with_default_speaker(speaker)
+                .with_default_speaker_span(span);
         }
         block
     }

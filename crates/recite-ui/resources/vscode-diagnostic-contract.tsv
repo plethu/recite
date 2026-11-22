@@ -141,6 +141,7 @@ diagnostic-validate-007	reference	string
 diagnostic-validate-009	block_id	string
 diagnostic-validate-010	path	string
 diagnostic-validate-011	block_id	string
+diagnostic-validate-051	speaker	string
 diagnostic-config-101	detail	string
 diagnostic-config-102	detail	string
 diagnostic-config-103	detail	string
@@ -473,6 +474,9 @@ diagnostic-validate-031-help
 diagnostic-validate-032-help
 diagnostic-validate-033-help
 diagnostic-validate-005-help
+diagnostic-validate-007-help-suggestion	suggestion	string
+diagnostic-validate-051-help
+diagnostic-validate-051-help-suggestion	suggestion	string
 diagnostic-validate-006-related
 diagnostic-validate-006-help
 diagnostic-validate-009-related
@@ -758,4 +762,7 @@ diagnostic-validate-049-remediation-001
 diagnostic-validate-050-meaning
 diagnostic-validate-050-cause-001
 diagnostic-validate-050-remediation-001
+diagnostic-validate-051-meaning
+diagnostic-validate-051-cause-001
+diagnostic-validate-051-remediation-001
 diagnostic-legacy-message	message	string

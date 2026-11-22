@@ -35,8 +35,8 @@ pub use catalog_summary::{
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,
     SourceFingerprint, SourceRange, StableIdOccurrence, StableIdRefusal, StableIdTarget,
-    plan_create_block_stub, plan_create_block_stub_in_range, plan_insert_missing_id,
-    plan_insert_missing_ids, plan_insert_missing_ids_for_document,
+    plan_apply_suggestion_in_range, plan_create_block_stub, plan_create_block_stub_in_range,
+    plan_insert_missing_id, plan_insert_missing_ids, plan_insert_missing_ids_for_document,
     plan_insert_missing_ids_in_range, plan_move_header_prose_in_range, plan_reassign_stable_id,
     plan_rename_block, plan_rename_stable_id,
 };
