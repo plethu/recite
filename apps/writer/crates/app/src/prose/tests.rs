@@ -181,3 +181,96 @@ fn results_of_superseded_requests_are_dropped() -> Result<(), Box<dyn Error>> {
     assert!(first_prose(&writer).is_some());
     Ok(())
 }
+
+#[test]
+fn fixes_and_words_are_refused_when_stale_pending_or_unwritable() -> Result<(), Box<dyn Error>> {
+    let (directory, mut writer, mut requests) = writer(PROSE)?;
+    let mut checker = Checker::default();
+    writer.check_prose_if_needed();
+    finish(&mut writer, &mut requests, &mut checker);
+    assert!(!writer.problems().is_empty());
+    let (generation, index) = first_prose(&writer).ok_or("prose finding")?;
+    // A finding from another check is never applied.
+    writer.add_prose_word(CheckGeneration::default(), index);
+    assert_eq!(writer.status, text(MsgId::WriterProseStale));
+    // A word the dictionary already lists is reported rather than appended twice.
+    fs::write(directory.path().join("words.txt"), "flickerd\n")?;
+    writer.add_prose_word(generation, index);
+    assert_eq!(
+        fs::read_to_string(directory.path().join("words.txt"))?,
+        "flickerd\n"
+    );
+    assert_ne!(writer.status, text(MsgId::WriterProseStale));
+    // A dictionary that cannot be written reports why.
+    fs::remove_file(directory.path().join("words.txt"))?;
+    fs::create_dir(directory.path().join("words.txt"))?;
+    let before = writer.status.clone();
+    writer.add_prose_word(generation, index);
+    assert_ne!(writer.status, before);
+    assert!(directory.path().join("words.txt").is_dir());
+    // A pending draft must be applied or discarded before a replacement.
+    writer.change(|model| {
+        model.set_draft("Pending typing.".into());
+        Ok(())
+    });
+    writer.apply_prose_fix(generation, index, 0);
+    assert_eq!(writer.status, text(MsgId::WriterProseDraftPending));
+    assert_eq!(writer.session.model().document().source(), SOURCE);
+    Ok(())
+}
+
+#[test]
+fn closed_workers_and_unrequested_results_change_nothing() -> Result<(), Box<dyn Error>> {
+    let (_directory, mut writer, mut requests) = writer(PROSE)?;
+    writer.check_prose_if_needed();
+    let checked = requests.try_recv()?.execute(&mut Checker::default());
+    assert!(format!("{checked:?}").contains("ProseChecked"));
+    // A result that arrives after its request was withdrawn is dropped.
+    writer.prose.requested = None;
+    writer.accept_prose(checked);
+    assert!(first_prose(&writer).is_none());
+    // A stopped worker receives nothing and the request stays unsent.
+    drop(requests);
+    writer.check_prose_if_needed();
+    assert!(writer.prose.requested.is_none());
+    Ok(())
+}
+
+#[test]
+fn unchanged_text_in_a_new_allocation_keeps_its_findings() -> Result<(), Box<dyn Error>> {
+    let (_directory, mut writer, mut requests) = writer(PROSE)?;
+    writer.check_prose_if_needed();
+    let mut checked = requests.try_recv()?.execute(&mut Checker::default());
+    // The checked text arrives in a copy of the requested allocation, as after a save.
+    checked.source = std::sync::Arc::from(SOURCE);
+    writer.accept_prose(checked);
+    assert!(first_prose(&writer).is_some());
+    // The request's own copy moves too; the same text sends no new request.
+    if let Some(stamp) = &mut writer.prose.requested {
+        stamp.source = std::sync::Arc::from(SOURCE);
+    }
+    writer.check_prose_if_needed();
+    assert!(requests.try_recv().is_err());
+    assert!(first_prose(&writer).is_some());
+    Ok(())
+}
+
+#[test]
+fn a_project_that_stops_checking_prose_drops_its_findings() -> Result<(), Box<dyn Error>> {
+    let (_enabled, mut checking, mut requests) = writer(PROSE)?;
+    checking.check_prose_if_needed();
+    let request = requests.try_recv()?;
+    let stamp = super::Stamp {
+        configuration: request.configuration.clone(),
+        source: request.source.clone(),
+    };
+    let checked = request.execute(&mut Checker::default());
+    // The same Writer state after the project's `[prose]` table was removed.
+    let (_disabled, mut writer, _requests) = writer("")?;
+    writer.prose.requested = Some(stamp);
+    writer.prose.checked = Some(checked);
+    writer.check_prose_if_needed();
+    assert!(writer.prose.requested.is_none());
+    assert!(writer.prose.checked.is_none());
+    Ok(())
+}
