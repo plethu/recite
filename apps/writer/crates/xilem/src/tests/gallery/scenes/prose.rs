@@ -3,7 +3,7 @@ use super::*;
 use recite_writer_app::prose::Checker;
 
 // Two misspellings and one grammar slip in dialogue; the speaker and IDs stay unflagged.
-const PROSE: &str = ":: harbour default\n> speaker=rhea @ffee6p8\n  The lantern flickerd above the pier.\n> speaker=rhea @rthh7ab\n  Bring the the lamp before the tide.\n> speaker=rhea @bqyvpqq\n  Nobody has recieved the ferry list.\n-> END\n";
+const PROSE: &str = ":: harbour default\n> speaker=rhea @ffee6p8\n  The lantern flickerd above the pier.\n> speaker=rhea @rthh7ab\n  Bring the the lamp before the tide.\n> speaker=rhea @bqyvpqq\n  Nobody has stampd the ferry list.\n-> END\n";
 
 /// A project with `[prose]` enabled, a project dictionary and one scene with findings.
 fn with_prose() -> tempfile::TempDir {
