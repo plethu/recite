@@ -3,7 +3,18 @@ use std::path::{Path, PathBuf};
 
 use crate::error::CliError;
 
+/// Write through a temporary sibling and rename, creating a missing output directory first, as a
+/// new project's `build/` usually is.
 pub(crate) fn write_staged(output: &Path, contents: &[u8]) -> Result<(), CliError> {
+    if let Some(parent) = output
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        fs::create_dir_all(parent).map_err(|source| CliError::Write {
+            path: parent.to_owned(),
+            source,
+        })?;
+    }
     let temp_path = staged_output_path(output);
     if let Err(error) = fs::write(&temp_path, contents) {
         let _ = fs::remove_file(&temp_path);

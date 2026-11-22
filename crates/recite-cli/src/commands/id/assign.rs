@@ -14,7 +14,7 @@ use recite_core::{DocumentKey, StableIdGenerator};
 use crate::args::InputArgs;
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
-use crate::fs::{read_relative_inputs, validate_inputs, write_staged};
+use crate::fs::{LooseKeys, SourceSet, validate_inputs, write_staged};
 use crate::i18n::{Messages, MsgId};
 
 pub(super) fn run(
@@ -24,7 +24,7 @@ pub(super) fn run(
 ) -> Result<(), CliError> {
     let mut paths = BTreeMap::new();
     let mut documents = Vec::new();
-    for input in read_relative_inputs(&args.paths)? {
+    for input in SourceSet::read(&args.paths, LooseKeys::CommonDirectory)?.named {
         let key = DocumentKey::new(input.key).map_err(|error| CliError::Read {
             path: input.path.clone(),
             source: std::io::Error::new(std::io::ErrorKind::InvalidInput, error),

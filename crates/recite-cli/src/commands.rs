@@ -5,8 +5,8 @@ use crate::diagnostics::{Subject, report_diagnostics, report_success};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
 use crate::fs::{
-    collect_input_files, compile_options, load_optional_schema, read_compile_inputs_for_output,
-    read_compile_inputs_from_files, reject_output_input_alias, write_staged,
+    LooseKeys, SourceSet, compile_options, load_optional_schema, reject_output_input_alias,
+    warn_schema_choice, write_staged,
 };
 use crate::i18n::{Messages, MsgId};
 use crate::play::run_play_command;
@@ -124,17 +124,20 @@ fn compile_command(
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<(), CliError> {
-    let input_files = collect_input_files(&args.paths)?;
-    reject_output_input_alias(&args.output, &input_files)?;
-    let file_count = input_files.len();
-    let inputs = read_compile_inputs_for_output(&args.output, input_files)?;
-    let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
+    let sources = SourceSet::read(&args.paths, LooseKeys::OutputRoot(&args.output))?;
+    reject_output_input_alias(&args.output, &sources.named_paths())?;
+    let file_count = sources.named.len();
+    let choice = sources.effective_schema(args.schema.as_deref());
+    warn_schema_choice(stderr, messages, &choice)?;
+    let schema = load_optional_schema(choice.path.as_deref(), stderr, messages)?;
     let options = compile_options(&args.output, schema.as_ref())?;
-    let report = if let Some(schema) = &schema {
+    let inputs = sources.named_inputs();
+    let mut report = if let Some(schema) = &schema {
         compile_inputs_to_messagepack_with_schema(inputs, options, schema)?
     } else {
         compile_inputs_to_messagepack(inputs, options)?
     };
+    sources.relocate(&mut report.diagnostics);
 
     let reported = report_diagnostics(stderr, messages, report.diagnostics.iter())?;
     let Some(messagepack) = report.messagepack else {
@@ -154,17 +157,20 @@ fn extract_command(
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<(), CliError> {
-    let input_files = collect_input_files(&args.paths)?;
+    let sources = SourceSet::read(&args.paths, LooseKeys::AsTyped)?;
     if let Some(output) = &args.output {
-        reject_output_input_alias(output, &input_files)?;
+        reject_output_input_alias(output, &sources.named_paths())?;
     }
-    let inputs = read_compile_inputs_from_files(input_files)?;
-    let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
-    let report = if let Some(schema) = &schema {
+    let choice = sources.effective_schema(args.schema.as_deref());
+    warn_schema_choice(stderr, messages, &choice)?;
+    let schema = load_optional_schema(choice.path.as_deref(), stderr, messages)?;
+    let inputs = sources.named_inputs();
+    let mut report = if let Some(schema) = &schema {
         extract_pot_with_schema(inputs, schema)
     } else {
         extract_pot(inputs)
     };
+    sources.relocate(&mut report.diagnostics);
 
     report_diagnostics(stderr, messages, report.diagnostics.iter())?;
     let Some(catalog) = report.catalog else {
@@ -225,7 +231,7 @@ fn runtime_command_with_options(
         .transpose()?;
     let execution = execute_runtime_fixture(
         &asset,
-        &args.block,
+        &crate::fs::start_block(&args.asset, args.block.as_deref())?,
         &fixture,
         dialogue_preview
             .as_ref()

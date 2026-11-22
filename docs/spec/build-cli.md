@@ -269,7 +269,7 @@ verbs-under-nouns (`recite <noun> <verb>`); there are no hyphenated verb-noun to
 | `recording status`, `recording export`, `recording import` | recording handoffs and returned takes              |
 
 `check-markup` and `check-metadata` are `validate --only markup` and `validate --only metadata`,
-because they filter the same diagnostics run; `--only metadata` requires `--schema`. The released-ID
+because they filter the same diagnostics run; `--only metadata` requires a schema. The released-ID
 guard is `id check --since <REF>`. There is no `id doctor`: `id check` reports problems, `id assign`
 makes the one safe automatic repair, and `id rename` and `id reassign` make the deliberate identity
 changes an author chooses, so a further command would only overlap them.
@@ -277,6 +277,16 @@ changes an author chooses, so a further command would only overlap them.
 Recite is pre-release, so the previous hyphenated names (`check-ids`, `assign-ids`, `check-markup`,
 `check-metadata`, `validate-project`, `check-fresh`, `check-schema-producer-freshness`,
 `inspect-schema`, `export-schema`) have no aliases.
+
+**Project inputs.** When the named sources lie inside a project (§11.1), `validate`, `compile`,
+`extract` and the `id` commands key them by their project-relative `DocumentKey`s, so a cross-file
+target resolves the same way whichever path, form or working directory names them. `validate` reads
+the project's other sources as context and reports only the named ones. With no paths, `validate`,
+`compile` and `extract` read the project's discovered sources; outside a project they say what to
+pass. With no `--schema` they use the manifest's `[project].schema`; an explicit `--schema` wins, with
+a warning when it is a different file. With no `--block`, `run`, `trace` and `play` start at the block
+of the single manifest scene that uses the asset, and otherwise ask for `--block`. Diagnostics name
+files relative to the working directory. Outside a project, keys keep each command's earlier form.
 
 **Contracts that follow the tree.**
 

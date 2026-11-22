@@ -99,6 +99,19 @@ pub(crate) enum CliError {
         prompt_keys: Vec<String>,
     },
     NoInputs,
+    /// A command that defaults to the project's sources ran where no project manifest exists.
+    NoInputsOutsideProject,
+    /// No `--block` and no single project scene that uses the asset.
+    BlockRequired {
+        asset: String,
+    },
+    /// No `--block`, and several project scenes start the asset at different blocks.
+    BlockAmbiguous {
+        asset: String,
+        blocks: Vec<String>,
+    },
+    /// `--only metadata` found neither `--schema` nor a project schema.
+    SchemaRequired,
     StableIdBaseline {
         reference: String,
         detail: String,
@@ -312,6 +325,21 @@ impl std::fmt::Display for CliError {
                 prompt_keys.join("|")
             ),
             Self::NoInputs => formatter.write_str("no .recite inputs found"),
+            Self::BlockRequired { asset } => write!(
+                formatter,
+                "pass --block: no scene in recite.project.toml uses {asset}"
+            ),
+            Self::BlockAmbiguous { asset, blocks } => write!(
+                formatter,
+                "pass --block: scenes in recite.project.toml start {asset} at {}",
+                blocks.join(", ")
+            ),
+            Self::SchemaRequired => formatter.write_str(
+                "--only metadata needs a schema: pass --schema, or declare [project].schema in recite.project.toml",
+            ),
+            Self::NoInputsOutsideProject => formatter.write_str(
+                "no paths given and no recite.project.toml found here or above; pass the .recite files or directories to read",
+            ),
             Self::StableIdBaseline { reference, detail } => write!(
                 formatter,
                 "cannot read stable IDs at `{reference}`: {detail}"

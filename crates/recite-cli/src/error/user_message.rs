@@ -155,6 +155,15 @@ impl CliError {
                 [("prompt_keys", prompt_keys.join("|"))],
             ),
             Self::NoInputs => messages.text(MsgId::CliErrorNoInputs),
+            Self::NoInputsOutsideProject => messages.text(MsgId::CliErrorNoInputsOutsideProject),
+            Self::SchemaRequired => messages.text(MsgId::CliErrorSchemaRequired),
+            Self::BlockRequired { asset } => {
+                messages.format(MsgId::CliErrorBlockRequired, [("asset", asset.clone())])
+            }
+            Self::BlockAmbiguous { asset, blocks } => messages.format(
+                MsgId::CliErrorBlockAmbiguous,
+                [("asset", asset.clone()), ("blocks", blocks.join(", "))],
+            ),
             Self::StableIdEdit(refusal) => refusal.to_user_message(messages),
             Self::Localisation(error) => error.to_user_message(messages),
             Self::StableIdBaseline { reference, detail } => messages.format(

@@ -95,7 +95,9 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandImport
         | MsgId::CliHelpCommandBench
         | MsgId::CliHelpArgPaths
+        | MsgId::CliHelpArgPathsProject
         | MsgId::CliHelpArgSchema
+        | MsgId::CliHelpArgSchemaProject
         | MsgId::CliHelpArgSchemaInspection
         | MsgId::CliHelpArgProjectRoot
         | MsgId::CliHelpArgDiagnosticCode
@@ -107,6 +109,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpArgAssetRun
         | MsgId::CliHelpArgAssetPlay
         | MsgId::CliHelpArgBlock
+        | MsgId::CliHelpArgBlockProject
         | MsgId::CliHelpArgFixture
         | MsgId::CliHelpArgUi
         | MsgId::CliHelpArgKeymap
@@ -304,6 +307,11 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorRecordingHandoff
         | MsgId::CliErrorMissingFixtureChoice
         | MsgId::CliErrorNoInputs
+        | MsgId::CliErrorNoInputsOutsideProject
+        | MsgId::CliErrorSchemaRequired
+        | MsgId::CliErrorBlockRequired
+        | MsgId::CliErrorBlockAmbiguous
+        | MsgId::CliWarningSchemaDiffers
         | MsgId::CliErrorOutputOverwritesInput
         | MsgId::CliErrorBlockingEffect
         | MsgId::CliErrorBenchJson

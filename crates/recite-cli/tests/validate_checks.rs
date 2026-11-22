@@ -94,8 +94,8 @@ fn validate_only_metadata_requires_a_schema() {
     let output = run(recite()
         .args(["validate", "--only", "metadata"])
         .arg(source));
-    output.assert_failure().assert_exit_code(2);
-    output.assert_stderr_contains("--schema <SCHEMA>");
+    output.assert_failure().assert_exit_code(1);
+    output.assert_stderr_contains("--only metadata needs a schema");
 }
 
 #[test]

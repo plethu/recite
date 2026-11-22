@@ -144,7 +144,7 @@ impl ValidateOnly {
 #[derive(Debug, Args)]
 pub(crate) struct ValidateArgs {
     /// Schema manifest whose declarations, metadata and markup policy are checked.
-    #[arg(long, required_if_eq("only", "metadata"))]
+    #[arg(long)]
     pub(crate) schema: Option<PathBuf>,
     /// Report only this diagnostic category; syntax errors are always reported.
     #[arg(long, value_enum, value_name = "CATEGORY")]
@@ -155,7 +155,7 @@ pub(crate) struct ValidateArgs {
     /// Caller-owned identifier copied into each structured protocol record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
-    #[arg(required = true)]
+    /// Sources to read; defaults to the sources of the project here.
     pub(crate) paths: Vec<PathBuf>,
 }
 
@@ -230,7 +230,7 @@ pub(crate) struct CompileArgs {
     /// Caller-owned identifier copied into each structured protocol record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
-    #[arg(required = true)]
+    /// Sources to read; defaults to the sources of the project here.
     pub(crate) paths: Vec<PathBuf>,
 }
 
@@ -246,7 +246,7 @@ pub(crate) struct ExtractArgs {
     /// Caller-owned identifier copied into each structured protocol record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
-    #[arg(required = true)]
+    /// Sources to read; defaults to the sources of the project here.
     pub(crate) paths: Vec<PathBuf>,
 }
 
@@ -254,7 +254,7 @@ pub(crate) struct ExtractArgs {
 pub(crate) struct RuntimeArgs {
     pub(crate) asset: PathBuf,
     #[arg(long)]
-    pub(crate) block: String,
+    pub(crate) block: Option<String>,
     #[arg(long)]
     pub(crate) fixture: PathBuf,
     /// Select human-readable or version-1 newline-delimited structured output.
@@ -290,7 +290,7 @@ pub(crate) enum PlayKeymap {
 pub(crate) struct PlayArgs {
     pub(crate) asset: PathBuf,
     #[arg(long)]
-    pub(crate) block: String,
+    pub(crate) block: Option<String>,
     #[arg(long, value_enum, default_value_t = PlayUi::Auto)]
     pub(crate) ui: PlayUi,
     #[arg(long, value_enum)]

@@ -1,10 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use recite_compiler::{
-    compile::{CompileInput, CompileOptions},
-    validation::validate_source_files,
-};
+use recite_compiler::{compile::CompileOptions, validation::validate_source_files};
 use recite_core::{
     compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
     schema::ProjectSchema,
@@ -12,26 +9,36 @@ use recite_core::{
 use recite_parser::parse;
 
 use super::paths::{canonical_output_path, display_path};
+use super::sources::{LooseKeys, SourceSet};
 use crate::diagnostics::InputDiagnostics;
 use crate::error::CliError;
 
+/// Parse and validate the named sources. Inside a project the project's other sources are read as
+/// context, so references into them resolve, and only the named sources' diagnostics are kept.
 pub(crate) fn validate_inputs(
     paths: &[PathBuf],
     schema: Option<&ProjectSchema>,
 ) -> Result<InputDiagnostics, CliError> {
-    let inputs = read_compile_inputs(paths)?;
-    let file_count = inputs.len();
+    validate_sources(&SourceSet::read(paths, LooseKeys::AsTyped)?, schema)
+}
+
+pub(crate) fn validate_sources(
+    sources: &SourceSet,
+    schema: Option<&ProjectSchema>,
+) -> Result<InputDiagnostics, CliError> {
+    let file_count = sources.named.len();
     let mut source_files = Vec::new();
     let mut parse_diagnostics = Vec::new();
 
-    for input in inputs {
-        let parse = parse(&input.path, &input.source);
+    for source in sources.named.iter().chain(&sources.context) {
+        let parse = parse(&source.key, &source.source);
         let lowered = parse.lower_source_file();
         parse_diagnostics.extend(lowered.diagnostics);
         source_files.push(lowered.source_file);
     }
+    parse_diagnostics.retain(|diagnostic| sources.is_named(&diagnostic.span.file));
 
-    let validation_diagnostics = if parse_diagnostics.is_empty() {
+    let mut validation_diagnostics = if parse_diagnostics.is_empty() {
         if let Some(schema) = schema {
             recite_compiler::validation::validate_inputs(
                 source_files
@@ -47,16 +54,16 @@ pub(crate) fn validate_inputs(
     } else {
         Vec::new()
     };
+    // Context sources are read, not validated: their own findings belong to their own command.
+    validation_diagnostics.retain(|diagnostic| sources.is_named(&diagnostic.span.file));
+    sources.relocate(&mut parse_diagnostics);
+    sources.relocate(&mut validation_diagnostics);
 
     Ok(InputDiagnostics {
         parse_diagnostics,
         validation_diagnostics,
         file_count,
     })
-}
-
-fn read_compile_inputs(paths: &[PathBuf]) -> Result<Vec<CompileInput>, CliError> {
-    read_compile_inputs_from_files(collect_input_files(paths)?)
 }
 
 pub(crate) fn collect_input_files(paths: &[PathBuf]) -> Result<Vec<PathBuf>, CliError> {
@@ -73,86 +80,7 @@ pub(crate) fn collect_input_files(paths: &[PathBuf]) -> Result<Vec<PathBuf>, Cli
     Ok(files)
 }
 
-pub(crate) fn read_compile_inputs_from_files(
-    files: Vec<PathBuf>,
-) -> Result<Vec<CompileInput>, CliError> {
-    files
-        .into_iter()
-        .map(|path| {
-            let source = fs::read_to_string(&path).map_err(|source| CliError::Read {
-                path: path.clone(),
-                source,
-            })?;
-            Ok(CompileInput::new(display_path(&path), source))
-        })
-        .collect()
-}
-
-pub(crate) fn read_compile_inputs_for_output(
-    output: &Path,
-    files: Vec<PathBuf>,
-) -> Result<Vec<CompileInput>, CliError> {
-    let project_root = compile_path_root(output, &files);
-    read_compile_inputs_with_root(files, project_root.as_deref())
-}
-
-/// An input file keyed by its path relative to the inputs' common directory,
-/// as authoring documents and cross-file references expect.
-pub(crate) struct RelativeInput {
-    pub(crate) path: PathBuf,
-    pub(crate) key: String,
-    pub(crate) source: String,
-}
-
-pub(crate) fn read_relative_inputs(paths: &[PathBuf]) -> Result<Vec<RelativeInput>, CliError> {
-    let files = collect_input_files(paths)?;
-    let canonical = files
-        .iter()
-        .map(|path| {
-            fs::canonicalize(path).map_err(|source| CliError::Read {
-                path: path.clone(),
-                source,
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let root = canonical
-        .iter()
-        .filter_map(|path| path.parent().map(Path::to_owned))
-        .reduce(|left, right| common_path_prefix(&left, &right).unwrap_or_default())
-        .unwrap_or_default();
-    files
-        .into_iter()
-        .map(|path| {
-            let source = fs::read_to_string(&path).map_err(|source| CliError::Read {
-                path: path.clone(),
-                source,
-            })?;
-            let key = project_relative_path(&root, &path).unwrap_or_else(|| display_path(&path));
-            Ok(RelativeInput { path, key, source })
-        })
-        .collect()
-}
-
-fn read_compile_inputs_with_root(
-    files: Vec<PathBuf>,
-    project_root: Option<&Path>,
-) -> Result<Vec<CompileInput>, CliError> {
-    files
-        .into_iter()
-        .map(|path| {
-            let source = fs::read_to_string(&path).map_err(|source| CliError::Read {
-                path: path.clone(),
-                source,
-            })?;
-            let input_path = project_root
-                .and_then(|root| project_relative_path(root, &path))
-                .unwrap_or_else(|| display_path(&path));
-            Ok(CompileInput::new(input_path, source))
-        })
-        .collect()
-}
-
-fn compile_path_root(output: &Path, files: &[PathBuf]) -> Option<PathBuf> {
+pub(super) fn compile_path_root(output: &Path, files: &[PathBuf]) -> Option<PathBuf> {
     let output = canonical_output_path(output)?;
     let mut root = output.parent()?.to_owned();
 
@@ -164,16 +92,7 @@ fn compile_path_root(output: &Path, files: &[PathBuf]) -> Option<PathBuf> {
     (root.components().count() > 1).then_some(root)
 }
 
-fn project_relative_path(root: &Path, path: &Path) -> Option<String> {
-    let canonical = fs::canonicalize(path).ok()?;
-    canonical
-        .strip_prefix(root)
-        .ok()
-        .map(display_path)
-        .filter(|path| !path.is_empty())
-}
-
-fn common_path_prefix(left: &Path, right: &Path) -> Option<PathBuf> {
+pub(super) fn common_path_prefix(left: &Path, right: &Path) -> Option<PathBuf> {
     let mut prefix = PathBuf::new();
     for (left_component, right_component) in left.components().zip(right.components()) {
         if left_component != right_component {

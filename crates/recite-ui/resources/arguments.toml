@@ -801,3 +801,14 @@ detail = "string"
 [arguments."cli-error-recording-handoff"]
 file = "string"
 detail = "string"
+
+[arguments."cli-warning-schema-differs"]
+given = "string"
+declared = "string"
+
+[arguments."cli-error-block-required"]
+asset = "string"
+
+[arguments."cli-error-block-ambiguous"]
+asset = "string"
+blocks = "string"

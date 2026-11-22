@@ -47,6 +47,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
                 messages,
             );
             localise_paths(command, messages);
+            localise_project_defaults(command, messages);
         }
         "compile" => {
             set_about(command, messages.text(MsgId::CliHelpCommandCompile));
@@ -58,6 +59,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             );
             localise_schema(command, messages);
             localise_paths(command, messages);
+            localise_project_defaults(command, messages);
         }
         "extract" => {
             set_about(command, messages.text(MsgId::CliHelpCommandExtract));
@@ -69,6 +71,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             );
             localise_schema(command, messages);
             localise_paths(command, messages);
+            localise_project_defaults(command, messages);
         }
         "id check" => {
             set_about(command, messages.text(MsgId::CliHelpCommandIdCheck));
@@ -257,7 +260,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
             set_arg_help(
                 command,
                 "block",
-                messages.text(MsgId::CliHelpArgBlock),
+                messages.text(MsgId::CliHelpArgBlockProject),
                 messages,
             );
             set_arg_help(command, "ui", messages.text(MsgId::CliHelpArgUi), messages);
@@ -338,6 +341,22 @@ fn localise_group(command: &mut clap::Command, messages: &Messages, about: MsgId
     }
 }
 
+/// Commands whose paths and schema default to the project's (§13).
+fn localise_project_defaults(command: &mut clap::Command, messages: &Messages) {
+    set_arg_help(
+        command,
+        "paths",
+        messages.text(MsgId::CliHelpArgPathsProject),
+        messages,
+    );
+    set_arg_help(
+        command,
+        "schema",
+        messages.text(MsgId::CliHelpArgSchemaProject),
+        messages,
+    );
+}
+
 fn localise_paths(command: &mut clap::Command, messages: &Messages) {
     set_arg_help(
         command,
@@ -361,7 +380,7 @@ fn localise_runtime_args(command: &mut clap::Command, messages: &Messages, asset
     set_arg_help(
         command,
         "block",
-        messages.text(MsgId::CliHelpArgBlock),
+        messages.text(MsgId::CliHelpArgBlockProject),
         messages,
     );
     set_arg_help(

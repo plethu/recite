@@ -1,0 +1,195 @@
+#![cfg(test)]
+//! Inside a project, sources are keyed as the project keys them, whatever path the author passes,
+//! and commands default to the project's sources and schema.
+
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use tempfile::TempDir;
+
+mod support;
+use support::*;
+
+/// A copy of the realistic pack, whose scenes link across files with `src/...` targets.
+fn v1_pack() -> (TempDir, PathBuf) {
+    let temp = TempDir::new().expect("tempdir");
+    let root = temp.path().join("dialogue");
+    copy_dir(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/realistic/v1-pack"),
+        &root,
+    );
+    (temp, root)
+}
+
+fn copy_dir(from: &Path, to: &Path) {
+    fs::create_dir_all(to).expect("create directory");
+    for entry in fs::read_dir(from).expect("read fixture") {
+        let entry = entry.expect("fixture entry");
+        let target = to.join(entry.file_name());
+        if entry.file_type().expect("file type").is_dir() {
+            copy_dir(&entry.path(), &target);
+        } else {
+            fs::copy(entry.path(), target).expect("copy fixture file");
+        }
+    }
+}
+
+fn validate_in(directory: &Path, args: &[&str]) -> std::process::Output {
+    run(recite().current_dir(directory).arg("validate").args(args))
+}
+
+#[test]
+fn cross_file_references_resolve_whatever_path_is_passed() {
+    let (_temp, root) = v1_pack();
+    let absolute = root.join("src").display().to_string();
+    for (directory, args) in [
+        (root.clone(), vec!["src"]),
+        (root.clone(), vec!["."]),
+        (root.clone(), vec!["./src"]),
+        (root.clone(), vec![absolute.as_str()]),
+        (root.join("src"), vec!["."]),
+        (
+            root.parent().expect("parent").to_owned(),
+            vec!["dialogue/src"],
+        ),
+    ] {
+        validate_in(&directory, &args)
+            .assert_success()
+            .assert_stderr("ok  5 files, no diagnostics\n");
+    }
+}
+
+#[test]
+fn one_file_is_validated_against_the_rest_of_its_project() {
+    let (_temp, root) = v1_pack();
+    validate_in(&root, &["src/arrival.recite"])
+        .assert_success()
+        .assert_stderr("ok  1 file, no diagnostics\n");
+
+    fs::write(
+        root.join("src/broken.recite"),
+        ":: broken\n> @broken_line\n  Nowhere.\n-> src/arrival.recite::arival\n",
+    )
+    .expect("write broken scene");
+    let output = validate_in(&root.join("src"), &["broken.recite"]);
+    output.assert_stderr_contains("unknown block reference `src/arrival.recite::arival`");
+    output.assert_stderr_contains("--> broken.recite:4:1");
+    output.assert_stderr_contains("1 error in 1 file");
+}
+
+#[test]
+fn commands_default_to_the_project_sources_and_schema() {
+    let (_temp, root) = v1_pack();
+    validate_in(&root, &[])
+        .assert_success()
+        .assert_stderr("ok  5 files, no diagnostics\n");
+    run(recite()
+        .current_dir(&root)
+        .args(["compile", "-o", "build/dialogue.recitec"]))
+    .assert_success();
+    assert!(
+        root.join("build/dialogue.recitec").is_file(),
+        "creates build/"
+    );
+    run(recite()
+        .current_dir(&root)
+        .args(["extract", "-o", "dialogue.pot"]))
+    .assert_success();
+    assert!(root.join("dialogue.pot").is_file());
+    run(recite()
+        .current_dir(&root)
+        .args(["validate", "--only", "metadata"]))
+    .assert_success();
+}
+
+#[test]
+fn compile_checks_the_declared_schema_without_a_flag() {
+    let (_temp, root) = v1_pack();
+    let arrival = root.join("src/arrival.recite");
+    let source = fs::read_to_string(&arrival).expect("read arrival");
+    fs::write(
+        &arrival,
+        source.replace(
+            "! immediate play_sfx(carrier_tone)",
+            "! immediate play_sfx(carrier_tone, loud)",
+        ),
+    )
+    .expect("write arrival");
+    let output =
+        run(recite()
+            .current_dir(&root)
+            .args(["compile", "src", "-o", "build/dialogue.recitec"]));
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_VALIDATE018");
+}
+
+#[test]
+fn a_different_explicit_schema_is_used_with_a_warning() {
+    let (_temp, root) = v1_pack();
+    fs::copy(
+        root.join("schema/realistic.schema.json"),
+        root.join("other.schema.json"),
+    )
+    .expect("copy schema");
+    run(recite()
+        .current_dir(&root)
+        .args(["validate", "--schema", "other.schema.json", "src"]))
+    .assert_success()
+    .assert_stderr_contains("warning: --schema other.schema.json is not the project schema");
+}
+
+#[test]
+fn no_paths_outside_a_project_explains_what_to_pass() {
+    let temp = TempDir::new().expect("tempdir");
+    let output = run(recite().current_dir(temp.path()).arg("validate"));
+    assert!(!output.status.success());
+    output.assert_stderr_contains("no recite.project.toml found here or above");
+}
+
+#[test]
+fn run_starts_at_the_block_of_the_scene_that_uses_the_asset() {
+    let (_temp, root) = v1_pack();
+    run(recite()
+        .current_dir(&root)
+        .args(["compile", "-o", "build/dialogue.recitec"]))
+    .assert_success();
+    run(recite().current_dir(&root).args([
+        "run",
+        "build/dialogue.recitec",
+        "--fixture",
+        "runtime-fixture.toml",
+    ]))
+    .assert_success();
+
+    fs::copy(
+        root.join("build/dialogue.recitec"),
+        root.join("build/loose.recitec"),
+    )
+    .expect("copy asset");
+    let loose = run(recite().current_dir(&root).args([
+        "run",
+        "build/loose.recitec",
+        "--fixture",
+        "runtime-fixture.toml",
+    ]));
+    assert!(!loose.status.success());
+    loose.assert_stderr_contains("pass --block: no scene in recite.project.toml uses");
+
+    let manifest = root.join("recite.project.toml");
+    let text = fs::read_to_string(&manifest).expect("read manifest");
+    fs::write(
+        &manifest,
+        format!(
+            "{text}\n[[scenes]]\nid = \"return\"\nasset = \"build/dialogue.recitec\"\nblock = \"arrival_return\"\nparticipants = [\"operator\"]\n"
+        ),
+    )
+    .expect("write manifest");
+    let ambiguous = run(recite().current_dir(&root).args([
+        "run",
+        "build/dialogue.recitec",
+        "--fixture",
+        "runtime-fixture.toml",
+    ]));
+    assert!(!ambiguous.status.success());
+    ambiguous.assert_stderr_contains("at arrival, arrival_return");
+}

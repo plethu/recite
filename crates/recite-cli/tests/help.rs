@@ -18,7 +18,7 @@ fn help_covers_issue_25_commands_and_options() {
 
     let compile = run(recite().arg("compile").arg("--help"));
     compile.assert_success().assert_stderr("");
-    compile.assert_stdout_contains("Usage: recite compile [OPTIONS] --output <OUTPUT> <PATHS>...");
+    compile.assert_stdout_contains("Usage: recite compile [OPTIONS] --output <OUTPUT> [PATHS]...");
     compile.assert_stdout_contains("--schema <SCHEMA>");
 
     let extract = run(recite().arg("extract").arg("--help"));
@@ -125,7 +125,7 @@ locale = "en-GB"
         .arg("--help")
         .env("RECITE_CONFIG", &config));
     compile.assert_success().assert_stderr("");
-    compile.assert_stdout_contains("Usage: recite compile [OPTIONS] --output <OUTPUT> <PATHS>...");
+    compile.assert_stdout_contains("Usage: recite compile [OPTIONS] --output <OUTPUT> [PATHS]...");
     compile.assert_stdout_contains("Compile dialogue source to a MessagePack .recitec asset");
     compile.assert_stdout_contains("--output <OUTPUT>");
     compile.assert_stdout_contains("--schema <SCHEMA>");
