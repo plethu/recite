@@ -178,3 +178,35 @@ fn statements_no_player_can_reach_are_not_save_points() {
     assert_eq!(report.summary().total, 3);
     assert_eq!(report.fallbacks().count(), 0);
 }
+
+#[test]
+fn statements_after_a_branch_that_always_leaves_are_not_save_points() {
+    for branch in [
+        ":if ready()\n  -> work\n:else\n  -> END\n",
+        ":match mood()\n  :case tired\n    -> work\n  :case _\n    -> END\n",
+    ] {
+        let reachable =
+            format!(":: start default\n> @l_a\n  A.\n{branch}\n:: work\n> @l_work\n  W.\n-> END\n");
+        let with_dead_code = reachable.replace(
+            &format!("{branch}\n"),
+            &format!("{branch}> @l_dead\n  Dead.\n! immediate dead_fx()\n\n"),
+        );
+        let report =
+            analyze_save_impact(&compile(&with_dead_code), &compile(&reachable)).expect("analyses");
+        // Two block starts and two lines: nothing after the branch.
+        assert_eq!(report.summary().total, 4, "{branch}");
+        assert_eq!(report.fallbacks().count(), 0, "{branch}");
+    }
+    // A branch that can fall through keeps the statements after it.
+    let falls_through = concat!(
+        ":: start default\n",
+        ":if ready()\n",
+        "  -> END\n",
+        "> @l_after\n",
+        "  After.\n",
+        "-> END\n",
+    );
+    let report =
+        analyze_save_impact(&compile(falls_through), &compile(falls_through)).expect("analyses");
+    assert_eq!(report.summary().total, 2);
+}

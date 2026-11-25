@@ -206,10 +206,12 @@ impl Walker<'_> {
                 prompt_choices: Vec::new(),
             },
         )?;
-        self.range(index, block.statements)
+        self.range(index, block.statements).map(|_| ())
     }
 
-    fn range(&mut self, block: BlockIndex, range: StatementRange) -> Result<(), DialogueError> {
+    /// Walks a range, returning whether traversal always leaves it before its
+    /// end, so statements after the branch that holds it are unreachable.
+    fn range(&mut self, block: BlockIndex, range: StatementRange) -> Result<bool, DialogueError> {
         for position in self.view.statement_range(range)? {
             let index = StatementIndex::new(u32::try_from(position).unwrap_or(u32::MAX));
             let next = StatementIndex::new(index.as_u32() + 1);
@@ -269,7 +271,7 @@ impl Walker<'_> {
                     )?;
                     // Every choice leaves for its target, so later statements
                     // in this range are unreachable.
-                    break;
+                    return Ok(true);
                 }
                 CompiledStatementKind::Effect(effect) => {
                     let effect = self.view.effect_at(*effect)?;
@@ -310,19 +312,28 @@ impl Walker<'_> {
                     ..
                 } => {
                     let (then_statements, else_statements) = (*then_statements, *else_statements);
-                    self.nested(block, range, next, then_statements)?;
-                    self.nested(block, range, next, else_statements)?;
+                    let then_leaves = self.nested(block, range, next, then_statements)?;
+                    let else_leaves = self.nested(block, range, next, else_statements)?;
+                    if then_leaves && else_leaves {
+                        return Ok(true);
+                    }
                 }
                 CompiledStatementKind::Match { arms, .. } => {
+                    // A match always selects an arm, so it leaves when every
+                    // arm does.
+                    let mut every_arm_leaves = true;
                     for arm in self.view.match_arms(*arms)? {
-                        self.nested(block, range, next, arm.statements)?;
+                        every_arm_leaves &= self.nested(block, range, next, arm.statements)?;
+                    }
+                    if every_arm_leaves {
+                        return Ok(true);
                     }
                 }
                 // Nothing after a divert or an end in this range can run.
-                CompiledStatementKind::Divert(_) | CompiledStatementKind::End => break,
+                CompiledStatementKind::Divert(_) | CompiledStatementKind::End => return Ok(true),
             }
         }
-        Ok(())
+        Ok(false)
     }
 
     fn nested(
@@ -331,7 +342,7 @@ impl Walker<'_> {
         parent: StatementRange,
         continuation: StatementIndex,
         child: StatementRange,
-    ) -> Result<(), DialogueError> {
+    ) -> Result<bool, DialogueError> {
         self.frames.push(StatementFrame {
             range: parent,
             next_statement: continuation,
