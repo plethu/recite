@@ -249,7 +249,7 @@ fn inspect_reads_a_save_and_predicts_its_restore() {
         .assert_success();
     let report = stdout(&output);
     assert!(
-        report.starts_with("build/dialogue.recitec: saved in block `start` after @ask (snapshot format 1, compiler 0.0.1)\n  waiting at a prompt with choices @town, @stay\n"),
+        report.starts_with("build/dialogue.recitec: saved in block `start` at prompt @ask (snapshot format 1, compiler 0.0.1)\n  waiting at a prompt with choices @town, @stay\n"),
         "{report}"
     );
     assert!(report.contains(": resumes (text_edited)\n"), "{report}");

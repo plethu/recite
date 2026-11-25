@@ -61,12 +61,18 @@ pub(super) fn set_arg_help(
     help: String,
     messages: &Messages,
 ) {
-    let heading = if id == "paths" || id == "project_root" || id == "asset" || id == "code" {
-        messages.text(MsgId::CliHelpArgumentsHeading)
-    } else {
-        messages.text(MsgId::CliHelpOptionsHeading)
-    };
-    *command = std::mem::take(command).mut_arg(id, |arg| arg.help(help).help_heading(heading));
+    // The same id can be positional in one command and an option in another
+    // (`run <ASSET>` and `save inspect --asset`), so the argument decides.
+    let arguments = messages.text(MsgId::CliHelpArgumentsHeading);
+    let options = messages.text(MsgId::CliHelpOptionsHeading);
+    *command = std::mem::take(command).mut_arg(id, |arg| {
+        let heading = if arg.is_positional() {
+            arguments
+        } else {
+            options
+        };
+        arg.help(help).help_heading(heading)
+    });
 }
 
 pub(super) fn set_positional_arg_help(

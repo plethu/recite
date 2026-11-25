@@ -68,6 +68,15 @@ fn write_text(
 ) -> Result<(), CliError> {
     let position = match nearest_landmark(snapshot) {
         _ if snapshot.ended => messages.text(MsgId::CliSaveInspectPositionEnded),
+        // A prompt landmark is where the save waits, not a line it follows.
+        Some(landmark @ DialogueLandmarkSnapshot::Prompt { .. })
+            if snapshot.pending_prompt.is_some() =>
+        {
+            messages.format(
+                MsgId::CliSavePointPrompt,
+                [("prompt", landmark_name(landmark))],
+            )
+        }
         Some(landmark) => messages.format(
             MsgId::CliSaveInspectPositionAfter,
             [("landmark", landmark_name(landmark))],
