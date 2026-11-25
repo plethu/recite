@@ -1,5 +1,6 @@
 //! Report-local source excerpts. Read each requested file once and retain only requested lines.
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
 use recite_core::{SourceSpan, source_lines};
 
@@ -26,8 +27,13 @@ impl<'a> Excerpts<'a> {
         Self { files }
     }
 
-    pub(super) fn line(&mut self, span: &SourceSpan) -> Option<&str> {
-        self.load(span, |file| std::fs::read_to_string(file).ok())
+    /// The requested line, read from `root` when the sources are not in the
+    /// working directory, such as a checkout of an earlier revision.
+    pub(super) fn line(&mut self, span: &SourceSpan, root: Option<&Path>) -> Option<&str> {
+        self.load(span, |file| match root {
+            Some(root) => std::fs::read_to_string(root.join(file)).ok(),
+            None => std::fs::read_to_string(file).ok(),
+        })
     }
 
     fn load(

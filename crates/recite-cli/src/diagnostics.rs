@@ -17,6 +17,16 @@ pub(crate) fn report_diagnostics<'a>(
     messages: &Messages,
     diagnostics: impl Iterator<Item = &'a Diagnostic>,
 ) -> Result<usize, CliError> {
+    report_diagnostics_in(writer, messages, diagnostics, None)
+}
+
+/// Like [`report_diagnostics`], with source excerpts read from `root`.
+pub(crate) fn report_diagnostics_in<'a>(
+    writer: &mut dyn Write,
+    messages: &Messages,
+    diagnostics: impl Iterator<Item = &'a Diagnostic>,
+    root: Option<&std::path::Path>,
+) -> Result<usize, CliError> {
     let paint = human::Paint::stderr();
     let mut summary = human::Summary::default();
     let diagnostics = diagnostics.collect::<Vec<_>>();
@@ -39,7 +49,7 @@ pub(crate) fn report_diagnostics<'a>(
             paint,
             &record,
             &rendered,
-            excerpts.line(&record.span),
+            excerpts.line(&record.span, root),
         )?;
     }
     summary.write(writer, paint, messages)?;

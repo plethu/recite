@@ -519,6 +519,7 @@ cli-save-inspect-ended = the conversation had ended
 cli-save-inspect-resumes = Against {$asset}: resumes ({$level})
 cli-save-inspect-reevaluated = the pending prompt is evaluated again from the patched content
 cli-save-inspect-fallback = Against {$asset}: falls back: {$reason}
+cli-save-baseline-diagnostics = these diagnostics are from the project at `{$reference}`; to compare against what you shipped, give the shipped compiled asset as the baseline instead
 cli-save-inspect-restores-nothing = Against {$asset}: restores no session, because the conversation had ended
 cli-error-save-baseline = cannot build the project at `{$reference}`: {$detail}
 cli-error-save-since-needs-project = --since compares project builds; {$candidate} is not a project directory

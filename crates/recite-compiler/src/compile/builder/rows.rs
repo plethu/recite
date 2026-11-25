@@ -125,16 +125,22 @@ impl AssetBuilder<'_> {
         &mut self,
         arms: &[MatchArm],
     ) -> Result<MatchArmRange, CompileError> {
-        let start = MatchArmIndex::new(usize_to_u32("match arms", self.match_arms.len())?);
-        let mut len = 0_u32;
+        // Arm bodies may contain nested matches that push their own arms, so
+        // compile every body before this match claims its contiguous range.
+        let mut compiled = Vec::with_capacity(arms.len());
         for arm in arms {
             let statements = self.compile_statement_range(&arm.statements)?;
             let source_map = self.push_source_map(&arm.span)?;
-            self.match_arms.push(CompiledMatchArm {
+            compiled.push(CompiledMatchArm {
                 pattern: compile_match_pattern(&arm.pattern),
                 statements,
                 source_map,
             });
+        }
+        let start = MatchArmIndex::new(usize_to_u32("match arms", self.match_arms.len())?);
+        let mut len = 0_u32;
+        for arm in compiled {
+            self.match_arms.push(arm);
             len = increment_u32_len("match arms", len)?;
         }
 

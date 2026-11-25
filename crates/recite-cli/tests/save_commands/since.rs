@@ -120,3 +120,50 @@ fn since_checks_out_a_symlinked_schema() {
         stdout(&output)
     );
 }
+
+#[test]
+fn a_baseline_the_compiler_now_rejects_reports_that_revision() {
+    let temp = TempDir::new().expect("tempdir");
+    git(temp.path(), &["init", "-q", "-b", "main"]);
+    std::fs::write(temp.path().join("recite.project.toml"), MANIFEST).expect("manifest");
+    let shipped = RELEASED.replace(
+        ":: town\n",
+        ":: town\n:match mood()\n  :case tired\n    -> END\n  :case tired\n    -> END\n  :case _\n    -> END\n",
+    );
+    write_recite(temp.path(), "main.recite", &shipped);
+    git(temp.path(), &["add", "."]);
+    git(temp.path(), &["commit", "-q", "-m", "release"]);
+    git(temp.path(), &["tag", "v1"]);
+    // The patch removes the arm traversal never selected.
+    let patched = shipped.replace("  :case tired\n    -> END\n  :case _\n", "  :case _\n");
+    write_recite(temp.path(), "main.recite", &patched);
+
+    let output = recite()
+        .args(["save", "impact", "--since", "v1", "."])
+        .current_dir(temp.path())
+        .output()
+        .expect("runs");
+    output.assert_failure();
+    let report = stderr(&output);
+    assert!(report.contains("RECITE_VALIDATE052"), "{report}");
+    assert!(
+        report.contains("these diagnostics are from the project at `v1`"),
+        "{report}"
+    );
+    // `save impact` and `watch` share the note, so it names no flag.
+    let note = report
+        .lines()
+        .find(|line| line.contains("from the project at"))
+        .expect("note");
+    assert!(!note.contains("--"), "{note}");
+    // The excerpt is the release's line, not the working tree's.
+    let line = shipped
+        .lines()
+        .position(|line| line == "  :case tired")
+        .expect("first arm")
+        + 3;
+    assert!(
+        report.contains(&format!("{line} |   :case tired")),
+        "{report}"
+    );
+}

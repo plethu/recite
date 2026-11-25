@@ -11,10 +11,10 @@ use recite_compiler::authoring::{
 use recite_config::discover_project;
 use recite_core::compiled::{CompiledDialogue, decode_compiled_dialogue_messagepack};
 
-use crate::diagnostics::report_diagnostics;
+use crate::diagnostics::report_diagnostics_in;
 use crate::error::{CliError, SaveError};
 use crate::git;
-use crate::i18n::Messages;
+use crate::i18n::{Messages, MsgId};
 
 /// Compiled assets keyed by asset ID, in build-target order.
 pub(crate) type Assets = Vec<(String, CompiledDialogue)>;
@@ -100,7 +100,23 @@ pub(super) fn project_at_revision(
     } else {
         checkout.path().join(&project_spec)
     };
-    build_project(&project_root, stderr, messages)
+    match build_project(&project_root, stderr, messages) {
+        // A release may hold content this compiler rejects; say whose
+        // diagnostics these are and how to compare against the shipped asset.
+        Err(CliError::Diagnostics) => {
+            writeln!(
+                stderr,
+                "{}",
+                messages.format(
+                    MsgId::CliSaveBaselineDiagnostics,
+                    [("reference", reference.to_owned())]
+                )
+            )
+            .map_err(CliError::Io)?;
+            Err(CliError::Diagnostics)
+        }
+        other => other,
+    }
 }
 
 #[cfg(unix)]
@@ -123,6 +139,9 @@ fn build_project(
 ) -> Result<Assets, CliError> {
     let discovery =
         discover_project(root).map_err(|source| CliError::ProjectDiscovery { source })?;
+    // Diagnostic excerpts come from this project's files, which for a
+    // baseline are a checkout rather than the working tree.
+    let project_root = discovery.manifest().project_root().to_owned();
     let preparation = recite_build::prepare_discovered(
         discovery,
         BuildGeneration::initial(),
@@ -132,7 +151,7 @@ fn build_project(
     let request = match preparation {
         ProjectBuildPreparation::Ready(request) => *request,
         ProjectBuildPreparation::Rejected { diagnostics } => {
-            report_diagnostics(stderr, messages, diagnostics.iter())?;
+            report_diagnostics_in(stderr, messages, diagnostics.iter(), Some(&project_root))?;
             return Err(CliError::Diagnostics);
         }
         _ => {
@@ -146,7 +165,7 @@ fn build_project(
     let candidates = match engine.build(request.build_request(), &BuildControl::new()) {
         Ok(candidates) => candidates,
         Err(BuildFailure::Diagnostics { diagnostics }) => {
-            report_diagnostics(stderr, messages, diagnostics.iter())?;
+            report_diagnostics_in(stderr, messages, diagnostics.iter(), Some(&project_root))?;
             return Err(CliError::Diagnostics);
         }
         Err(failure) => {

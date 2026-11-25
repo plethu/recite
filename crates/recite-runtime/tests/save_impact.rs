@@ -3,7 +3,8 @@
 
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::compiled::{
-    CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint, SourceMapId,
+    CompiledAssetId, CompiledDialogue, CompiledMatchPattern, CompilerVersion, SchemaFingerprint,
+    SourceMapId,
 };
 use recite_runtime::resume::{
     PromptResume, ResumeFallbackReason, ResumeLevel, SavePointKind, SavePointOutcome,
@@ -226,17 +227,34 @@ fn match_arms_traversal_can_never_select_are_not_save_points() {
         "  After.\n",
         "-> END\n",
     );
-    let with_repeats = selectable.replace(
+    // Validation rejects such arms in source, so the baseline is patched
+    // after compiling: an older compiler accepted them.
+    let mut with_repeats = compile(concat!(
+        ":: start default\n",
+        ":match mood()\n",
+        "  :case tired\n",
+        "    > @l_tired\n",
+        "      Tired.\n",
+        "  :case calm\n",
+        "    > @l_again\n",
+        "      Again.\n",
+        "  :case rested\n",
+        "    > @l_other\n",
+        "      Other.\n",
         "  :case _\n",
-        "  :case tired\n    > @l_again\n      Again.\n  :case _\n",
-    );
-    let with_repeats = with_repeats.replace(
+        "    > @l_second\n",
+        "      Second.\n",
         "> @l_after\n",
-        "  :case _\n    > @l_second\n      Second.\n> @l_after\n",
-    );
-    let report =
-        analyze_save_impact(&compile(&with_repeats), &compile(selectable)).expect("analyses");
-    // A block start and three lines: the repeated arms are never entered.
+        "  After.\n",
+        "-> END\n",
+    ))
+    .into_payload();
+    with_repeats.match_arms[1].pattern = CompiledMatchPattern::Variant("tired".to_owned());
+    with_repeats.match_arms[2].pattern = CompiledMatchPattern::Wildcard;
+    let with_repeats = CompiledDialogue::new(with_repeats);
+    let report = analyze_save_impact(&with_repeats, &compile(selectable)).expect("analyses");
+    // A block start, the first arm's line, the first wildcard's line and the
+    // line after: the repeated arms are never entered.
     assert_eq!(report.summary().total, 4);
     assert_eq!(report.fallbacks().count(), 0);
 }

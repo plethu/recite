@@ -47,6 +47,8 @@ export default Object.freeze({
   "diagnostic-validate-050": {"template":"condition exceeds the boolean nesting limit of {$limit}","arguments":[{"name":"limit","type":"integer"}]},
   "diagnostic-validate-051": {"template":"unknown speaker `{$speaker}`","arguments":[{"name":"speaker","type":"string"}]},
   "diagnostic-validate-051-help-suggestion": {"template":"did you mean `{$suggestion}`?","arguments":[{"name":"suggestion","type":"string"}]},
+  "diagnostic-validate-052": {"template":"duplicate `:case {$pattern}` arm is never selected","arguments":[{"name":"pattern","type":"string"}]},
+  "diagnostic-validate-053": {"template":"`:case {$pattern}` follows the wildcard arm; `:case _` must be the last arm","arguments":[{"name":"pattern","type":"string"}]},
   "diagnostic-id-001": {"template":"line header must include a stable line id","arguments":[]},
   "diagnostic-id-002": {"template":"choice header must include a stable choice id","arguments":[]},
   "diagnostic-id-003": {"template":"duplicate localisable id `{$id}` on line","arguments":[{"name":"id","type":"string"}]},

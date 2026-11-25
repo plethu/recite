@@ -40,6 +40,7 @@ macro_rules! save_message_ids {
         | MsgId::CliSaveInspectResumes
         | MsgId::CliSaveInspectReevaluated
         | MsgId::CliSaveInspectFallback
+        | MsgId::CliSaveBaselineDiagnostics
         | MsgId::CliSaveInspectRestoresNothing
         | MsgId::CliErrorSaveBaseline
         | MsgId::CliErrorSaveSinceNeedsProject
