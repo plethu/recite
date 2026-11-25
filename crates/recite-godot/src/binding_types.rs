@@ -83,9 +83,10 @@ impl ReciteOperationResult {
 
     /// Empty except after a restore: `outcome` is `resumed` (with `level`,
     /// `block_id`, `prompt`, `schema_changed`, `compiler_changed`) or
-    /// `fallback` (with `reason`, `block_id`, `block_available`, `landmark`,
-    /// `ended`, `deferred_effects`, `pending_effect`,
-    /// `selected_choice_history`, `locale`).
+    /// `fallback` (with `reason`, `required_level`, `allowed_level`,
+    /// `reason_landmark`, `block_id`, `block_available`, `landmark`,
+    /// `deferred_effects`, `pending_effect`, `selected_choice_history`,
+    /// `locale`; keys that do not apply are nil).
     #[func]
     fn restore_outcome(&self) -> VarDictionary {
         self.restore_outcome.clone()

@@ -8,7 +8,7 @@ use recite_core::{
 };
 
 use crate::session_serialization::references::{
-    choice_id, invalid_snapshot, invalid_snapshot_with_source, restore_locale,
+    choice_id, invalid_snapshot, invalid_snapshot_with_source, restore_effects, restore_locale,
 };
 use crate::session_serialization::{decode_session_snapshot_messagepack, restore_session};
 use crate::session_snapshot::{
@@ -103,14 +103,14 @@ pub fn resume_session(
     };
     let block = view.block_at(block_index)?;
     let digests = block_digests(view, block)?;
-    let position = match locate_session(view, block, &snapshot)? {
+    let level = change_level(&snapshot.block_digests, digests);
+    // Any structural change, such as a choice's requirement or target, means
+    // saved prompt availability may no longer hold.
+    let structure_unchanged = level <= ResumeLevel::TextEdited;
+    let position = match locate_session(view, block, &snapshot, structure_unchanged)? {
         Ok(position) => position,
         Err(reason) => return Ok(saved.fallback(reason, true)),
     };
-    let mut level = change_level(&snapshot.block_digests, digests);
-    if position.prompt == PromptResume::Reevaluated {
-        level = level.max(ResumeLevel::Relocated);
-    }
     if level > options.max_level() {
         return Ok(saved.fallback(
             ResumeFallbackReason::LevelRefused {
@@ -184,13 +184,7 @@ impl SavedState {
             ended: snapshot.ended,
             previous_prompt_choices: choice_ids(&snapshot.previous_prompt_choices)?,
             selected_choice_history: choice_ids(&snapshot.selected_choice_history)?,
-            deferred_effects: snapshot
-                .deferred_effects
-                .iter()
-                .map(|effect| {
-                    effect_request_from_snapshot(effect).map_err(invalid_snapshot_with_source)
-                })
-                .collect::<Result<_, _>>()?,
+            deferred_effects: restore_effects(&snapshot.deferred_effects)?,
             pending_effect: snapshot
                 .pending_effect
                 .as_ref()

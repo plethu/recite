@@ -521,8 +521,8 @@
       ]
     },
     {
-      "id": "ended_save_falls_back_without_effects",
-      "title": "A save taken after the conversation ended falls back without the deferred effects its end already delivered",
+      "id": "ended_save_restores_no_session_after_a_patch",
+      "title": "A save taken after the conversation ended restores no session, even against a patched asset the host refuses",
       "requirement_level": "mandatory",
       "execution_mode": "reference_driver",
       "capability_gates": [],
@@ -706,16 +706,6 @@
             "snapshot_slot": "saved_end",
             "asset_slot": "text_edited",
             "max_resume_level": "exact"
-          },
-          "expect": {
-            "status": "ok",
-            "fallback_reason": "level_refused",
-            "deferred_effect_functions": []
-          }
-        },
-        {
-          "operation": {
-            "kind": "advance"
           },
           "expect": {
             "status": "error",

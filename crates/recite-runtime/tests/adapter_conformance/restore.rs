@@ -6,9 +6,9 @@ use recite_runtime::resume::{
 };
 
 use super::{
-    ActiveSession, CATEGORY_ASSET_LOAD_OR_DECODE_ERROR, CATEGORY_SAVE_LOAD_INCOMPATIBILITY_ERROR,
-    CATEGORY_SESSION_ALREADY_ACTIVE_ERROR, CATEGORY_VALIDATION_ERROR, ReferenceDriver, StepOutcome,
-    StepResult,
+    ActiveSession, CATEGORY_ASSET_LOAD_OR_DECODE_ERROR, CATEGORY_NO_ACTIVE_SESSION_ERROR,
+    CATEGORY_SAVE_LOAD_INCOMPATIBILITY_ERROR, CATEGORY_SESSION_ALREADY_ACTIVE_ERROR,
+    CATEGORY_VALIDATION_ERROR, ReferenceDriver, StepOutcome, StepResult,
 };
 
 impl ReferenceDriver {
@@ -49,6 +49,15 @@ impl ReferenceDriver {
         }
 
         match resume_session(&asset.dialogue, snapshot, &options) {
+            // An ended save has nothing to restore in any revision.
+            Ok(SessionResume::Resumed { session, .. }) if session.is_ended() => self.error(
+                CATEGORY_NO_ACTIVE_SESSION_ERROR,
+                "the save was taken after its conversation ended".to_owned(),
+            ),
+            Ok(SessionResume::Fallback(fallback)) if fallback.ended => self.error(
+                CATEGORY_NO_ACTIVE_SESSION_ERROR,
+                "the save was taken after its conversation ended".to_owned(),
+            ),
             Ok(SessionResume::Resumed { session, report }) => {
                 self.active_session = Some(ActiveSession {
                     asset_slot: asset_slot.to_owned(),

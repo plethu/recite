@@ -80,7 +80,9 @@ impl SessionDriver {
     /// Restores the checkpoint without traversing. Configure host conditions
     /// and locale resolution before calling `begin`, as for a new session.
     /// Unsupported or malformed saves, and saves of a different asset, are
-    /// errors; a save that cannot resume in this asset is a fallback.
+    /// errors; a save that cannot resume in this asset is a fallback. A save
+    /// taken after the conversation ended has nothing to restore in any
+    /// revision and is always a `NoActiveSession` error.
     pub fn prepare_restore(
         &mut self,
         asset: &LoadedDialogue,
@@ -94,6 +96,7 @@ impl SessionDriver {
             .map_err(AdapterError::from_restore_error)?
         {
             SessionResume::Resumed { session, report } => (session, report),
+            SessionResume::Fallback(fallback) if fallback.ended => return Err(no_active()),
             SessionResume::Fallback(fallback) => {
                 return Ok(PreparedRestore::Fallback(Box::new(fallback)));
             }

@@ -19,9 +19,13 @@ use recite_runtime::{
         PromptResume, ResumeFallbackReason, ResumeLandmark, ResumeLevel, ResumeOptions,
         resume_session, resume_session_messagepack,
     },
-    snapshot::encode_session_messagepack,
+    snapshot::{encode_session_messagepack, restore_session},
 };
 
+#[path = "resume_across_revisions/added_statements.rs"]
+mod added_statements;
+#[path = "resume_across_revisions/invalid_saves.rs"]
+mod invalid_saves;
 #[path = "resume_across_revisions/support.rs"]
 mod support;
 use support::*;

@@ -107,7 +107,8 @@ serialized and must be supplied again when restoring.
 
 Choosing a choice or acknowledging an effect drains the next output batch. Restoring a pending
 blocking effect re-emits it once, and a pending prompt is presented again in the resumption batch.
-Ended snapshots reject restore with `RECITE_STATUS_NO_ACTIVE_SESSION`.
+Ended snapshots reject restore and resume with `RECITE_STATUS_NO_ACTIVE_SESSION`, against the saved
+asset or any revision of it.
 
 `EffectAck::Completed` maps to `ack_completed = 1`; failure maps to `ack_completed = 0` with its
 reason. Hosts that cannot surface the reason pass `failure_reason = null` and still acknowledge
@@ -287,8 +288,7 @@ with `report_format_version = 0` and `outcome`.
   `compiler_changed`. The session handle is written and begins like any prepared session.
 - `fallback`: `reason`, `required_level` and `allowed_level` (for `level_refused`, otherwise nil),
   `reason_landmark` and `landmark` (`kind`, `line`, `choices`, or nil), `block_id`,
-  `block_available`, `ended` (the save was taken after the conversation ended, so it carries no
-  effects), `deferred_effects` and `pending_effect` (encoded as batch effects),
+  `block_available`, `deferred_effects` and `pending_effect` (encoded as batch effects),
   `selected_choice_history` and `locale`. The session handle is 0 and the status is
   `RECITE_STATUS_OK`; `recite_session_resume` leaves the batch empty.
 

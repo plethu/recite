@@ -85,13 +85,15 @@ options:
 - **Exact:** the payload fingerprint matches; exact restore applies.
 - **Unchanged block, text edited or relocated:** the payload differs, the saved block exists by ID
   and every step of the anchor relocates. A landmark is found by line ID, or for a prompt by its
-  line or any saved choice ID; the statements after it must match their saved signatures in order;
-  an entered branch is selected by `then`, `else` or match pattern. The level comes from the block
-  digests: equal content, equal structure, or neither.
+  line or any saved choice ID; the statements after it must match their saved signatures in order,
+  skipping lines the patch added before the saved point; an entered branch is selected by `then`,
+  `else` or match pattern. The level comes from the block digests: equal content, equal structure,
+  or neither.
 - **Fallback:** no session. The host receives the saved block ID, whether it still exists, the
   latest landmark, a typed reason, whether the conversation had ended, the saved deferred effects,
   the pending blocking effect, the selected-choice history and the locale. An ended save's fallback
-  carries no effects: the end already delivered them. Reasons are `block_removed`,
+  carries no effects: the end already delivered them. Adapters restore no session for an ended save,
+  against any revision, and report `no_active_session_error`. Reasons are `block_removed`,
   `landmark_removed`, `landmark_moved`, `landmark_ambiguous`, `statements_changed`, `branch_removed`
   and `level_refused`.
 - **Errors:** unsupported or malformed snapshots and a different asset ID.
@@ -100,10 +102,10 @@ Resume never chooses between ambiguous landmarks and never swaps an asset under 
 host bounds the accepted level (exact, unchanged block, text edited, relocated); a save that needs
 more falls back with `level_refused`. Schema and compiler changes are reported, not refused.
 
-A resumed pending prompt keeps its saved choice availability when the patched prompt has the same
-choice IDs in the same order, and is otherwise evaluated again from the patched content on the next
-advance. Saved deferred effects are delivered as saved, and a pending blocking effect keeps its
-saved request and ID. The trace counter continues from the save.
+A resumed pending prompt keeps its saved choice availability when its block changed at most in text,
+and is otherwise evaluated again from the patched content on the next advance. Saved deferred
+effects are delivered as saved, and a pending blocking effect keeps its saved request and ID. The
+trace counter continues from the save.
 
 `analyze_save_impact` saves a session at every host-observable boundary of a baseline asset (block
 starts, after lines and immediate effects, at prompts and blocking effects, inside every branch) and

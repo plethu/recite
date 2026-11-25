@@ -1,7 +1,7 @@
 #![cfg(test)]
 //! The shared driver restores saves against patched assets.
 
-use recite_adapter::{PreparedRestore, RestoreOutcome, SessionDriver};
+use recite_adapter::{AdapterErrorKind, PreparedRestore, RestoreOutcome, SessionDriver};
 use recite_runtime::{
     DialogueEvent, EmptyDialogueContext, LocaleResolution,
     resume::{ResumeFallbackReason, ResumeLevel, ResumeOptions},
@@ -82,5 +82,32 @@ fn refused_or_unlocatable_saves_fall_back_without_a_session()
     };
     assert_eq!(fallback.reason, ResumeFallbackReason::BlockRemoved);
     assert!(!driver.has_active_session());
+    Ok(())
+}
+
+#[test]
+fn ended_saves_restore_no_session_in_any_revision() -> Result<(), Box<dyn std::error::Error>> {
+    let base = asset(BASE)?;
+    let mut driver = SessionDriver::new();
+    driver.prepare(request(&base))?;
+    let events = driver.begin(&EmptyDialogueContext, LocaleResolution::new())?;
+    assert!(matches!(events.last(), Some(DialogueEvent::End { .. })));
+    let ended = driver.snapshot()?;
+
+    let edited = asset(&BASE.replace("  After.\n", "  Afterwards.\n"))?;
+    let renamed = asset(&BASE.replace(":: start default\n", ":: opening default\n"))?;
+    for (patched, options) in [
+        (&base, ResumeOptions::new()),
+        (&edited, ResumeOptions::new()),
+        (&edited, ResumeOptions::exact_only()),
+        (&renamed, ResumeOptions::new()),
+    ] {
+        let mut driver = SessionDriver::new();
+        let error = driver
+            .prepare_restore(patched, &ended, &options)
+            .expect_err("an ended save restores nothing");
+        assert_eq!(error.kind(), AdapterErrorKind::NoActiveSession);
+        assert!(!driver.has_active_session());
+    }
     Ok(())
 }

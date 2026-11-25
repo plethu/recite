@@ -141,7 +141,7 @@ fn changed_effect_fails_the_check_until_its_block_is_acknowledged() {
         "{report}"
     );
     assert!(
-        report.contains("main.recite:16:1: a save waiting for blocking effect `open_map` in block `town` falls back: an effect, condition or divert after @square was added, removed or edited"),
+        report.contains("main.recite:16:1: a save waiting for blocking effect `open_map` in block `town` falls back: an effect, condition, divert or prompt after @square was added, removed or edited"),
         "{report}"
     );
     assert!(

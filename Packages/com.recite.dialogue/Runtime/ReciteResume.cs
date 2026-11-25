@@ -78,7 +78,6 @@ namespace Recite.Unity
             string blockId,
             bool blockAvailable,
             ReciteResumeLandmark landmark,
-            bool ended,
             IReadOnlyList<ReciteEffect> deferredEffects,
             ReciteEffect pendingEffect,
             IReadOnlyList<string> selectedChoiceHistory,
@@ -91,7 +90,6 @@ namespace Recite.Unity
             BlockId = blockId ?? string.Empty;
             BlockAvailable = blockAvailable;
             Landmark = landmark;
-            Ended = ended;
             DeferredEffects = deferredEffects ?? Array.Empty<ReciteEffect>();
             PendingEffect = pendingEffect;
             SelectedChoiceHistory = selectedChoiceHistory ?? Array.Empty<string>();
@@ -122,12 +120,6 @@ namespace Recite.Unity
 
         /// <summary>The last line or prompt before the saved point, if any.</summary>
         public ReciteResumeLandmark Landmark { get; }
-
-        /// <summary>
-        /// Whether the conversation had already ended when it was saved. Its deferred effects were
-        /// delivered with the end, so there is nothing to apply, restart or reconcile.
-        /// </summary>
-        public bool Ended { get; }
 
         public IReadOnlyList<ReciteEffect> DeferredEffects { get; }
 

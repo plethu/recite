@@ -247,6 +247,13 @@ namespace Recite.Unity
                     (uint)maxLevel,
                     out var resumedSession,
                     out var reportBuffer));
+                // Own the prepared session before decoding, so a report that
+                // fails to decode still frees it.
+                if (resumedSession != 0)
+                {
+                    native.Attach(resumedSession);
+                }
+
                 var payload = OutputDecoder.DecodeResumeReport(ref reportBuffer);
                 if (payload.Fallback != null)
                 {
@@ -255,7 +262,6 @@ namespace Recite.Unity
                     return ReciteRestoreResult.FellBack(payload.Fallback);
                 }
 
-                native.Attach(resumedSession);
                 return ReciteRestoreResult.Resumed(payload.Report, ConfigureAndBegin());
             }
             catch

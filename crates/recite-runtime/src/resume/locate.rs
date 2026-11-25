@@ -14,9 +14,9 @@ use crate::session_snapshot::{
     DialoguePositionAnchorSnapshot, DialogueSessionSnapshot, DialogueStatementSignatureSnapshot,
     availability_from_snapshot, effect_request_from_snapshot,
 };
-use crate::traversal::AssetView;
+use crate::traversal::{AssetView, dialogue_effect_request};
 
-use super::key::{StatementKey, statement_key};
+use super::key::{Landmark, StatementKey, statement_key};
 use super::outcome::{PromptResume, ResumeFallbackReason};
 use super::relocate::landmark_from_snapshot;
 
@@ -34,6 +34,7 @@ pub(super) fn locate_session(
     view: AssetView<'_>,
     block: &CompiledBlock,
     snapshot: &DialogueSessionSnapshot,
+    structure_unchanged: bool,
 ) -> Result<Result<LocatedPosition, ResumeFallbackReason>, DialogueError> {
     if snapshot.ended {
         let range = block.statements;
@@ -85,13 +86,24 @@ pub(super) fn locate_session(
                 "a pending prompt must be the landmark of the saved position",
             ));
         }
+        if pending
+            .choices
+            .iter()
+            .map(|choice| choice.id.as_str())
+            .ne(snapshot.previous_prompt_choices.iter().map(String::as_str))
+        {
+            return Err(invalid_snapshot(
+                "pending prompt choices must match previous prompt choices",
+            ));
+        }
         let statement = previous(next)?;
         let CompiledStatementKind::Prompt { choices, .. } = &view.statement_at(statement)?.kind
         else {
             return Err(invalid_snapshot("relocated pending prompt is not a prompt"));
         };
         let compiled = view.choices(*choices)?;
-        let unchanged = compiled.len() == pending.choices.len()
+        let unchanged = structure_unchanged
+            && compiled.len() == pending.choices.len()
             && compiled
                 .iter()
                 .zip(&pending.choices)
@@ -133,10 +145,28 @@ pub(super) fn locate_session(
         }
         let request =
             effect_request_from_snapshot(&pending.request).map_err(invalid_snapshot_with_source)?;
+        // The trail matched the compiled effect's signature; the saved request
+        // must still ask for that effect, as exact restore requires.
+        let statement = previous(next)?;
+        let CompiledStatementKind::Effect(effect) = &view.statement_at(statement)?.kind else {
+            return Err(invalid_snapshot(
+                "relocated pending effect is not an effect",
+            ));
+        };
+        let compiled = dialogue_effect_request(view, view.effect_at(*effect)?)?;
+        if request.mode != compiled.mode
+            || request.function != compiled.function
+            || request.args != compiled.args
+        {
+            return Err(invalid_snapshot(format!(
+                "pending effect request `{}` differs from its compiled effect",
+                request.id
+            )));
+        }
         (
             next,
             SessionPhase::AwaitingEffect(PendingEffect {
-                statement: previous(next)?,
+                statement,
                 request,
                 reemit_on_next: true,
             }),
@@ -193,24 +223,34 @@ fn locate(
             }
         }
     };
-    for (offset, saved) in anchor.trail.iter().enumerate() {
-        let index = base + offset as u32;
-        let matches = index < end
-            && matches!(
-                statement_key(view, StatementIndex::new(index))?,
-                StatementKey::Signature(signature) if signature.matches(saved)
-            );
-        if !matches {
-            return Ok(Err(ResumeFallbackReason::StatementsChanged {
-                landmark: anchor
-                    .landmark
-                    .as_ref()
-                    .map(landmark_from_snapshot)
-                    .transpose()?,
-            }));
+    // The landmark is the last line before the saved point, so any line
+    // between it and the point was added by the patch. It precedes the point,
+    // like a line added before the landmark, and is skipped.
+    let mut index = base;
+    for saved in &anchor.trail {
+        loop {
+            let key = if index < end {
+                Some(statement_key(view, StatementIndex::new(index))?)
+            } else {
+                None
+            };
+            index += 1;
+            match key {
+                Some(StatementKey::Signature(signature)) if signature.matches(saved) => break,
+                Some(StatementKey::Landmark(Landmark::Line { .. })) => {}
+                _ => {
+                    return Ok(Err(ResumeFallbackReason::StatementsChanged {
+                        landmark: anchor
+                            .landmark
+                            .as_ref()
+                            .map(landmark_from_snapshot)
+                            .transpose()?,
+                    }));
+                }
+            }
         }
     }
-    Ok(Ok(StatementIndex::new(base + anchor.trail.len() as u32)))
+    Ok(Ok(StatementIndex::new(index)))
 }
 
 fn select_branch(

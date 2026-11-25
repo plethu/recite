@@ -28,7 +28,7 @@ pub(super) fn snapshot_reference<T>(
 /// Saved deferred effects are self-contained requests. They are delivered as
 /// saved, so a session resumed in a patched asset, and saved again, still
 /// restores: compiled effect IDs are positional and need not exist any more.
-pub(super) fn restore_effects(
+pub(crate) fn restore_effects(
     snapshots: &[DialogueEffectRequestSnapshot],
 ) -> Result<Vec<DialogueEffectRequest>, DialogueError> {
     snapshots

@@ -30,10 +30,16 @@ pub(crate) fn fallback_dictionary(fallback: &ResumeFallback) -> VarDictionary {
     let mut dictionary = VarDictionary::new();
     dictionary.set("outcome", "fallback");
     dictionary.set("reason", fallback_reason_name(&fallback.reason));
-    if let ResumeFallbackReason::LevelRefused { required, allowed } = &fallback.reason {
-        dictionary.set("required_level", resume_level_name(*required));
-        dictionary.set("allowed_level", resume_level_name(*allowed));
-    }
+    // Every key is present, nil when it does not apply, as in the C ABI report.
+    let (required, allowed) = match &fallback.reason {
+        ResumeFallbackReason::LevelRefused { required, allowed } => (
+            resume_level_name(*required).to_variant(),
+            resume_level_name(*allowed).to_variant(),
+        ),
+        _ => (Variant::nil(), Variant::nil()),
+    };
+    set_variant(&mut dictionary, "required_level", required);
+    set_variant(&mut dictionary, "allowed_level", allowed);
     set_variant(
         &mut dictionary,
         "reason_landmark",
@@ -43,7 +49,6 @@ pub(crate) fn fallback_dictionary(fallback: &ResumeFallback) -> VarDictionary {
     );
     dictionary.set("block_id", fallback.block_id.as_str());
     dictionary.set("block_available", fallback.block_available);
-    dictionary.set("ended", fallback.ended);
     set_variant(
         &mut dictionary,
         "landmark",

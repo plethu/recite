@@ -75,7 +75,6 @@ fn prepare_resume_reports_a_fallback_with_saved_effects_and_no_handle() {
     assert_eq!(value["reason_landmark"]["kind"], "prompt");
     assert_eq!(value["block_id"], "start");
     assert_eq!(value["block_available"], true);
-    assert_eq!(value["ended"], false);
     assert_eq!(value["deferred_effects"][0]["function"], "remember");
     assert!(value["pending_effect"].is_null());
     unsafe { recite_buffer_free(&raw mut report) };
