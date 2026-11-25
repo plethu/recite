@@ -3,6 +3,7 @@ mod conditions;
 mod effects;
 mod ids;
 mod markup;
+mod match_arms;
 mod metadata;
 mod project;
 
@@ -21,6 +22,7 @@ pub(crate) use conditions::*;
 pub(crate) use effects::*;
 pub(crate) use ids::*;
 pub(crate) use markup::*;
+pub(crate) use match_arms::*;
 pub(crate) use metadata::*;
 pub(crate) use project::*;
 

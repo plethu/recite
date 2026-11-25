@@ -31,3 +31,8 @@ companions. [The README](README.md) introduces the current toolchain.
 - `recite save impact` classifies every save point of a release against a patched build (`--since` a
   git revision or `--baseline` an asset, `--check` for CI), `recite save inspect` reads a save
   without the game, and `recite watch --save-baseline` reports the same after each rebuild.
+- A `:match` nested in another `:match` arm compiles to its own arm table. Previously the outer
+  match took the inner match's arms and could run the wrong arm, so assets with nested matches must
+  be recompiled.
+- Validation rejects a repeated `:case <variant>` arm (`RECITE_VALIDATE052`) and any arm after
+  `:case _`, including a second wildcard (`RECITE_VALIDATE053`): traversal could never select them.

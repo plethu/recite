@@ -114,6 +114,12 @@ diagnostic-validate-050 = condition exceeds the boolean nesting limit of {$limit
 diagnostic-validate-051 = unknown speaker `{$speaker}`
 diagnostic-validate-051-help = declare the speaker in the schema, or correct the name
 diagnostic-validate-051-help-suggestion = did you mean `{$suggestion}`?
+diagnostic-validate-052 = duplicate `:case {$pattern}` arm is never selected
+diagnostic-validate-052-related = the first `:case` arm for this variant is here
+diagnostic-validate-052-help = merge the arms, or change this one to the variant it was meant for
+diagnostic-validate-053 = `:case {$pattern}` after the wildcard arm is never selected
+diagnostic-validate-053-related = the wildcard arm is here
+diagnostic-validate-053-help = move `:case _` to the end of the match and keep only one wildcard arm
 
 # Compiler diagnostic primary presentations. These resources are deliberately
 # kept beside the parser presentations; their exact arguments come from the
@@ -977,6 +983,16 @@ diagnostic-validate-050-remediation-001 = Simplify the nested condition or move 
 diagnostic-validate-051-meaning = A line or block names a speaker that the project schema does not declare.
 diagnostic-validate-051-cause-001 = The speaker's name is misspelled, or the character was never added to the schema.
 diagnostic-validate-051-remediation-001 = Correct the name, or declare the speaker in the schema's speakers.
+
+# RECITE_VALIDATE052
+diagnostic-validate-052-meaning = A `:match` has two `:case` arms for the same variant.
+diagnostic-validate-052-cause-001 = An arm was copied or a variant was listed twice. Only the first arm can ever run.
+diagnostic-validate-052-remediation-001 = Merge the two arms, or change the second one to the variant it was meant for.
+
+# RECITE_VALIDATE053
+diagnostic-validate-053-meaning = A `:case` arm follows the wildcard arm `:case _`.
+diagnostic-validate-053-cause-001 = The wildcard is not the last arm, or a `:match` has two wildcard arms.
+diagnostic-validate-053-remediation-001 = Move `:case _` to the end of the match and keep only one wildcard arm.
 
 diagnostic-import-001 = Invalid import input: {$detail}
 diagnostic-import-002 = Unsupported import construct: {$detail}

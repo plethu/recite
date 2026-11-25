@@ -26,6 +26,8 @@ mod ids_blocks_and_references;
 mod interpolation;
 #[path = "validation/markup.rs"]
 mod markup;
+#[path = "validation/match_arms.rs"]
+mod match_arms;
 #[path = "validation/metadata_schema/mod.rs"]
 mod metadata_schema;
 #[path = "validation/ordering.rs"]

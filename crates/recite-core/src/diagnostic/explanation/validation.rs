@@ -365,4 +365,18 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         &["The speaker's name is misspelled, or the character was never added to the schema."],
         &["Correct the name, or declare the speaker in the schema's speakers."],
     ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE052",
+        DiagnosticCategory::Validation,
+        "A `:match` has two `:case` arms for the same variant.",
+        &["An arm was copied or a variant was listed twice. Only the first arm can ever run."],
+        &["Merge the two arms, or change the second one to the variant it was meant for."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE053",
+        DiagnosticCategory::Validation,
+        "A `:case` arm follows the wildcard arm `:case _`.",
+        &["The wildcard is not the last arm, or a `:match` has two wildcard arms."],
+        &["Move `:case _` to the end of the match and keep only one wildcard arm."],
+    ),
 ];
