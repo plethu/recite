@@ -40,6 +40,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliSaveInspectResumes => Some("cli-save-inspect-resumes"),
         super::MsgId::CliSaveInspectReevaluated => Some("cli-save-inspect-reevaluated"),
         super::MsgId::CliSaveInspectFallback => Some("cli-save-inspect-fallback"),
+        super::MsgId::CliSaveBaselineDiagnostics => Some("cli-save-baseline-diagnostics"),
         super::MsgId::CliSaveInspectRestoresNothing => Some("cli-save-inspect-restores-nothing"),
         super::MsgId::CliErrorSaveBaseline => Some("cli-error-save-baseline"),
         super::MsgId::CliErrorSaveSinceNeedsProject => Some("cli-error-save-since-needs-project"),

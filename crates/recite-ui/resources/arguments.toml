@@ -956,6 +956,9 @@ level = "string"
 asset = "string"
 reason = "string"
 
+[arguments."cli-save-baseline-diagnostics"]
+reference = "string"
+
 [arguments."cli-save-inspect-restores-nothing"]
 asset = "string"
 
