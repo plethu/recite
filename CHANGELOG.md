@@ -36,5 +36,6 @@ companions. [The README](README.md) introduces the current toolchain.
   be recompiled.
 - Validation rejects a repeated `:case <variant>` arm (`RECITE_VALIDATE052`) and any arm after
   `:case _`, including a second wildcard (`RECITE_VALIDATE053`): traversal could never select them.
-  A `recite save impact --since` release that contains such arms now fails to build; the report
-  names that revision, and `--baseline` with the shipped asset still compares against it.
+  A `recite save impact --since` or `recite watch --save-baseline` release that contains such arms
+  now fails to build; the report names that revision, and the shipped compiled asset still works as
+  the baseline.

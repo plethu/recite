@@ -150,6 +150,12 @@ fn a_baseline_the_compiler_now_rejects_reports_that_revision() {
         report.contains("these diagnostics are from the project at `v1`"),
         "{report}"
     );
+    // `save impact` and `watch` share the note, so it names no flag.
+    let note = report
+        .lines()
+        .find(|line| line.contains("from the project at"))
+        .expect("note");
+    assert!(!note.contains("--"), "{note}");
     // The excerpt is the release's line, not the working tree's.
     let line = shipped
         .lines()
