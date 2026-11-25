@@ -267,6 +267,9 @@ impl Walker<'_> {
                             ids,
                         ),
                     )?;
+                    // Every choice leaves for its target, so later statements
+                    // in this range are unreachable.
+                    break;
                 }
                 CompiledStatementKind::Effect(effect) => {
                     let effect = self.view.effect_at(*effect)?;
@@ -315,7 +318,8 @@ impl Walker<'_> {
                         self.nested(block, range, next, arm.statements)?;
                     }
                 }
-                CompiledStatementKind::Divert(_) | CompiledStatementKind::End => {}
+                // Nothing after a divert or an end in this range can run.
+                CompiledStatementKind::Divert(_) | CompiledStatementKind::End => break,
             }
         }
         Ok(())

@@ -106,10 +106,10 @@ and is otherwise evaluated again from the patched content on the next advance. S
 effects are delivered as saved, and a pending blocking effect keeps its saved request and ID. The
 trace counter continues from the save.
 
-`analyze_save_impact` saves a session at every host-observable boundary of a baseline asset (block
-starts, after lines and immediate effects, at prompts and blocking effects, inside every branch) and
-resumes each against a candidate through `resume_session`. `recite save impact` and `recite watch
---save-baseline` render that report.
+`analyze_save_impact` saves a session at every reachable host-observable boundary of a baseline
+asset (block starts, after lines and immediate effects, at prompts and blocking effects, inside
+every branch) and resumes each against a candidate through `resume_session`. `recite save impact`
+and `recite watch --save-baseline` render that report.
 
 #### Presenting restored work
 

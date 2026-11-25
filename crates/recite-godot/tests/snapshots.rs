@@ -2,7 +2,7 @@ mod support;
 
 use recite_godot::ReciteDialogueDriver;
 
-use recite_adapter::RestoreOutcome;
+use recite_adapter::{AdapterErrorKind, RestoreOutcome};
 use recite_runtime::resume::{ResumeFallbackReason, ResumeLevel, ResumeOptions};
 use support::{assert_line, compile_asset, must_ok, must_ok_unit, must_resume, output_kinds};
 
@@ -92,5 +92,30 @@ fn restore_resumes_patched_text_and_falls_back_when_ids_change() {
         ResumeFallbackReason::LandmarkRemoved { .. }
     ));
     assert_eq!(fallback.deferred_effects[0].function, "remember");
+    assert!(!driver.has_active_session());
+
+    // GDScript names the most a save may move.
+    let RestoreOutcome::Fallback(fallback) = driver
+        .restore_with_level(&reworded, &snapshot, None, Some("exact"))
+        .expect("restore is not an error")
+    else {
+        panic!("an exact-only restore refuses an edited asset");
+    };
+    assert_eq!(
+        fallback.reason,
+        ResumeFallbackReason::LevelRefused {
+            required: ResumeLevel::TextEdited,
+            allowed: ResumeLevel::Exact,
+        }
+    );
+    assert!(matches!(
+        driver.restore_with_level(&reworded, &snapshot, None, Some("text_edited")),
+        Ok(RestoreOutcome::Resumed { .. })
+    ));
+    must_ok_unit(driver.end_session());
+    let error = driver
+        .restore_with_level(&reworded, &snapshot, None, Some("bogus"))
+        .expect_err("an unknown level is rejected");
+    assert_eq!(error.kind(), AdapterErrorKind::Validation);
     assert!(!driver.has_active_session());
 }

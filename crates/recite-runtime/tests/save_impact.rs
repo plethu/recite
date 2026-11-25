@@ -153,3 +153,28 @@ fn removed_block_reports_no_candidate_span() {
         ));
     }
 }
+
+#[test]
+fn statements_no_player_can_reach_are_not_save_points() {
+    let reachable = concat!(
+        ":: start default\n",
+        "> @l_one\n",
+        "  One.\n",
+        ":if ready()\n",
+        "  -> END\n",
+        "> @l_ask\n",
+        "  Where?\n",
+        "  ? @c_go\n",
+        "    Go.\n",
+        "    -> END\n",
+    );
+    let with_dead_code = reachable.replace(
+        "  -> END\n> @l_ask",
+        "  -> END\n  > @l_dead_branch\n    Dead.\n> @l_ask",
+    ) + "> @l_dead\n  Dead.\n";
+    let base = compile(&with_dead_code);
+    let report = analyze_save_impact(&base, &compile(reachable)).expect("analyses");
+    // A block start, a line, a prompt: nothing after the divert or the prompt.
+    assert_eq!(report.summary().total, 3);
+    assert_eq!(report.fallbacks().count(), 0);
+}
