@@ -50,11 +50,13 @@ pub(crate) fn pathspec(root: &Path, path: &Path) -> Result<String, String> {
     Ok(relative.to_string_lossy().into_owned())
 }
 
-/// Files under `pathspecs` at `reference`, as `(repository path, contents)`.
+/// Files under `pathspecs` at `reference` whose repository path `keep`
+/// accepts, as `(repository path, contents)`. Only accepted files are read.
 pub(crate) fn files_at(
     root: &Path,
     reference: &str,
     pathspecs: &[String],
+    keep: impl Fn(&str) -> bool,
 ) -> Result<Vec<(String, Vec<u8>)>, String> {
     let mut listing_args = vec!["ls-tree", "-r", "-z", reference, "--"];
     listing_args.extend(pathspecs.iter().map(String::as_str));
@@ -65,7 +67,7 @@ pub(crate) fn files_at(
         .split('\0')
         .filter_map(|entry| {
             let (header, path) = entry.split_once('\t')?;
-            (header.split(' ').nth(1) == Some("blob")).then(|| path.to_owned())
+            (header.split(' ').nth(1) == Some("blob") && keep(path)).then(|| path.to_owned())
         })
         .collect::<Vec<_>>();
     if files.is_empty() {

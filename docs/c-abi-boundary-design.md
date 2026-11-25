@@ -287,7 +287,8 @@ with `report_format_version = 0` and `outcome`.
   `compiler_changed`. The session handle is written and begins like any prepared session.
 - `fallback`: `reason`, `required_level` and `allowed_level` (for `level_refused`, otherwise nil),
   `reason_landmark` and `landmark` (`kind`, `line`, `choices`, or nil), `block_id`,
-  `block_available`, `deferred_effects` and `pending_effect` (encoded as batch effects),
+  `block_available`, `ended` (the save was taken after the conversation ended, so it carries no
+  effects), `deferred_effects` and `pending_effect` (encoded as batch effects),
   `selected_choice_history` and `locale`. The session handle is 0 and the status is
   `RECITE_STATUS_OK`; `recite_session_resume` leaves the batch empty.
 

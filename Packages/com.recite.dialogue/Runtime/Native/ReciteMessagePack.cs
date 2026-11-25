@@ -71,6 +71,7 @@ namespace Recite.Unity.Native
                     RequiredString(root, "block_id"),
                     RequiredBool(root, "block_available"),
                     ReadNullableLandmark(root, "landmark"),
+                    RequiredBool(root, "ended"),
                     ReadList(root, "deferred_effects", ReadEffect),
                     pending == null ? null : ReadEffect(pending),
                     ReadStrings(root, "selected_choice_history"),

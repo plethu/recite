@@ -249,6 +249,7 @@ fn prediction_json(asset: &str, outcome: &SessionResume) -> Value {
             "outcome": "fallback",
             "reason": recite_adapter::resume_names::fallback_reason_name(&fallback.reason),
             "block_available": fallback.block_available,
+            "ended": fallback.ended,
         }),
         _ => Value::Null,
     }

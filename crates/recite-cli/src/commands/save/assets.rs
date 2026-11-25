@@ -62,10 +62,22 @@ pub(super) fn project_at_revision(
         }
         .into());
     }
-    let root = git::repository_at(project, reference).map_err(baseline_error)?;
-    let project_spec = git::pathspec(&root, project).map_err(baseline_error)?;
-    let files = git::files_at(&root, reference, std::slice::from_ref(&project_spec))
-        .map_err(baseline_error)?;
+    // Project content stays inside the manifest directory, which may be above
+    // the directory the command was given.
+    let discovery =
+        discover_project(project).map_err(|source| CliError::ProjectDiscovery { source })?;
+    let manifest_directory = discovery.manifest().project_root().to_owned();
+    let root = git::repository_at(&manifest_directory, reference).map_err(baseline_error)?;
+    let project_spec = git::pathspec(&root, &manifest_directory).map_err(baseline_error)?;
+    // The manifest may declare schema, settings and catalogue files under any
+    // name, so the whole project directory is checked out.
+    let files = git::files_at(
+        &root,
+        reference,
+        std::slice::from_ref(&project_spec),
+        |_| true,
+    )
+    .map_err(baseline_error)?;
     if files.is_empty() {
         return Err(baseline_error("the project did not exist at that revision".to_owned()).into());
     }

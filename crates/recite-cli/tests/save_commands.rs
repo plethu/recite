@@ -304,4 +304,17 @@ fn since_builds_a_project_at_the_repository_root_or_through_a_relative_path() {
         "{}",
         stdout(&output)
     );
+
+    // Inside the project, the baseline is still the whole project.
+    let chapters = nested.path().join("dialogue/chapters");
+    std::fs::create_dir_all(&chapters).expect("project subdirectory");
+    let output = recite()
+        .args(["save", "impact", "--since", "v1", "--check"])
+        .current_dir(&chapters)
+        .assert_success();
+    assert!(
+        stdout(&output).contains("unchanged; all 7 save points"),
+        "{}",
+        stdout(&output)
+    );
 }

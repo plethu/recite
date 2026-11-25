@@ -99,11 +99,16 @@ A fallback names the block the player saved in, whether that block still exists,
 could not resume. It also carries the effects the dialogue had already requested. A reasonable
 policy:
 
-1. Apply the deferred effects and reconcile the pending blocking effect, if any. These are things
-   the conversation already promised your game.
-2. If the block still exists, restart it. In Rust, `ResumeFallback::restart_block` does this in the
+1. If the fallback is marked `ended`, the conversation had already finished when the player saved.
+   It delivered its deferred effects with its end and carries none, so there is nothing to do.
+2. Reconcile the pending blocking effect, if any. The conversation was waiting on it.
+3. If the block still exists, restart it. In Rust, `ResumeFallback::restart_block` does this in the
    saved locale. Otherwise end the conversation and leave the player where the game put them.
-3. Log the reason, so support can match a report to the patch.
+4. Apply the deferred effects, which the conversation already promised your game. A restart replays
+   the block, so its deferred statements before the save point are requested again and delivered
+   with the restarted conversation's end. When you restart, apply only the saved effects the replay
+   will not request again, or make those effects idempotent.
+5. Log the reason, so support can match a report to the patch.
 
 ## Investigate a player's save
 

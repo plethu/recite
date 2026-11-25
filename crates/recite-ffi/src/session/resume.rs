@@ -254,6 +254,7 @@ struct FallbackWire<'a> {
     block_id: &'a str,
     block_available: bool,
     landmark: Option<LandmarkWire<'a>>,
+    ended: bool,
     deferred_effects: Vec<FfiEffect>,
     pending_effect: Option<FfiEffect>,
     selected_choice_history: Vec<&'a str>,
@@ -296,6 +297,7 @@ impl<'a> ResumeReportWire<'a> {
             block_id: fallback.block_id.as_str(),
             block_available: fallback.block_available,
             landmark: fallback.landmark.as_ref().map(LandmarkWire::new),
+            ended: fallback.ended,
             deferred_effects: fallback
                 .deferred_effects
                 .iter()

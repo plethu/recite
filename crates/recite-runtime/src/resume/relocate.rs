@@ -156,6 +156,7 @@ pub fn resume_session(
 struct SavedState {
     block_id: BlockId,
     landmark: Option<ResumeLandmark>,
+    ended: bool,
     previous_prompt_choices: Vec<ChoiceId>,
     selected_choice_history: Vec<ChoiceId>,
     deferred_effects: Vec<DialogueEffectRequest>,
@@ -180,6 +181,7 @@ impl SavedState {
         Ok(Self {
             block_id,
             landmark,
+            ended: snapshot.ended,
             previous_prompt_choices: choice_ids(&snapshot.previous_prompt_choices)?,
             selected_choice_history: choice_ids(&snapshot.selected_choice_history)?,
             deferred_effects: snapshot
@@ -202,12 +204,19 @@ impl SavedState {
     }
 
     fn fallback(self, reason: ResumeFallbackReason, block_available: bool) -> SessionResume {
+        // An ended session keeps the deferred effects it delivered with its end.
+        let deferred_effects = if self.ended {
+            Vec::new()
+        } else {
+            self.deferred_effects
+        };
         SessionResume::Fallback(ResumeFallback {
             reason,
             block_id: self.block_id,
             block_available,
             landmark: self.landmark,
-            deferred_effects: self.deferred_effects,
+            ended: self.ended,
+            deferred_effects,
             pending_effect: self.pending_effect,
             selected_choice_history: self.selected_choice_history,
             locale: self.locale,

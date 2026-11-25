@@ -43,6 +43,7 @@ pub(crate) fn fallback_dictionary(fallback: &ResumeFallback) -> VarDictionary {
     );
     dictionary.set("block_id", fallback.block_id.as_str());
     dictionary.set("block_available", fallback.block_available);
+    dictionary.set("ended", fallback.ended);
     set_variant(
         &mut dictionary,
         "landmark",

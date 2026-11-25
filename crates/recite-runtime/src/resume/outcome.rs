@@ -112,7 +112,9 @@ pub enum PromptResume {
 ///
 /// Deferred effects and a pending blocking effect are returned exactly as
 /// they were saved, so the game can honour what the dialogue already
-/// requested before it restarts or ends the conversation.
+/// requested before it restarts or ends the conversation. A save taken after
+/// the conversation ended is marked [`ResumeFallback::ended`] and returns no
+/// effects: the session already delivered them with its end.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResumeFallback {
@@ -123,6 +125,9 @@ pub struct ResumeFallback {
     pub block_available: bool,
     /// The last line or prompt before the saved point, if any.
     pub landmark: Option<ResumeLandmark>,
+    /// Whether the conversation had already ended when it was saved. There is
+    /// nothing to apply, restart or reconcile.
+    pub ended: bool,
     pub deferred_effects: Vec<DialogueEffectRequest>,
     pub pending_effect: Option<DialogueEffectRequest>,
     pub selected_choice_history: Vec<ChoiceId>,

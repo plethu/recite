@@ -63,6 +63,13 @@ impl ReferenceDriver {
             }
             Ok(SessionResume::Fallback(fallback)) => StepResult::Ok(StepOutcome {
                 fallback_reason: Some(fallback_reason_name(&fallback.reason).to_owned()),
+                deferred_effect_functions: Some(
+                    fallback
+                        .deferred_effects
+                        .iter()
+                        .map(|effect| effect.function.clone())
+                        .collect(),
+                ),
                 ..self.empty_outcome()
             }),
             Ok(_) => self.error(

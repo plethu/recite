@@ -89,10 +89,11 @@ options:
   an entered branch is selected by `then`, `else` or match pattern. The level comes from the block
   digests: equal content, equal structure, or neither.
 - **Fallback:** no session. The host receives the saved block ID, whether it still exists, the
-  latest landmark, a typed reason, the saved deferred effects, the pending blocking effect, the
-  selected-choice history and the locale. Reasons are `block_removed`, `landmark_removed`,
-  `landmark_moved`, `landmark_ambiguous`, `statements_changed`, `branch_removed` and
-  `level_refused`.
+  latest landmark, a typed reason, whether the conversation had ended, the saved deferred effects,
+  the pending blocking effect, the selected-choice history and the locale. An ended save's fallback
+  carries no effects: the end already delivered them. Reasons are `block_removed`,
+  `landmark_removed`, `landmark_moved`, `landmark_ambiguous`, `statements_changed`, `branch_removed`
+  and `level_refused`.
 - **Errors:** unsupported or malformed snapshots and a different asset ID.
 
 Resume never chooses between ambiguous landmarks and never swaps an asset under a live session. A

@@ -351,8 +351,32 @@ fn host_policy_limits_how_far_a_save_may_move() {
 fn ended_saves_stay_ended_and_other_assets_are_rejected() {
     let base = compile(BASE);
     let patched = edited("  Second.\n", "  Second!\n");
-    let (session, _) = resumed(resume(&patched, save(&base, SavePoint::Ended)));
+    let ended = save(&base, SavePoint::Ended);
+    assert_eq!(ended.deferred_effects.len(), 1, "delivered with the end");
+    let (session, _) = resumed(resume(&patched, ended.clone()));
     assert!(session.is_ended());
+
+    // A fallback of an ended save hands back nothing: the end already
+    // delivered its deferred effects.
+    let refused = fallback(
+        resume_session(&patched, ended.clone(), &ResumeOptions::exact_only())
+            .expect("not an error"),
+    );
+    let renamed = edited(":: start default\n", ":: begin default\n");
+    let removed = fallback(resume(&renamed, ended));
+    assert!(matches!(
+        refused.reason,
+        ResumeFallbackReason::LevelRefused { .. }
+    ));
+    assert_eq!(removed.reason, ResumeFallbackReason::BlockRemoved);
+    for fell_back in [refused, removed] {
+        assert!(fell_back.ended);
+        assert!(fell_back.deferred_effects.is_empty());
+        assert!(fell_back.pending_effect.is_none());
+    }
+    let fell_back = fallback(resume(&renamed, save(&base, SavePoint::PendingPrompt)));
+    assert!(!fell_back.ended);
+    assert_eq!(fell_back.deferred_effects.len(), 1);
 
     let other_asset = {
         let report = compile_inputs(

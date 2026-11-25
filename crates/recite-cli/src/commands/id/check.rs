@@ -125,10 +125,11 @@ fn baseline_ids(paths: &[PathBuf], reference: &str) -> Result<BTreeSet<String>, 
         .collect::<Result<Vec<_>, _>>()
         .map_err(baseline_error)?;
     let mut ids = BTreeSet::new();
-    for (file, contents) in git::files_at(&root, reference, &pathspecs).map_err(baseline_error)? {
-        if !file.ends_with(".recite") {
-            continue;
-        }
+    let sources = git::files_at(&root, reference, &pathspecs, |file| {
+        file.ends_with(".recite")
+    })
+    .map_err(baseline_error)?;
+    for (file, contents) in sources {
         let source = String::from_utf8(contents)
             .map_err(|_| baseline_error(format!("{file} is not valid UTF-8")))?;
         collect_ids(
