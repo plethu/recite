@@ -8,7 +8,7 @@ use recite_core::{
 };
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueError, DialogueEvent,
-    DialogueSession, choose, next,
+    DialogueSession, EmptyDialogueContext, choose, next,
     snapshot::{decode_session_messagepack, encode_session_messagepack, snapshot_session},
     start_scene,
 };
@@ -216,6 +216,8 @@ proptest! {
         let mut model = Model { phase: Phase::Running, history: Vec::new() };
         // Every trace reaches a live prompt before the generated suffix explores transitions.
         let actions = [(3, true), (0, true), (3, true), (1, true)].into_iter().chain(actions);
+        // A restored prompt is presented once more on the next advance.
+        let mut represent_prompt = false;
         for (action, checkpoint) in actions {
             let action = match action {
                 0 => Action::Next,
@@ -224,20 +226,38 @@ proptest! {
                 _ => Action::UnknownChoice,
             };
             if checkpoint {
-                let before = snapshot_session(&restored);
-                let bytes = encode_session_messagepack(&restored).map_err(failure)?;
+                let before = snapshot_session(&asset, &restored).expect("session snapshots");
+                let bytes = encode_session_messagepack(&asset, &restored).map_err(failure)?;
                 restored = decode_session_messagepack(&asset, &bytes).map_err(failure)?;
-                prop_assert_eq!(snapshot_session(&restored), before);
+                prop_assert_eq!(snapshot_session(&asset, &restored).expect("session snapshots"), before);
+                represent_prompt |= matches!(model.phase, Phase::Prompt(_));
+            }
+            if represent_prompt && matches!(action, Action::Next) {
+                represent_prompt = false;
+                let live_result = next(&asset, &mut live, &EmptyDialogueContext);
+                let presented = next(&asset, &mut restored, &EmptyDialogueContext);
+                let live_pending = matches!(live_result, Err(DialogueError::PromptPending { .. }));
+                let restored_presented = matches!(presented, Ok(DialogueEvent::Prompt { .. }));
+                prop_assert!(live_pending, "live session keeps its prompt pending");
+                prop_assert!(restored_presented, "restored session presents its prompt");
+                prop_assert_eq!(
+                    snapshot_session(&asset, &live).expect("session snapshots"),
+                    snapshot_session(&asset, &restored).expect("session snapshots")
+                );
+                continue;
             }
             let stage = if let Phase::Prompt(stage) = model.phase { stage } else { 0 };
-            let before = snapshot_session(&live);
+            let before = snapshot_session(&asset, &live).expect("session snapshots");
             let expected = model.apply(action, &gates);
             let actual = apply(&asset, &mut live, action, stage, &gates)?;
             let resumed = apply(&asset, &mut restored, action, stage, &gates)?;
             prop_assert_eq!(observe(&actual)?, expected);
             prop_assert_eq!(&actual, &resumed);
-            let after = snapshot_session(&live);
-            prop_assert_eq!(&after, &snapshot_session(&restored));
+            if actual.is_ok() && !matches!(action, Action::Next) {
+                represent_prompt = false;
+            }
+            let after = snapshot_session(&asset, &live).expect("session snapshots");
+            prop_assert_eq!(&after, &snapshot_session(&asset, &restored).expect("session snapshots"));
             prop_assert_eq!(&after.selected_choice_history, &model.history);
             prop_assert_eq!(after.ended, matches!(model.phase, Phase::Ended));
             if actual.is_err() {

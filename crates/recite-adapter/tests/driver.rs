@@ -1,9 +1,11 @@
 mod support;
 
 use recite_adapter::{
-    AdapterErrorKind, DriverError, ReciteDialogueCatalog, SessionDriver, StartRequest,
+    AdapterErrorKind, DriverError, ReciteDialogueCatalog, RestoreOutcome, SessionDriver,
+    StartRequest,
 };
 use recite_core::{ChoiceId, LocaleId};
+use recite_runtime::resume::ResumeOptions;
 use recite_runtime::{
     DialogueEvent, DialogueSessionOptions, EmptyDialogueContext, LocaleResolution,
 };
@@ -92,7 +94,7 @@ fn failed_start_leaves_owner_free_and_second_start_preserves_original()
 }
 
 #[test]
-fn restore_prompt_is_empty_and_blocking_effect_reemits() -> Result<(), Box<dyn std::error::Error>> {
+fn restore_presents_prompt_and_reemits_blocking_effect() -> Result<(), Box<dyn std::error::Error>> {
     let prompt_asset =
         asset(":: start default\n> @ffee6p8\n  Pick.\n  ? @rthh7ab\n    Go.\n    -> END\n")?;
     let mut first = SessionDriver::new();
@@ -104,15 +106,15 @@ fn restore_prompt_is_empty_and_blocking_effect_reemits() -> Result<(), Box<dyn s
     assert!(matches!(&events[..], [DialogueEvent::Prompt { .. }]));
     let snapshot = first.snapshot()?;
     let mut restored = SessionDriver::new();
-    assert!(
-        restored
-            .restore(
-                &prompt_asset,
-                &snapshot,
-                &EmptyDialogueContext,
-                LocaleResolution::new()
-            )?
-            .is_empty()
+    assert_eq!(
+        resumed(restored.restore(
+            &prompt_asset,
+            &snapshot,
+            &ResumeOptions::new(),
+            &EmptyDialogueContext,
+            LocaleResolution::new()
+        )?),
+        events
     );
 
     let effect_asset =
@@ -125,13 +127,14 @@ fn restore_prompt_is_empty_and_blocking_effect_reemits() -> Result<(), Box<dyn s
     )?;
     let effect_snapshot = effect_driver.snapshot()?;
     let mut restored_effect = SessionDriver::new();
-    let resumed = restored_effect.restore(
+    let reemitted = resumed(restored_effect.restore(
         &effect_asset,
         &effect_snapshot,
+        &ResumeOptions::new(),
         &EmptyDialogueContext,
         LocaleResolution::new(),
-    )?;
-    assert_eq!(first_events, resumed);
+    )?);
+    assert_eq!(first_events, reemitted);
     Ok(())
 }
 
@@ -204,16 +207,16 @@ fn prior_prompt_choice_is_stale_only_after_committed_transition_and_restore()
     );
     let snapshot = driver.snapshot()?;
     let mut restored = SessionDriver::new();
-    assert!(
-        restored
-            .restore(
-                &asset,
-                &snapshot,
-                &EmptyDialogueContext,
-                LocaleResolution::new()
-            )?
-            .is_empty()
-    );
+    assert!(matches!(
+        &resumed(restored.restore(
+            &asset,
+            &snapshot,
+            &ResumeOptions::new(),
+            &EmptyDialogueContext,
+            LocaleResolution::new()
+        )?)[..],
+        [DialogueEvent::Prompt { .. }]
+    ));
     assert_eq!(
         restored
             .select_choice(first, &EmptyDialogueContext, LocaleResolution::new())
@@ -313,4 +316,11 @@ fn failed_choice_and_ack_encoding_keep_session_checkpoint() -> Result<(), Box<dy
     )?;
     assert!(matches!(&resumed[0], DialogueEvent::Line(line) if line.text == "After."));
     Ok(())
+}
+
+fn resumed<T: std::fmt::Debug>(outcome: RestoreOutcome<T>) -> T {
+    match outcome {
+        RestoreOutcome::Resumed { output, .. } => output,
+        other => panic!("expected a resumed session, got {other:?}"),
+    }
 }

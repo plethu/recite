@@ -8,11 +8,13 @@ use std::path::PathBuf;
 mod conversions;
 mod localisation;
 mod project_defaults;
+mod save;
 mod stable_id_edit;
 mod user_message;
 
 pub(crate) use localisation::LocalisationError;
 pub(crate) use project_defaults::ProjectDefaultError;
+pub(crate) use save::SaveError;
 pub(crate) use stable_id_edit::StableIdEditError;
 
 #[derive(Debug)]
@@ -109,6 +111,7 @@ pub(crate) enum CliError {
     },
     StableIdEdit(StableIdEditError),
     Localisation(LocalisationError),
+    Save(SaveError),
     OutputOverwritesInput {
         output: PathBuf,
         input: PathBuf,
@@ -323,6 +326,7 @@ impl std::fmt::Display for CliError {
             ),
             Self::StableIdEdit(refusal) => refusal.fmt(formatter),
             Self::Localisation(error) => error.fmt(formatter),
+            Self::Save(error) => error.fmt(formatter),
             Self::OutputOverwritesInput { output, input } => write!(
                 formatter,
                 "refusing to overwrite input {} with output {}",
@@ -379,19 +383,3 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {}
-
-impl CliError {
-    /// The reader of our output went away, as when piped into `head`; nothing is left to report.
-    pub(crate) fn is_broken_pipe(&self) -> bool {
-        match self {
-            Self::Io(error) => error.kind() == io::ErrorKind::BrokenPipe,
-            Self::TraceJson(error) | Self::BenchJson(error) => {
-                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
-            }
-            Self::SchemaInspection(error::SchemaInspectionError::Json(error)) => {
-                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
-            }
-            _ => false,
-        }
-    }
-}

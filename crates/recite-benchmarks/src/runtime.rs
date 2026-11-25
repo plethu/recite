@@ -183,7 +183,7 @@ impl<'a> TraversalDriver<'a> {
 
     pub fn encoded_prompt_session(&self) -> BenchmarkResult<Vec<u8>> {
         let session = self.session_with_prompt()?;
-        encode_session_messagepack(&session).map_err(Into::into)
+        encode_session_messagepack(self.asset, &session).map_err(Into::into)
     }
 
     pub fn decode_session(&self, bytes: &[u8]) -> BenchmarkResult<DialogueSession> {
@@ -191,7 +191,7 @@ impl<'a> TraversalDriver<'a> {
     }
 
     pub fn encode_session(&self, session: &DialogueSession) -> BenchmarkResult<Vec<u8>> {
-        encode_session_messagepack(session).map_err(Into::into)
+        encode_session_messagepack(self.asset, session).map_err(Into::into)
     }
 
     pub fn full_traversal(&self) -> BenchmarkResult<usize> {

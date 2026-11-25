@@ -1,10 +1,12 @@
 use std::collections::BTreeMap;
 
-use recite_adapter::{SessionDriver, StartRequest};
+use recite_adapter::resume_names::parse_resume_level;
+use recite_adapter::{RestoreOutcome, SessionDriver, StartRequest};
 use recite_core::{ChoiceId, EffectId};
 use recite_runtime::{
     ConditionEvaluationError, ConditionEvaluationErrorKind, ConditionQuery, ConditionValue,
     DialogueContext, EffectAck, LocaleResolution, localisation::InterpolationValues,
+    resume::ResumeOptions,
 };
 
 pub(crate) use crate::adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
@@ -146,12 +148,14 @@ impl ReciteDialogueDriver {
         self.driver.snapshot()
     }
 
+    /// Restores a save against `asset`, which may be a patched revision of
+    /// the asset it was saved against.
     pub fn restore(
         &mut self,
         asset: &ReciteDialogueAsset,
         bytes: &[u8],
-    ) -> AdapterResult<Vec<ReciteOutput>> {
-        self.restore_with_variant(asset, bytes, None)
+    ) -> AdapterResult<RestoreOutcome<Vec<ReciteOutput>>> {
+        self.restore_with_options(asset, bytes, None, &ResumeOptions::new())
     }
 
     pub fn restore_with_variant(
@@ -159,7 +163,42 @@ impl ReciteDialogueDriver {
         asset: &ReciteDialogueAsset,
         bytes: &[u8],
         variant: Option<&str>,
-    ) -> AdapterResult<Vec<ReciteOutput>> {
+    ) -> AdapterResult<RestoreOutcome<Vec<ReciteOutput>>> {
+        self.restore_with_options(asset, bytes, variant, &ResumeOptions::new())
+    }
+
+    /// Restores with a maximum level named as in `recite_adapter::resume_names`
+    /// (`exact`, `unchanged_block`, `text_edited`, `relocated`); `None` accepts
+    /// any relocation.
+    pub fn restore_with_level(
+        &mut self,
+        asset: &ReciteDialogueAsset,
+        bytes: &[u8],
+        variant: Option<&str>,
+        max_level: Option<&str>,
+    ) -> AdapterResult<RestoreOutcome<Vec<ReciteOutput>>> {
+        let options = match max_level {
+            None => ResumeOptions::new(),
+            Some(name) => {
+                let level = parse_resume_level(name).ok_or_else(|| {
+                    AdapterError::with_detail(
+                        AdapterErrorKind::Validation,
+                        format!("unknown resume level `{name}`"),
+                    )
+                })?;
+                ResumeOptions::new().with_max_level(level)
+            }
+        };
+        self.restore_with_options(asset, bytes, variant, &options)
+    }
+
+    pub fn restore_with_options(
+        &mut self,
+        asset: &ReciteDialogueAsset,
+        bytes: &[u8],
+        variant: Option<&str>,
+        options: &ResumeOptions,
+    ) -> AdapterResult<RestoreOutcome<Vec<ReciteOutput>>> {
         let variant = validate_variant(variant)?;
         let context = GodotContext {
             conditions: &self.conditions,
@@ -169,11 +208,13 @@ impl ReciteDialogueDriver {
             self.locale_catalog.as_ref(),
             variant.as_deref(),
         );
-        let output = self
+        let outcome = self
             .driver
-            .restore(asset.loaded(), bytes, &context, resolution)?;
-        self.locale_variant = variant;
-        Ok(output)
+            .restore(asset.loaded(), bytes, options, &context, resolution)?;
+        if matches!(outcome, RestoreOutcome::Resumed { .. }) {
+            self.locale_variant = variant;
+        }
+        Ok(outcome)
     }
 
     #[must_use]

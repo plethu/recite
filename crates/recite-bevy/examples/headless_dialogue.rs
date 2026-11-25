@@ -21,7 +21,7 @@ use recite_core::{
 };
 use recite_runtime::{
     ConditionValue, DialogueEffectMode, DialogueEffectRequest, DialogueEvent, EffectAck,
-    localisation::TextDomain,
+    localisation::TextDomain, resume::ResumeOptions,
 };
 
 #[derive(Resource)]
@@ -85,6 +85,22 @@ fn batch(outputs: &[ReciteOutput]) -> Result<&[DialogueEvent], io::Error> {
         Some(ReciteOutputValue::Dialogue(events)) => Ok(events),
         Some(ReciteOutputValue::Error { error, .. }) => Err(io::Error::other(error.clone())),
         _ => Err(io::Error::other("expected dialogue output")),
+    }
+}
+
+/// The first batch of a restored save, or what the game must do instead.
+fn resumed(outputs: &[ReciteOutput]) -> Result<&[DialogueEvent], io::Error> {
+    match outputs.first().map(|output| &output.value) {
+        Some(ReciteOutputValue::Resumed { report, events }) => {
+            println!("save resumed ({:?})", report.level);
+            Ok(events)
+        }
+        Some(ReciteOutputValue::ResumeFallback(fallback)) => Err(io::Error::other(format!(
+            "save could not resume in block `{}`: {:?}",
+            fallback.block_id, fallback.reason
+        ))),
+        Some(ReciteOutputValue::Error { error, .. }) => Err(io::Error::other(error.clone())),
+        _ => Err(io::Error::other("expected restore output")),
     }
 }
 
@@ -169,13 +185,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let prompt_save = snapshot(&send(&mut app, &mut cursor, ReciteRequest::Snapshot))?;
     send(&mut app, &mut cursor, ReciteRequest::End);
-    batch(&send(
+    resumed(&send(
         &mut app,
         &mut cursor,
         ReciteRequest::Restore {
             asset: handle.clone(),
-            snapshot: prompt_save,
+            snapshot: prompt_save.clone(),
             variant: Some("formal".to_owned()),
+            options: ResumeOptions::new(),
         },
     ))?;
 
@@ -197,13 +214,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let effect_id = pending.id.clone();
     let blocked_save = snapshot(&send(&mut app, &mut cursor, ReciteRequest::Snapshot))?;
     send(&mut app, &mut cursor, ReciteRequest::End);
-    batch(&send(
+    resumed(&send(
         &mut app,
         &mut cursor,
         ReciteRequest::Restore {
             asset: handle.clone(),
             snapshot: blocked_save,
             variant: Some("formal".to_owned()),
+            options: ResumeOptions::new(),
         },
     ))?;
     let ending = send(
@@ -232,10 +250,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     app.update();
     app.update();
     send(&mut app, &mut cursor, ReciteRequest::End);
-    let next = send(&mut app, &mut cursor, start(handle)?);
+    let next = send(&mut app, &mut cursor, start(handle.clone())?);
     assert!(
         matches!(&batch(&next)?[0], DialogueEvent::Line(line) if line.source_text == "Welcome back.")
     );
     println!("next session uses rebuilt compiled revision");
+
+    // A player's save from before the patch resumes in the rebuilt revision:
+    // only text changed, so the pending prompt is presented again in place.
+    send(&mut app, &mut cursor, ReciteRequest::End);
+    let restored = send(
+        &mut app,
+        &mut cursor,
+        ReciteRequest::Restore {
+            asset: handle,
+            snapshot: prompt_save,
+            variant: Some("formal".to_owned()),
+            options: ResumeOptions::new(),
+        },
+    );
+    assert!(matches!(
+        resumed(&restored)?,
+        [DialogueEvent::Prompt { .. }]
+    ));
     Ok(())
 }

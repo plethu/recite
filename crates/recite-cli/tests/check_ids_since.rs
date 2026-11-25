@@ -118,3 +118,25 @@ fn an_unavailable_release_ref_fails_instead_of_passing_on_an_empty_baseline() {
     output.assert_stderr_contains("cannot read stable IDs at `v9`");
     output.assert_stderr_contains("fetch it (and its tags)");
 }
+
+#[test]
+fn submodules_in_the_checked_directory_are_skipped() {
+    let temp = released_project();
+    // A gitlink, as `git submodule add` records, names a commit that lives in
+    // another repository, so this one has no object to read for it.
+    git(
+        temp.path(),
+        &[
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            "160000,0123456789abcdef0123456789abcdef01234567,dialogue/vendor",
+        ],
+    );
+    git(temp.path(), &["commit", "-q", "-m", "vendor"]);
+    git(temp.path(), &["tag", "v2"]);
+    recite()
+        .args(["id", "check", "--since", "v2"])
+        .arg(temp.path().join("dialogue"))
+        .assert_success();
+}

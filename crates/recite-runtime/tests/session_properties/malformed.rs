@@ -13,7 +13,7 @@ fn malformed_pending_prompt_shapes_fail_before_restoration()
     let mut session = start_scene(&asset, None)?;
     let context = |_: ConditionQuery<'_>| Ok(ConditionValue::Bool(true));
     next(&asset, &mut session, &context)?;
-    let original = snapshot_session(&session);
+    let original = snapshot_session(&asset, &session).expect("session snapshots");
     for (operation, detail) in [
         (0, "pending prompt has no choices"),
         (1, "does not match compiled prompt choice count"),

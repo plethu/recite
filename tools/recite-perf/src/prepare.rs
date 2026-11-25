@@ -32,8 +32,58 @@ pub(super) fn workspace(
     fs::write(control.join("Cargo.toml"), manifest.to_string())?;
     adapt_lsp_driver(control)?;
     adapt_completion_workload(control)?;
+    adapt_session_snapshots(control)?;
     Ok(())
 }
+
+// Session snapshots took their asset and gained self-contained effect requests
+// with cross-revision resume (#323); earlier controls encode from the session.
+fn adapt_session_snapshots(control: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let harness = control.join("crates/recite-benchmarks/src");
+    if !harness.join("runtime.rs").is_file()
+        || control
+            .join("crates/recite-runtime/src/resume.rs")
+            .is_file()
+    {
+        return Ok(());
+    }
+    rewrite_harness(
+        &harness.join("runtime.rs"),
+        &[
+            (
+                "encode_session_messagepack(self.asset, &session)",
+                "encode_session_messagepack(&session)",
+                1,
+            ),
+            (
+                "encode_session_messagepack(self.asset, session)",
+                "encode_session_messagepack(session)",
+                1,
+            ),
+        ],
+        "session snapshot encoding",
+    )?;
+    rewrite_harness(
+        &harness.join("preview_hash_dialogue_errors.rs"),
+        &[(
+            INVALID_EFFECT_REQUEST_ARM,
+            "        // Snapshot effect requests predate this control.\n",
+            1,
+        )],
+        "snapshot conversion errors",
+    )
+}
+
+const INVALID_EFFECT_REQUEST_ARM: &str = "        \
+recite_runtime::snapshot::DialogueSessionSnapshotConversionError::InvalidEffectRequest {
+            id,
+            reason,
+        } => {
+            tag(hasher, 2);
+            hash_text(hasher, id);
+            hash_text(hasher, reason);
+        }
+";
 
 // Keep the current harness on the historical diagnostic-publication path when
 // that revision predates the related-source fast path; never overlay its owner.

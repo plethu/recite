@@ -139,6 +139,14 @@ impl DialogueSession {
         self.locale.as_ref()
     }
 
+    /// Preview restores keep their own prompt projection, so they do not
+    /// present a restored prompt a second time.
+    pub(crate) fn clear_prompt_reemit(&mut self) {
+        if let SessionPhase::AwaitingChoice(prompt) = &mut self.phase {
+            prompt.reemit_on_next = false;
+        }
+    }
+
     pub(crate) fn active_block_index(&self) -> BlockIndex {
         self.current_block
     }
@@ -181,6 +189,9 @@ pub(crate) struct StatementFrame {
 pub(crate) struct PendingPrompt {
     pub(crate) statement: StatementIndex,
     pub(crate) choices: Vec<PendingPromptChoice>,
+    /// Restore-only presentation marker, like [`PendingEffect::reemit_on_next`]:
+    /// a restored prompt is presented again once so hosts need not cache it.
+    pub(crate) reemit_on_next: bool,
 }
 
 impl PendingPrompt {

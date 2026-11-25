@@ -5,7 +5,7 @@ use support::*;
 
 #[test]
 fn snapshot_restore_round_trip() {
-    // Snapshot at a pending prompt; restore must return empty batch (prompt still pending).
+    // Snapshot at a pending prompt; restore presents the prompt again.
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         "> @save_prompt\n",
@@ -46,7 +46,7 @@ fn snapshot_restore_round_trip() {
     );
     recite_session_free(session1);
 
-    // Restore — empty batch because prompt is still pending.
+    // Restore presents the still-pending prompt again.
     let mut session2: u64 = 0;
     let mut batch2 = ReciteBuffer::null();
     let restore_status = unsafe {
@@ -61,12 +61,11 @@ fn snapshot_restore_round_trip() {
     assert_eq!(restore_status, ReciteStatus::Ok, "restore succeeds");
     assert_ne!(session2, 0);
 
-    // Restored batch is empty (prompt pending, not re-emitted).
     let value2 = decode_batch(&batch2);
     assert_eq!(
-        value2["events"].as_array().unwrap().len(),
-        0,
-        "restored batch is empty"
+        event_kinds(&value2),
+        ["prompt"],
+        "restored batch presents the pending prompt"
     );
 
     // Can still make the choice from the restored session.
@@ -238,7 +237,7 @@ fn restore_from_ended_session_returns_no_active_session() {
 }
 
 #[test]
-fn restore_schema_fingerprint_mismatch_returns_schema_mismatch_status() {
+fn exact_restore_rejects_a_patched_asset_that_resume_accepts() {
     let source = concat!(
         ":: start default\n",
         "> @t1jmfck\n",
@@ -317,12 +316,39 @@ fn restore_schema_fingerprint_mismatch_returns_schema_mismatch_status() {
             &raw mut restored_batch,
         )
     };
-    assert_eq!(status, ReciteStatus::SchemaMismatch);
+    assert_eq!(status, ReciteStatus::SaveLoadIncompatibility);
     assert_eq!(restored_session, 0);
     let message = recite_last_error_message();
     assert!(!message.is_null());
     let message = unsafe { std::ffi::CStr::from_ptr(message) }.to_string_lossy();
-    assert!(message.contains("schema fingerprint"), "{message}");
+    assert!(
+        message.contains("recite_session_prepare_resume"),
+        "{message}"
+    );
+
+    let mut report = ReciteBuffer::null();
+    let status = unsafe {
+        recite_session_resume(
+            second_asset,
+            snapshot.data,
+            snapshot.len,
+            RECITE_RESUME_LEVEL_RELOCATED,
+            &raw mut restored_session,
+            &raw mut report,
+            &raw mut restored_batch,
+        )
+    };
+    assert_eq!(status, ReciteStatus::Ok);
+    assert_ne!(restored_session, 0);
+    let report_value = decode_batch(&report);
+    assert_eq!(report_value["outcome"], "resumed");
+    assert_eq!(report_value["level"], "unchanged_block");
+    assert_eq!(report_value["prompt"], "kept");
+    assert_eq!(report_value["schema_changed"], true);
+    assert_eq!(report_value["compiler_changed"], true);
+    assert_eq!(event_kinds(&decode_batch(&restored_batch)), ["prompt"]);
+    recite_session_free(restored_session);
+    unsafe { recite_buffer_free(&raw mut report) };
 
     unsafe {
         recite_buffer_free(&raw mut snapshot);
@@ -339,7 +365,9 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
             ":: start default\n",
             "> @bwg39z1\n",
             "  First.\n",
-            "-> END\n",
+            "  ? @c7k2m4p\n",
+            "    Leave.\n",
+            "    -> END\n",
         ),
         recite_core::compiled::SchemaFingerprint::NoSchema,
     );
@@ -348,7 +376,9 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
             ":: start default\n",
             "> @bwg39z1\n",
             "  Changed.\n",
-            "-> END\n",
+            "  ? @c7k2m4p\n",
+            "    Leave.\n",
+            "    -> END\n",
         ),
         recite_core::compiled::SchemaFingerprint::NoSchema,
     );
@@ -387,7 +417,7 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
         },
         ReciteStatus::Ok
     );
-    // There is no condition in this asset, but begin establishes a valid session state.
+    // The session waits at its prompt, so the save is not of an ended conversation.
     assert_eq!(
         unsafe { recite_session_begin(session, &raw mut batch) },
         ReciteStatus::Ok

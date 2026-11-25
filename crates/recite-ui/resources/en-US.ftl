@@ -463,6 +463,69 @@ cli-error-recording-locale = no catalogue declares Language `{$locale}`; add one
 cli-error-recording-sidecar = recording sidecar {$sidecar} is invalid: {$detail}
 cli-error-recording-handoff = handoff {$file} is invalid: {$detail}
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys
+cli-help-command-save = Players' saved sessions across dialogue patches
+cli-help-command-save-impact = Show where players' saves resume after a dialogue patch, and which fall back
+cli-help-command-save-inspect = Show what a saved session holds without the game, and how it restores against an asset
+cli-help-arg-save-candidate = Patched compiled asset, or project root to build
+cli-help-arg-save-baseline = Compiled asset players' saves were taken against
+cli-help-arg-save-since = Git revision, such as the last release tag, whose project build players' saves were taken against
+cli-help-arg-save-check = Fail when a save point falls back outside an --allow-fallback block
+cli-help-arg-allow-fallback = Block whose save points may fall back; repeat for each block
+cli-help-arg-save-format = Write a text report or a JSON document
+cli-help-arg-save-file = Saved session bytes, as the game stored them
+cli-help-arg-save-asset = Compiled asset to predict the restore outcome against
+cli-save-impact-identical = {$asset}: unchanged; { $total ->
+        [one] its {$total} save point restores exactly
+       *[other] all {$total} save points restore exactly
+    }
+cli-save-impact-summary = {$asset}: { $total ->
+        [one] {$total} save point
+       *[other] {$total} save points
+    }: {$exact} exact, {$unchanged} in unchanged blocks, {$text} with edited text, {$relocated} relocated, { $fallback ->
+        [one] {$fallback} falls back
+       *[other] {$fallback} fall back
+    }
+cli-save-impact-prompts = { $count ->
+        [one] {$count} pending prompt is evaluated again from the patched content
+       *[other] {$count} pending prompts are evaluated again from the patched content
+    }
+cli-save-impact-fallback = {$location}: a save {$point} in block `{$block}` falls back: {$reason}
+cli-save-impact-acknowledged = acknowledged with --allow-fallback {$block}
+cli-save-impact-unacknowledged = { $count ->
+        [one] {$count} save point falls back
+       *[other] {$count} save points fall back
+    }; keep their stable IDs and the effects around them, or acknowledge the blocks with --allow-fallback BLOCK
+cli-save-point-block-start = at the start
+cli-save-point-after-line = after line @{$line}
+cli-save-point-prompt = at prompt {$prompt}
+cli-save-point-blocking-effect = waiting for blocking effect `{$function}`
+cli-save-point-after-effect = after effect `{$function}`
+cli-save-reason-block-removed = the block was removed or renamed
+cli-save-reason-landmark-removed = {$landmark} no longer exists as the line or prompt it was
+cli-save-reason-landmark-moved = {$landmark} moved to another block or branch
+cli-save-reason-landmark-ambiguous = the choices of {$landmark} now belong to more than one prompt
+cli-save-reason-statements-changed = a statement between {$landmark} and the save point was added, removed or edited
+cli-save-reason-statements-changed-start = a statement between the start of the block and the save point was added, removed or edited
+cli-save-reason-branch-removed = the `if` or `match` branch it was inside no longer exists
+cli-save-reason-level-refused = it needs `{$required}` but the host allows at most `{$allowed}`
+cli-save-inspect-summary = {$asset}: saved in block `{$block}` {$position} (snapshot format {$format}, compiler {$compiler})
+cli-save-inspect-position-start = before its first line
+cli-save-inspect-position-after = after {$landmark}
+cli-save-inspect-position-ended = at its end
+cli-save-inspect-pending-prompt = waiting at a prompt with choices {$choices}
+cli-save-inspect-pending-effect = waiting for blocking effect `{$function}` ({$id})
+cli-save-inspect-deferred = deferred effects the game still receives: {$functions}
+cli-save-inspect-ended = the conversation had ended
+cli-save-inspect-resumes = Against {$asset}: resumes ({$level})
+cli-save-inspect-reevaluated = the pending prompt is evaluated again from the patched content
+cli-save-inspect-fallback = Against {$asset}: falls back: {$reason}
+cli-save-inspect-restores-nothing = Against {$asset}: restores no session, because the conversation had ended
+cli-error-save-baseline = cannot build the project at `{$reference}`: {$detail}
+cli-error-save-since-needs-project = --since compares project builds; {$candidate} is not a project directory
+cli-error-save-missing-asset = the candidate builds no asset `{$asset}`; compare assets with the same asset ID
+cli-error-save-build = the project build failed: {$detail}
+cli-error-save-snapshot = {$path} is not a readable Recite save: {$detail}
+cli-help-arg-watch-save-baseline = After each build, report where saves from this git revision or compiled asset resume (readable output only)
 cli-error-no-inputs = no .recite inputs found
 cli-error-no-inputs-outside-project = no paths given and no recite.project.toml found here or above; pass the .recite files or directories to read
 cli-error-schema-required = --only metadata needs a schema: pass --schema, or declare [project].schema in recite.project.toml

@@ -27,6 +27,100 @@ namespace Recite.Unity.Native
             return new ReciteOutputBatch(version, events);
         }
 
+        /// <summary>
+        /// Decodes the C ABI resume report. Exactly one of the returned report
+        /// and fallback is set.
+        /// </summary>
+        internal static ResumeReportPayload DecodeResumeReport(byte[] bytes)
+        {
+            var reader = new ReciteMessagePackReader(bytes);
+            var root = reader.ReadMap();
+            reader.EnsureEnd();
+            var version = RequiredUInt16(root, "report_format_version");
+            if (version != 0)
+            {
+                throw new FormatException("unsupported Recite resume report format version: " + version);
+            }
+
+            var outcome = RequiredString(root, "outcome");
+            if (outcome == "resumed")
+            {
+                return new ResumeReportPayload(
+                    new ReciteResumeReport(
+                        RequiredString(root, "level"),
+                        RequiredString(root, "block_id"),
+                        RequiredString(root, "prompt"),
+                        RequiredBool(root, "schema_changed"),
+                        RequiredBool(root, "compiler_changed")),
+                    null);
+            }
+
+            if (outcome != "fallback")
+            {
+                throw new FormatException("unknown Recite resume outcome: " + outcome);
+            }
+
+            var pending = RequiredNullableMap(root, "pending_effect");
+            return new ResumeReportPayload(
+                null,
+                new ReciteResumeFallback(
+                    RequiredString(root, "reason"),
+                    RequiredNullableString(root, "required_level"),
+                    RequiredNullableString(root, "allowed_level"),
+                    ReadNullableLandmark(root, "reason_landmark"),
+                    RequiredString(root, "block_id"),
+                    RequiredBool(root, "block_available"),
+                    ReadNullableLandmark(root, "landmark"),
+                    ReadList(root, "deferred_effects", ReadEffect),
+                    pending == null ? null : ReadEffect(pending),
+                    ReadStrings(root, "selected_choice_history"),
+                    RequiredNullableString(root, "locale")));
+        }
+
+        internal sealed class ResumeReportPayload
+        {
+            internal ResumeReportPayload(ReciteResumeReport report, ReciteResumeFallback fallback)
+            {
+                Report = report;
+                Fallback = fallback;
+            }
+
+            internal ReciteResumeReport Report { get; }
+
+            internal ReciteResumeFallback Fallback { get; }
+        }
+
+        private static ReciteResumeLandmark ReadNullableLandmark(IReadOnlyDictionary<string, object> map, string key)
+        {
+            var landmark = RequiredNullableMap(map, key);
+            if (landmark == null)
+            {
+                return null;
+            }
+
+            return new ReciteResumeLandmark(
+                RequiredString(landmark, "kind"),
+                RequiredNullableString(landmark, "line"),
+                ReadStrings(landmark, "choices"));
+        }
+
+        private static IReadOnlyList<string> ReadStrings(IReadOnlyDictionary<string, object> map, string key)
+        {
+            var raw = RequiredArray(map, key);
+            var values = new List<string>(raw.Count);
+            foreach (var item in raw)
+            {
+                if (!(item is string text))
+                {
+                    throw new FormatException("Recite MessagePack field `" + key + "` must contain strings");
+                }
+
+                values.Add(text);
+            }
+
+            return values;
+        }
+
         internal static IReadOnlyList<object> DecodeConditionArgs(byte[] bytes)
         {
             var typed = DecodeTypedConditionArgs(bytes);

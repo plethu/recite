@@ -77,7 +77,10 @@ unqualified context, BCP-47 locale fallback, and authored source.
 The runtime snapshot preserves the selected locale and deterministic session state, but not the
 Resource, interpolation values, or grammatical variant. On restore, keep the Resource installed,
 restore the same typed values, and call `restore_with_variant` with the selected variant before
-traversal resumes. No catalogue lookup or traversal operation performs game-side effects.
+traversal resumes. Restore runs against the Resource's current revision, which may be a patched one:
+`restore_outcome()` on the result is `resumed` (with `level`) or `fallback` (with `reason`,
+`block_id`, `deferred_effects` and `pending_effect`), and `restore_with_options` bounds how far a
+save may move. No catalogue lookup or traversal operation performs game-side effects.
 
 Rust unit tests cover the catalogue's line, choice, availability-reason, presentation-label, plural,
 variant, fallback, placeholder, and restore semantics. The executable host conformance lane is

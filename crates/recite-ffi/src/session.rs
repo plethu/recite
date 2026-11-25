@@ -22,6 +22,7 @@ mod effect;
 mod locale;
 mod prepare_restore;
 mod restore;
+mod resume;
 mod snapshot;
 mod start;
 mod values;
@@ -36,6 +37,10 @@ pub use locale::{
 };
 pub use prepare_restore::recite_session_prepare_restore;
 pub use restore::recite_session_restore;
+pub use resume::{
+    RECITE_RESUME_LEVEL_EXACT, RECITE_RESUME_LEVEL_RELOCATED, RECITE_RESUME_LEVEL_TEXT_EDITED,
+    RECITE_RESUME_LEVEL_UNCHANGED_BLOCK, recite_session_prepare_resume, recite_session_resume,
+};
 pub use snapshot::recite_session_snapshot;
 pub use start::recite_session_start;
 pub use values::{recite_session_free, recite_session_set_interpolation_values};

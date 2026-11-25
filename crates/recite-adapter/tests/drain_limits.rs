@@ -4,6 +4,7 @@ use std::fmt::Write;
 
 use recite_adapter::{AdapterErrorKind, SessionDriver};
 use recite_core::{ChoiceId, StableIdGenerator, StatementHeader};
+use recite_runtime::resume::ResumeOptions;
 use recite_runtime::{DialogueEvent, EffectAck, EmptyDialogueContext, LocaleResolution};
 
 use support::{asset, request};
@@ -32,7 +33,7 @@ fn line_and_immediate_effect_loops_fail_without_committing()
         driver.prepare(request(&asset))?;
         let checkpoint = driver.snapshot()?;
         let mut restored = SessionDriver::new();
-        restored.prepare_restore(&asset, &checkpoint)?;
+        restored.prepare_restore(&asset, &checkpoint, &ResumeOptions::new())?;
         for owner in [&mut driver, &mut restored] {
             let error = owner
                 .begin(&EmptyDialogueContext, LocaleResolution::new())

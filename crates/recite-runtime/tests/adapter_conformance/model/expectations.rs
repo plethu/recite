@@ -15,6 +15,8 @@ pub(crate) struct StepExpectation {
     pub(crate) effect_mode: Option<EffectMode>,
     pub(crate) deferred_effect_functions: Option<Vec<String>>,
     pub(crate) pending_effect_slot: Option<String>,
+    pub(crate) resume_level: Option<String>,
+    pub(crate) fallback_reason: Option<String>,
     pub(crate) error_category: Option<String>,
     pub(crate) allowed_error_categories: Option<Vec<String>>,
 }

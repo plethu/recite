@@ -97,16 +97,18 @@ catalogue after preparation and before begin so the first batch is localized.
 
 ## Session Lifecycle Functions
 
-Create a session or call `recite_session_prepare_restore`, install its condition handlers,
-interpolation values and locale configuration, then begin traversal. Failed preparation publishes no
-handle; failed begin retains the prepared checkpoint for correction and retry. The two convenience
-functions `start` and `restore` begin immediately and are suitable only when no host configuration
-is needed. Failures free their prepared session and leave output slots unchanged. The grammatical
-variant is not serialized and must be supplied again when restoring.
+Create a session or call `recite_session_prepare_resume` (or the exact-only
+`recite_session_prepare_restore`), install its condition handlers, interpolation values and locale
+configuration, then begin traversal. Failed preparation publishes no handle; failed begin retains
+the prepared checkpoint for correction and retry. The two convenience functions `start` and
+`restore` begin immediately and are suitable only when no host configuration is needed. Failures
+free their prepared session and leave output slots unchanged. The grammatical variant is not
+serialized and must be supplied again when restoring.
 
 Choosing a choice or acknowledging an effect drains the next output batch. Restoring a pending
-blocking effect re-emits it once; a pending prompt produces an empty resumption batch. Ended
-snapshots reject restore with `RECITE_STATUS_NO_ACTIVE_SESSION`.
+blocking effect re-emits it once, and a pending prompt is presented again in the resumption batch.
+Ended snapshots reject restore and resume with `RECITE_STATUS_NO_ACTIVE_SESSION`, against the saved
+asset or any revision of it.
 
 `EffectAck::Completed` maps to `ack_completed = 1`; failure maps to `ack_completed = 0` with its
 reason. Hosts that cannot surface the reason pass `failure_reason = null` and still acknowledge
@@ -273,9 +275,28 @@ exceptions. C++ hosts should use an `extern "C"` wrapper that catches exceptions
 ## Save and Load Handoff
 
 `recite_session_snapshot` returns complete runtime state as opaque MessagePack bytes in an owned
-buffer. Store those bytes with the game save. Restore validates them against the supplied asset:
-schema-fingerprint differences return `RECITE_STATUS_SCHEMA_MISMATCH`, taking precedence over other
-identity/content differences, which return `RECITE_STATUS_SAVE_LOAD_INCOMPATIBILITY`.
+buffer. Store those bytes with the game save.
+
+`recite_session_prepare_resume` and `recite_session_resume` restore a save against an asset that may
+be a patched revision of the one it was saved against
+([runtime §8.6](spec/runtime-localisation.md#86-session-state)). `max_level` is one of
+`RECITE_RESUME_LEVEL_EXACT`, `_UNCHANGED_BLOCK`, `_TEXT_EDITED` or `_RELOCATED`; other values return
+`RECITE_STATUS_VALIDATION`. Both write a caller-freed resume report: a named-map MessagePack value
+with `report_format_version = 0` and `outcome`.
+
+- `resumed`: `level`, `block_id`, `prompt` (`none`, `kept`, `reevaluated`), `schema_changed` and
+  `compiler_changed`. The session handle is written and begins like any prepared session.
+- `fallback`: `reason`, `required_level` and `allowed_level` (for `level_refused`, otherwise nil),
+  `reason_landmark` and `landmark` (`kind`, `line`, `choices`, or nil), `block_id`,
+  `block_available`, `deferred_effects` and `pending_effect` (encoded as batch effects),
+  `selected_choice_history` and `locale`. The session handle is 0 and the status is
+  `RECITE_STATUS_OK`; `recite_session_resume` leaves the batch empty.
+
+Malformed or unsupported snapshots and a different asset ID return
+`RECITE_STATUS_SAVE_LOAD_INCOMPATIBILITY` and write neither handle nor report. The older
+`recite_session_prepare_restore` and `recite_session_restore` are exact-only: any change to the
+compiled asset returns `RECITE_STATUS_SAVE_LOAD_INCOMPATIBILITY`. `RECITE_STATUS_SCHEMA_MISMATCH`
+remains in the status enumeration but restore no longer produces it.
 
 Use the prepared lifecycle above to restore host conditions, interpolation values and catalogue
 configuration before traversal begins. Pending-effect reconciliation remains the game's

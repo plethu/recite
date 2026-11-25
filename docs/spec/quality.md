@@ -22,6 +22,7 @@ Supported test patterns:
 - hidden-vs-unavailable prompt output assertion;
 - blocking effect pause/resume assertion;
 - save/load mid-scene assertion;
+- save/load across a patched revision, asserting the restore outcome for each edit kind;
 - save/load while waiting on blocking effect assertion;
 - adapter conformance operation/result traces.
 
@@ -158,7 +159,8 @@ The compiler is whole-project for v1. Recite has several distinct refresh layers
 - Adapter import refresh: each engine adapter defines how rebuilt compiled assets enter the host
   asset pipeline and what authors do with active sessions.
 - Mid-session patch reload: changing the compiled asset underneath an already running session
-  without restarting it is a non-v1 feature.
+  without restarting it is a non-v1 feature. Restoring a save against a patched revision starts a
+  new session on that revision and is specified in [§8.6](runtime-localisation.md#86-session-state).
 
 The v1 requirement is a competitive edit/save/rebuild/import/restart authoring loop, not arbitrary
 runtime patching of active dialogue sessions.

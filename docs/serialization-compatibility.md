@@ -8,13 +8,13 @@ compatibility obligations or require new format numbers.
 
 Keep the current MessagePack contracts, with each surface governed separately:
 
-| Surface                | Current contract                                                                                                                         | Boundary                                                                                                                                                                                                                                     |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Compiled assets        | Deterministic MessagePack v0 (`format_version = 0`, `compiler_compatibility_version = 0`) with fixed arrays and an explicit encoding tag | The compiler, core decoder, adapters, and the [shared wire registry](../crates/recite-core/src/compiled/wire.rs) share this contract.                                                                                                        |
-| Runtime snapshots      | MessagePack encoding of `DialogueSessionSnapshot` with `snapshot_format_version = 1`                                                     | Hosts store snapshot bytes as opaque save data. Restore validates the canonical compiled payload fingerprint as well as header, source, schema, and pending-effect identity.                                                                 |
-| Preview snapshots      | MessagePack preview envelope with `version = 1`                                                                                          | The envelope preserves preview state and embeds the validated session snapshot.                                                                                                                                                              |
-| FFI output batches     | Named-map MessagePack with `batch_format_version = 0`                                                                                    | The [C ABI boundary](c-abi-boundary-design.md#output-payload-encoding) owns buffer, status, ordering, and host-copy rules; the batch is not the compiled-asset wire.                                                                         |
-| FFI condition payloads | MessagePack argument arrays and tagged result maps; no independent format version                                                        | The ABI owns this payload and its buffer lifetimes. Host result and error storage remains valid after callback return until the next condition callback for that session or the enclosing Recite operation returns, whichever happens first. |
+| Surface                | Current contract                                                                                                                         | Boundary                                                                                                                                                                                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compiled assets        | Deterministic MessagePack v0 (`format_version = 0`, `compiler_compatibility_version = 0`) with fixed arrays and an explicit encoding tag | The compiler, core decoder, adapters, and the [shared wire registry](../crates/recite-core/src/compiled/wire.rs) share this contract.                                                                                                          |
+| Runtime snapshots      | MessagePack encoding of `DialogueSessionSnapshot` with `snapshot_format_version = 1`                                                     | Hosts store snapshot bytes as opaque save data. Exact restore validates the payload fingerprint and identity; resume relocates a save in a patched asset through its stable-ID anchor ([§8.6](spec/runtime-localisation.md#86-session-state)). |
+| Preview snapshots      | MessagePack preview envelope with `version = 1`                                                                                          | The envelope preserves preview state and embeds the validated session snapshot.                                                                                                                                                                |
+| FFI output batches     | Named-map MessagePack with `batch_format_version = 0`                                                                                    | The [C ABI boundary](c-abi-boundary-design.md#output-payload-encoding) owns buffer, status, ordering, and host-copy rules; the batch is not the compiled-asset wire.                                                                           |
+| FFI condition payloads | MessagePack argument arrays and tagged result maps; no independent format version                                                        | The ABI owns this payload and its buffer lifetimes. Host result and error storage remains valid after callback return until the next condition callback for that session or the enclosing Recite operation returns, whichever happens first.   |
 
 These are five compatibility surfaces, even where they currently use the same codec. They are not
 one shared version: compiled assets expose their format and compiler-compatibility versions,
@@ -32,9 +32,12 @@ envelope design.
 
 ### The initial v1 snapshot contract
 
-Runtime snapshots carry canonical compiled payload identity, checked before restore reconstructs
-saved requests. Header/source fingerprints alone cannot detect changed effect arguments or semantic
-tables.
+Runtime snapshots carry canonical compiled payload identity, checked before exact restore. Header
+and source fingerprints alone cannot detect changed effect arguments or semantic tables. Snapshots
+also carry a revision-independent resume anchor, block digests and complete deferred and pending
+effect requests, so a save can resume in a patched asset without reading the asset it was saved
+against. Saves are the one durable artifact that outlives a content patch; that is why their
+position is anchored to authored IDs rather than to table indices or positional effect IDs.
 
 Both session snapshots and preview envelopes use their initial v1 format. Development snapshots may
 be discarded and regenerated; there are no released snapshot formats to migrate. Malformed

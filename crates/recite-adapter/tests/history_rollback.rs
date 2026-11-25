@@ -1,7 +1,8 @@
 mod support;
 
-use recite_adapter::{DriverError, SessionDriver};
+use recite_adapter::{DriverError, RestoreOutcome, SessionDriver};
 use recite_core::ChoiceId;
+use recite_runtime::resume::ResumeOptions;
 use recite_runtime::{
     DialogueEvent, EffectAck, EmptyDialogueContext, LocaleResolution,
     snapshot::{decode_session_messagepack, encode_session_messagepack},
@@ -71,12 +72,16 @@ fn history_appends_roll_back_on_encoding_failure_and_retry_preserves_effect_orde
     assert!(matches!(rejected, Err(DriverError::Output("encode end"))));
     assert_eq!(driver.snapshot()?, blocked);
     let mut restored = SessionDriver::new();
-    let replay = restored.restore(
+    let RestoreOutcome::Resumed { output: replay, .. } = restored.restore(
         &asset,
         &blocked,
+        &ResumeOptions::new(),
         &EmptyDialogueContext,
         LocaleResolution::new(),
-    )?;
+    )?
+    else {
+        panic!("the exact asset resumes");
+    };
     assert_eq!(replay, [DialogueEvent::Effect(blocking.clone())]);
     let end = driver.acknowledge_effect(
         blocking.id.clone(),
@@ -105,6 +110,9 @@ fn history_appends_roll_back_on_encoding_failure_and_retry_preserves_effect_orde
     );
     assert_eq!(driver.snapshot()?, restored.snapshot()?);
     let original = decode_session_messagepack(asset.dialogue(), &before)?;
-    assert_eq!(encode_session_messagepack(&original)?, before);
+    assert_eq!(
+        encode_session_messagepack(asset.dialogue(), &original)?,
+        before
+    );
     Ok(())
 }

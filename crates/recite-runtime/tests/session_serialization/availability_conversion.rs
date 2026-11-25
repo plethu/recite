@@ -17,7 +17,8 @@ fn pending_prompt_snapshot_for_conversion_test() -> (
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits prompt");
-    (asset, snapshot_session(&session))
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+    (asset, snapshot)
 }
 
 fn reason_snapshot(id: &str) -> DialogueChoiceAvailabilityReasonSnapshot {

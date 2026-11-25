@@ -49,8 +49,8 @@ Bevy on the version named above until this adapter declares support for another 
 the host schema, rebuild the `.recitec` assets, and run `recite project check-fresh <project-root>`
 before loading them. An active session keeps the compiled revision it started with; start a new
 session after an accepted import to use rebuilt content. Preserve authored line, choice, and effect
-IDs when editing source, and test restore from any save format your game intends to carry across the
-upgrade.
+IDs when editing source, and run `recite save impact --since <release>` to see which saves resume
+after the upgrade and which fall back.
 
 ## Performance
 

@@ -25,9 +25,9 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
         next(&asset, &mut original, &EmptyDialogueContext)?,
         DialogueEvent::Prompt { .. }
     ));
-    let saved = snapshot_session(&original);
+    let saved = snapshot_session(&asset, &original).expect("session snapshots");
     let saved_copy = saved.clone();
-    let bytes = encode_session_messagepack(&original)?;
+    let bytes = encode_session_messagepack(&asset, &original)?;
     let mut repeated = original.clone();
     let mut ending = original.clone();
     assert!(matches!(
@@ -40,7 +40,7 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
         DialogueEvent::Prompt { .. }
     ));
     let earlier = repeated.clone();
-    let earlier_snapshot = snapshot_session(&repeated);
+    let earlier_snapshot = snapshot_session(&asset, &repeated).expect("session snapshots");
     choose(
         &asset,
         &mut repeated,
@@ -93,12 +93,18 @@ fn cloned_sessions_and_snapshots_keep_independent_histories_through_appends_and_
             ChoiceId::new("z0g6c80")?,
         ]
     );
-    assert_eq!(snapshot_session(&earlier), earlier_snapshot);
-    assert_eq!(snapshot_session(&original), saved);
+    assert_eq!(
+        snapshot_session(&asset, &earlier).expect("session snapshots"),
+        earlier_snapshot
+    );
+    assert_eq!(
+        snapshot_session(&asset, &original).expect("session snapshots"),
+        saved
+    );
     assert_eq!(saved, saved_copy);
-    assert_eq!(encode_session_messagepack(&original)?, bytes);
+    assert_eq!(encode_session_messagepack(&asset, &original)?, bytes);
     let restored = restore_session(&asset, saved)?;
-    assert_eq!(encode_session_messagepack(&restored)?, bytes);
+    assert_eq!(encode_session_messagepack(&asset, &restored)?, bytes);
     assert_eq!(restored.selected_choice_history(), []);
     assert_eq!(restored.deferred_effects().len(), 1);
     Ok(())

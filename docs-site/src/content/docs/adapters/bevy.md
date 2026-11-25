@@ -41,6 +41,9 @@ EffectId, ack: EffectAck }`, `Snapshot`, `Restore`, or `End`. Selection and ackn
 stable authored IDs. A second start or an operation without a session emits a
 `ReciteOutputValue::Error` with a stable error category. `Snapshot` returns opaque Recite session
 bytes; save game state separately and provide caller-owned interpolation values again after restore.
+`Restore { asset, snapshot, variant, options }` restores against the asset's current revision and
+emits `Resumed { report, events }` or `ResumeFallback(fallback)`; see
+[Patching a shipped game](/guides/patching-saves/).
 
 Requests are processed in message order during `Update`. Every operation emits one `ReciteOutput`
 with a monotonic sequence and an ordered batch or structured error. The shared driver drains

@@ -272,7 +272,7 @@ internal static class ReciteUnityHeadless
     private static void PreserveTypedInterpolationValues()
     {
         Assert(ReciteNativeBridge.AbiMajor == 0, "FFI ABI major version changed");
-        Assert(ReciteNativeBridge.AbiMinor == 7, "FFI ABI minor version changed");
+        Assert(ReciteNativeBridge.AbiMinor == 8, "FFI ABI minor version changed");
         Assert(ReciteNativeBridge.AbiPatch == 0, "FFI ABI patch version changed");
 
         var values = new List<ReciteInterpolationValue>
@@ -357,7 +357,8 @@ internal static class ReciteUnityHeadless
             service.End();
             Assert(!service.HasActiveSession, "End retained native session");
             var resume = service.Restore(asset, snapshot);
-            Assert(resume.Events.Count == 0, "pending prompt restore emitted unexpected output");
+            Assert(FindPrompt(resume) != null && FindPrompt(resume).Choices.Count == 2,
+                "pending prompt restore did not present the prompt again");
             var chosen = service.SelectChoice(prompt.Choices[0].Id);
             var effect = FindEffect(chosen).Effect;
             Assert(effect.Mode == "blocking", "managed choice did not yield blocking effect");
@@ -468,8 +469,11 @@ internal static class ReciteUnityHeadless
                 sessionHandle, ReciteNativeBridge.ToUtf8NullTerminated("has_key"), NativeFalseConditionCallback, IntPtr.Zero));
             ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionBegin(sessionHandle, out nativeBatch));
             var restored = ReciteNativeBridge.CopyAndFree(ref nativeBatch);
-            Assert(ReciteDialogueService.DecodeBatchBytes(restored).Events.Count == 0,
-                "native restore changed the pending prompt");
+            var presented = ReciteDialogueService.DecodeBatchBytes(restored).Events;
+            Assert(presented.Count == 1 && presented[0] is RecitePromptOutput restoredPrompt &&
+                restoredPrompt.Choices.Count == prompt.Choices.Count &&
+                restoredPrompt.Choices[0].Id == prompt.Choices[0].Id,
+                "native restore did not present the pending prompt again");
 
             status = ReciteNativeBridge.SessionChoose(
                 sessionHandle,

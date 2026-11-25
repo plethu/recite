@@ -8,7 +8,9 @@ pub(super) fn state_matches_session(
     state: &PreviewState,
     session: &DialogueSession,
 ) -> bool {
-    let snapshot = crate::snapshot::snapshot_session(session);
+    let Ok(snapshot) = crate::snapshot::snapshot_session(asset, session) else {
+        return false;
+    };
     let active_block = asset
         .blocks
         .get(session.active_block_index().as_u32() as usize)
@@ -83,7 +85,7 @@ pub(super) fn state_matches_session(
         }
         PreviewStatus::WaitingForEffect { effect } => {
             snapshot.pending_effect.as_ref().is_some_and(|saved| {
-                saved.id == effect.id.as_str() && session.pending_effect() == Some(effect)
+                saved.request.id == effect.id.as_str() && session.pending_effect() == Some(effect)
             })
         }
         PreviewStatus::Ended => snapshot.ended,

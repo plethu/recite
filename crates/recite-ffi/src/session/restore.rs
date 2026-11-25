@@ -5,7 +5,7 @@ use crate::error::{ReciteStatus, set_last_error};
 /// Use prepare_restore, the session setters, then begin when resumption needs
 /// condition handlers, interpolation values, a catalogue or locale provider.
 ///
-/// Pending prompts return an empty batch; blocking effects are re-emitted
+/// Pending prompts are presented again; blocking effects are re-emitted
 /// with the original request ID. Ended checkpoints return NoActiveSession.
 /// Failure publishes neither a handle nor a batch.
 ///

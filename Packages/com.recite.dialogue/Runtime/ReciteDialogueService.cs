@@ -171,6 +171,11 @@ namespace Recite.Unity
             return new ReciteSessionSnapshot(ReciteNativeBridge.CopyAndFree(ref buffer));
         }
 
+        /// <summary>
+        /// Restores a save against the exact asset it was saved against. Any change
+        /// to the compiled asset throws <see cref="ReciteStatus.SaveLoadIncompatibility"/>;
+        /// use <see cref="Resume"/> to load saves after a patch.
+        /// </summary>
         public ReciteOutputBatch Restore(ReciteDialogueAsset asset, ReciteSessionSnapshot snapshot, string variant = null)
         {
             ThrowIfDisposed();
@@ -195,6 +200,69 @@ namespace Recite.Unity
                     native.Asset, snapshot.Bytes, new UIntPtr((ulong)snapshot.Bytes.Length), out var restoredSession));
                 native.Attach(restoredSession);
                 return ConfigureAndBegin();
+            }
+            catch
+            {
+                End();
+                SetStoredVariant(previousVariant);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Restores a save against <paramref name="asset"/>, which may be a patched
+        /// revision of the asset it was saved against. A resumed save is active and
+        /// its first batch re-presents a pending prompt or re-emits a pending
+        /// blocking effect. A fallback leaves no active session and returns the
+        /// saved block, deferred effects and pending effect.
+        /// </summary>
+        public ReciteRestoreResult Resume(
+            ReciteDialogueAsset asset,
+            ReciteSessionSnapshot snapshot,
+            ReciteResumeLevel maxLevel = ReciteResumeLevel.Relocated,
+            string variant = null)
+        {
+            ThrowIfDisposed();
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
+
+            if (HasActiveSession)
+            {
+                throw new ReciteAdapterException(ReciteStatus.SessionAlreadyActive, "a Recite session is already active");
+            }
+
+            var previousVariant = localeVariant;
+            var requestedVariant = variant == null ? previousVariant :
+                ReciteStringValidation.Validate(variant, nameof(variant), allowEmpty: true);
+            SetStoredVariant(string.IsNullOrEmpty(requestedVariant) ? null : requestedVariant);
+            try
+            {
+                native.Load(asset);
+                ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionPrepareResume(
+                    native.Asset,
+                    snapshot.Bytes,
+                    new UIntPtr((ulong)snapshot.Bytes.Length),
+                    (uint)maxLevel,
+                    out var resumedSession,
+                    out var reportBuffer));
+                // Own the prepared session before decoding, so a report that
+                // fails to decode still frees it.
+                if (resumedSession != 0)
+                {
+                    native.Attach(resumedSession);
+                }
+
+                var payload = OutputDecoder.DecodeResumeReport(ref reportBuffer);
+                if (payload.Fallback != null)
+                {
+                    End();
+                    SetStoredVariant(previousVariant);
+                    return ReciteRestoreResult.FellBack(payload.Fallback);
+                }
+
+                return ReciteRestoreResult.Resumed(payload.Report, ConfigureAndBegin());
             }
             catch
             {

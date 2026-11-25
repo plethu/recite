@@ -13,6 +13,7 @@ pub struct ReciteOperationResult {
     outputs: VarArray,
     snapshot_bytes: PackedByteArray,
     error: VarDictionary,
+    restore_outcome: VarDictionary,
 }
 
 #[godot_api]
@@ -26,6 +27,14 @@ impl ReciteOperationResult {
 
     pub(crate) fn success_with_snapshot(snapshot_bytes: Vec<u8>) -> Gd<Self> {
         Self::new(true, VarArray::new(), snapshot_bytes, None)
+    }
+
+    /// A restore result: `outputs` is the first batch of a resumed save and
+    /// empty for a fallback; `restore_outcome` describes which happened.
+    pub(crate) fn restored(outputs: VarArray, restore_outcome: VarDictionary) -> Gd<Self> {
+        let mut result = Self::new(true, outputs, Vec::new(), None);
+        result.bind_mut().restore_outcome = restore_outcome;
+        result
     }
 
     pub(crate) fn failure(error: AdapterError) -> Gd<Self> {
@@ -48,6 +57,7 @@ impl ReciteOperationResult {
             outputs,
             snapshot_bytes,
             error: error_dictionary,
+            restore_outcome: VarDictionary::new(),
         })
     }
 
@@ -71,9 +81,23 @@ impl ReciteOperationResult {
         self.error.clone()
     }
 
+    /// Empty except after a restore: `outcome` is `resumed` (with `level`,
+    /// `block_id`, `prompt`, `schema_changed`, `compiler_changed`) or
+    /// `fallback` (with `reason`, `required_level`, `allowed_level`,
+    /// `reason_landmark`, `block_id`, `block_available`, `landmark`,
+    /// `deferred_effects`, `pending_effect`, `selected_choice_history`,
+    /// `locale`; keys that do not apply are nil).
+    #[func]
+    fn restore_outcome(&self) -> VarDictionary {
+        self.restore_outcome.clone()
+    }
+
     #[func]
     fn as_dictionary(&self) -> VarDictionary {
-        result_dictionary(self.ok, &self.outputs, &self.snapshot_bytes, &self.error)
+        let mut dictionary =
+            result_dictionary(self.ok, &self.outputs, &self.snapshot_bytes, &self.error);
+        dictionary.set("restore_outcome", &self.restore_outcome);
+        dictionary
     }
 }
 

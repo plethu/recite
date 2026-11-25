@@ -12,7 +12,7 @@ use super::choice::prompt_choices;
 use super::condition::{evaluate_condition, evaluate_enum_condition};
 use super::effect::handle_effect;
 use super::flow::{apply_divert, enter_statement_range, finish_scene, next_statement_after};
-use super::output::{LocaleLookup, LocaleResolution, dialogue_line};
+use super::output::{LocaleLookup, LocaleResolution, dialogue_choice, dialogue_line};
 use super::{AssetView, malformed};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
@@ -67,6 +67,16 @@ pub(super) fn next_with_locale(
             });
         }
         SessionPhase::AwaitingChoice(prompt) => {
+            if prompt.reemit_on_next {
+                // Render before clearing the flag, so a host that fixes a
+                // missing value or locale can retry the presentation.
+                let prompt = prompt.clone();
+                let event = represent_prompt(asset_view, session, &prompt, locale)?;
+                if let SessionPhase::AwaitingChoice(pending) = &mut session.phase {
+                    pending.reemit_on_next = false;
+                }
+                return Ok(event);
+            }
             return Err(DialogueError::PromptPending {
                 choices: prompt.choice_ids(),
             });
@@ -133,6 +143,7 @@ pub(super) fn next_with_locale(
                 session.phase = SessionPhase::AwaitingChoice(PendingPrompt {
                     statement: prompt_statement,
                     choices: prompt_choices.pending,
+                    reemit_on_next: false,
                 });
 
                 return session.emit(DialogueEvent::Prompt {
@@ -180,6 +191,49 @@ pub(super) fn next_with_locale(
 
     Err(DialogueError::TraversalLimitExceeded {
         limit: MAX_INTERNAL_STEPS,
+    })
+}
+
+/// Presents a restored prompt again with its saved availability. Like a
+/// restored blocking effect, the repeat does not advance the trace counter,
+/// and conditions are not queried again.
+fn represent_prompt(
+    asset: AssetView<'_>,
+    session: &DialogueSession,
+    prompt: &PendingPrompt,
+    locale: LocaleLookup<'_>,
+) -> Result<DialogueEvent, DialogueError> {
+    let block = asset.block_at(session.current_block)?;
+    let CompiledStatementKind::Prompt { line, choices } =
+        &asset.statement_at(prompt.statement)?.kind
+    else {
+        return Err(malformed(format!(
+            "pending prompt statement {} is not a prompt",
+            prompt.statement.as_u32()
+        )));
+    };
+    let line = line
+        .map(|line| dialogue_line(asset, line, block.default_speaker, locale))
+        .transpose()?;
+    let compiled = asset.choices(*choices)?;
+    let mut events = Vec::with_capacity(prompt.choices.len());
+    for pending in &prompt.choices {
+        let Some(choice) = compiled.iter().find(|choice| choice.id == pending.id) else {
+            return Err(malformed(format!(
+                "pending prompt choice `{}` is not in its compiled prompt",
+                pending.id
+            )));
+        };
+        events.push(dialogue_choice(
+            asset,
+            choice,
+            pending.availability.clone(),
+            locale,
+        )?);
+    }
+    Ok(DialogueEvent::Prompt {
+        line,
+        choices: events,
     })
 }
 

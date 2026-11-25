@@ -167,7 +167,7 @@ fn ffi_reason_origin(origin: ChoiceAvailabilityReasonOrigin) -> FfiReasonOrigin 
     }
 }
 
-fn ffi_effect(effect: DialogueEffectRequest) -> FfiEffect {
+pub(crate) fn ffi_effect(effect: DialogueEffectRequest) -> FfiEffect {
     let mode = match effect.mode {
         DialogueEffectMode::Deferred => "deferred",
         DialogueEffectMode::Immediate => "immediate",

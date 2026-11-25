@@ -35,6 +35,7 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
             target: CompiledDivertTarget::End,
             availability: missing_trust_availability(),
         }],
+        reemit_on_next: false,
     });
 
     assert_eq!(

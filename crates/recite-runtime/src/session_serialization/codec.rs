@@ -7,8 +7,12 @@ use crate::{DialogueError, DialogueSession};
 
 use super::restore::restore_session;
 
-pub fn encode_session_messagepack(session: &DialogueSession) -> Result<Vec<u8>, DialogueError> {
-    rmp_serde::to_vec(&SessionSnapshotRef::new(session)).map_err(|error| {
+/// Encodes a session running against `asset` as MessagePack save bytes.
+pub fn encode_session_messagepack(
+    asset: &CompiledDialogue,
+    session: &DialogueSession,
+) -> Result<Vec<u8>, DialogueError> {
+    rmp_serde::to_vec(&SessionSnapshotRef::new(asset, session)?).map_err(|error| {
         DialogueError::SessionSnapshotEncodeFailed {
             reason: error.to_string(),
         }
@@ -26,6 +30,15 @@ pub fn decode_session_messagepack(
     asset: &CompiledDialogue,
     bytes: &[u8],
 ) -> Result<DialogueSession, DialogueError> {
+    restore_session(asset, decode_session_snapshot_messagepack(bytes)?)
+}
+
+/// Decodes MessagePack save bytes without an asset, for inspection or for
+/// [`crate::resume::resume_session`]. It checks the encoding and snapshot
+/// format version only.
+pub fn decode_session_snapshot_messagepack(
+    bytes: &[u8],
+) -> Result<DialogueSessionSnapshot, DialogueError> {
     reject_unsupported_messagepack_snapshot_format(bytes)?;
 
     let mut cursor = Cursor::new(bytes);
@@ -45,7 +58,7 @@ pub fn decode_session_messagepack(
         });
     }
 
-    restore_session(asset, snapshot)
+    Ok(snapshot)
 }
 
 fn reject_unsupported_messagepack_snapshot_format(bytes: &[u8]) -> Result<(), DialogueError> {

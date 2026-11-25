@@ -62,7 +62,7 @@ fn next(asset: &CompiledDialogue, session: &mut DialogueSession) -> DialogueEven
 }
 
 fn save_and_load(asset: &CompiledDialogue, session: &DialogueSession) -> DialogueSession {
-    let bytes = encode_session_messagepack(session).expect("session encodes");
+    let bytes = encode_session_messagepack(asset, session).expect("session encodes");
     decode_session_messagepack(asset, &bytes).expect("session restores on the same asset")
 }
 
@@ -108,7 +108,7 @@ fn team_project_restores_prompt_and_blocking_effect_and_rejects_a_changed_asset(
     // Save at the blocking effect; restoring re-emits the same request ID until it is answered.
     let effect = blocking_effect(next(&asset, &mut at_prompt));
     assert_eq!(effect.function, "load_cargo");
-    let saved = encode_session_messagepack(&at_prompt).expect("blocked session encodes");
+    let saved = encode_session_messagepack(&asset, &at_prompt).expect("blocked session encodes");
     let mut restored = decode_session_messagepack(&asset, &saved).expect("blocked session loads");
     let reemitted = blocking_effect(next(&asset, &mut restored));
     assert_eq!(reemitted.id, effect.id);

@@ -5,6 +5,7 @@ use crate::i18n::{Messages, MsgId};
 mod args;
 mod prose;
 mod recording;
+mod save;
 
 use args::{
     localise_paths, localise_project_defaults, localise_runtime_args, localise_schema, set_about,
@@ -249,6 +250,7 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
         "prose" | "prose check" => prose::localise(command, messages, &path),
         "project" => localise_group(command, messages, MsgId::CliHelpCommandProject, &path),
         "schema" => localise_group(command, messages, MsgId::CliHelpCommandSchema, &path),
+        "save" | "save impact" | "save inspect" => save::localise(command, messages, &path),
         "explain" => {
             set_about(command, messages.text(MsgId::CliHelpCommandExplain));
             set_arg_help(
@@ -264,6 +266,12 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages, parent:
                 command,
                 "project_root",
                 messages.text(MsgId::CliHelpArgProjectRoot),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "save_baseline",
+                messages.text(MsgId::CliHelpArgWatchSaveBaseline),
                 messages,
             );
         }

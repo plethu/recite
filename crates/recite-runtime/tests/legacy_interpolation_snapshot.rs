@@ -132,7 +132,7 @@ fn legacy_wire_rows_preserve_braced_line_and_choice_text_across_snapshot() {
     assert_eq!(choices[0].source_text, "Choose {unbound}.");
     assert_eq!(line.text, "Bonjour.");
     assert_eq!(choices[0].text, "Choisir.");
-    let snapshot = snapshot_session(&session);
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     let mut restored = restore_session(&asset, snapshot)
         .unwrap_or_else(|error| panic!("legacy snapshot restores: {error}"));
     choose(

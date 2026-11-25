@@ -7,10 +7,11 @@ use recite_runtime::{
     snapshot::{
         DialogueChoiceAvailabilityReasonOriginSnapshot, DialogueChoiceAvailabilityReasonSnapshot,
         DialogueChoiceAvailabilityReasonTreeSnapshot,
-        DialogueChoiceAvailabilityReasonValueSnapshot, DialogueDeferredEffectSnapshot,
-        DialogueSessionPendingEffectSnapshot, DialogueSessionSnapshot,
-        DialogueSessionSnapshotConversionError, decode_session_messagepack,
-        encode_session_messagepack, restore_session, snapshot_session,
+        DialogueChoiceAvailabilityReasonValueSnapshot, DialogueEffectModeSnapshot,
+        DialogueEffectRequestSnapshot, DialogueSessionPendingEffectSnapshot,
+        DialogueSessionSnapshot, DialogueSessionSnapshotConversionError,
+        DialogueSourceSpanSnapshot, decode_session_messagepack, encode_session_messagepack,
+        restore_session, snapshot_session,
     },
     start_scene, start_scene_with_options,
 };
@@ -40,3 +41,22 @@ mod support;
 
 use shared_support::*;
 use support::*;
+
+/// A plausible saved effect request that no compiled effect produced.
+fn forged_effect_request(
+    id: &str,
+    mode: DialogueEffectModeSnapshot,
+) -> DialogueEffectRequestSnapshot {
+    DialogueEffectRequestSnapshot {
+        id: id.to_owned(),
+        mode,
+        function: "forged".to_owned(),
+        args: Vec::new(),
+        source_span: DialogueSourceSpanSnapshot {
+            file: "dialogue/start.recite".to_owned(),
+            start_line: 2,
+            start_column: 1,
+            end: None,
+        },
+    }
+}

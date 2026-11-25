@@ -253,3 +253,74 @@ fn control_completion_adapter_keeps_integer_revisions_before_typed_versions() {
         }
     }
 }
+
+#[test]
+fn control_snapshot_adapter_encodes_sessions_without_assets_before_resume() {
+    for resumable in [false, true] {
+        let directory = tempfile::tempdir().unwrap();
+        let candidate = directory.path().join("candidate");
+        let control = directory.path().join("control");
+        let runtime = "crates/recite-benchmarks/src/runtime.rs";
+        let errors = "crates/recite-benchmarks/src/preview_hash_dialogue_errors.rs";
+        let owner = "crates/recite-runtime/src/resume.rs";
+        let encode = "a(encode_session_messagepack(self.asset, &session));\n\
+                      b(encode_session_messagepack(self.asset, session));\n";
+        let arm = "        recite_runtime::snapshot::DialogueSessionSnapshotConversionError::InvalidEffectRequest {
+            id,
+            reason,
+        } => {
+            tag(hasher, 2);
+            hash_text(hasher, id);
+            hash_text(hasher, reason);
+        }
+";
+        let hash = format!("match error {{\n{arm}}}\n");
+        for root in [&candidate, &control] {
+            fs::create_dir_all(root.join(runtime).parent().unwrap()).unwrap();
+            fs::write(
+                root.join("Cargo.toml"),
+                "[workspace.dependencies]\ntoml_edit = '0.24'\n",
+            )
+            .unwrap();
+            fs::write(root.join(runtime), encode).unwrap();
+            fs::write(root.join(errors), &hash).unwrap();
+        }
+        if resumable {
+            fs::create_dir_all(control.join(owner).parent().unwrap()).unwrap();
+            fs::write(control.join(owner), "").unwrap();
+        }
+        let (expected_runtime, expected_errors) = if resumable {
+            (encode.to_owned(), hash.clone())
+        } else {
+            (
+                "a(encode_session_messagepack(&session));\n\
+                 b(encode_session_messagepack(session));\n"
+                    .to_owned(),
+                "match error {\n        // Snapshot effect requests predate this control.\n}\n"
+                    .to_owned(),
+            )
+        };
+        for _ in 0..2 {
+            let output = Command::new(env!("CARGO_BIN_EXE_recite-perf"))
+                .arg("prepare")
+                .arg(&candidate)
+                .arg(&control)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(fs::read_to_string(candidate.join(runtime)).unwrap(), encode);
+            assert_eq!(
+                fs::read_to_string(control.join(runtime)).unwrap(),
+                expected_runtime
+            );
+            assert_eq!(
+                fs::read_to_string(control.join(errors)).unwrap(),
+                expected_errors
+            );
+        }
+    }
+}

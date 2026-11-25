@@ -11,16 +11,18 @@ use std::ffi::CString;
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 pub(crate) use recite_ffi::{
-    ReciteBuffer, ReciteConditionFn, ReciteConditionQuery, ReciteConditionResult,
-    ReciteInterpolationValue, ReciteInterpolationValueKind, ReciteLocaleAttempt, ReciteLocaleFn,
-    ReciteLocaleQuery, ReciteLocaleResult, ReciteStatus, recite_asset_free, recite_asset_load,
-    recite_buffer_free, recite_last_error_message, recite_locale_evaluate_plural_rule,
+    RECITE_RESUME_LEVEL_EXACT, RECITE_RESUME_LEVEL_RELOCATED, ReciteBuffer, ReciteConditionFn,
+    ReciteConditionQuery, ReciteConditionResult, ReciteInterpolationValue,
+    ReciteInterpolationValueKind, ReciteLocaleAttempt, ReciteLocaleFn, ReciteLocaleQuery,
+    ReciteLocaleResult, ReciteStatus, recite_asset_free, recite_asset_load, recite_buffer_free,
+    recite_last_error_message, recite_locale_evaluate_plural_rule,
     recite_locale_validate_plural_rule, recite_locale_validate_translation_placeholders,
     recite_session_acknowledge_effect, recite_session_begin, recite_session_choose,
     recite_session_create, recite_session_free, recite_session_prepare_restore,
-    recite_session_register_condition, recite_session_restore,
-    recite_session_set_interpolation_values, recite_session_set_locale_provider,
-    recite_session_set_locale_variant, recite_session_snapshot, recite_session_start,
+    recite_session_prepare_resume, recite_session_register_condition, recite_session_restore,
+    recite_session_resume, recite_session_set_interpolation_values,
+    recite_session_set_locale_provider, recite_session_set_locale_variant, recite_session_snapshot,
+    recite_session_start,
 };
 
 pub(crate) fn compile_to_bytes(source: &str) -> Vec<u8> {

@@ -18,7 +18,10 @@ Import the **Basic Dialogue** sample, then run **Tools > Recite > Migrate Legacy
 References** so Unity binds the imported object's actual local ID. It shows a `ReciteDialogueRunner`
 scene with an imported `.recitec` asset, condition registration, structured output, choice
 selection, blocking effect acknowledgement, and snapshot restore. Register handlers in `Start` or
-later, after the runner's `Awake`.
+later, after the runner's `Awake`. `ReciteDialogueRunner.Restore` resumes saves within its **Max
+Resume Level** and raises **Resume Fallback** when a save cannot resume in the assigned asset;
+`ReciteDialogueService.Resume` returns the same outcome as a `ReciteRestoreResult`. See
+[Patching a shipped game](/guides/patching-saves/).
 
 For translated dialogue, pass PO bytes to `SetPoCatalog` before `Start`, then choose a locale.
 Recite's native parser owns gettext validation, locale fallback, plural selection, and translation

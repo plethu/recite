@@ -51,8 +51,11 @@ batch fully before a nested operation's output.
 `AcknowledgeEffect`, `Snapshot`, and `Restore` methods use native Recite traversal. Conditions are
 synchronous queries. Effects are requests for the game to perform and acknowledge, never game
 mutations inside Recite. Pass stable choice/effect IDs from structured output. Save the opaque
-snapshot beside game state. A restored pending blocking effect may be emitted with the same request
-ID, so hosts should reconcile their game operation before acknowledging.
+snapshot beside game state. `Resume` restores it against the asset you have now, which may be a
+patched revision, and returns a `ReciteRestoreResult`: a resumed batch with its report, or a
+fallback with the saved block, deferred effects and pending effect. `Restore` accepts only the exact
+saved asset. A restored pending prompt is presented again and a pending blocking effect is emitted
+with the same request ID, so hosts should reconcile their game operation before acknowledging.
 
 ```csharp
 using var service = new ReciteDialogueService();
@@ -74,9 +77,9 @@ localisation path is PO only.
 `ActiveAssetInfo` reports the native-validated revision retained by an active session. The imported
 resource reports the latest available revision and whether it came from the last-valid cache.
 Compare their canonical content fingerprints to show an active/available difference after reimport;
-equal asset names alone do not establish equal content. Native start/restore enforce compatibility.
-Editor import of `.recitec` has no source/project/schema inputs, so it does **not** assert source
-freshness.
+equal asset names alone do not establish equal content. Native start and restore check the asset;
+`Resume` reports how far a save moved instead of refusing every change. Editor import of `.recitec`
+has no source/project/schema inputs, so it does **not** assert source freshness.
 
 ## Schema and authoring
 

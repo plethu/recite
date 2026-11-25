@@ -334,3 +334,21 @@ locale = "en-GB"
             .any(|event| event["type"] == "line" && event["line"]["text"] == "Welcome.")
     );
 }
+
+#[test]
+fn an_option_named_like_a_positional_is_listed_under_options() {
+    let output = run(recite().args(["save", "inspect", "--help"]));
+    output.assert_success().assert_stderr("");
+    let help = String::from_utf8_lossy(&output.stdout).into_owned();
+    let options = help.find("Options:").expect("options heading");
+    let asset = help.find("--asset <ASSET>").expect("asset option");
+    assert!(asset > options, "{help}");
+    let run_help = run(recite().args(["run", "--help"]));
+    let run_help = String::from_utf8_lossy(&run_help.stdout).into_owned();
+    let arguments = run_help.find("Arguments:").expect("arguments heading");
+    let options = run_help.find("Options:").expect("options heading");
+    assert!(
+        run_help[arguments..options].contains("<ASSET>"),
+        "{run_help}"
+    );
+}

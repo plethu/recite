@@ -39,8 +39,8 @@ fn transaction_commit_matches_direct_traversal() -> Result<(), Box<dyn std::erro
     assert_eq!(effect, committed);
     assert_eq!(transactional, direct);
     assert_eq!(
-        encode_session_messagepack(&transactional)?,
-        encode_session_messagepack(&direct)?
+        encode_session_messagepack(&asset, &transactional)?,
+        encode_session_messagepack(&asset, &direct)?
     );
     Ok(())
 }
@@ -54,7 +54,7 @@ fn failures_and_unwinding_restore_histories_boundaries_and_retained_sessions()
             let mut session = start_scene(&asset, None)?;
             next(&asset, &mut session, &EmptyDialogueContext)?;
             let original = session.clone();
-            let before = encode_session_messagepack(&session)?;
+            let before = encode_session_messagepack(&asset, &session)?;
             let mut retained_trial = None;
             let attempt = catch_unwind(AssertUnwindSafe(|| {
                 session.try_traverse(|trial| {
@@ -92,9 +92,9 @@ fn failures_and_unwinding_restore_histories_boundaries_and_retained_sessions()
                 assert!(attempt.expect("returned error without unwinding").is_err());
             }
             assert_eq!(session, original);
-            assert_eq!(encode_session_messagepack(&session)?, before);
+            assert_eq!(encode_session_messagepack(&asset, &session)?, before);
             let retained = retained_trial.expect("trial session retained before rejection");
-            let retained_bytes = encode_session_messagepack(&retained)?;
+            let retained_bytes = encode_session_messagepack(&asset, &retained)?;
             let choice = ChoiceId::new("ffee6p8")?;
             session.try_traverse(|trial| {
                 trial.choose_with(
@@ -104,8 +104,11 @@ fn failures_and_unwinding_restore_histories_boundaries_and_retained_sessions()
                     LocaleResolution::new(),
                 )
             })?;
-            assert_eq!(encode_session_messagepack(&retained)?, retained_bytes);
-            assert_eq!(encode_session_messagepack(&original)?, before);
+            assert_eq!(
+                encode_session_messagepack(&asset, &retained)?,
+                retained_bytes
+            );
+            assert_eq!(encode_session_messagepack(&asset, &original)?, before);
             assert_eq!(session.deferred_effects().len(), 2);
         }
     }
@@ -120,7 +123,7 @@ fn unique_history_rolls_back_without_a_retained_session() -> Result<(), Box<dyn 
     for unwind in [false, true] {
         let mut session = start_scene(&asset, None)?;
         next(&asset, &mut session, &EmptyDialogueContext)?;
-        let before = encode_session_messagepack(&session)?;
+        let before = encode_session_messagepack(&asset, &session)?;
         let result = catch_unwind(AssertUnwindSafe(|| {
             session.try_traverse(|trial| {
                 trial.choose_with(
@@ -140,7 +143,7 @@ fn unique_history_rolls_back_without_a_retained_session() -> Result<(), Box<dyn 
             })
         }));
         assert!(result.is_err() || result.expect("non-panicking attempt").is_err());
-        assert_eq!(encode_session_messagepack(&session)?, before);
+        assert_eq!(encode_session_messagepack(&asset, &session)?, before);
         session.try_traverse(|trial| {
             trial.choose_with(
                 &asset,
@@ -176,13 +179,16 @@ fn preview_provider_unwind_restores_the_session_and_its_history_projection()
         "> bind=(name:string=$name) @ffee6p8\n  Hello {name}.\n-> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new())?;
-    let before = encode_session_messagepack(preview.session())?;
+    let before = encode_session_messagepack(&asset, preview.session())?;
     let state = preview.state().clone();
     let result = catch_unwind(AssertUnwindSafe(|| {
         preview.step(PreviewInputs::new().with_interpolation_values(&PanickingValues))
     }));
     assert!(result.is_err());
-    assert_eq!(encode_session_messagepack(preview.session())?, before);
+    assert_eq!(
+        encode_session_messagepack(&asset, preview.session())?,
+        before
+    );
     assert_eq!(preview.state(), &state);
     assert_eq!(
         preview.state().deferred_effects(),
@@ -210,7 +216,7 @@ fn rejected_traversal_restores_nested_continuations_after_reaching_end()
         next(&asset, &mut session, &ready)?,
         DialogueEvent::Line(_)
     ));
-    let before = encode_session_messagepack(&session)?;
+    let before = encode_session_messagepack(&asset, &session)?;
     let rejected = session.try_traverse(|trial| {
         for _ in 0..3 {
             trial.next_with(&asset, &ready, LocaleResolution::new())?;
@@ -223,7 +229,7 @@ fn rejected_traversal_restores_nested_continuations_after_reaching_end()
         )
     });
     assert!(rejected.is_err());
-    assert_eq!(encode_session_messagepack(&session)?, before);
+    assert_eq!(encode_session_messagepack(&asset, &session)?, before);
     for expected in ["Outer.", "After."] {
         let DialogueEvent::Line(line) = next(&asset, &mut session, &ready)? else {
             panic!("expected resumed line");

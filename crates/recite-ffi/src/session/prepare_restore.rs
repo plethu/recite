@@ -1,14 +1,14 @@
-use crate::asset::{alloc_handle, lock_assets};
-use crate::buffer::checked_bytes;
 use crate::error::{ReciteStatus, set_last_error};
-use recite_adapter::{LoadedDialogue, SessionDriver};
 
-/// Restores a checkpoint without running traversal.
+/// Restores a checkpoint against the exact asset it was saved against,
+/// without running traversal. Any change to the compiled asset returns
+/// `SaveLoadIncompatibility`; use `recite_session_prepare_resume` to resume a
+/// save in a patched asset.
 ///
 /// Configure condition handlers, interpolation values and locale providers on
-/// the returned handle, then call `recite_session_begin`. A pending prompt
-/// resumes with an empty batch; a pending blocking effect is re-emitted with
-/// its original ID. Failed preparation does not allocate a session handle.
+/// the returned handle, then call `recite_session_begin`, which presents a
+/// pending prompt again or re-emits a pending blocking effect with its
+/// original ID. Failed preparation does not allocate a session handle.
 ///
 /// # Safety
 /// `session_handle_out` must be a valid non-null pointer. `snapshot_bytes`
@@ -25,30 +25,11 @@ pub unsafe extern "C" fn recite_session_prepare_restore(
         set_last_error("null session handle output");
         return ReciteStatus::Validation;
     }
-    let bytes = match unsafe { checked_bytes(snapshot_bytes, snapshot_len, "snapshot bytes") } {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            set_last_error(&error);
-            return ReciteStatus::Validation;
-        }
-    };
-    let Some(dialogue) = lock_assets().get(&asset_handle).cloned() else {
-        set_last_error("unknown asset handle");
-        return ReciteStatus::InvalidHandle;
-    };
-    let mut driver = SessionDriver::new();
-    let result = LoadedDialogue::from_shared(dialogue)
-        .and_then(|asset| driver.prepare_restore(&asset, bytes));
-    if let Err(error) = result {
-        set_last_error(&error.to_string());
-        return ReciteStatus::from(error);
-    }
-    let handle = alloc_handle();
-    let mut guard = match super::lock_sessions() {
-        Ok(guard) => guard,
-        Err(status) => return status,
-    };
-    guard.insert(handle, super::FfiSession::prepared(driver));
+    let handle =
+        match unsafe { super::resume::prepare_exact(asset_handle, snapshot_bytes, snapshot_len) } {
+            Ok(handle) => handle,
+            Err(status) => return status,
+        };
     unsafe { *session_handle_out = handle };
     ReciteStatus::Ok
 }

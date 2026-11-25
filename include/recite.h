@@ -46,7 +46,7 @@
 /**
  * Pre-release ABI revision; hosts must ship matching headers and libraries.
  */
-#define RECITE_FFI_VERSION_MINOR 7
+#define RECITE_FFI_VERSION_MINOR 8
 
 /**
  * ABI patch version for documentation-only or implementation-only releases.
@@ -72,6 +72,26 @@
 #define RECITE_LOCALE_ATTEMPT_MISSING_TRANSLATION 2
 
 #define RECITE_LOCALE_ATTEMPT_MATCHED 3
+
+/**
+ * Accept only a restore against the exact saved asset.
+ */
+#define RECITE_RESUME_LEVEL_EXACT 0
+
+/**
+ * Also accept an asset whose saved block is unchanged.
+ */
+#define RECITE_RESUME_LEVEL_UNCHANGED_BLOCK 1
+
+/**
+ * Also accept text-only edits in the saved block.
+ */
+#define RECITE_RESUME_LEVEL_TEXT_EDITED 2
+
+/**
+ * Accept any deterministic relocation of the saved position.
+ */
+#define RECITE_RESUME_LEVEL_RELOCATED 3
 
 /**
  * Stable C error codes. The generated header defines the public names.
@@ -607,12 +627,15 @@ ReciteStatus recite_session_create(uint64_t asset_handle,
 void recite_session_free(uint64_t session_handle);
 
 /**
- * Restores a checkpoint without running traversal.
+ * Restores a checkpoint against the exact asset it was saved against,
+ * without running traversal. Any change to the compiled asset returns
+ * `SaveLoadIncompatibility`; use `recite_session_prepare_resume` to resume a
+ * save in a patched asset.
  *
  * Configure condition handlers, interpolation values and locale providers on
- * the returned handle, then call `recite_session_begin`. A pending prompt
- * resumes with an empty batch; a pending blocking effect is re-emitted with
- * its original ID. Failed preparation does not allocate a session handle.
+ * the returned handle, then call `recite_session_begin`, which presents a
+ * pending prompt again or re-emits a pending blocking effect with its
+ * original ID. Failed preparation does not allocate a session handle.
  *
  * # Safety
  * `session_handle_out` must be a valid non-null pointer. `snapshot_bytes`
@@ -623,6 +646,34 @@ ReciteStatus recite_session_prepare_restore(uint64_t asset_handle,
                                             const uint8_t *snapshot_bytes,
                                             size_t snapshot_len,
                                             uint64_t *session_handle_out);
+
+/**
+ * Prepares a save against an asset that may be a patched revision of the
+ * one it was saved against, without running traversal.
+ *
+ * `max_level` is one of the `RECITE_RESUME_LEVEL_*` constants. On success,
+ * `*report_out` receives a MessagePack named-map report (free it with
+ * `recite_buffer_free`). Its `outcome` is `resumed`, with a prepared session
+ * written to `*session_handle_out`, or `fallback`, with `*session_handle_out`
+ * set to 0 and the saved block, deferred effects and pending blocking effect
+ * in the report. Configure the prepared session, then call
+ * `recite_session_begin`: it re-presents a pending prompt or re-emits a
+ * pending blocking effect with its original request ID.
+ *
+ * Malformed or unsupported snapshots, and snapshots of a different asset,
+ * return an error status and allocate neither a handle nor a report.
+ *
+ * # Safety
+ * Both output pointers must be valid and non-null. `snapshot_bytes` must be
+ * non-null and valid for `snapshot_len` bytes when the length fits Rust
+ * `isize`; larger lengths are rejected before reading the snapshot.
+ */
+ReciteStatus recite_session_prepare_resume(uint64_t asset_handle,
+                                           const uint8_t *snapshot_bytes,
+                                           size_t snapshot_len,
+                                           uint32_t max_level,
+                                           uint64_t *session_handle_out,
+                                           ReciteBuffer *report_out);
 
 /**
  * Registers a condition handler on an existing session handle.
@@ -653,7 +704,7 @@ ReciteStatus recite_session_register_condition(uint64_t session_handle,
  * Use prepare_restore, the session setters, then begin when resumption needs
  * condition handlers, interpolation values, a catalogue or locale provider.
  *
- * Pending prompts return an empty batch; blocking effects are re-emitted
+ * Pending prompts are presented again; blocking effects are re-emitted
  * with the original request ID. Ended checkpoints return NoActiveSession.
  * Failure publishes neither a handle nor a batch.
  *
@@ -667,6 +718,26 @@ ReciteStatus recite_session_restore(uint64_t asset_handle,
                                     size_t snapshot_len,
                                     uint64_t *session_handle_out,
                                     ReciteBuffer *batch_out);
+
+/**
+ * Resumes a save and begins it in one call, for hosts that need no
+ * condition handlers, interpolation values or locale configuration.
+ *
+ * Behaves like `recite_session_prepare_resume` followed by
+ * `recite_session_begin`. A fallback writes the report, sets
+ * `*session_handle_out` to 0 and leaves `*batch_out` empty.
+ *
+ * # Safety
+ * All output pointers must be valid and non-null. Snapshot bytes follow the
+ * rules of `recite_session_prepare_resume`.
+ */
+ReciteStatus recite_session_resume(uint64_t asset_handle,
+                                   const uint8_t *snapshot_bytes,
+                                   size_t snapshot_len,
+                                   uint32_t max_level,
+                                   uint64_t *session_handle_out,
+                                   ReciteBuffer *report_out,
+                                   ReciteBuffer *batch_out);
 
 /**
  * Attaches one owned catalogue revision to a session, replacing its locale

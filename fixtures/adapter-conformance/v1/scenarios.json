@@ -147,20 +147,18 @@
       ]
     },
     {
-      "id": "schema_mismatch_error_on_restore",
-      "title": "Restoring against a schema-mismatched compiled asset maps to schema_mismatch_error",
+      "id": "schema_only_change_resumes_on_restore",
+      "title": "Restoring against an asset that differs only by schema resumes the save and reports the change",
       "requirement_level": "mandatory",
       "execution_mode": "reference_driver",
       "capability_gates": [],
-      "expected_error": {
-        "error_category": "schema_mismatch_error"
-      },
       "steps": [
         {
           "operation": {
             "kind": "compile_fixture",
             "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
             "asset_slot": "schema_a",
+            "asset_id": "dialogue/runtime.recitec",
             "schema_fingerprint": "schema:a"
           },
           "expect": {
@@ -172,6 +170,7 @@
             "kind": "compile_fixture",
             "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
             "asset_slot": "schema_b",
+            "asset_id": "dialogue/runtime.recitec",
             "schema_fingerprint": "schema:b"
           },
           "expect": {
@@ -229,8 +228,618 @@
             "asset_slot": "schema_b"
           },
           "expect": {
+            "status": "ok",
+            "resume_level": "unchanged_block"
+          }
+        }
+      ]
+    },
+    {
+      "id": "text_edit_resumes_pending_prompt_on_restore",
+      "title": "Restoring a save against an asset with edited text resumes it in place and re-presents the pending prompt",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface_text_edited.recite",
+            "asset_slot": "text_edited",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": true
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "intro_sfx"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "mkkr74x",
+              "j12cqy0"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "save_session",
+            "snapshot_slot": "saved_prompt"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "text_edited"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "load_session",
+            "snapshot_slot": "saved_prompt",
+            "asset_slot": "text_edited"
+          },
+          "expect": {
+            "status": "ok",
+            "resume_level": "text_edited"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "mkkr74x",
+              "j12cqy0"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "exact_only_policy_falls_back_on_restore",
+      "title": "An exact-only restore of an edited asset falls back with a structured reason and no active session",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "no_active_session_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface_text_edited.recite",
+            "asset_slot": "text_edited",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": true
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "intro_sfx"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "mkkr74x",
+              "j12cqy0"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "save_session",
+            "snapshot_slot": "saved_prompt"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "text_edited"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "load_session",
+            "snapshot_slot": "saved_prompt",
+            "asset_slot": "text_edited",
+            "max_resume_level": "exact"
+          },
+          "expect": {
+            "status": "ok",
+            "fallback_reason": "level_refused"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
             "status": "error",
-            "error_category": "schema_mismatch_error"
+            "error_category": "no_active_session_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ended_save_restores_no_session_after_a_patch",
+      "title": "A save taken after the conversation ended restores no session, even against a patched asset the host refuses",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "no_active_session_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface_text_edited.recite",
+            "asset_slot": "text_edited",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": false
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "intro_sfx",
+            "effect_mode": "immediate"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "mkkr74x",
+              "j12cqy0"
+            ],
+            "prompt_unavailable_choice_ids": [
+              "j12cqy0"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "mkkr74x"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "grant_item",
+            "effect_mode": "blocking"
+          }
+        },
+        {
+          "operation": {
+            "kind": "remember_pending_effect_id",
+            "slot": "blocking_effect"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "acknowledge_effect",
+            "ack": "completed",
+            "effect_slot": "blocking_effect"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "t680psd"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "t680psd"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "end",
+            "deferred_effect_functions": [
+              "finished_work"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "save_session",
+            "snapshot_slot": "saved_end"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "text_edited"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "load_session",
+            "snapshot_slot": "saved_end",
+            "asset_slot": "text_edited",
+            "max_resume_level": "exact"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "no_active_session_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reassigned_ids_fall_back_on_restore",
+      "title": "A save whose stable IDs no longer exist falls back with a structured reason instead of failing",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface_changed.recite",
+            "asset_slot": "changed",
+            "asset_id": "dialogue/runtime.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": true
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "intro_sfx"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "mkkr74x",
+              "j12cqy0"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "save_session",
+            "snapshot_slot": "saved_prompt"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "load_session",
+            "snapshot_slot": "saved_prompt",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "ok",
+            "fallback_reason": "landmark_removed"
           }
         }
       ]

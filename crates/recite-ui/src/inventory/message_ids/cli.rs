@@ -2,6 +2,9 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
     if let Some(key) = super::watch_message_ids::key(id) {
         return Some(key);
     }
+    if let Some(key) = super::save_message_ids::key(id) {
+        return Some(key);
+    }
     match id {
         super::MsgId::CliHelpArgImportInput => Some("cli-help-arg-import-input"),
         super::MsgId::CliHelpArgImportFrom => Some("cli-help-arg-import-from"),

@@ -1,23 +1,33 @@
 use recite_core::{
     ChoiceId, LocaleId,
     compiled::{
-        CompiledSourceFile, ContentFingerprint, SchemaFingerprint, StatementIndex, StatementRange,
+        CompiledDialogue, CompiledSourceFile, ContentFingerprint, SchemaFingerprint,
+        StatementIndex, StatementRange,
     },
 };
 use serde::{Deserialize, Serialize};
 
-use crate::DialogueSession;
-use crate::event::DialogueEffectRequest;
 use crate::session::{PendingEffect, PendingPrompt, SessionPhase, StatementFrame};
+use crate::{DialogueError, DialogueSession};
 
 pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = 1;
 
 mod borrowed;
 mod conversion;
+mod effect;
+mod resume;
 
 pub(crate) use borrowed::SessionSnapshotRef;
 pub use conversion::DialogueSessionSnapshotConversionError;
 pub(crate) use conversion::{availability_from_snapshot, availability_snapshot};
+pub(crate) use effect::EffectRequestRef;
+pub use effect::{effect_request_from_snapshot, effect_request_snapshot};
+pub use resume::{
+    DialogueBlockDigestsSnapshot, DialogueBranchSnapshot, DialogueEffectArgumentSnapshot,
+    DialogueEffectModeSnapshot, DialogueEffectRequestSnapshot, DialogueLandmarkSnapshot,
+    DialoguePositionAnchorSnapshot, DialogueResumeAnchorSnapshot, DialogueResumeFrameSnapshot,
+    DialogueSourcePositionSnapshot, DialogueSourceSpanSnapshot, DialogueStatementSignatureSnapshot,
+};
 
 /// Versioned structural save data for a dialogue session.
 ///
@@ -37,15 +47,21 @@ pub struct DialogueSessionSnapshot {
     pub compiled_payload_fingerprint: DialogueContentFingerprintSnapshot,
     pub schema_fingerprint: DialogueSchemaFingerprintSnapshot,
     pub sources: Vec<DialogueSessionSourceSnapshot>,
+    /// Authored ID of the block the session was saved in.
+    pub block_id: String,
+    pub block_digests: DialogueBlockDigestsSnapshot,
     pub current_block: u32,
     pub current_range: DialogueSessionRangeSnapshot,
     pub next_statement: u32,
     pub continuation_stack: Vec<DialogueSessionFrameSnapshot>,
+    /// The saved position expressed through stable IDs, used to resume the
+    /// session in a patched asset.
+    pub resume_anchor: DialogueResumeAnchorSnapshot,
     pub pending_prompt: Option<DialogueSessionPendingPromptSnapshot>,
     pub pending_effect: Option<DialogueSessionPendingEffectSnapshot>,
     pub previous_prompt_choices: Vec<String>,
     pub selected_choice_history: Vec<String>,
-    pub deferred_effects: Vec<DialogueDeferredEffectSnapshot>,
+    pub deferred_effects: Vec<DialogueEffectRequestSnapshot>,
     pub locale: Option<String>,
     pub trace_counter: u64,
     pub ended: bool,
@@ -135,17 +151,11 @@ pub enum DialogueChoiceAvailabilityReasonTreeSnapshot {
     RequirementSourceText(String),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DialogueSessionPendingEffectSnapshot {
     pub statement: u32,
-    pub id: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueDeferredEffectSnapshot {
-    pub id: String,
+    pub request: DialogueEffectRequestSnapshot,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -171,12 +181,17 @@ pub enum DialogueSchemaFingerprintSnapshot {
 
 /// Captures the current session as trusted structural save data.
 ///
-/// The returned snapshot is intended to be stored by the host save system. It
-/// should be authenticated by that host if users or external systems can modify
-/// saves before restore.
-#[must_use]
-pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
-    DialogueSessionSnapshot {
+/// The asset must be the one the session runs against; it supplies the
+/// stable block, line and choice IDs that let the save resume in a patched
+/// asset. The returned snapshot is intended to be stored by the host save
+/// system. It should be authenticated by that host if users or external
+/// systems can modify saves before restore.
+pub fn snapshot_session(
+    asset: &CompiledDialogue,
+    session: &DialogueSession,
+) -> Result<DialogueSessionSnapshot, DialogueError> {
+    let borrowed = SessionSnapshotRef::new(asset, session)?;
+    Ok(DialogueSessionSnapshot {
         snapshot_format_version: CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION,
         asset_id: session.asset_id.as_str().to_owned(),
         asset_format_version: session.format_version,
@@ -188,6 +203,8 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
         ),
         schema_fingerprint: schema_fingerprint_snapshot(&session.schema_fingerprint),
         sources: session.sources.iter().map(source_snapshot).collect(),
+        block_id: borrowed.block_id().to_owned(),
+        block_digests: borrowed.block_digests(),
         current_block: session.current_block.as_u32(),
         current_range: range_snapshot(session.current_range),
         next_statement: session.next_statement.as_u32(),
@@ -196,6 +213,7 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
             .iter()
             .map(frame_snapshot)
             .collect(),
+        resume_anchor: borrowed.resume_anchor().to_snapshot(),
         pending_prompt: match &session.phase {
             SessionPhase::AwaitingChoice(prompt) => Some(pending_prompt_snapshot(prompt)),
             _ => None,
@@ -218,7 +236,7 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
             .map(str::to_owned),
         trace_counter: session.trace_counter,
         ended: matches!(session.phase, SessionPhase::Ended),
-    }
+    })
 }
 
 pub(crate) fn statement_range(snapshot: DialogueSessionRangeSnapshot) -> StatementRange {
@@ -269,7 +287,7 @@ fn pending_prompt_snapshot(prompt: &PendingPrompt) -> DialogueSessionPendingProm
 fn pending_effect_snapshot(effect: &PendingEffect) -> DialogueSessionPendingEffectSnapshot {
     DialogueSessionPendingEffectSnapshot {
         statement: effect.statement.as_u32(),
-        id: effect.request.id.as_str().to_owned(),
+        request: effect_request_snapshot(&effect.request),
     }
 }
 
@@ -278,12 +296,6 @@ fn choice_ids_snapshot(choice_ids: &[ChoiceId]) -> Vec<String> {
         .iter()
         .map(|choice_id| choice_id.as_str().to_owned())
         .collect()
-}
-
-fn effect_request_snapshot(effect: &DialogueEffectRequest) -> DialogueDeferredEffectSnapshot {
-    DialogueDeferredEffectSnapshot {
-        id: effect.id.as_str().to_owned(),
-    }
 }
 
 fn range_snapshot(range: StatementRange) -> DialogueSessionRangeSnapshot {

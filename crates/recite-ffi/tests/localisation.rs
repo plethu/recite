@@ -157,7 +157,8 @@ fn locale_callback_translates_start_choose_and_restore() {
         decode_batch(&restored_batch)["events"]
             .as_array()
             .unwrap()
-            .is_empty()
+            .iter()
+            .all(|event| event["kind"] == "prompt")
     );
     unsafe { recite_buffer_free(&raw mut restored_batch) };
 

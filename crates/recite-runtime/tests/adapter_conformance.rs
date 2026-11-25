@@ -22,6 +22,10 @@ const PROJECTION_ERROR_CATEGORIES: [&str; 3] = [
     "projection_evaluation_error",
     "invalid_projection_result_error",
 ];
+/// Categories kept in the stable enumeration for ABI compatibility that no
+/// adapter operation produces any more. Restoring against an asset whose
+/// schema changed resumes the save and reports the change instead.
+const RESERVED_ERROR_CATEGORIES: [&str; 1] = ["schema_mismatch_error"];
 
 #[test]
 fn stable_error_categories_match_the_operation_schema() {
@@ -165,8 +169,13 @@ fn reference_driver_runs_reference_scenarios_and_checks_mandatory_category_cover
         .into_iter()
         .map(str::to_owned)
         .collect::<BTreeSet<_>>();
+    let reserved_categories = RESERVED_ERROR_CATEGORIES
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<BTreeSet<_>>();
     let mandatory_contract_categories = contract_categories_set
         .difference(&projection_categories)
+        .filter(|category| !reserved_categories.contains(*category))
         .cloned()
         .collect::<BTreeSet<_>>();
     assert_eq!(
@@ -315,6 +324,23 @@ fn reference_driver_runs_reference_scenarios_and_checks_mandatory_category_cover
                             expected_deferred_functions
                         );
                     }
+                    if step.expect.resume_level.is_some() {
+                        assert_eq!(
+                            outcome.resume_level,
+                            step.expect.resume_level,
+                            "scenario `{}` step {} resume level",
+                            scenario.id,
+                            step_index + 1,
+                        );
+                    }
+                    // A fallback is never silent: every one must be expected.
+                    assert_eq!(
+                        outcome.fallback_reason,
+                        step.expect.fallback_reason,
+                        "scenario `{}` step {} fallback reason",
+                        scenario.id,
+                        step_index + 1,
+                    );
                     if let Some(effect_slot) = &step.expect.pending_effect_slot {
                         let remembered =
                             driver.remembered_effect_id(effect_slot).unwrap_or_else(|| {

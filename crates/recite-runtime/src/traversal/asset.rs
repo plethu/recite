@@ -1,15 +1,14 @@
 use std::ops::Range;
 
 use recite_core::{
-    AvailabilityReasonId, ChoiceId, EffectId,
+    AvailabilityReasonId,
     compiled::{
         BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
         ChoiceIndex, ChoiceRange, CompiledAssetHeader, CompiledAvailabilityReason, CompiledChoice,
-        CompiledConditionAvailabilityReason, CompiledDialogue, CompiledEffect, CompiledEffectMode,
-        CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceMapEntry,
-        CompiledStatement, CompiledValueError, EffectIndex, LineIndex, MatchArmIndex,
-        MatchArmRange, MetadataIndex, MetadataRange, SourceMapIndex, SpeakerIndex, StatementIndex,
-        StatementRange, TableRange,
+        CompiledConditionAvailabilityReason, CompiledDialogue, CompiledEffect, CompiledLine,
+        CompiledMatchArm, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement,
+        CompiledValueError, EffectIndex, LineIndex, MatchArmIndex, MatchArmRange, MetadataIndex,
+        MetadataRange, SourceMapIndex, SpeakerIndex, StatementIndex, StatementRange, TableRange,
     },
 };
 
@@ -148,34 +147,6 @@ impl<'a> AssetView<'a> {
             .ok_or_else(|| malformed(format!("effect index {} is out of range", index.as_u32())))
     }
 
-    pub(crate) fn deferred_effect_by_id(
-        self,
-        effect_id: &EffectId,
-    ) -> Result<&'a CompiledEffect, DialogueError> {
-        let mut matches = self
-            .asset
-            .effects
-            .iter()
-            .filter(|effect| effect.id == *effect_id);
-        let Some(effect) = matches.next() else {
-            return Err(malformed(format!(
-                "effect `{effect_id}` is not in compiled effect table"
-            )));
-        };
-        if matches.next().is_some() {
-            return Err(malformed(format!(
-                "effect `{effect_id}` appears more than once in compiled effect table"
-            )));
-        }
-        if effect.mode != CompiledEffectMode::Deferred {
-            return Err(malformed(format!(
-                "effect `{effect_id}` is not a deferred effect"
-            )));
-        }
-
-        Ok(effect)
-    }
-
     pub(crate) fn speaker_at(
         self,
         index: SpeakerIndex,
@@ -226,37 +197,22 @@ impl<'a> AssetView<'a> {
         Ok(&self.asset.match_arms[bounds])
     }
 
-    pub(crate) fn choice_by_id(
-        self,
-        choice_id: &ChoiceId,
-    ) -> Result<&'a CompiledChoice, DialogueError> {
-        let choice_index = self
-            .asset
+    /// Whether a line with this authored ID exists anywhere in the asset.
+    pub(crate) fn has_line(self, line_id: &str) -> bool {
+        self.asset
+            .line_lookup
+            .as_slice()
+            .binary_search_by(|entry| entry.id.as_str().cmp(line_id))
+            .is_ok()
+    }
+
+    /// Whether a choice with this authored ID exists anywhere in the asset.
+    pub(crate) fn has_choice(self, choice_id: &str) -> bool {
+        self.asset
             .choice_lookup
             .as_slice()
-            .binary_search_by(|entry| entry.id.cmp(choice_id))
-            .map(|index| self.asset.choice_lookup.as_slice()[index].index)
-            .map_err(|_| malformed(format!("choice `{choice_id}` is not in compiled lookup")))?;
-        let choice = self
-            .asset
-            .choices
-            .get(choice_index.as_u32() as usize)
-            .ok_or_else(|| {
-                malformed(format!(
-                    "choice lookup entry `{choice_id}` points to out-of-range choice index {}",
-                    choice_index.as_u32()
-                ))
-            })?;
-
-        if choice.id != *choice_id {
-            return Err(malformed(format!(
-                "choice lookup entry `{choice_id}` points to choice `{}` at index {}",
-                choice.id,
-                choice_index.as_u32()
-            )));
-        }
-
-        Ok(choice)
+            .binary_search_by(|entry| entry.id.as_str().cmp(choice_id))
+            .is_ok()
     }
 
     pub(crate) fn availability_reason(

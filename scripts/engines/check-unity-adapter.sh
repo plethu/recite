@@ -70,6 +70,8 @@ if [[ -f "$bridge" && -f "$header" ]]; then
     "SessionAcknowledgeEffect(ulong sessionHandle, byte[] effectRequestId, byte ackCompleted, byte[] failureReason, out ReciteBuffer batch)"
     "SessionSnapshot(ulong sessionHandle, out ReciteBuffer snapshot)"
     "SessionRestore(ulong assetHandle, byte[] snapshotBytes, UIntPtr snapshotLen, out ulong sessionHandle, out ReciteBuffer batch)"
+    "SessionPrepareResume(ulong assetHandle, byte[] snapshotBytes,"
+    "UIntPtr snapshotLen, uint maxLevel, out ulong sessionHandle, out ReciteBuffer report);"
     "SessionFree(ulong sessionHandle)"
     "BufferFree(ref ReciteBuffer buffer)"
   )

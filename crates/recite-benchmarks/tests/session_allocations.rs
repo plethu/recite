@@ -49,7 +49,13 @@ fn warm_traversal_does_not_clone_accumulated_effect_requests()
         assert_eq!(preview_output.state().deferred_effects().len(), history + 4);
         assert_eq!(
             adapter.snapshot()?,
-            recite_runtime::snapshot::encode_session_messagepack(preview.session())?
+            recite_runtime::snapshot::encode_session_messagepack(
+                adapter
+                    .active_asset()
+                    .ok_or("adapter session is active")?
+                    .dialogue(),
+                preview.session(),
+            )?
         );
     }
     for source_count in SESSION_SOURCE_COUNTS {

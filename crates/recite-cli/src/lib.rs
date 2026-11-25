@@ -30,6 +30,7 @@ mod diagnostics;
 mod dialogue_locale;
 mod error;
 mod fs;
+mod git;
 mod i18n;
 mod ink;
 mod migration;

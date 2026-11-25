@@ -26,9 +26,12 @@ fn restores_continuation_stack_inside_conditional_branch() {
         "pg92x7f",
         "Inside.",
     );
-    assert_snapshot_encoding(&session);
-    let mut restored =
-        restore_session(&asset, snapshot_session(&session)).expect("restores branch state");
+    assert_snapshot_encoding(&asset, &session);
+    let mut restored = restore_session(
+        &asset,
+        snapshot_session(&asset, &session).expect("session snapshots"),
+    )
+    .expect("restores branch state");
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
@@ -66,9 +69,12 @@ fn restores_end_state_reached_inside_conditional_branch() {
         ["branch_done"],
     );
 
-    assert_snapshot_encoding(&session);
-    let mut restored =
-        restore_session(&asset, snapshot_session(&session)).expect("restores branch end state");
+    assert_snapshot_encoding(&asset, &session);
+    let mut restored = restore_session(
+        &asset,
+        snapshot_session(&asset, &session).expect("session snapshots"),
+    )
+    .expect("restores branch end state");
     assert_eq!(
         runtime_next(&asset, &mut restored, &context),
         Err(DialogueError::SessionEnded)
@@ -106,9 +112,12 @@ fn restores_continuation_stack_inside_match_arm() {
         "wwjwj2z",
         "Inside.",
     );
-    assert_snapshot_encoding(&session);
-    let mut restored =
-        restore_session(&asset, snapshot_session(&session)).expect("restores match state");
+    assert_snapshot_encoding(&asset, &session);
+    let mut restored = restore_session(
+        &asset,
+        snapshot_session(&asset, &session).expect("session snapshots"),
+    )
+    .expect("restores match state");
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
@@ -157,9 +166,12 @@ fn restores_nested_match_and_if_continuations() {
         "deep",
         "Deep.",
     );
-    assert_snapshot_encoding(&session);
-    let mut restored =
-        restore_session(&asset, snapshot_session(&session)).expect("restores nested state");
+    assert_snapshot_encoding(&asset, &session);
+    let mut restored = restore_session(
+        &asset,
+        snapshot_session(&asset, &session).expect("session snapshots"),
+    )
+    .expect("restores nested state");
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),

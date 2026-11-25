@@ -15,7 +15,7 @@ func _ready() -> void:
 	_run_import_and_resource_checks()
 	_run_refresh_and_snapshot_checks()
 	_run_node_error_conformance_checks()
-	_run_schema_mismatch_restore_check()
+	_run_schema_change_restore_check()
 	_run_plural_conformance_checks()
 	_run_localisation_error_conformance_check()
 	_run_po_persistence_check()
@@ -281,14 +281,13 @@ func _run_refresh_and_snapshot_checks() -> void:
 		"next session should see available revision"
 	)
 	_require(node.end_session().is_ok(), "changed session should end")
+	# The changed fixture compiles to a different asset ID, so this is a
+	# different asset rather than a patched revision of the saved one.
 	var restored = node.restore(asset, snapshot.snapshot_bytes())
-	_require(not restored.is_ok(), "old snapshot should reject incompatible changed revision")
+	_require(not restored.is_ok(), "old snapshot should reject a different asset")
 	_require(
-		(
-			restored.error().get("code") == "save_load_incompatibility_error"
-			or restored.error().get("code") == "stale_or_incompatible_asset_error"
-		),
-		"snapshot incompatibility should have structured category"
+		restored.error().get("code") == "save_load_incompatibility_error",
+		"asset mismatch should have structured category"
 	)
 	_require(
 		asset.load_from_path("res://dialogue/runtime.recitec").is_ok(),
@@ -422,7 +421,7 @@ func _run_node_error_conformance_checks() -> void:
 	failed_condition_node.queue_free()
 
 
-func _run_schema_mismatch_restore_check() -> void:
+func _run_schema_change_restore_check() -> void:
 	var first := ReciteDialogueResource.new()
 	var second := ReciteDialogueResource.new()
 	_require(
@@ -439,10 +438,17 @@ func _run_schema_mismatch_restore_check() -> void:
 	var snapshot = node.snapshot()
 	_require(snapshot.is_ok(), "schema fixture should snapshot")
 	_require(node.end_session().is_ok(), "schema fixture should end")
-	var rejected = node.restore(second, snapshot.snapshot_bytes())
+	var resumed = node.restore(second, snapshot.snapshot_bytes())
+	var outcome = resumed.restore_outcome()
 	_require(
-		not rejected.is_ok() and rejected.error().get("code") == "schema_mismatch_error",
-		"restore against different canonical schema should reject with schema_mismatch_error"
+		(
+			resumed.is_ok()
+			and outcome.get("outcome") == "resumed"
+			and outcome.get("level") == "unchanged_block"
+			and outcome.get("schema_changed")
+			and resumed.outputs()[0].get("kind") == "prompt"
+		),
+		"restore against a schema-only change should resume and report the change"
 	)
 	node.queue_free()
 

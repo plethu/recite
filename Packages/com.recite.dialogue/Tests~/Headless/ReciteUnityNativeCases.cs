@@ -15,7 +15,7 @@ internal static class ReciteUnityNativeCases
         PreservePluralMetadataFromNativePo();
         ManagedContractErrors();
         StaleChoiceAfterLaterPrompt();
-        RestoreRejectsDifferentSchema();
+        ResumeAcrossSchemaChange();
         RestoreRunningConditionsAndReasonOrigins();
     }
 
@@ -147,6 +147,15 @@ internal static class ReciteUnityNativeCases
             Assert(service.ActiveAssetInfo == null, "End retained active asset metadata");
             ExpectStatus(() => service.Restore(newAsset, snapshot), ReciteStatus.SaveLoadIncompatibility);
             Assert(service.ActiveAssetInfo == null, "mismatched restore retained active asset metadata");
+            var resumed = service.Resume(newAsset, snapshot);
+            Assert(resumed.IsResumed || resumed.Fallback != null, "resume returned no outcome");
+            Assert(resumed.IsResumed == service.HasActiveSession,
+                "only a resumed save may leave an active session");
+            if (!resumed.IsResumed)
+            {
+                Assert(resumed.Fallback.BlockId.Length > 0, "fallback lost its saved block");
+            }
+            service.End();
             service.Start(newAsset);
             Assert(ByteArraysEqual(service.ActiveAssetInfo.ContentFingerprint.Digest,
                 newInfo.ContentFingerprint.Digest), "next session did not take new revision");
@@ -290,7 +299,7 @@ internal static class ReciteUnityNativeCases
         }
     }
 
-    private static void RestoreRejectsDifferentSchema()
+    private static void ResumeAcrossSchemaChange()
     {
         var first = new ReciteDialogueAsset(File.ReadAllBytes(
             Environment.GetEnvironmentVariable("RECITE_UNITY_SCHEMA_A")));
@@ -307,11 +316,24 @@ internal static class ReciteUnityNativeCases
             Assert(FindPrompt(service.Start(first)) != null, "schema fixture did not reach its prompt");
             var snapshot = service.Snapshot();
             service.End();
-            ExpectStatus(() => service.Restore(second, snapshot), ReciteStatus.SchemaMismatch);
+            ExpectStatus(() => service.Restore(second, snapshot), ReciteStatus.SaveLoadIncompatibility);
             Assert(!service.HasActiveSession && service.ActiveAssetInfo == null,
-                "schema-mismatched restore retained native session or metadata");
-            Assert(service.Restore(first, snapshot).Events.Count == 0,
-                "matching-schema restore failed after rejected candidate");
+                "exact restore of a schema-changed asset retained native session or metadata");
+
+            var refused = service.Resume(second, snapshot, ReciteResumeLevel.Exact);
+            Assert(!refused.IsResumed && refused.Fallback.Reason == "level_refused" &&
+                refused.Fallback.RequiredLevel == "unchanged_block" && refused.Fallback.AllowedLevel == "exact",
+                "exact-only resume did not fall back with the required level");
+            Assert(!service.HasActiveSession, "fallback retained a native session");
+
+            var resumed = service.Resume(second, snapshot);
+            Assert(resumed.IsResumed && resumed.Report.Level == "unchanged_block" &&
+                resumed.Report.SchemaChanged && resumed.Report.Prompt == "kept",
+                "schema-only change did not resume with a report");
+            Assert(FindPrompt(resumed.Batch) != null, "resumed save did not present its prompt");
+            service.End();
+            Assert(FindPrompt(service.Restore(first, snapshot)) != null,
+                "matching-schema restore failed after the patched resume");
         }
     }
 

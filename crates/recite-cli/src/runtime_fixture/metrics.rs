@@ -6,6 +6,7 @@ use super::trace::{TraceEffectCounts, TraceMetrics};
 
 pub(super) fn record_session_size(
     metrics: Option<&mut RuntimeMetricsCollector>,
+    asset: &recite_core::compiled::CompiledDialogue,
     session: &recite_runtime::DialogueSession,
 ) -> Result<(), CliError> {
     let Some(metrics) = metrics else {
@@ -13,7 +14,7 @@ pub(super) fn record_session_size(
     };
     metrics.max_serialized_session_size_bytes = metrics
         .max_serialized_session_size_bytes
-        .max(encode_session_messagepack(session)?.len());
+        .max(encode_session_messagepack(asset, session)?.len());
     Ok(())
 }
 
