@@ -66,7 +66,7 @@ fn write_text(
     messages: &Messages,
     snapshot: &DialogueSessionSnapshot,
 ) -> Result<(), CliError> {
-    let position = match &snapshot.resume_anchor.position.landmark {
+    let position = match nearest_landmark(snapshot) {
         Some(landmark) => messages.format(
             MsgId::CliSaveInspectPositionAfter,
             [("landmark", landmark_name(landmark))],
@@ -191,6 +191,15 @@ fn write_prediction(
     Ok(())
 }
 
+/// The last line or prompt before the saved point: in the innermost range,
+/// or else in the ranges around the branch it is inside.
+fn nearest_landmark(snapshot: &DialogueSessionSnapshot) -> Option<&DialogueLandmarkSnapshot> {
+    let anchor = &snapshot.resume_anchor;
+    std::iter::once(&anchor.position)
+        .chain(anchor.frames.iter().rev().map(|frame| &frame.position))
+        .find_map(|position| position.landmark.as_ref())
+}
+
 fn landmark_name(landmark: &DialogueLandmarkSnapshot) -> String {
     match landmark {
         DialogueLandmarkSnapshot::Line { id } => format!("@{id}"),
@@ -223,14 +232,15 @@ fn snapshot_json(snapshot: &DialogueSessionSnapshot) -> Value {
         "compiler_version": snapshot.compiler_version,
         "block_id": snapshot.block_id,
         "position": {
-            "landmark": snapshot.resume_anchor.position.landmark.as_ref().map(landmark_json),
-            "statements_after_landmark": snapshot.resume_anchor.position.trail.len(),
+            "landmark": nearest_landmark(snapshot).map(landmark_json),
             "branch_depth": snapshot.resume_anchor.frames.len(),
         },
         "pending": pending,
+        // An ended conversation delivered its deferred effects with its end.
         "deferred_effects": snapshot
             .deferred_effects
             .iter()
+            .filter(|_| !snapshot.ended)
             .map(|effect| json!({ "id": effect.id, "function": effect.function }))
             .collect::<Vec<_>>(),
         "selected_choice_history": snapshot.selected_choice_history,

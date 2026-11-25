@@ -277,7 +277,8 @@ fn inspect_reads_a_save_and_predicts_its_restore() {
 #[test]
 fn inspect_reports_that_an_ended_save_restores_no_session() {
     let temp = TempDir::new().expect("tempdir");
-    let shipped = compile(RELEASED);
+    let released = RELEASED.replace("> @ask\n", "! deferred remember(ferry)\n> @ask\n");
+    let shipped = compile(&released);
     let mut session = start_scene(&shipped, None).expect("starts");
     while !matches!(
         next(&shipped, &mut session, &EmptyDialogueContext).expect("advances"),
@@ -302,7 +303,7 @@ fn inspect_reports_that_an_ended_save_restores_no_session() {
     let patched = temp.path().join("patched.recitec");
     write_asset(
         &patched,
-        &compile(&RELEASED.replace("    Into town.\n", "    Head into town.\n")),
+        &compile(&released.replace("    Into town.\n", "    Head into town.\n")),
     );
 
     for asset in [&shipped_path, &patched] {
@@ -317,6 +318,7 @@ fn inspect_reports_that_an_ended_save_restores_no_session() {
             report.contains("  the conversation had ended\n"),
             "{report}"
         );
+        assert!(!report.contains("deferred effects"), "{report}");
         assert!(
             report.contains(": restores no session, because the conversation had ended\n"),
             "{report}"
@@ -329,7 +331,57 @@ fn inspect_reports_that_an_ended_save_restores_no_session() {
             .assert_success();
         let document: serde_json::Value = serde_json::from_str(&stdout(&output)).expect("JSON");
         assert_eq!(document["prediction"]["outcome"], "ended");
+        assert_eq!(document["deferred_effects"], serde_json::json!([]));
     }
+}
+
+fn trusting(
+    _: recite_runtime::ConditionQuery<'_>,
+) -> Result<recite_runtime::ConditionValue, recite_runtime::ConditionEvaluationError> {
+    Ok(recite_runtime::ConditionValue::Bool(true))
+}
+
+#[test]
+fn inspect_names_the_line_before_a_branch_the_save_is_inside() {
+    let temp = TempDir::new().expect("tempdir");
+    let shipped = compile(concat!(
+        ":: start default\n",
+        "> @arrive\n",
+        "  The ferry docks.\n",
+        ":if trusts(player)\n",
+        "  ! blocking open_map(town)\n",
+        "  > @fold\n",
+        "    You fold the map.\n",
+        "-> END\n",
+    ));
+    let mut session = start_scene(&shipped, None).expect("starts");
+    while !matches!(
+        next(&shipped, &mut session, &trusting).expect("advances"),
+        DialogueEvent::Effect(_)
+    ) {}
+    let save = temp.path().join("player.sav");
+    std::fs::write(
+        &save,
+        encode_session_messagepack(&shipped, &session).expect("encodes save"),
+    )
+    .expect("writes save");
+
+    let output = recite()
+        .args(["save", "inspect"])
+        .arg(&save)
+        .assert_success();
+    let report = stdout(&output);
+    assert!(
+        report.contains("saved in block `start` after @arrive"),
+        "{report}"
+    );
+    let output = recite()
+        .args(["save", "inspect", "--format", "json"])
+        .arg(&save)
+        .assert_success();
+    let document: serde_json::Value = serde_json::from_str(&stdout(&output)).expect("JSON");
+    assert_eq!(document["position"]["landmark"]["line"], "arrive");
+    assert_eq!(document["position"]["branch_depth"], 1);
 }
 
 #[test]

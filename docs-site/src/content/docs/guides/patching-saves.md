@@ -42,17 +42,17 @@ as they were saved, even if the patch removed the effect from the source.
 
 ## Edits and their effect on saves
 
-| Edit                                                                           | Saves in the edited block               | Saves elsewhere |
-| ------------------------------------------------------------------------------ | --------------------------------------- | --------------- |
-| Fix a typo or reword a line or choice                                          | Resume, with the new text               | Unaffected      |
-| Add a line before the line the player saved after, or after the save point     | Resume; added lines after it are played | Unaffected      |
-| Add a line between that line and a waiting effect or the branch the save is in | Fall back                               | Unaffected      |
-| Add, remove, reorder or re-gate choices at a waiting prompt                    | Resume; the prompt is evaluated again   | Unaffected      |
-| Change an effect's arguments or a condition next to the save                   | Fall back                               | Unaffected      |
-| Delete or move the line the player saved after                                 | Fall back                               | Unaffected      |
-| Rename or delete a block                                                       | Fall back                               | Unaffected      |
-| Change a stable `@` ID                                                         | Fall back at points that ID located     | Unaffected      |
-| Update the compiler or the schema                                              | Resume, usually as `unchanged_block`    | Unaffected      |
+| Edit                                                                                                                       | Saves in the edited block               | Saves elsewhere |
+| -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | --------------- |
+| Fix a typo or reword a line or choice                                                                                      | Resume, with the new text               | Unaffected      |
+| Add a line before the last line the player saw, or after the save point                                                    | Resume; added lines after it are played | Unaffected      |
+| Add a line between the last line the player saw and the save point, including before an `if` or `match` the save is inside | Fall back                               | Unaffected      |
+| Add, remove, reorder or re-gate choices at a waiting prompt                                                                | Resume; the prompt is evaluated again   | Unaffected      |
+| Change an effect's arguments or a condition next to the save                                                               | Fall back                               | Unaffected      |
+| Delete or move the line the player saved after                                                                             | Fall back                               | Unaffected      |
+| Rename or delete a block                                                                                                   | Fall back                               | Unaffected      |
+| Change a stable `@` ID                                                                                                     | Fall back at points that ID located     | Unaffected      |
+| Update the compiler or the schema                                                                                          | Resume, usually as `unchanged_block`    | Unaffected      |
 
 Recite never guesses. When two prompts could be the one the player saved at, the save falls back
 with `landmark_ambiguous`.
