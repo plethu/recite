@@ -119,3 +119,40 @@ fn a_line_that_becomes_a_prompt_is_removed_rather_than_moved() {
         ResumeFallbackReason::LandmarkRemoved { .. }
     ));
 }
+
+fn refusing(
+    _: recite_runtime::ConditionQuery<'_>,
+) -> Result<recite_runtime::ConditionValue, recite_runtime::ConditionEvaluationError> {
+    Ok(recite_runtime::ConditionValue::Bool(false))
+}
+
+#[test]
+fn removing_the_else_branch_of_a_save_reports_the_branch_removed() {
+    let source = concat!(
+        ":: start default\n",
+        "> @l_a\n  A.\n",
+        ":if ready()\n",
+        "  > @l_then\n    Then.\n",
+        ":else\n",
+        "  ! immediate fx(one)\n",
+        "  > @l_else\n    Else.\n",
+        "> @l_after\n  After.\n",
+        "-> END\n",
+    );
+    let base = compile(source);
+    let removed =
+        compile(&source.replace(":else\n  ! immediate fx(one)\n  > @l_else\n    Else.\n", ""));
+    let mut session = recite_runtime::start_scene(&base, None).expect("starts");
+    let mut saves = Vec::new();
+    for _ in 0..3 {
+        recite_runtime::next(&base, &mut session, &refusing).expect("advances");
+        saves.push(recite_runtime::snapshot::snapshot_session(&base, &session).expect("saves"));
+    }
+    // After the effect, and after the line, inside the removed branch.
+    for saved in saves.into_iter().skip(1) {
+        assert_eq!(
+            fallback(resume(&removed, saved)).reason,
+            ResumeFallbackReason::BranchRemoved
+        );
+    }
+}

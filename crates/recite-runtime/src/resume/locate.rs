@@ -299,12 +299,14 @@ fn select_branch(
             },
             DialogueBranchSnapshot::Then,
         ) => Some(*then_statements),
+        // An `if` without `else` compiles an empty else range. No save is
+        // ever inside an empty range, so it means the branch was removed.
         (
             CompiledStatementKind::If {
                 else_statements, ..
             },
             DialogueBranchSnapshot::Else,
-        ) => Some(*else_statements),
+        ) => (else_statements.len > 0).then_some(*else_statements),
         (
             CompiledStatementKind::Match { arms, .. },
             DialogueBranchSnapshot::Arm {
