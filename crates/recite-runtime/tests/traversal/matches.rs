@@ -290,3 +290,43 @@ fn boolean_condition_reports_wrong_condition_kind() {
         })
     );
 }
+
+#[test]
+fn nested_match_selects_its_own_arms_at_every_level() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":match outer_stage(thread)\n",
+            "  :case tired\n",
+            "    :match inner_stage(thread)\n",
+            "      :case tired\n",
+            "        > @nm7aa1x\n",
+            "          Both tired.\n",
+            "      :case _\n",
+            "        > @nm7aa2x\n",
+            "          Outer tired only.\n",
+            "  :case _\n",
+            "    > @nm7aa3x\n",
+            "      Outer other.\n",
+            "-> END\n",
+        ),
+    );
+    for (outer, inner, expected) in [
+        ("tired", "tired", "nm7aa1x"),
+        ("tired", "rested", "nm7aa2x"),
+        ("rested", "tired", "nm7aa3x"),
+        ("rested", "rested", "nm7aa3x"),
+    ] {
+        let context = RecordingContext::default()
+            .with_enum("outer_stage", outer)
+            .with_enum("inner_stage", inner);
+        let mut session = start_scene(&asset, None).expect("starts");
+        let DialogueEvent::Line(line) =
+            next_with_context(&asset, &mut session, &context).expect("advances")
+        else {
+            panic!("expected a line for {outer}/{inner}");
+        };
+        assert_eq!(line.id.as_str(), expected, "{outer}/{inner}");
+    }
+}
