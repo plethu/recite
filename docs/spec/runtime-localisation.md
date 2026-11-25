@@ -86,9 +86,8 @@ options:
 - **Unchanged block, text edited or relocated:** the payload differs, the saved block exists by ID
   and every step of the anchor relocates. A landmark is found by line ID, or for a prompt by its
   line or any saved choice ID; the statements after it must match their saved signatures in order,
-  skipping lines the patch added before the saved point; an entered branch is selected by `then`,
-  `else` or match pattern. The level comes from the block digests: equal content, equal structure,
-  or neither.
+  with nothing added between them; an entered branch is selected by `then`, `else` or match pattern.
+  The level comes from the block digests: equal content, equal structure, or neither.
 - **Fallback:** no session. The host receives the saved block ID, whether it still exists, the
   latest landmark, a typed reason, whether the conversation had ended, the saved deferred effects,
   the pending blocking effect, the selected-choice history and the locale. An ended save's fallback

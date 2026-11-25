@@ -164,8 +164,8 @@ pub enum ResumeFallbackReason {
     /// The saved prompt's choices now belong to more than one prompt.
     LandmarkAmbiguous { landmark: ResumeLandmark },
     /// Statements between the locating line or prompt and the saved point
-    /// changed: an effect, condition, divert or prompt was added, removed or
-    /// edited. Added lines are skipped and do not cause this.
+    /// changed: a line, effect, condition, divert or prompt was added, removed
+    /// or edited there.
     StatementsChanged { landmark: Option<ResumeLandmark> },
     /// The `if` or `match` branch the session was inside no longer exists.
     BranchRemoved,

@@ -19,13 +19,13 @@ state.
 When you restore a save against a compiled asset, Recite compares the asset with the one the save
 was taken against:
 
-| Result            | When                                                                                                                                             | What the player sees                                        |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `exact`           | The asset is the one the save was taken against                                                                                                  | The conversation continues                                  |
-| `unchanged_block` | The patch changed other blocks or files, the compiler or the schema, but not the saved block                                                     | The conversation continues                                  |
-| `text_edited`     | Only text, speakers, interpolation or metadata changed in the saved block                                                                        | The conversation continues with the corrected text          |
-| `relocated`       | The saved block's structure changed, but the saved point was found again through its stable IDs                                                  | The conversation continues, including any newly added lines |
-| fallback          | The block is gone, the line or prompt that located the save is gone or moved, or an effect, condition, divert or prompt next to the save changed | No session; your game decides what happens next             |
+| Result            | When                                                                                                                                                      | What the player sees                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `exact`           | The asset is the one the save was taken against                                                                                                           | The conversation continues                                  |
+| `unchanged_block` | The patch changed other blocks or files, the compiler or the schema, but not the saved block                                                              | The conversation continues                                  |
+| `text_edited`     | Only text, speakers, interpolation or metadata changed in the saved block                                                                                 | The conversation continues with the corrected text          |
+| `relocated`       | The saved block's structure changed, but the saved point was found again through its stable IDs                                                           | The conversation continues, including any newly added lines |
+| fallback          | The block is gone, the line or prompt that located the save is gone or moved, or a statement between that line and the save was added, removed or changed | No session; your game decides what happens next             |
 
 A prompt that was waiting when the player saved is presented again when the save is restored, so
 your game does not need to remember it. If the patch only changed text in that block, the prompt
@@ -42,16 +42,17 @@ as they were saved, even if the patch removed the effect from the source.
 
 ## Edits and their effect on saves
 
-| Edit                                                         | Saves in the edited block               | Saves elsewhere |
-| ------------------------------------------------------------ | --------------------------------------- | --------------- |
-| Fix a typo or reword a line or choice                        | Resume, with the new text               | Unaffected      |
-| Add a line before or after the save point                    | Resume; added lines after it are played | Unaffected      |
-| Add, remove, reorder or re-gate choices at a waiting prompt  | Resume; the prompt is evaluated again   | Unaffected      |
-| Change an effect's arguments or a condition next to the save | Fall back                               | Unaffected      |
-| Delete or move the line the player saved after               | Fall back                               | Unaffected      |
-| Rename or delete a block                                     | Fall back                               | Unaffected      |
-| Change a stable `@` ID                                       | Fall back at points that ID located     | Unaffected      |
-| Update the compiler or the schema                            | Resume, usually as `unchanged_block`    | Unaffected      |
+| Edit                                                                           | Saves in the edited block               | Saves elsewhere |
+| ------------------------------------------------------------------------------ | --------------------------------------- | --------------- |
+| Fix a typo or reword a line or choice                                          | Resume, with the new text               | Unaffected      |
+| Add a line before the line the player saved after, or after the save point     | Resume; added lines after it are played | Unaffected      |
+| Add a line between that line and a waiting effect or the branch the save is in | Fall back                               | Unaffected      |
+| Add, remove, reorder or re-gate choices at a waiting prompt                    | Resume; the prompt is evaluated again   | Unaffected      |
+| Change an effect's arguments or a condition next to the save                   | Fall back                               | Unaffected      |
+| Delete or move the line the player saved after                                 | Fall back                               | Unaffected      |
+| Rename or delete a block                                                       | Fall back                               | Unaffected      |
+| Change a stable `@` ID                                                         | Fall back at points that ID located     | Unaffected      |
+| Update the compiler or the schema                                              | Resume, usually as `unchanged_block`    | Unaffected      |
 
 Recite never guesses. When two prompts could be the one the player saved at, the save falls back
 with `landmark_ambiguous`.
@@ -67,7 +68,7 @@ recite save impact --since v1.2.0 .
 
 ```text
 build/dialogue.recitec: 7 save points: 0 exact, 3 in unchanged blocks, 2 with edited text, 1 relocated, 1 falls back
-main.recite:17:1: a save waiting for blocking effect `open_map` in block `town` falls back: an effect, condition, divert or prompt after @l_town was added, removed or edited
+main.recite:17:1: a save waiting for blocking effect `open_map` in block `town` falls back: a statement between @l_town and the save point was added, removed or edited
 ```
 
 To compare compiled files instead of git revisions, pass `--baseline shipped.recitec

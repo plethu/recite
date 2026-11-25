@@ -10,7 +10,8 @@ use recite_core::compiled::{
     encode_compiled_dialogue_messagepack,
 };
 use recite_runtime::{
-    DialogueEvent, EmptyDialogueContext, next, snapshot::encode_session_messagepack, start_scene,
+    DialogueEvent, EmptyDialogueContext, choose, next, snapshot::encode_session_messagepack,
+    start_scene,
 };
 use tempfile::TempDir;
 
@@ -141,7 +142,7 @@ fn changed_effect_fails_the_check_until_its_block_is_acknowledged() {
         "{report}"
     );
     assert!(
-        report.contains("main.recite:16:1: a save waiting for blocking effect `open_map` in block `town` falls back: an effect, condition, divert or prompt after @square was added, removed or edited"),
+        report.contains("main.recite:16:1: a save waiting for blocking effect `open_map` in block `town` falls back: a statement between @square and the save point was added, removed or edited"),
         "{report}"
     );
     assert!(
@@ -271,6 +272,64 @@ fn inspect_reads_a_save_and_predicts_its_restore() {
         "{}",
         stderr(&output)
     );
+}
+
+#[test]
+fn inspect_reports_that_an_ended_save_restores_no_session() {
+    let temp = TempDir::new().expect("tempdir");
+    let shipped = compile(RELEASED);
+    let mut session = start_scene(&shipped, None).expect("starts");
+    while !matches!(
+        next(&shipped, &mut session, &EmptyDialogueContext).expect("advances"),
+        DialogueEvent::Prompt { .. }
+    ) {}
+    let end = choose(
+        &shipped,
+        &mut session,
+        recite_core::ChoiceId::new("stay").expect("choice"),
+        &EmptyDialogueContext,
+    )
+    .expect("chooses");
+    assert!(matches!(end, DialogueEvent::End { .. }));
+    let save = temp.path().join("player.sav");
+    std::fs::write(
+        &save,
+        encode_session_messagepack(&shipped, &session).expect("encodes save"),
+    )
+    .expect("writes save");
+    let shipped_path = temp.path().join("shipped.recitec");
+    write_asset(&shipped_path, &shipped);
+    let patched = temp.path().join("patched.recitec");
+    write_asset(
+        &patched,
+        &compile(&RELEASED.replace("    Into town.\n", "    Head into town.\n")),
+    );
+
+    for asset in [&shipped_path, &patched] {
+        let output = recite()
+            .args(["save", "inspect"])
+            .arg(&save)
+            .arg("--asset")
+            .arg(asset)
+            .assert_success();
+        let report = stdout(&output);
+        assert!(
+            report.contains("  the conversation had ended\n"),
+            "{report}"
+        );
+        assert!(
+            report.contains(": restores no session, because the conversation had ended\n"),
+            "{report}"
+        );
+        let output = recite()
+            .args(["save", "inspect", "--format", "json"])
+            .arg(&save)
+            .arg("--asset")
+            .arg(asset)
+            .assert_success();
+        let document: serde_json::Value = serde_json::from_str(&stdout(&output)).expect("JSON");
+        assert_eq!(document["prediction"]["outcome"], "ended");
+    }
 }
 
 #[test]

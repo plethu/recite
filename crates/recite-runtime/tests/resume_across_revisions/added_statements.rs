@@ -3,41 +3,48 @@
 use super::*;
 
 #[test]
-fn lines_added_before_the_saved_point_are_skipped_like_earlier_lines() {
+fn statements_between_the_landmark_and_the_saved_point_must_be_unchanged() {
     let base = compile(BASE);
-    // Between the landmark and a waiting blocking effect.
+    // A line between the landmark and a waiting blocking effect, or the branch
+    // the save is inside, could be a line that followed the saved point
+    // before the patch, so it is not skipped.
     let before_grant = edited(
         "  ! blocking grant(map)\n",
         "  > @l_new\n    New.\n  ! blocking grant(map)\n",
     );
-    let (session, report) = resumed(resume(&before_grant, save(&base, SavePoint::PendingGrant)));
-    assert_eq!(report.level, ResumeLevel::Relocated);
-    let mut session = assert_saves_again(&before_grant, session);
-    let DialogueEvent::Effect(effect) = step(&before_grant, &mut session) else {
-        panic!("the waiting effect is emitted again");
-    };
-    assert_eq!(effect.function, "grant");
-    acknowledge_effect(&mut session, effect.id, EffectAck::Completed).expect("acks");
-    let DialogueEvent::Line(line) = step(&before_grant, &mut session) else {
-        panic!("the added line precedes the saved point");
-    };
-    assert_eq!(line.id.as_str(), "l_after_grant");
-
-    // Between the landmark and the branch the save is inside.
     let before_match = edited(":match mood()\n", "> @l_new\n  New.\n:match mood()\n");
-    for point in [SavePoint::InsideIf, SavePoint::InsideMatch] {
-        let (session, report) = resumed(resume(&before_match, save(&base, point)));
-        assert_eq!(report.level, ResumeLevel::Relocated, "{point:?}");
-        assert_continues_like_fresh(&before_match, point, session);
+    for (patched, point) in [
+        (&before_grant, SavePoint::PendingGrant),
+        (&before_match, SavePoint::InsideMatch),
+    ] {
+        assert!(
+            matches!(
+                fallback(resume(patched, save(&base, point))).reason,
+                ResumeFallbackReason::StatementsChanged { .. }
+            ),
+            "{point:?}"
+        );
     }
 
-    // A new prompt is not skipped: its choices could lead anywhere.
-    let prompt = edited(
-        "  ! blocking grant(map)\n",
-        "  > @l_ask\n    Ask?\n    ? @c_yes\n      Yes.\n      -> work\n  ! blocking grant(map)\n",
+    // Removing an effect that has a twin further on must not slide the save
+    // past the lines between them to the twin.
+    let twins = concat!(
+        ":: start default\n",
+        "> @l_a\n  A.\n",
+        "! immediate play_sound(door)\n",
+        "> @l_b\n  B.\n",
+        "! immediate play_sound(door)\n",
+        "> @l_d\n  D.\n",
+        "-> END\n",
     );
+    let twins_base = compile(twins);
+    let mut session = recite_runtime::start_scene(&twins_base, None).expect("starts");
+    step(&twins_base, &mut session);
+    step(&twins_base, &mut session);
+    let saved = recite_runtime::snapshot::snapshot_session(&twins_base, &session).expect("saves");
+    let removed = compile(&twins.replacen("! immediate play_sound(door)\n", "", 1));
     assert!(matches!(
-        fallback(resume(&prompt, save(&base, SavePoint::PendingGrant))).reason,
+        fallback(resume(&removed, saved)).reason,
         ResumeFallbackReason::StatementsChanged { .. }
     ));
 }

@@ -45,7 +45,7 @@ pub(super) fn run(
         ReportFormat::Json => {
             let mut document = snapshot_json(&snapshot);
             if let Some((asset, outcome)) = &prediction {
-                document["prediction"] = prediction_json(asset, outcome);
+                document["prediction"] = prediction_json(asset, outcome, snapshot.ended);
             }
             serde_json::to_writer_pretty(&mut *stdout, &document)
                 .map_err(|error| CliError::Io(error.into()))?;
@@ -54,7 +54,7 @@ pub(super) fn run(
         ReportFormat::Text => {
             write_text(stdout, messages, &snapshot)?;
             if let Some((asset, outcome)) = &prediction {
-                write_prediction(stdout, messages, asset, outcome)?;
+                write_prediction(stdout, messages, asset, outcome, snapshot.ended)?;
             }
         }
     }
@@ -116,7 +116,8 @@ fn write_text(
             )
         )?;
     }
-    if !snapshot.deferred_effects.is_empty() {
+    // An ended conversation delivered its deferred effects with its end.
+    if !snapshot.ended && !snapshot.deferred_effects.is_empty() {
         let functions = snapshot
             .deferred_effects
             .iter()
@@ -137,7 +138,20 @@ fn write_prediction(
     messages: &Messages,
     asset: &str,
     outcome: &SessionResume,
+    ended: bool,
 ) -> Result<(), CliError> {
+    // Adapters restore no session for an ended save, whatever the asset.
+    if ended {
+        writeln!(
+            stdout,
+            "{}",
+            messages.format(
+                MsgId::CliSaveInspectRestoresNothing,
+                [("asset", asset.to_owned())]
+            )
+        )?;
+        return Ok(());
+    }
     match outcome {
         SessionResume::Resumed { report, .. } => {
             writeln!(
@@ -234,7 +248,10 @@ fn landmark_json(landmark: &DialogueLandmarkSnapshot) -> Value {
     }
 }
 
-fn prediction_json(asset: &str, outcome: &SessionResume) -> Value {
+fn prediction_json(asset: &str, outcome: &SessionResume, ended: bool) -> Value {
+    if ended {
+        return json!({ "asset": asset, "outcome": "ended" });
+    }
     match outcome {
         SessionResume::Resumed { report, .. } => json!({
             "asset": asset,
@@ -249,7 +266,6 @@ fn prediction_json(asset: &str, outcome: &SessionResume) -> Value {
             "outcome": "fallback",
             "reason": recite_adapter::resume_names::fallback_reason_name(&fallback.reason),
             "block_available": fallback.block_available,
-            "ended": fallback.ended,
         }),
         _ => Value::Null,
     }

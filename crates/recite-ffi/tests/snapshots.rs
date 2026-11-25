@@ -365,7 +365,9 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
             ":: start default\n",
             "> @bwg39z1\n",
             "  First.\n",
-            "-> END\n",
+            "  ? @c7k2m4p\n",
+            "    Leave.\n",
+            "    -> END\n",
         ),
         recite_core::compiled::SchemaFingerprint::NoSchema,
     );
@@ -374,7 +376,9 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
             ":: start default\n",
             "> @bwg39z1\n",
             "  Changed.\n",
-            "-> END\n",
+            "  ? @c7k2m4p\n",
+            "    Leave.\n",
+            "    -> END\n",
         ),
         recite_core::compiled::SchemaFingerprint::NoSchema,
     );
@@ -413,7 +417,7 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
         },
         ReciteStatus::Ok
     );
-    // There is no condition in this asset, but begin establishes a valid session state.
+    // The session waits at its prompt, so the save is not of an ended conversation.
     assert_eq!(
         unsafe { recite_session_begin(session, &raw mut batch) },
         ReciteStatus::Ok

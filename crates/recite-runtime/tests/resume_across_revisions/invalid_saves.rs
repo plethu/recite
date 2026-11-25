@@ -36,4 +36,30 @@ fn relocated_saves_must_ask_for_their_compiled_effects_and_prompt() {
     let mut prompt = save(&base, SavePoint::PendingPrompt);
     prompt.previous_prompt_choices.reverse();
     rejected(&text, prompt);
+
+    let mut empty = save(&base, SavePoint::PendingPrompt);
+    empty
+        .pending_prompt
+        .as_mut()
+        .expect("prompt")
+        .choices
+        .clear();
+    empty.previous_prompt_choices.clear();
+    rejected(&text, empty);
+
+    // With the block's structure unchanged, the saved choices must be the
+    // compiled ones rather than a reason to evaluate the prompt again.
+    let mut renamed = save(&base, SavePoint::PendingPrompt);
+    for choice in &mut renamed.pending_prompt.as_mut().expect("prompt").choices {
+        choice.id = format!("c_bogus_{}", choice.id);
+    }
+    renamed.previous_prompt_choices = renamed
+        .pending_prompt
+        .as_ref()
+        .expect("prompt")
+        .choices
+        .iter()
+        .map(|choice| choice.id.clone())
+        .collect();
+    rejected(&text, renamed);
 }

@@ -39,6 +39,7 @@ macro_rules! save_message_ids {
         | MsgId::CliSaveInspectResumes
         | MsgId::CliSaveInspectReevaluated
         | MsgId::CliSaveInspectFallback
+        | MsgId::CliSaveInspectRestoresNothing
         | MsgId::CliErrorSaveBaseline
         | MsgId::CliErrorSaveSinceNeedsProject
         | MsgId::CliErrorSaveMissingAsset

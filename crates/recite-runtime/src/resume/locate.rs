@@ -16,7 +16,7 @@ use crate::session_snapshot::{
 };
 use crate::traversal::{AssetView, dialogue_effect_request};
 
-use super::key::{Landmark, StatementKey, statement_key};
+use super::key::{StatementKey, statement_key};
 use super::outcome::{PromptResume, ResumeFallbackReason};
 use super::relocate::landmark_from_snapshot;
 
@@ -101,23 +101,40 @@ pub(super) fn locate_session(
         else {
             return Err(invalid_snapshot("relocated pending prompt is not a prompt"));
         };
+        if pending.choices.is_empty() {
+            return Err(invalid_snapshot("pending prompt has no choices"));
+        }
+        // Saved availability must parse whether or not it is kept.
+        let availability = pending
+            .choices
+            .iter()
+            .map(|choice| {
+                availability_from_snapshot(choice.availability.clone())
+                    .map_err(invalid_snapshot_with_source)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         let compiled = view.choices(*choices)?;
-        let unchanged = structure_unchanged
-            && compiled.len() == pending.choices.len()
+        let same_choices = compiled.len() == pending.choices.len()
             && compiled
                 .iter()
                 .zip(&pending.choices)
                 .all(|(compiled, saved)| compiled.id.as_str() == saved.id);
-        if unchanged {
-            let mut choices = Vec::with_capacity(compiled.len());
-            for (compiled, saved) in compiled.iter().zip(&pending.choices) {
-                choices.push(PendingPromptChoice {
+        if structure_unchanged && !same_choices {
+            // Choice IDs are part of the structure, so they cannot differ.
+            return Err(invalid_snapshot(
+                "pending prompt choices do not match the compiled prompt",
+            ));
+        }
+        if structure_unchanged {
+            let choices = compiled
+                .iter()
+                .zip(availability)
+                .map(|(compiled, availability)| PendingPromptChoice {
                     id: compiled.id.clone(),
                     target: compiled.target.clone(),
-                    availability: availability_from_snapshot(saved.availability.clone())
-                        .map_err(invalid_snapshot_with_source)?,
-                });
-            }
+                    availability,
+                })
+                .collect();
             (
                 next,
                 SessionPhase::AwaitingChoice(PendingPrompt {
@@ -223,34 +240,27 @@ fn locate(
             }
         }
     };
-    // The landmark is the last line before the saved point, so any line
-    // between it and the point was added by the patch. It precedes the point,
-    // like a line added before the landmark, and is skipped.
-    let mut index = base;
-    for saved in &anchor.trail {
-        loop {
-            let key = if index < end {
-                Some(statement_key(view, StatementIndex::new(index))?)
-            } else {
-                None
-            };
-            index += 1;
-            match key {
-                Some(StatementKey::Signature(signature)) if signature.matches(saved) => break,
-                Some(StatementKey::Landmark(Landmark::Line { .. })) => {}
-                _ => {
-                    return Ok(Err(ResumeFallbackReason::StatementsChanged {
-                        landmark: anchor
-                            .landmark
-                            .as_ref()
-                            .map(landmark_from_snapshot)
-                            .transpose()?,
-                    }));
-                }
-            }
+    // Every statement between the landmark and the saved point must still be
+    // there, in order and with nothing between: a line found there may have
+    // followed the saved point before the patch removed what preceded it.
+    for (offset, saved) in anchor.trail.iter().enumerate() {
+        let index = base + offset as u32;
+        let matches = index < end
+            && matches!(
+                statement_key(view, StatementIndex::new(index))?,
+                StatementKey::Signature(signature) if signature.matches(saved)
+            );
+        if !matches {
+            return Ok(Err(ResumeFallbackReason::StatementsChanged {
+                landmark: anchor
+                    .landmark
+                    .as_ref()
+                    .map(landmark_from_snapshot)
+                    .transpose()?,
+            }));
         }
     }
-    Ok(Ok(StatementIndex::new(index)))
+    Ok(Ok(StatementIndex::new(base + anchor.trail.len() as u32)))
 }
 
 fn select_branch(

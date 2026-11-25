@@ -798,6 +798,7 @@ resource_ids = [
     "cli-save-inspect-resumes",
     "cli-save-inspect-reevaluated",
     "cli-save-inspect-fallback",
+    "cli-save-inspect-restores-nothing",
     "cli-error-save-baseline",
     "cli-error-save-since-needs-project",
     "cli-error-save-missing-asset",
