@@ -156,7 +156,10 @@ report against a git revision or compiled asset. That report is readable output 
 
 [Patching a shipped game](/guides/patching-saves/) explains how saves resume after a patch.
 
-### `recite save impact [--baseline <ASSET> | --since <REF>] [--check] [--allow-fallback <BLOCK>]... [--format text|json] [CANDIDATE]`
+### `recite save impact [OPTIONS] [CANDIDATE]`
+
+Options: `--baseline <ASSET>` or `--since <REF>`, `--check`, `--allow-fallback <BLOCK>`, and
+`--format text|json`.
 
 Saves a session at every point a player could save in the baseline and restores each one against the
 candidate, using the runtime's own restore. The candidate is a compiled asset or a project root
