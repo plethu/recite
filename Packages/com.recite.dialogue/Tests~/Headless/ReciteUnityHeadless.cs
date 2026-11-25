@@ -469,8 +469,11 @@ internal static class ReciteUnityHeadless
                 sessionHandle, ReciteNativeBridge.ToUtf8NullTerminated("has_key"), NativeFalseConditionCallback, IntPtr.Zero));
             ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionBegin(sessionHandle, out nativeBatch));
             var restored = ReciteNativeBridge.CopyAndFree(ref nativeBatch);
-            Assert(ReciteDialogueService.DecodeBatchBytes(restored).Events.Count == 0,
-                "native restore changed the pending prompt");
+            var presented = ReciteDialogueService.DecodeBatchBytes(restored).Events;
+            Assert(presented.Count == 1 && presented[0] is RecitePromptOutput restoredPrompt &&
+                restoredPrompt.Choices.Count == prompt.Choices.Count &&
+                restoredPrompt.Choices[0].Id == prompt.Choices[0].Id,
+                "native restore did not present the pending prompt again");
 
             status = ReciteNativeBridge.SessionChoose(
                 sessionHandle,

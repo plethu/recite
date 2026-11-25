@@ -224,6 +224,11 @@ namespace Recite.Unity.Native
         internal static extern ReciteStatus SessionPrepareResume(ulong assetHandle, byte[] snapshotBytes,
             UIntPtr snapshotLen, uint maxLevel, out ulong sessionHandle, out ReciteBuffer report);
 
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_resume")]
+        internal static extern ReciteStatus SessionResume(ulong assetHandle, byte[] snapshotBytes,
+            UIntPtr snapshotLen, uint maxLevel, out ulong sessionHandle, out ReciteBuffer report,
+            out ReciteBuffer batch);
+
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_begin")]
         internal static extern ReciteStatus SessionBegin(ulong sessionHandle, out ReciteBuffer batch);
 
