@@ -90,3 +90,32 @@ fn a_change_in_a_branch_without_lines_names_the_line_before_the_branch() {
         }
     );
 }
+
+#[test]
+fn a_line_that_becomes_a_prompt_is_removed_rather_than_moved() {
+    let base = compile(BASE);
+    let became_prompt = edited(
+        "> @l_second\n  Second.\n",
+        "> @l_second\n  Second.\n  ? @c_next\n    Next.\n    -> work\n",
+    );
+    let saved_after_line = {
+        let mut session = drive(&base, SavePoint::AfterChime);
+        step(&base, &mut session);
+        recite_runtime::snapshot::snapshot_session(&base, &session).expect("saves")
+    };
+    assert_eq!(
+        fallback(resume(&became_prompt, saved_after_line)).reason,
+        ResumeFallbackReason::LandmarkRemoved {
+            landmark: ResumeLandmark::Line(LineId::new("l_second").expect("id")),
+        }
+    );
+
+    let became_line = edited(
+        "  ? @c_work\n    Work.\n    -> work\n  ? @c_leave\n    Leave.\n    -> END\n",
+        "-> END\n",
+    );
+    assert!(matches!(
+        fallback(resume(&became_line, save(&base, SavePoint::PendingPrompt))).reason,
+        ResumeFallbackReason::LandmarkRemoved { .. }
+    ));
+}

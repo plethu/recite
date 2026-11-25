@@ -156,6 +156,23 @@ impl Landmark<'_> {
             _ => false,
         }
     }
+
+    /// Whether this is the saved landmark's line, turned from a line into a
+    /// prompt or from a prompt into a line.
+    pub(crate) fn changed_kind_of(self, saved: &DialogueLandmarkSnapshot) -> bool {
+        match (self, saved) {
+            (
+                Self::Line { id },
+                DialogueLandmarkSnapshot::Prompt {
+                    line: Some(saved), ..
+                },
+            )
+            | (Self::Prompt { line: Some(id), .. }, DialogueLandmarkSnapshot::Line { id: saved }) => {
+                id.as_str() == saved
+            }
+            _ => false,
+        }
+    }
 }
 
 impl Signature<'_> {

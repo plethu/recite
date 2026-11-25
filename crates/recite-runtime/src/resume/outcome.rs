@@ -156,7 +156,8 @@ impl ResumeFallback {
 pub enum ResumeFallbackReason {
     /// The saved block no longer exists.
     BlockRemoved,
-    /// A line or prompt that located the saved point no longer exists.
+    /// A line or prompt that located the saved point no longer exists, or
+    /// changed from a line into a prompt or from a prompt into a line.
     LandmarkRemoved { landmark: ResumeLandmark },
     /// A line or prompt that located the saved point moved to another block
     /// or branch.

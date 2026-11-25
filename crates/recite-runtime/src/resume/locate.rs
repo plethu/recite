@@ -218,11 +218,15 @@ fn locate(
         None => start,
         Some(saved) => {
             let mut found = None;
+            let mut changed_kind = false;
             for index in start..end {
-                if let StatementKey::Landmark(landmark) =
+                let StatementKey::Landmark(landmark) =
                     statement_key(view, StatementIndex::new(index))?
-                    && landmark.matches(saved)
-                {
+                else {
+                    continue;
+                };
+                changed_kind |= landmark.changed_kind_of(saved);
+                if landmark.matches(saved) {
                     if found.is_some() {
                         return Ok(Err(ResumeFallbackReason::LandmarkAmbiguous {
                             landmark: landmark_from_snapshot(saved)?,
@@ -235,10 +239,12 @@ fn locate(
                 Some(index) => index + 1,
                 None => {
                     let landmark = landmark_from_snapshot(saved)?;
-                    return Ok(Err(if landmark_exists(view, saved) {
-                        ResumeFallbackReason::LandmarkMoved { landmark }
-                    } else {
+                    // A line that became a prompt, or the reverse, is still
+                    // here; it did not move, but it no longer locates the save.
+                    return Ok(Err(if changed_kind || !landmark_exists(view, saved) {
                         ResumeFallbackReason::LandmarkRemoved { landmark }
+                    } else {
+                        ResumeFallbackReason::LandmarkMoved { landmark }
                     }));
                 }
             }

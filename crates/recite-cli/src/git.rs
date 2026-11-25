@@ -69,6 +69,10 @@ pub(crate) fn files_at(
 /// Passes each file under `pathspecs` at `reference` whose repository path
 /// `keep` accepts to `each`, one at a time, so only one file is held in
 /// memory. Returns how many files were passed.
+///
+/// Symbolic links are skipped. Project discovery reads a link as its
+/// canonical target, which is listed in its own right when it is inside the
+/// project, and does not accept a link that leads outside it.
 pub(crate) fn for_each_file_at(
     root: &Path,
     reference: &str,
@@ -85,15 +89,37 @@ pub(crate) fn for_each_file_at(
         .split('\0')
         .filter_map(|entry| {
             let (header, path) = entry.split_once('\t')?;
-            (header.split(' ').nth(1) == Some("blob") && keep(path)).then(|| path.to_owned())
+            let mut fields = header.split(' ');
+            let (mode, kind, object) = (fields.next()?, fields.next()?, fields.next()?);
+            (kind == "blob" && mode != SYMLINK_MODE && keep(path))
+                .then(|| (path.to_owned(), object.to_owned()))
         })
         .collect::<Vec<_>>();
-    if files.is_empty() {
-        return Ok(0);
-    }
-    let requests = files
+    // Objects are requested by ID, so paths may contain any character.
+    let objects = files
         .iter()
-        .map(|file| format!("{reference}:{file}\n"))
+        .map(|(_, object)| object.clone())
+        .collect::<Vec<_>>();
+    cat_objects(root, &objects, |index, contents| {
+        each(&files[index].0, contents)
+    })?;
+    Ok(files.len())
+}
+
+const SYMLINK_MODE: &str = "120000";
+
+/// Streams the contents of `objects`, in order, to `each` with their index.
+fn cat_objects(
+    root: &Path,
+    objects: &[String],
+    mut each: impl FnMut(usize, &[u8]) -> Result<(), String>,
+) -> Result<(), String> {
+    if objects.is_empty() {
+        return Ok(());
+    }
+    let requests = objects
+        .iter()
+        .map(|object| format!("{object}\n"))
         .collect::<String>();
     git_streaming(
         root,
@@ -101,9 +127,9 @@ pub(crate) fn for_each_file_at(
         Some(requests.as_bytes()),
         |output| {
             let mut contents = Vec::new();
-            for file in &files {
+            for index in 0..objects.len() {
                 read_batch_object(output, &mut contents)?;
-                each(file, &contents)?;
+                each(index, &contents)?;
             }
             let mut rest = [0; 1];
             if output
@@ -115,8 +141,7 @@ pub(crate) fn for_each_file_at(
             }
             Ok(())
         },
-    )?;
-    Ok(files.len())
+    )
 }
 
 /// Reads one `git cat-file --batch` object, `<oid> <type> <size>\n<content>\n`,

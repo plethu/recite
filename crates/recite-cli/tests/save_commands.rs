@@ -429,3 +429,31 @@ fn since_builds_a_project_at_the_repository_root_or_through_a_relative_path() {
         stdout(&output)
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn since_checks_out_symlinked_sources_and_unusual_file_names() {
+    use std::os::unix::fs::symlink;
+
+    let temp = TempDir::new().expect("tempdir");
+    git(temp.path(), &["init", "-q", "-b", "main"]);
+    let project = temp.path().join("dialogue");
+    std::fs::create_dir_all(&project).expect("project directory");
+    std::fs::write(project.join("recite.project.toml"), MANIFEST).expect("manifest");
+    write_recite(temp.path(), "dialogue/real.recite", RELEASED);
+    symlink("real.recite", project.join("main.recite")).expect("links");
+    std::fs::write(project.join("notes\ndraft.txt"), "notes").expect("notes");
+    git(temp.path(), &["add", "."]);
+    git(temp.path(), &["commit", "-q", "-m", "release"]);
+    git(temp.path(), &["tag", "v1"]);
+
+    let output = recite()
+        .args(["save", "impact", "--since", "v1", "--check"])
+        .arg(&project)
+        .assert_success();
+    assert!(
+        stdout(&output).contains("unchanged; all 7 save points"),
+        "{}",
+        stdout(&output)
+    );
+}
