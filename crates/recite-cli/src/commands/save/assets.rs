@@ -70,20 +70,25 @@ pub(super) fn project_at_revision(
     let root = git::repository_at(&manifest_directory, reference).map_err(baseline_error)?;
     let project_spec = git::pathspec(&root, &manifest_directory).map_err(baseline_error)?;
     // The manifest may declare schema, settings and catalogue files under any
-    // name, so the whole project directory is checked out. Files are written
-    // as git streams them, so only one is held in memory.
+    // name, so the whole project directory is checked out, with its links, as
+    // discovery would read it. Files are written as git streams them, so only
+    // one is held in memory.
     let checkout = tempfile::tempdir().map_err(CliError::Io)?;
     let written = git::for_each_file_at(
         &root,
         reference,
         std::slice::from_ref(&project_spec),
         |_| true,
-        |file, contents| {
+        |file, entry| {
             let destination = checkout.path().join(file);
             if let Some(parent) = destination.parent() {
                 std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
             }
-            std::fs::write(&destination, contents).map_err(|error| error.to_string())
+            match entry {
+                git::TreeEntry::File(contents) => std::fs::write(&destination, contents),
+                git::TreeEntry::Link(target) => link(target, &destination),
+            }
+            .map_err(|error| format!("cannot write {file}: {error}"))
         },
     )
     .map_err(baseline_error)?;
@@ -96,6 +101,18 @@ pub(super) fn project_at_revision(
         checkout.path().join(&project_spec)
     };
     build_project(&project_root, stderr, messages)
+}
+
+#[cfg(unix)]
+fn link(target: &str, destination: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::symlink;
+    symlink(target, destination)
+}
+
+#[cfg(windows)]
+fn link(target: &str, destination: &Path) -> std::io::Result<()> {
+    use std::os::windows::fs::symlink_file;
+    symlink_file(target, destination)
 }
 
 /// Builds every scene asset of a project in memory without writing output.

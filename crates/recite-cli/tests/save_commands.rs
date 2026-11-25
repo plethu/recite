@@ -18,6 +18,9 @@ use tempfile::TempDir;
 mod support;
 use support::*;
 
+#[path = "save_commands/since.rs"]
+mod since;
+
 const MANIFEST: &str = concat!(
     "format_version = 1\n\n",
     "[[scenes]]\n",
@@ -382,78 +385,4 @@ fn inspect_names_the_line_before_a_branch_the_save_is_inside() {
     let document: serde_json::Value = serde_json::from_str(&stdout(&output)).expect("JSON");
     assert_eq!(document["position"]["landmark"]["line"], "arrive");
     assert_eq!(document["position"]["branch_depth"], 1);
-}
-
-#[test]
-fn since_builds_a_project_at_the_repository_root_or_through_a_relative_path() {
-    let temp = TempDir::new().expect("tempdir");
-    git(temp.path(), &["init", "-q", "-b", "main"]);
-    std::fs::write(temp.path().join("recite.project.toml"), MANIFEST).expect("manifest");
-    write_recite(temp.path(), "main.recite", RELEASED);
-    git(temp.path(), &["add", "."]);
-    git(temp.path(), &["commit", "-q", "-m", "release"]);
-    git(temp.path(), &["tag", "v1"]);
-    let output = recite()
-        .args(["save", "impact", "--since", "v1", "--check", "."])
-        .current_dir(temp.path())
-        .assert_success();
-    assert!(
-        stdout(&output).contains("unchanged; all 7 save points"),
-        "{}",
-        stdout(&output)
-    );
-
-    let nested = released_project();
-    let sibling = nested.path().join("tools");
-    std::fs::create_dir_all(&sibling).expect("sibling directory");
-    let output = recite()
-        .args(["save", "impact", "--since", "v1", "--check", "../dialogue"])
-        .current_dir(&sibling)
-        .assert_success();
-    assert!(
-        stdout(&output).contains("unchanged; all 7 save points"),
-        "{}",
-        stdout(&output)
-    );
-
-    // Inside the project, the baseline is still the whole project.
-    let chapters = nested.path().join("dialogue/chapters");
-    std::fs::create_dir_all(&chapters).expect("project subdirectory");
-    let output = recite()
-        .args(["save", "impact", "--since", "v1", "--check"])
-        .current_dir(&chapters)
-        .assert_success();
-    assert!(
-        stdout(&output).contains("unchanged; all 7 save points"),
-        "{}",
-        stdout(&output)
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn since_checks_out_symlinked_sources_and_unusual_file_names() {
-    use std::os::unix::fs::symlink;
-
-    let temp = TempDir::new().expect("tempdir");
-    git(temp.path(), &["init", "-q", "-b", "main"]);
-    let project = temp.path().join("dialogue");
-    std::fs::create_dir_all(&project).expect("project directory");
-    std::fs::write(project.join("recite.project.toml"), MANIFEST).expect("manifest");
-    write_recite(temp.path(), "dialogue/real.recite", RELEASED);
-    symlink("real.recite", project.join("main.recite")).expect("links");
-    std::fs::write(project.join("notes\ndraft.txt"), "notes").expect("notes");
-    git(temp.path(), &["add", "."]);
-    git(temp.path(), &["commit", "-q", "-m", "release"]);
-    git(temp.path(), &["tag", "v1"]);
-
-    let output = recite()
-        .args(["save", "impact", "--since", "v1", "--check"])
-        .arg(&project)
-        .assert_success();
-    assert!(
-        stdout(&output).contains("unchanged; all 7 save points"),
-        "{}",
-        stdout(&output)
-    );
 }

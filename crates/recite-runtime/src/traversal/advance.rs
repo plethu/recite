@@ -68,9 +68,14 @@ pub(super) fn next_with_locale(
         }
         SessionPhase::AwaitingChoice(prompt) => {
             if prompt.reemit_on_next {
-                prompt.reemit_on_next = false;
+                // Render before clearing the flag, so a host that fixes a
+                // missing value or locale can retry the presentation.
                 let prompt = prompt.clone();
-                return represent_prompt(asset_view, session, &prompt, locale);
+                let event = represent_prompt(asset_view, session, &prompt, locale)?;
+                if let SessionPhase::AwaitingChoice(pending) = &mut session.phase {
+                    pending.reemit_on_next = false;
+                }
+                return Ok(event);
             }
             return Err(DialogueError::PromptPending {
                 choices: prompt.choice_ids(),

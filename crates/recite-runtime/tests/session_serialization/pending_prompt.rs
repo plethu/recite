@@ -262,3 +262,50 @@ fn restored_prompt_is_presented_once_with_saved_availability() {
         snapshot
     );
 }
+
+#[test]
+fn restored_prompt_can_be_presented_again_after_a_failed_presentation() {
+    use recite_core::ScalarValue;
+    use recite_runtime::localisation::InterpolationValues;
+    use recite_runtime::{EmptyDialogueContext, LocaleResolution, next_with};
+
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> @qhdr2xd\n",
+            "  What next?\n",
+            "  ? bind=(topic:string=$topic) @ask_work\n",
+            "    Ask about {topic}.\n",
+            "    -> END\n",
+            "  ? @leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+        ),
+    );
+    let mut values = InterpolationValues::new();
+    values.insert("topic".to_owned(), ScalarValue::from("work".to_owned()));
+    let with_values = || LocaleResolution::new().with_values(&values);
+    let mut session = start_scene(&asset, None).expect("starts");
+    assert!(matches!(
+        next_with(&asset, &mut session, &EmptyDialogueContext, with_values()),
+        Ok(DialogueEvent::Prompt { .. })
+    ));
+    let snapshot = snapshot_session(&asset, &session).expect("snapshots");
+    let mut restored = restore_session(&asset, snapshot).expect("restores");
+
+    let empty = InterpolationValues::new();
+    assert!(matches!(
+        next_with(
+            &asset,
+            &mut restored,
+            &EmptyDialogueContext,
+            LocaleResolution::new().with_values(&empty),
+        ),
+        Err(DialogueError::MissingInterpolationValue { .. })
+    ));
+    assert!(matches!(
+        next_with(&asset, &mut restored, &EmptyDialogueContext, with_values()),
+        Ok(DialogueEvent::Prompt { .. })
+    ));
+}

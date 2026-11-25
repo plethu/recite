@@ -51,7 +51,9 @@ pub(crate) fn pathspec(root: &Path, path: &Path) -> Result<String, String> {
 }
 
 /// Files under `pathspecs` at `reference` whose repository path `keep`
-/// accepts, as `(repository path, contents)`. Only accepted files are read.
+/// accepts, as `(repository path, contents)`. Only accepted files are read;
+/// symbolic links are skipped, since their targets are listed in their own
+/// right.
 pub(crate) fn files_at(
     root: &Path,
     reference: &str,
@@ -59,26 +61,31 @@ pub(crate) fn files_at(
     keep: impl Fn(&str) -> bool,
 ) -> Result<Vec<(String, Vec<u8>)>, String> {
     let mut files = Vec::new();
-    for_each_file_at(root, reference, pathspecs, keep, |path, contents| {
-        files.push((path.to_owned(), contents.to_vec()));
+    for_each_file_at(root, reference, pathspecs, keep, |path, entry| {
+        if let TreeEntry::File(contents) = entry {
+            files.push((path.to_owned(), contents.to_vec()));
+        }
         Ok(())
     })?;
     Ok(files)
 }
 
+/// A file in a revision's tree.
+pub(crate) enum TreeEntry<'a> {
+    File(&'a [u8]),
+    /// A symbolic link, with the target it stores.
+    Link(&'a str),
+}
+
 /// Passes each file under `pathspecs` at `reference` whose repository path
 /// `keep` accepts to `each`, one at a time, so only one file is held in
-/// memory. Returns how many files were passed.
-///
-/// Symbolic links are skipped. Project discovery reads a link as its
-/// canonical target, which is listed in its own right when it is inside the
-/// project, and does not accept a link that leads outside it.
+/// memory. Returns how many entries were passed.
 pub(crate) fn for_each_file_at(
     root: &Path,
     reference: &str,
     pathspecs: &[String],
     keep: impl Fn(&str) -> bool,
-    mut each: impl FnMut(&str, &[u8]) -> Result<(), String>,
+    mut each: impl FnMut(&str, TreeEntry<'_>) -> Result<(), String>,
 ) -> Result<usize, String> {
     let mut listing_args = vec!["ls-tree", "-r", "-z", reference, "--"];
     listing_args.extend(pathspecs.iter().map(String::as_str));
@@ -91,17 +98,24 @@ pub(crate) fn for_each_file_at(
             let (header, path) = entry.split_once('\t')?;
             let mut fields = header.split(' ');
             let (mode, kind, object) = (fields.next()?, fields.next()?, fields.next()?);
-            (kind == "blob" && mode != SYMLINK_MODE && keep(path))
-                .then(|| (path.to_owned(), object.to_owned()))
+            (kind == "blob" && keep(path))
+                .then(|| (path.to_owned(), object.to_owned(), mode == SYMLINK_MODE))
         })
         .collect::<Vec<_>>();
     // Objects are requested by ID, so paths may contain any character.
     let objects = files
         .iter()
-        .map(|(_, object)| object.clone())
+        .map(|(_, object, _)| object.clone())
         .collect::<Vec<_>>();
     cat_objects(root, &objects, |index, contents| {
-        each(&files[index].0, contents)
+        let (path, _, link) = &files[index];
+        if *link {
+            let target = std::str::from_utf8(contents)
+                .map_err(|_| format!("the target of link {path} is not UTF-8"))?;
+            each(path, TreeEntry::Link(target))
+        } else {
+            each(path, TreeEntry::File(contents))
+        }
     })?;
     Ok(files.len())
 }
