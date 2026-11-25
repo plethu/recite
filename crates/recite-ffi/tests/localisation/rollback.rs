@@ -89,7 +89,8 @@ fn locale_variant_is_supplied_on_start_and_restore() {
         decode_batch(&batch)["events"]
             .as_array()
             .unwrap()
-            .is_empty()
+            .iter()
+            .all(|event| event["kind"] == "prompt")
     );
     unsafe { recite_buffer_free(&raw mut batch) };
     recite_session_free(restored);

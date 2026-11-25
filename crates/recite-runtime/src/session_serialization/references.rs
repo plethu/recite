@@ -1,9 +1,10 @@
-use recite_core::{ChoiceId, EffectId, LocaleId};
+use recite_core::{ChoiceId, LocaleId};
 
 use crate::DialogueError;
 use crate::event::DialogueEffectRequest;
 use crate::session_snapshot::{
-    DialogueDeferredEffectSnapshot, DialogueSessionSnapshotConversionError,
+    DialogueEffectRequestSnapshot, DialogueSessionSnapshotConversionError,
+    effect_request_from_snapshot,
 };
 use crate::traversal::{AssetView, dialogue_effect_request};
 
@@ -42,7 +43,7 @@ pub(super) fn snapshot_reference<T>(
 
 pub(super) fn restore_effects(
     asset: AssetView<'_>,
-    snapshots: &[DialogueDeferredEffectSnapshot],
+    snapshots: &[DialogueEffectRequestSnapshot],
 ) -> Result<Vec<DialogueEffectRequest>, DialogueError> {
     snapshots
         .iter()
@@ -52,9 +53,10 @@ pub(super) fn restore_effects(
 
 fn restore_effect(
     asset: AssetView<'_>,
-    snapshot: &DialogueDeferredEffectSnapshot,
+    snapshot: &DialogueEffectRequestSnapshot,
 ) -> Result<DialogueEffectRequest, DialogueError> {
-    let effect_id = effect_id(&snapshot.id)?;
+    let saved = effect_request_from_snapshot(snapshot).map_err(invalid_snapshot_with_source)?;
+    let effect_id = saved.id.clone();
     let effect = asset
         .deferred_effect_by_id(&effect_id)
         .map_err(|error| match error {
@@ -64,33 +66,36 @@ fn restore_effect(
             other => other,
         })?;
 
-    dialogue_effect_request(asset, effect)
+    let request = dialogue_effect_request(asset, effect)?;
+    if request != saved {
+        return Err(invalid_snapshot(format!(
+            "deferred effect request `{}` differs from its compiled effect",
+            saved.id
+        )));
+    }
+    Ok(request)
 }
 
-pub(super) fn restore_locale(value: Option<&str>) -> Result<Option<LocaleId>, DialogueError> {
+pub(crate) fn restore_locale(value: Option<&str>) -> Result<Option<LocaleId>, DialogueError> {
     value.map(LocaleId::new).transpose().map_err(core_error)
 }
 
-pub(super) fn choice_id(value: &str) -> Result<ChoiceId, DialogueError> {
+pub(crate) fn choice_id(value: &str) -> Result<ChoiceId, DialogueError> {
     ChoiceId::new(value).map_err(core_error)
-}
-
-pub(super) fn effect_id(value: &str) -> Result<EffectId, DialogueError> {
-    EffectId::new(value).map_err(core_error)
 }
 
 fn core_error(error: impl std::fmt::Display) -> DialogueError {
     invalid_snapshot(error.to_string())
 }
 
-pub(super) fn invalid_snapshot(reason: impl Into<String>) -> DialogueError {
+pub(crate) fn invalid_snapshot(reason: impl Into<String>) -> DialogueError {
     DialogueError::InvalidSessionSnapshot {
         reason: reason.into(),
         source: None,
     }
 }
 
-pub(super) fn invalid_snapshot_with_source(
+pub(crate) fn invalid_snapshot_with_source(
     error: DialogueSessionSnapshotConversionError,
 ) -> DialogueError {
     let reason = error.to_string();

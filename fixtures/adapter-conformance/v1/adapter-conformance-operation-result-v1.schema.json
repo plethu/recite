@@ -402,6 +402,9 @@
             },
             "asset_slot": {
               "type": "string"
+            },
+            "max_resume_level": {
+              "$ref": "#/$defs/resume_level"
             }
           },
           "additionalProperties": false
@@ -917,6 +920,12 @@
         "pending_effect_slot": {
           "type": "string"
         },
+        "resume_level": {
+          "$ref": "#/$defs/resume_level"
+        },
+        "fallback_reason": {
+          "$ref": "#/$defs/fallback_reason"
+        },
         "error_category": {
           "$ref": "#/$defs/stable_error_category"
         },
@@ -955,6 +964,27 @@
         }
       ],
       "additionalProperties": false
+    },
+    "resume_level": {
+      "type": "string",
+      "enum": [
+        "exact",
+        "unchanged_block",
+        "text_edited",
+        "relocated"
+      ]
+    },
+    "fallback_reason": {
+      "type": "string",
+      "enum": [
+        "block_removed",
+        "landmark_removed",
+        "landmark_moved",
+        "landmark_ambiguous",
+        "statements_changed",
+        "branch_removed",
+        "level_refused"
+      ]
     }
   }
 }

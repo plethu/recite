@@ -200,6 +200,14 @@ fn hash_snapshot_conversion_error(
                 }
             }
         }
+        recite_runtime::snapshot::DialogueSessionSnapshotConversionError::InvalidEffectRequest {
+            id,
+            reason,
+        } => {
+            tag(hasher, 2);
+            hash_text(hasher, id);
+            hash_text(hasher, reason);
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use recite_runtime::resume::ResumeOptions;
 use std::{fs, path::Path};
 
 use bevy_app::App;
@@ -78,6 +79,13 @@ fn send(
         .clone()
 }
 
+fn resumed(output: ReciteOutputValue) -> Vec<DialogueEvent> {
+    match output {
+        ReciteOutputValue::Resumed { events, .. } => events,
+        other => panic!("expected a resumed save, got {other:?}"),
+    }
+}
+
 fn batch(output: ReciteOutputValue) -> Vec<DialogueEvent> {
     match output {
         ReciteOutputValue::Dialogue(events) => events,
@@ -129,13 +137,14 @@ fn maintained_workflow_preserves_blocking_snapshot_and_active_revision_on_refres
         other => panic!("expected snapshot: {other:?}"),
     };
     send(&mut app, &mut cursor, ReciteRequest::End);
-    let restored = batch(send(
+    let restored = resumed(send(
         &mut app,
         &mut cursor,
         ReciteRequest::Restore {
             asset: handle.clone(),
             snapshot: save,
             variant: None,
+            options: ResumeOptions::new(),
         },
     ));
     assert!(

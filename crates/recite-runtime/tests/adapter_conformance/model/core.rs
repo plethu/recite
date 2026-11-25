@@ -167,6 +167,7 @@ pub(crate) enum Operation {
     LoadSession {
         snapshot_slot: String,
         asset_slot: String,
+        max_resume_level: Option<String>,
     },
     MutateSnapshotFormat {
         input_snapshot_slot: String,

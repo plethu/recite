@@ -112,6 +112,7 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
         | Command::Recording(_)
         | Command::Schema(SchemaCommand::Inspect(_) | SchemaCommand::CheckFresh(_))
         | Command::Project(ProjectCommand::Validate(_) | ProjectCommand::CheckFresh(_))
+        | Command::Save(_)
         | Command::Explain(_)
         | Command::Play(_)
         | Command::Bench(_)

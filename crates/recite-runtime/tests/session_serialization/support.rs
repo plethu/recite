@@ -1,9 +1,13 @@
 use super::*;
 
-pub(super) fn assert_snapshot_encoding(session: &recite_runtime::DialogueSession) {
+pub(super) fn assert_snapshot_encoding(
+    asset: &recite_core::compiled::CompiledDialogue,
+    session: &recite_runtime::DialogueSession,
+) {
     assert_eq!(
-        encode_session_messagepack(session).expect("borrowed session encodes"),
-        rmp_serde::to_vec(&snapshot_session(session)).expect("owned snapshot encodes"),
+        encode_session_messagepack(asset, session).expect("borrowed session encodes"),
+        rmp_serde::to_vec(&snapshot_session(asset, session).expect("session snapshots"))
+            .expect("owned snapshot encodes"),
         "borrowed encoding preserves every owned snapshot field and its order",
     );
 }

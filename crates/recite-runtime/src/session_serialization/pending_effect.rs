@@ -10,7 +10,8 @@ use crate::traversal::{
 };
 
 use super::pending_position::validate_pending_statement_position;
-use super::references::{effect_id, invalid_snapshot, snapshot_reference};
+use super::references::{invalid_snapshot, invalid_snapshot_with_source, snapshot_reference};
+use crate::session_snapshot::effect_request_from_snapshot;
 
 pub(super) fn restore_pending_effect(
     asset: AssetView<'_>,
@@ -61,15 +62,22 @@ pub(super) fn restore_pending_effect(
         )));
     }
 
-    let snapshot_id = effect_id(&snapshot.id)?;
+    let saved =
+        effect_request_from_snapshot(&snapshot.request).map_err(invalid_snapshot_with_source)?;
     let request = runtime_effect_request_for_trace_counter(
         dialogue_effect_request(asset, effect)?,
         trace_counter,
     )?;
-    if request.id != snapshot_id {
+    if request.id != saved.id {
         return Err(invalid_snapshot(format!(
             "pending effect id `{}` does not match restored effect `{}`",
-            snapshot.id, request.id
+            saved.id, request.id
+        )));
+    }
+    if request != saved {
+        return Err(invalid_snapshot(format!(
+            "pending effect request `{}` differs from its compiled effect",
+            saved.id
         )));
     }
 

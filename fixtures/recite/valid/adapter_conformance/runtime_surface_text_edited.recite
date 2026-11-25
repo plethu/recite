@@ -1,0 +1,22 @@
+:: start default
+> @ndccqx1
+  Intro line, reworded.
+! immediate intro_sfx()
+? @mkkr74x
+  Ask about work.
+  -> work
+? requires=(trusts(player)) @j12cqy0
+  Take the locked route.
+  -> locked
+
+:: work
+! deferred finished_work()
+! blocking grant_item(map)
+? @t680psd
+  End now.
+  -> END
+
+:: locked
+> @d2m1fx9
+  Locked route reached.
+-> END

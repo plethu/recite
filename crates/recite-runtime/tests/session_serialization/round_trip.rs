@@ -16,7 +16,7 @@ fn messagepack_round_trip_resumes_line_progress_without_asset_payload() {
     let mut session = start_scene(&asset, None).expect("starts");
 
     assert_line(next(&asset, &mut session), "first", "First.");
-    let bytes = encode_session_messagepack(&session).expect("encodes session");
+    let bytes = encode_session_messagepack(&asset, &session).expect("encodes session");
     let mut restored =
         decode_session_messagepack(&asset, &bytes).expect("restores from messagepack");
 
@@ -44,8 +44,8 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
     .expect("starts with options");
     assert_line(next(&asset, &mut session), "start_line", "Start.");
 
-    let snapshot = snapshot_session(&session);
-    assert_snapshot_encoding(&session);
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+    assert_snapshot_encoding(&asset, &session);
     assert_eq!(snapshot.snapshot_format_version, 1);
     assert_eq!(snapshot.asset_id, "dialogue/main.recitec");
     assert_eq!(snapshot.compiler_version, "0.0.1");
@@ -73,7 +73,7 @@ fn messagepack_decoder_rejects_trailing_bytes_as_typed_failure() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut bytes = encode_session_messagepack(&session).expect("encodes session");
+    let mut bytes = encode_session_messagepack(&asset, &session).expect("encodes session");
     bytes.push(0xc0);
 
     let error = decode_session_messagepack(&asset, &bytes)

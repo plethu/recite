@@ -226,6 +226,24 @@ impl<'a> AssetView<'a> {
         Ok(&self.asset.match_arms[bounds])
     }
 
+    /// Whether a line with this authored ID exists anywhere in the asset.
+    pub(crate) fn has_line(self, line_id: &str) -> bool {
+        self.asset
+            .line_lookup
+            .as_slice()
+            .binary_search_by(|entry| entry.id.as_str().cmp(line_id))
+            .is_ok()
+    }
+
+    /// Whether a choice with this authored ID exists anywhere in the asset.
+    pub(crate) fn has_choice(self, choice_id: &str) -> bool {
+        self.asset
+            .choice_lookup
+            .as_slice()
+            .binary_search_by(|entry| entry.id.as_str().cmp(choice_id))
+            .is_ok()
+    }
+
     pub(crate) fn choice_by_id(
         self,
         choice_id: &ChoiceId,

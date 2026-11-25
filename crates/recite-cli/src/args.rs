@@ -3,11 +3,13 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
 mod localisation;
+mod save;
 pub(crate) use localisation::{
     CatalogCommand, CatalogProjectArgs, CatalogStatusArgs, ExportState, HandoffFormat,
     RecordingCommand, RecordingExportArgs, RecordingImportArgs, RecordingStatusArgs, ReportFormat,
 };
 use recite_core::DiagnosticCategory;
+pub(crate) use save::{SaveCommand, SaveImpactArgs, SaveInspectArgs};
 
 #[derive(Debug, Parser)]
 #[command(name = "recite", version)]
@@ -39,6 +41,9 @@ pub(crate) enum Command {
     /// Project manifests and compiled-asset freshness.
     #[command(subcommand)]
     Project(ProjectCommand),
+    /// Players' saved sessions across dialogue patches.
+    #[command(subcommand)]
+    Save(SaveCommand),
     Explain(ExplainArgs),
     Watch(WatchArgs),
     Run(RuntimeArgs),
@@ -245,6 +250,10 @@ pub(crate) struct WatchArgs {
     /// Identifier to copy into each structured record.
     #[arg(long)]
     pub(crate) invocation_id: Option<String>,
+    /// After each build, report where saves from this git revision or
+    /// compiled asset resume. Readable output only.
+    #[arg(long, value_name = "REF|ASSET")]
+    pub(crate) save_baseline: Option<String>,
     pub(crate) project_root: PathBuf,
 }
 

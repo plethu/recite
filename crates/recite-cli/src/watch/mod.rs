@@ -34,6 +34,7 @@ pub use recite_build::{
 };
 pub use recite_build::{TargetMapError, TargetPathError};
 
+use crate::commands::save;
 use build::{
     BuildStatus, build_once, format_failure_with_recovery, format_recovery_notice,
     format_recovery_required,
@@ -68,6 +69,11 @@ pub(crate) fn run_watch_command(
         .watch(&project_root, RecursiveMode::Recursive)
         .map_err(watch_error)?;
 
+    let save_baseline = args
+        .save_baseline
+        .as_deref()
+        .map(|spec| save::load_baseline(&project_root, spec, stderr, messages))
+        .transpose()?;
     let mut state = WatchState::new(project_root);
     state.manifest = Some(discovery.manifest().clone());
     writeln!(
@@ -79,7 +85,12 @@ pub(crate) fn run_watch_command(
         ))
     )?;
     let result = build_once(&mut state, stderr, messages);
+    let published = matches!(
+        result,
+        Ok(BuildStatus::Fresh { .. } | BuildStatus::Stale { .. })
+    );
     status.report(stderr, result, messages)?;
+    report_save_impact(&state, save_baseline.as_ref(), published, stderr, messages)?;
 
     loop {
         let event = receiver.recv().map_err(|_| CliError::Watch {
@@ -103,8 +114,29 @@ pub(crate) fn run_watch_command(
 
         drain_debounce(&receiver, &state, stderr, messages)?;
         let result = build_once(&mut state, stderr, messages);
+        let published = matches!(
+            result,
+            Ok(BuildStatus::Fresh { .. } | BuildStatus::Stale { .. })
+        );
         status.report(stderr, result, messages)?;
+        report_save_impact(&state, save_baseline.as_ref(), published, stderr, messages)?;
     }
+}
+
+/// After a published build, report where saves from the baseline resume.
+fn report_save_impact(
+    state: &WatchState,
+    baseline: Option<&save::Assets>,
+    published: bool,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+) -> Result<(), CliError> {
+    let (Some(baseline), true, Some(manifest)) = (baseline, published, state.manifest.as_ref())
+    else {
+        return Ok(());
+    };
+    let candidates = save::published_assets(&state.project_root, manifest)?;
+    save::write_impact(stderr, messages, baseline, &candidates)
 }
 
 /// The project path as typed relative to the working directory, or `.` when it is the directory.
@@ -187,6 +219,12 @@ pub(crate) fn run_structured_watch_command(
     args: WatchArgs,
     stdout: &mut dyn Write,
 ) -> Result<std::process::ExitCode, CliError> {
+    if args.save_baseline.is_some() {
+        return Err(CliError::Watch {
+            message: "--save-baseline reports readable output; run `recite save impact` for JSON"
+                .to_owned(),
+        });
+    }
     protocol::run(args, stdout)
 }
 

@@ -128,6 +128,7 @@ impl Command {
             | Self::Recording(_)
             | Self::Schema(SchemaCommand::Inspect(_) | SchemaCommand::CheckFresh(_))
             | Self::Project(ProjectCommand::Validate(_) | ProjectCommand::CheckFresh(_))
+            | Self::Save(_)
             | Self::Explain(_)
             | Self::Play(_)
             | Self::Bench(_)

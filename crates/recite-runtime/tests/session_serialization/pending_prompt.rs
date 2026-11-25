@@ -34,8 +34,8 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
         ["ask_work", "leave"]
     );
 
-    let snapshot = snapshot_session(&session);
-    assert_snapshot_encoding(&session);
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+    assert_snapshot_encoding(&asset, &session);
     assert_eq!(
         snapshot
             .pending_prompt
@@ -92,8 +92,8 @@ fn restores_pending_prompt_choice_availability_reasons() {
     };
     assert!(!choices[0].availability.is_available);
 
-    let snapshot = snapshot_session(&session);
-    assert_snapshot_encoding(&session);
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+    assert_snapshot_encoding(&asset, &session);
     let unavailable = DialogueError::UnavailableChoice {
         choice: choices[0].id.clone(),
         availability: Box::new(choices[0].availability.clone()),
@@ -102,7 +102,10 @@ fn restores_pending_prompt_choice_availability_reasons() {
         choose(&asset, &mut session, choices[0].id.clone()),
         Err(unavailable.clone())
     );
-    assert_eq!(snapshot_session(&session), snapshot);
+    assert_eq!(
+        snapshot_session(&asset, &session).expect("session snapshots"),
+        snapshot
+    );
     assert_eq!(
         snapshot.pending_prompt.as_ref().expect("pending").choices[0]
             .availability
@@ -113,13 +116,16 @@ fn restores_pending_prompt_choice_availability_reasons() {
     );
 
     let mut restored = restore_session(&asset, snapshot).expect("restores pending prompt");
-    let restored_snapshot = snapshot_session(&restored);
-    assert_snapshot_encoding(&restored);
+    let restored_snapshot = snapshot_session(&asset, &restored).expect("session snapshots");
+    assert_snapshot_encoding(&asset, &restored);
     assert_eq!(
         choose(&asset, &mut restored, choices[0].id.clone()),
         Err(unavailable)
     );
-    assert_eq!(snapshot_session(&restored), restored_snapshot);
+    assert_eq!(
+        snapshot_session(&asset, &restored).expect("session snapshots"),
+        restored_snapshot
+    );
     let restored_choice = &restored_snapshot
         .pending_prompt
         .as_ref()
@@ -196,9 +202,12 @@ fn restores_selected_choice_history_after_choice_continuation() {
         "Work waits.",
     );
 
-    assert_snapshot_encoding(&session);
-    let mut restored =
-        restore_session(&asset, snapshot_session(&session)).expect("restores after choice");
+    assert_snapshot_encoding(&asset, &session);
+    let mut restored = restore_session(
+        &asset,
+        snapshot_session(&asset, &session).expect("session snapshots"),
+    )
+    .expect("restores after choice");
     assert_eq!(
         restored
             .selected_choice_history()
@@ -208,4 +217,48 @@ fn restores_selected_choice_history_after_choice_continuation() {
         ["work"]
     );
     assert_eq!(next(&asset, &mut restored), Ok(empty_end()));
+}
+
+#[test]
+fn restored_prompt_is_presented_once_with_saved_availability() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> @tfpabzd\n",
+            "  What next?\n",
+            "  ? requires=(trusts(player)) @gecyztp\n",
+            "    Work.\n",
+            "    -> END\n",
+            "  ? @pqmzx3r\n",
+            "    Rest.\n",
+            "    -> END\n",
+        ),
+    );
+    let untrusting = |_: recite_runtime::ConditionQuery<'_>| {
+        Ok::<_, recite_runtime::ConditionEvaluationError>(recite_runtime::ConditionValue::Bool(
+            false,
+        ))
+    };
+    let mut session = start_scene(&asset, None).expect("starts");
+    let original = runtime_next(&asset, &mut session, &untrusting).expect("emits prompt");
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+
+    let mut restored = restore_session(&asset, snapshot.clone()).expect("restores");
+    // Conditions are not queried again: a trusting context still sees the
+    // saved unavailable choice.
+    let trusting = |_: recite_runtime::ConditionQuery<'_>| {
+        Ok::<_, recite_runtime::ConditionEvaluationError>(recite_runtime::ConditionValue::Bool(
+            true,
+        ))
+    };
+    assert_eq!(runtime_next(&asset, &mut restored, &trusting), Ok(original));
+    assert!(matches!(
+        runtime_next(&asset, &mut restored, &trusting),
+        Err(DialogueError::PromptPending { .. })
+    ));
+    assert_eq!(
+        snapshot_session(&asset, &restored).expect("session snapshots"),
+        snapshot
+    );
 }

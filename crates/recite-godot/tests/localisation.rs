@@ -5,7 +5,9 @@ use recite_core::ScalarValue;
 use recite_godot::{ReciteDialogueCatalog, ReciteDialogueDriver, ReciteOutput};
 use recite_runtime::localisation::{InterpolationValues, LocaleProvider, TextDomain};
 
-use support::{assert_effect, assert_line, compile_asset, must_ok, must_ok_unit, output_kinds};
+use support::{
+    assert_effect, assert_line, compile_asset, must_ok, must_ok_unit, must_resume, output_kinds,
+};
 
 fn localised_asset() -> recite_godot::ReciteDialogueAsset {
     compile_asset(
@@ -130,7 +132,11 @@ fn catalog_translates_line_plural_choice_and_restore() {
     let mut restored = ReciteDialogueDriver::new();
     restored.set_interpolation_values(values());
     restored.set_locale_catalog(catalog());
-    assert!(must_ok(restored.restore(&asset, &snapshot)).is_empty());
+    let presented = must_resume(restored.restore(&asset, &snapshot));
+    let ReciteOutput::Prompt { choices, .. } = &presented[0] else {
+        panic!("a restored prompt is presented again");
+    };
+    assert_eq!(choices[0].text, "Choisir ceci.");
     let outputs = must_ok(restored.select_choice("choose"));
     assert_eq!(output_kinds(&outputs), ["effect"]);
     let effect_id = assert_effect(&outputs[0], "finish", "blocking");
@@ -170,7 +176,11 @@ fn variant_is_context_first_and_re_supplied_on_restore() {
     let mut restored = ReciteDialogueDriver::new();
     restored.set_interpolation_values(values());
     restored.set_locale_catalog(catalog());
-    assert!(must_ok(restored.restore_with_variant(&asset, &snapshot, Some("formal"))).is_empty());
+    let presented = must_resume(restored.restore_with_variant(&asset, &snapshot, Some("formal")));
+    let ReciteOutput::Prompt { choices, .. } = &presented[0] else {
+        panic!("a restored prompt is presented again in the restored variant");
+    };
+    assert_eq!(choices[0].text, "Choisir ceci formel.");
 }
 
 #[test]

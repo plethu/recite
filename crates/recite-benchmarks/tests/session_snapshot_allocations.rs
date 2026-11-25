@@ -46,7 +46,7 @@ fn encoding_allocates_only_the_output_buffer_and_bounded_prompt_state()
                 assert!(cost.allocations <= 8, "{cost:?}");
                 assert!(cost.bytes_allocated <= encoded.capacity() + 512, "{cost:?}");
                 let restored = decode_session_messagepack(asset.dialogue(), &encoded)?;
-                let owned = snapshot_session(&restored);
+                let owned = snapshot_session(asset.dialogue(), &restored)?;
                 assert_eq!(owned.sources.len(), sources);
                 assert_eq!(owned.selected_choice_history.len(), history);
                 assert_eq!(

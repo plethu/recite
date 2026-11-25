@@ -66,6 +66,8 @@ mod cli_message_ids;
 mod lsp_message_ids;
 #[path = "inventory/message_ids/neovim.rs"]
 mod neovim_message_ids;
+#[path = "inventory/message_ids/save.rs"]
+mod save_message_ids;
 #[path = "inventory/message_ids/tui.rs"]
 mod tui_message_ids;
 #[path = "inventory/message_ids/vscode.rs"]

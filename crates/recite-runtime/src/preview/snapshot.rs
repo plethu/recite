@@ -25,7 +25,7 @@ impl<'asset> PreviewSession<'asset> {
         Ok(PreviewSnapshot {
             snapshot_format_version: PREVIEW_SNAPSHOT_FORMAT_VERSION,
             asset_revision,
-            session: snapshot_session(&self.session),
+            session: snapshot_session(self.asset, &self.session)?,
             initial_block: self.block.clone(),
             options: self.options.clone(),
             next_condition_id: self.next_condition_id,
@@ -71,8 +71,9 @@ impl<'asset> PreviewSession<'asset> {
         if snapshot.state().status().is_waiting_for_condition() {
             return Err(PreviewError::SnapshotPendingCondition);
         }
-        let restored = restore_session(self.asset, snapshot.session().clone())
+        let mut restored = restore_session(self.asset, snapshot.session().clone())
             .map_err(PreviewError::Runtime)?;
+        restored.clear_prompt_reemit();
         if snapshot.options().locale().map(LocaleId::as_str)
             != restored.locale().map(LocaleId::as_str)
             || snapshot.state().locale().map(LocaleId::as_str)

@@ -171,10 +171,8 @@ fn start_choose_snapshot_restore_choose_end_lifecycle() {
         )
     };
     assert_eq!(restore_status, ReciteStatus::Ok);
-    assert_eq!(
-        event_kinds(&decode_batch(&restore_batch)),
-        Vec::<&str>::new()
-    );
+    // The restored prompt is presented again so the host can render it.
+    assert_eq!(event_kinds(&decode_batch(&restore_batch)), ["prompt"]);
     unsafe { recite_buffer_free(&raw mut restore_batch) };
 
     let second_choice = cstr("finish");

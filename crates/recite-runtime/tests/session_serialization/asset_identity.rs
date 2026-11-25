@@ -14,8 +14,11 @@ fn independent_equal_assets_accept_live_sessions_but_forged_sources_do_not() {
     let mut session = start_scene(&first, None).expect("session");
     let mut expected = session.clone();
     assert_eq!(next(&second, &mut session), next(&first, &mut expected));
-    assert_eq!(snapshot_session(&session), snapshot_session(&expected));
-    let mut forged = snapshot_session(&session);
+    assert_eq!(
+        snapshot_session(&first, &session).expect("session snapshots"),
+        snapshot_session(&first, &expected).expect("session snapshots")
+    );
+    let mut forged = snapshot_session(&first, &session).expect("session snapshots");
     forged.sources[0].path = "forged.recite".into();
     assert!(matches!(
         restore_session(&first, forged),
@@ -89,7 +92,10 @@ fn same_id_different_asset_content_is_rejected() {
     let session = start_scene(&first, None).expect("starts");
 
     assert!(matches!(
-        restore_session(&second, snapshot_session(&session)),
+        restore_session(
+            &second,
+            snapshot_session(&first, &session).expect("session snapshots")
+        ),
         Err(DialogueError::AssetContentMismatch { .. })
     ));
 }
@@ -108,7 +114,7 @@ fn same_header_different_compiled_payload_is_rejected() {
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("collects deferred effect and emits line");
-    let snapshot = snapshot_session(&session);
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
 
     let mut modified = asset.clone().into_payload();
     modified.effects[0].args[0] = CompiledArgument::Identifier("changed_item".to_owned());
@@ -142,8 +148,11 @@ fn schema_fingerprint_mismatch_returns_structured_error() {
         recite_core::compiled::CompilerVersion::new("0.0.2").expect("valid compiler version");
     let incompatible_asset = recite_core::compiled::CompiledDialogue::new(incompatible_asset);
 
-    let error = restore_session(&incompatible_asset, snapshot_session(&session))
-        .expect_err("schema mismatch is rejected");
+    let error = restore_session(
+        &incompatible_asset,
+        snapshot_session(&asset, &session).expect("session snapshots"),
+    )
+    .expect_err("schema mismatch is rejected");
     let DialogueError::SchemaMismatch {
         asset_id,
         expected_schema_fingerprint,
@@ -188,7 +197,10 @@ fn mismatched_asset_identity_returns_structured_error() {
     let session = start_scene(&first, None).expect("starts");
 
     assert!(matches!(
-        restore_session(&second, snapshot_session(&session)),
+        restore_session(
+            &second,
+            snapshot_session(&first, &session).expect("session snapshots")
+        ),
         Err(DialogueError::AssetMismatch { .. })
     ));
 }
@@ -205,7 +217,7 @@ fn mismatched_asset_version_returns_structured_error() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.asset_format_version = 99;
 
     assert!(matches!(
@@ -231,7 +243,7 @@ fn unsupported_session_snapshot_formats_are_rejected() {
     );
     let session = start_scene(&asset, None).expect("starts");
     for snapshot_format_version in [0, 2] {
-        let mut snapshot = snapshot_session(&session);
+        let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
         snapshot.snapshot_format_version = snapshot_format_version;
 
         assert_eq!(
@@ -280,7 +292,8 @@ fn messagepack_snapshot_without_payload_fingerprint_is_rejected() {
     );
     let session = start_scene(&asset, None).expect("starts");
     let mut snapshot =
-        serde_json::to_value(snapshot_session(&session)).expect("serializes snapshot");
+        serde_json::to_value(snapshot_session(&asset, &session).expect("session snapshots"))
+            .expect("serializes snapshot");
     let fields = snapshot
         .as_object_mut()
         .expect("snapshot serializes as a map");

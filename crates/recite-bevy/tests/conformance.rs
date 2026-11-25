@@ -5,9 +5,10 @@ use std::path::PathBuf;
 use bevy_app::App;
 use bevy_asset::{AssetPlugin, Assets};
 use bevy_ecs::message::{MessageCursor, Messages};
+use recite_adapter::resume_names::{fallback_reason_name, resume_level_name};
 use recite_bevy::{
     AdapterErrorKind, ReciteCatalog, ReciteConditions, ReciteDialogueAsset, ReciteInterpolation,
-    ReciteOutput, ReciteOutputValue, RecitePlugin, ReciteRequest,
+    ReciteOutput, ReciteOutputValue, ReciteOwner, RecitePlugin, ReciteRequest,
 };
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
@@ -16,6 +17,7 @@ use recite_core::{
         CompiledAssetId, CompilerVersion, ContentFingerprint, SchemaFingerprint, SourceMapId,
     },
 };
+use recite_runtime::resume::ResumeOptions;
 use recite_runtime::{
     ConditionEvaluationError, ConditionValue, DialogueEvent, DialoguePluralResolutionOutcome,
     EffectAck, localisation::PluralResolutionOutcome,
@@ -331,6 +333,7 @@ fn compiled_decode_snapshot_format_and_schema_mismatch_cases() -> TestResult<()>
                 asset: handle,
                 snapshot: vec![0x93, 0x01],
                 variant: None,
+                options: ResumeOptions::new(),
             },
         )?,
         "save_load_incompatibility_error_snapshot_format_mismatch",
@@ -359,7 +362,7 @@ fn compiled_decode_snapshot_format_and_schema_mismatch_cases() -> TestResult<()>
         panic!("snapshot");
     };
     send(&mut app, &mut cursor, ReciteRequest::End)?;
-    assert_case_error(
+    assert_case_restore(
         send(
             &mut app,
             &mut cursor,
@@ -367,11 +370,82 @@ fn compiled_decode_snapshot_format_and_schema_mismatch_cases() -> TestResult<()>
                 asset: second,
                 snapshot: schema_snapshot,
                 variant: None,
+                options: ResumeOptions::new(),
             },
         )?,
-        "schema_mismatch_error_on_restore",
+        "schema_only_change_resumes_on_restore",
     )?;
     assert!(!snapshot.is_empty());
+    Ok(())
+}
+
+#[test]
+fn saves_restore_against_patched_revisions_like_the_reference_driver() -> TestResult<()> {
+    const TEXT_EDITED: &str =
+        "fixtures/recite/valid/adapter_conformance/runtime_surface_text_edited.recite";
+    const CHANGED: &str =
+        "fixtures/recite/valid/adapter_conformance/runtime_surface_changed.recite";
+    for (id, fixture, options) in [
+        (
+            "text_edit_resumes_pending_prompt_on_restore",
+            TEXT_EDITED,
+            ResumeOptions::new(),
+        ),
+        (
+            "exact_only_policy_falls_back_on_restore",
+            TEXT_EDITED,
+            ResumeOptions::exact_only(),
+        ),
+        (
+            "reassigned_ids_fall_back_on_restore",
+            CHANGED,
+            ResumeOptions::new(),
+        ),
+    ] {
+        let mut app = App::new();
+        app.add_plugins((AssetPlugin::default(), RecitePlugin));
+        register_trusts(&mut app, true);
+        let base = app
+            .world_mut()
+            .resource_mut::<Assets<ReciteDialogueAsset>>()
+            .add(fixture_asset(RUNTIME_SURFACE)?);
+        let patched = app
+            .world_mut()
+            .resource_mut::<Assets<ReciteDialogueAsset>>()
+            .add(fixture_asset(fixture)?);
+        app.update();
+        let mut cursor = MessageCursor::<ReciteOutput>::default();
+        send(&mut app, &mut cursor, start(base, None))?;
+        let ReciteOutputValue::Snapshot(snapshot) =
+            send(&mut app, &mut cursor, ReciteRequest::Snapshot)?.value
+        else {
+            panic!("snapshot");
+        };
+        send(&mut app, &mut cursor, ReciteRequest::End)?;
+        let output = send(
+            &mut app,
+            &mut cursor,
+            ReciteRequest::Restore {
+                asset: patched,
+                snapshot,
+                variant: None,
+                options,
+            },
+        )?;
+        let resumed_prompt = matches!(
+            &output.value,
+            ReciteOutputValue::Resumed { events, .. }
+                if matches!(events.as_slice(), [DialogueEvent::Prompt { .. }])
+        );
+        let fell_back = matches!(output.value, ReciteOutputValue::ResumeFallback(_));
+        assert_case_restore(output, id)?;
+        assert!(resumed_prompt || fell_back, "{id}");
+        assert_eq!(
+            app.world().resource::<ReciteOwner>().has_active_session(),
+            resumed_prompt,
+            "{id}: only a resumed save leaves an active session"
+        );
+    }
     Ok(())
 }
 

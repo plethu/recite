@@ -24,7 +24,14 @@ namespace Recite.Unity.GameObjects
         private string localeVariant;
 
         [SerializeField]
+        [Tooltip("How far a save may move when the compiled asset changed since it was saved.")]
+        private ReciteResumeLevel maxResumeLevel = ReciteResumeLevel.Relocated;
+
+        [SerializeField]
         private ReciteOutputEvent output = new ReciteOutputEvent();
+
+        [SerializeField]
+        private ReciteResumeFallbackEvent resumeFallback = new ReciteResumeFallbackEvent();
 
         [SerializeField]
         private ReciteErrorEvent error = new ReciteErrorEvent();
@@ -32,6 +39,14 @@ namespace Recite.Unity.GameObjects
         public ReciteDialogueService Service => service ?? throw new InvalidOperationException("ReciteDialogueRunner is not awake yet");
         public ReciteOutputEvent Output => output;
         public ReciteErrorEvent Error => error;
+
+        /// <summary>
+        /// Raised when <see cref="Restore"/> cannot resume a save in the assigned
+        /// asset. No session is active; the fallback carries the saved block and effects.
+        /// </summary>
+        public ReciteResumeFallbackEvent ResumeFallback => resumeFallback;
+
+        public ReciteResumeLevel MaxResumeLevel { get => maxResumeLevel; set => maxResumeLevel = value; }
 
         private void Awake()
         {
@@ -101,6 +116,10 @@ namespace Recite.Unity.GameObjects
             return Service.Snapshot();
         }
 
+        /// <summary>
+        /// Restores a save against the assigned asset, which may be a patched revision
+        /// of the one it was saved against, within <see cref="MaxResumeLevel"/>.
+        /// </summary>
         public void Restore(ReciteSessionSnapshot snapshot)
         {
             if (compiledAsset == null)
@@ -112,7 +131,19 @@ namespace Recite.Unity.GameObjects
             try
             {
                 var asset = compiledAsset.ToDialogueAsset();
-                Emit(Service.Restore(asset, snapshot, string.IsNullOrEmpty(localeVariant) ? null : localeVariant));
+                var result = Service.Resume(
+                    asset,
+                    snapshot,
+                    maxResumeLevel,
+                    string.IsNullOrEmpty(localeVariant) ? null : localeVariant);
+                if (result.IsResumed)
+                {
+                    Emit(result.Batch);
+                }
+                else
+                {
+                    resumeFallback.Invoke(result.Fallback);
+                }
             }
             catch (ReciteAdapterException ex)
             {
@@ -167,6 +198,11 @@ namespace Recite.Unity.GameObjects
 
         [Serializable]
         public sealed class ReciteErrorEvent : UnityEvent<ReciteAdapterException>
+        {
+        }
+
+        [Serializable]
+        public sealed class ReciteResumeFallbackEvent : UnityEvent<ReciteResumeFallback>
         {
         }
     }

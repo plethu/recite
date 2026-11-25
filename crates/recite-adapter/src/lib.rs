@@ -4,8 +4,9 @@ mod asset;
 mod catalog;
 mod driver;
 mod error;
+pub mod resume_names;
 
 pub use asset::LoadedDialogue;
 pub use catalog::ReciteDialogueCatalog;
-pub use driver::{DriverError, SessionDriver, StartRequest};
+pub use driver::{DriverError, PreparedRestore, RestoreOutcome, SessionDriver, StartRequest};
 pub use error::{AdapterError, AdapterErrorKind, AdapterResult};

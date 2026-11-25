@@ -85,5 +85,6 @@ pub(super) fn restore_pending_prompt(
     Ok(Some(PendingPrompt {
         statement: statement_index,
         choices: pending_choices,
+        reemit_on_next: true,
     }))
 }

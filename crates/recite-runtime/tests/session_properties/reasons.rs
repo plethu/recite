@@ -27,7 +27,7 @@ proptest! {
         let mut session = start_scene(&asset, None).map_err(failure)?;
         let context = |_: ConditionQuery<'_>| Ok(ConditionValue::Bool(false));
         next(&asset, &mut session, &context).map_err(failure)?;
-        let mut snapshot = snapshot_session(&session);
+        let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
         let values = vec![
             DialogueChoiceAvailabilityReasonValueSnapshot::Identifier(text.clone()),
             DialogueChoiceAvailabilityReasonValueSnapshot::String(text.clone()),
@@ -56,13 +56,13 @@ proptest! {
         } else { DialogueChoiceAvailabilityReasonTreeSnapshot::Any(children) });
         let expected = snapshot.clone();
         session = restore_session(&asset, snapshot).map_err(failure)?;
-        prop_assert_eq!(snapshot_session(&session), expected.clone());
-        let bytes = encode_session_messagepack(&session).map_err(failure)?;
+        prop_assert_eq!(snapshot_session(&asset, &session).expect("session snapshots"), expected.clone());
+        let bytes = encode_session_messagepack(&asset, &session).map_err(failure)?;
         let mut decoded = decode_session_messagepack(&asset, &bytes).map_err(failure)?;
-        prop_assert_eq!(snapshot_session(&decoded), expected.clone());
+        prop_assert_eq!(snapshot_session(&asset, &decoded).expect("session snapshots"), expected.clone());
         let id = ChoiceId::new(&expected.previous_prompt_choices[0]).map_err(failure)?;
         let result = choose(&asset, &mut decoded, id, &EmptyDialogueContext);
         prop_assert!(matches!(result, Err(DialogueError::UnavailableChoice { .. })), "unavailable choice must be rejected");
-        prop_assert_eq!(snapshot_session(&decoded), expected);
+        prop_assert_eq!(snapshot_session(&asset, &decoded).expect("session snapshots"), expected);
     }
 }

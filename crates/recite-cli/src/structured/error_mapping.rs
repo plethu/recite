@@ -202,6 +202,9 @@ pub(crate) fn structured_error(
             ErrorOperation::Validate,
             fallback_path,
         ),
+        // `save` commands are human or JSON reports, not structured protocol
+        // operations; their refusals are input that could not be read.
+        CliError::Save(_) => input(ErrorCode::Read, ErrorOperation::Read, fallback_path),
         CliError::Localisation(_) => input(
             ErrorCode::DialogueCatalogInvalid,
             ErrorOperation::Validate,

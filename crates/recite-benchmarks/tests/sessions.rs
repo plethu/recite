@@ -23,7 +23,13 @@ fn session_workloads_preserve_growing_histories_and_deferred_queues_after_restor
             workload.preview_cycle(&mut preview)?;
             assert_eq!(
                 adapter.snapshot()?,
-                recite_runtime::snapshot::encode_session_messagepack(preview.session())?,
+                recite_runtime::snapshot::encode_session_messagepack(
+                    adapter
+                        .active_asset()
+                        .ok_or("adapter session is active")?
+                        .dialogue(),
+                    preview.session(),
+                )?,
                 "adapter drain and preview replay must reach the same checkpoint"
             );
             assert_eq!(
@@ -54,7 +60,13 @@ fn source_count_workloads_preserve_adapter_and_preview_parity()
         assert_eq!(preview.session().selected_choice_history().len(), 1);
         assert_eq!(
             adapter.snapshot()?,
-            recite_runtime::snapshot::encode_session_messagepack(preview.session())?,
+            recite_runtime::snapshot::encode_session_messagepack(
+                adapter
+                    .active_asset()
+                    .ok_or("adapter session is active")?
+                    .dialogue(),
+                preview.session(),
+            )?,
             "source count {source_count} must preserve adapter/preview parity"
         );
     }

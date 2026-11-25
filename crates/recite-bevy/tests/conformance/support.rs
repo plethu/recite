@@ -59,6 +59,35 @@ pub(super) fn assert_case_error(output: ReciteOutput, id: &str) -> TestResult<()
     Ok(())
 }
 
+/// Checks a restore output against the outcome the scenario's final
+/// `load_session` step expects.
+pub(super) fn assert_case_restore(output: ReciteOutput, id: &str) -> TestResult<()> {
+    let case = scenario(id)?;
+    let expect = &case["steps"]
+        .as_array()
+        .ok_or_else(|| io::Error::other("missing scenario steps"))?
+        .iter()
+        .rev()
+        .find(|step| step["operation"]["kind"] == "load_session")
+        .ok_or_else(|| io::Error::other("scenario has no load_session step"))?["expect"];
+    match (
+        output.value,
+        expect["resume_level"].as_str(),
+        expect["fallback_reason"].as_str(),
+    ) {
+        (ReciteOutputValue::Resumed { report, .. }, Some(level), None) => {
+            assert_eq!(resume_level_name(report.level), level, "{id}");
+        }
+        (ReciteOutputValue::ResumeFallback(fallback), None, Some(reason)) => {
+            assert_eq!(fallback_reason_name(&fallback.reason), reason, "{id}");
+        }
+        (other, level, reason) => {
+            panic!("{id}: expected level {level:?} or fallback {reason:?}, got {other:?}")
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn register_trusts(app: &mut App, value: bool) {
     app.world_mut()
         .resource_mut::<ReciteConditions>()

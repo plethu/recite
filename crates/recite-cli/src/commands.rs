@@ -29,6 +29,7 @@ mod project;
 mod project_files;
 pub(crate) mod prose;
 mod recording;
+pub(crate) mod save;
 mod schema;
 mod validate;
 use bench::bench_command;
@@ -49,6 +50,7 @@ pub(crate) fn run_command(
         Command::Id(command) => id::run(command, stderr, messages),
         Command::Schema(command) => schema::run(command, stdout, stderr, messages),
         Command::Project(command) => project::run(command, stderr, messages),
+        Command::Save(command) => save::run(command, stdout, stderr, messages),
         Command::Explain(args) => explain_command(args, stdout, messages),
         Command::Watch(args) => run_watch_command(args, stderr, messages),
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout, messages),

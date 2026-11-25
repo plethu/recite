@@ -11,8 +11,12 @@ use crate::binding_types::{
     ReciteAdapterError, ReciteConditionFailure, ReciteOperationResult, ReciteOutputObject,
 };
 use crate::catalog_resource::ReciteDialogueCatalogResource;
-use crate::convert::{error_dictionary, interpolation_values, output_dictionary};
+use crate::convert::{
+    error_dictionary, fallback_dictionary, interpolation_values, output_dictionary,
+    resumed_dictionary,
+};
 use crate::dialogue_resource::ReciteDialogueResource;
+use recite_adapter::RestoreOutcome;
 
 #[derive(GodotClass)]
 #[class(init, base=Node)]
@@ -139,13 +143,15 @@ impl ReciteDialogueNode {
         }
     }
 
+    /// Restores a save against `asset`, which may be a patched revision of
+    /// the asset it was saved against. See `ReciteOperationResult.restore_outcome`.
     #[func]
     fn restore(
         &mut self,
         asset: Gd<ReciteDialogueResource>,
         snapshot_bytes: PackedByteArray,
     ) -> Gd<ReciteOperationResult> {
-        self.restore_with_variant(asset, snapshot_bytes, GString::new())
+        self.restore_with_options(asset, snapshot_bytes, GString::new(), GString::new())
     }
 
     #[func]
@@ -155,15 +161,45 @@ impl ReciteDialogueNode {
         snapshot_bytes: PackedByteArray,
         variant: GString,
     ) -> Gd<ReciteOperationResult> {
+        self.restore_with_options(asset, snapshot_bytes, variant, GString::new())
+    }
+
+    /// `max_level` bounds how far a save may move: `exact`, `unchanged_block`,
+    /// `text_edited` or `relocated`. Empty accepts any relocation.
+    #[func]
+    fn restore_with_options(
+        &mut self,
+        asset: Gd<ReciteDialogueResource>,
+        snapshot_bytes: PackedByteArray,
+        variant: GString,
+        max_level: GString,
+    ) -> Gd<ReciteOperationResult> {
         let asset = match asset.bind().cloned_asset() {
             Ok(asset) => asset,
             Err(error) => return self.emit_error_result(error),
         };
         let variant = optional_string(variant);
-        let result =
-            self.driver
-                .restore_with_variant(&asset, snapshot_bytes.as_slice(), variant.as_deref());
-        self.apply_driver_result(result)
+        let max_level = optional_string(max_level);
+        let result = self.driver.restore_with_level(
+            &asset,
+            snapshot_bytes.as_slice(),
+            variant.as_deref(),
+            max_level.as_deref(),
+        );
+        match result {
+            Ok(RestoreOutcome::Resumed { report, output }) => {
+                let outputs = self.emit_outputs(output);
+                ReciteOperationResult::restored(outputs, resumed_dictionary(&report))
+            }
+            Ok(RestoreOutcome::Fallback(fallback)) => {
+                ReciteOperationResult::restored(VarArray::new(), fallback_dictionary(&fallback))
+            }
+            Ok(_) => self.emit_error_result(AdapterError::with_detail(
+                AdapterErrorKind::SaveLoadIncompatibility,
+                "unsupported restore outcome",
+            )),
+            Err(error) => self.emit_error_result(error),
+        }
     }
 
     #[func]
@@ -253,19 +289,21 @@ impl ReciteDialogueNode {
         result: AdapterResult<Vec<AdapterOutput>>,
     ) -> Gd<ReciteOperationResult> {
         match result {
-            Ok(outputs) => {
-                let mut result_outputs = VarArray::new();
-                for output in outputs {
-                    let data = output_dictionary(&output);
-                    // Signal handlers may mutate nested payloads; the returned batch stays separate.
-                    self.pending_outputs.push_back(data.duplicate_deep());
-                    result_outputs.push(&data.to_variant());
-                }
-                self.drain_outputs();
-                ReciteOperationResult::success(result_outputs)
-            }
+            Ok(outputs) => ReciteOperationResult::success(self.emit_outputs(outputs)),
             Err(error) => self.emit_error_result(error),
         }
+    }
+
+    fn emit_outputs(&mut self, outputs: Vec<AdapterOutput>) -> VarArray {
+        let mut result_outputs = VarArray::new();
+        for output in outputs {
+            let data = output_dictionary(&output);
+            // Signal handlers may mutate nested payloads; the returned batch stays separate.
+            self.pending_outputs.push_back(data.duplicate_deep());
+            result_outputs.push(&data.to_variant());
+        }
+        self.drain_outputs();
+        result_outputs
     }
 
     fn drain_outputs(&mut self) {

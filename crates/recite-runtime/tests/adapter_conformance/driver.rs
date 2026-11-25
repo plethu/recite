@@ -14,15 +14,12 @@ use recite_core::{
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext, DialogueError,
     DialogueEvent, DialogueSession, DialogueSessionOptions, EffectAck, LocaleResolution,
-    acknowledge_effect, choose,
-    localisation::InterpolationValues,
-    next_with,
-    snapshot::{
-        DialogueContentFingerprintSnapshot, DialogueSchemaFingerprintSnapshot, restore_session,
-        snapshot_session,
-    },
-    start_scene, start_scene_with_options,
+    acknowledge_effect, choose, localisation::InterpolationValues, next_with,
+    snapshot::snapshot_session, start_scene, start_scene_with_options,
 };
+
+#[path = "restore.rs"]
+mod restore;
 
 use super::availability::choice_availability_expectation;
 use super::manifest::workspace_path;
@@ -89,6 +86,8 @@ pub(crate) struct StepOutcome {
     pub(crate) effect_mode: Option<EffectMode>,
     pub(crate) deferred_effect_functions: Option<Vec<String>>,
     pub(crate) pending_effect_id: Option<String>,
+    pub(crate) resume_level: Option<String>,
+    pub(crate) fallback_reason: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -209,7 +208,8 @@ impl ReferenceDriver {
             Operation::LoadSession {
                 snapshot_slot,
                 asset_slot,
-            } => self.load_session(snapshot_slot, asset_slot),
+                max_resume_level,
+            } => self.load_session(snapshot_slot, asset_slot, max_resume_level.as_deref()),
             Operation::MutateSnapshotFormat {
                 input_snapshot_slot,
                 output_snapshot_slot,
@@ -815,58 +815,24 @@ impl ReferenceDriver {
                 "save_session requested with no active session".to_owned(),
             );
         };
-        self.snapshots
-            .insert(snapshot_slot.to_owned(), snapshot_session(&active.session));
-        StepResult::Ok(self.outcome_without_event())
-    }
-
-    fn load_session(&mut self, snapshot_slot: &str, asset_slot: &str) -> StepResult {
-        if self.active_session.is_some() {
-            return self.error(
-                CATEGORY_SESSION_ALREADY_ACTIVE_ERROR,
-                "load_session requested while a session is already active".to_owned(),
-            );
-        }
-
-        let Some(snapshot) = self.snapshots.get(snapshot_slot).cloned() else {
-            return self.error(
-                CATEGORY_SAVE_LOAD_INCOMPATIBILITY_ERROR,
-                format!("snapshot slot `{snapshot_slot}` is not available"),
-            );
-        };
-        let Some(asset) = self.imported_assets.get(asset_slot).cloned() else {
+        let Some(asset) = self.imported_assets.get(&active.asset_slot) else {
             return self.error(
                 CATEGORY_ASSET_LOAD_OR_DECODE_ERROR,
-                format!("imported asset slot `{asset_slot}` is not available"),
-            );
-        };
-
-        if snapshot.schema_fingerprint
-            != schema_fingerprint_snapshot(&asset.dialogue.header.schema_fingerprint)
-        {
-            return self.error(
-                CATEGORY_SCHEMA_MISMATCH_ERROR,
                 format!(
-                    "snapshot `{snapshot_slot}` schema fingerprint does not match imported asset `{asset_slot}`"
+                    "imported asset slot `{}` is not available",
+                    active.asset_slot
                 ),
             );
-        }
-
-        match restore_session(&asset.dialogue, snapshot) {
-            Ok(session) => {
-                self.active_session = Some(ActiveSession {
-                    asset_slot: asset_slot.to_owned(),
-                    session,
-                });
-                self.last_event = None;
-                self.current_prompt_choice_ids.clear();
-                StepResult::Ok(self.outcome_without_event())
-            }
+        };
+        let snapshot = match snapshot_session(&asset.dialogue, &active.session) {
+            Ok(snapshot) => snapshot,
             Err(error) => {
-                let category = self.map_restore_runtime_error(&error);
-                self.error(category, error.to_string())
+                let category = self.map_runtime_error(&error, None);
+                return self.error(category, error.to_string());
             }
-        }
+        };
+        self.snapshots.insert(snapshot_slot.to_owned(), snapshot);
+        StepResult::Ok(self.outcome_without_event())
     }
 
     fn mutate_snapshot_format(
@@ -1171,18 +1137,4 @@ fn to_hex(bytes: &[u8]) -> String {
         output.push(HEX[(byte & 0x0f) as usize] as char);
     }
     output
-}
-
-fn schema_fingerprint_snapshot(
-    schema_fingerprint: &SchemaFingerprint,
-) -> DialogueSchemaFingerprintSnapshot {
-    match schema_fingerprint {
-        SchemaFingerprint::NoSchema => DialogueSchemaFingerprintSnapshot::NoSchema,
-        SchemaFingerprint::Fingerprint(fingerprint) => {
-            DialogueSchemaFingerprintSnapshot::Fingerprint(DialogueContentFingerprintSnapshot {
-                algorithm: fingerprint.algorithm().as_str().to_owned(),
-                digest: fingerprint.digest().as_bytes().to_vec(),
-            })
-        }
-    }
 }

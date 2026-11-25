@@ -1,8 +1,10 @@
 use crate::error::CliError;
 use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
+use crate::schema_inspection::error::SchemaInspectionError;
 use recite_config::ConfigError;
 use recite_ui::{UiArg, UiArgs};
+use std::io;
 
 #[cfg(test)]
 mod tests;
@@ -158,6 +160,7 @@ impl CliError {
             Self::ProjectDefault(error) => error.to_user_message(messages),
             Self::StableIdEdit(refusal) => refusal.to_user_message(messages),
             Self::Localisation(error) => error.to_user_message(messages),
+            Self::Save(error) => error.to_user_message(messages),
             Self::StableIdBaseline { reference, detail } => messages.format(
                 MsgId::CliErrorStableIdBaseline,
                 [("reference", reference.clone()), ("detail", detail.clone())],
@@ -275,5 +278,21 @@ fn user_config_message(error: &ConfigError, messages: &Messages) -> String {
             [("path", display_path(path)), ("locale", locale.clone())],
         ),
         _ => messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())]),
+    }
+}
+
+impl CliError {
+    /// The reader of our output went away, as when piped into `head`; nothing is left to report.
+    pub(crate) fn is_broken_pipe(&self) -> bool {
+        match self {
+            Self::Io(error) => error.kind() == io::ErrorKind::BrokenPipe,
+            Self::TraceJson(error) | Self::BenchJson(error) => {
+                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
+            }
+            Self::SchemaInspection(SchemaInspectionError::Json(error)) => {
+                error.io_error_kind() == Some(io::ErrorKind::BrokenPipe)
+            }
+            _ => false,
+        }
     }
 }

@@ -2,7 +2,8 @@ use recite_core::compiled::{BlockIndex, CompiledDialogue, StatementIndex};
 
 use crate::session::SessionPhase;
 use crate::session_snapshot::{
-    CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueSessionSnapshot, statement_range,
+    CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueSessionSnapshot, SessionSnapshotRef,
+    statement_range,
 };
 use crate::traversal::AssetView;
 use crate::{DialogueError, DialogueSession};
@@ -15,6 +16,10 @@ use super::references::{
 };
 use super::stack::{restore_frames, validate_range_stack, validate_statement_pointer};
 
+/// Restores a session against the exact asset it was saved against.
+///
+/// Any change to the compiled payload is rejected. Use
+/// [`crate::resume::resume_session`] to resume against a patched asset.
 pub fn restore_session(
     asset: &CompiledDialogue,
     snapshot: DialogueSessionSnapshot,
@@ -83,7 +88,7 @@ pub fn restore_session(
         _ => return Err(invalid_snapshot("session phase fields conflict")),
     };
 
-    Ok(DialogueSession {
+    let session = DialogueSession {
         asset_id: asset.header.asset_id.clone(),
         format_version: asset.header.format_version,
         compiler_compatibility_version: asset.header.compiler_compatibility_version,
@@ -102,5 +107,34 @@ pub fn restore_session(
         deferred_effects: deferred_effects.into(),
         locale,
         trace_counter: snapshot.trace_counter,
-    })
+    };
+    ensure_resume_fields_match(asset, &session, &snapshot)?;
+    Ok(session)
+}
+
+/// The revision-independent fields are derived data. On the exact asset they
+/// must equal what this session would save, or a later patched restore could
+/// relocate to a different position than the one restored here.
+fn ensure_resume_fields_match(
+    asset: &CompiledDialogue,
+    session: &DialogueSession,
+    snapshot: &DialogueSessionSnapshot,
+) -> Result<(), DialogueError> {
+    let expected = SessionSnapshotRef::new(asset, session)?;
+    if snapshot.block_id != expected.block_id() {
+        return Err(invalid_snapshot(
+            "saved block id does not match the current block",
+        ));
+    }
+    if snapshot.block_digests != expected.block_digests() {
+        return Err(invalid_snapshot(
+            "saved block digests do not match the current block",
+        ));
+    }
+    if snapshot.resume_anchor != expected.resume_anchor().to_snapshot() {
+        return Err(invalid_snapshot(
+            "saved resume anchor does not match the saved position",
+        ));
+    }
+    Ok(())
 }

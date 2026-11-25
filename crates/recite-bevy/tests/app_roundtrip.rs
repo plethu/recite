@@ -10,6 +10,7 @@ use recite_core::{
     ChoiceId, LocaleId,
     compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
 };
+use recite_runtime::resume::ResumeOptions;
 use recite_runtime::{
     ConditionValue, DialogueEffectMode, DialogueEvent, EffectAck, localisation::TextDomain,
 };
@@ -175,6 +176,7 @@ fn app_handles_conditions_effects_locale_and_snapshot_boundaries()
             asset: handle.clone(),
             snapshot: prompt_snapshot,
             variant: Some("formal".to_owned()),
+            options: ResumeOptions::new(),
         },
     );
     outputs(&app, &mut cursor);
@@ -208,6 +210,7 @@ fn app_handles_conditions_effects_locale_and_snapshot_boundaries()
             asset: handle,
             snapshot: blocking_snapshot,
             variant: Some("formal".to_owned()),
+            options: ResumeOptions::new(),
         },
     );
     outputs(&app, &mut cursor);

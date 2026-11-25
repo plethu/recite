@@ -4,7 +4,9 @@ mod model;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use convert::ffi_effect;
 pub(crate) use encode::encode_batch;
+pub(crate) use model::FfiEffect;
 pub(crate) use model::FfiOutputEncodeError;
 
 use crate::buffer::ReciteBuffer;

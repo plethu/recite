@@ -225,8 +225,8 @@ impl<'a> GeneratedTraversal<'a> {
             DialogueEvent::Effect(effect) => {
                 if matches!(effect.mode, recite_runtime::DialogueEffectMode::Blocking) {
                     self.saw_blocking = true;
-                    let bytes =
-                        encode_session_messagepack(self.session).expect("encode blocked session");
+                    let bytes = encode_session_messagepack(self.asset, self.session)
+                        .expect("encode blocked session");
                     let mut restored = decode_session_messagepack(self.asset, &bytes)
                         .expect("restore blocked session");
                     let restored_effect = match next_with(

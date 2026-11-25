@@ -13,9 +13,20 @@ namespace Recite.Unity
 
         internal static ReciteOutputBatch DecodeBatchBytes(byte[] bytes)
         {
+            return Decode(() => ReciteMessagePack.DecodeOutputBatch(bytes));
+        }
+
+        internal static ReciteMessagePack.ResumeReportPayload DecodeResumeReport(ref ReciteNativeBridge.ReciteBuffer report)
+        {
+            var bytes = ReciteNativeBridge.CopyAndFree(ref report);
+            return Decode(() => ReciteMessagePack.DecodeResumeReport(bytes));
+        }
+
+        private static T Decode<T>(Func<T> decode)
+        {
             try
             {
-                return ReciteMessagePack.DecodeOutputBatch(bytes);
+                return decode();
             }
             catch (FormatException error)
             {

@@ -58,6 +58,17 @@ pub(crate) fn compile_bytes(path: &str, asset_id: &str, source: impl Into<String
     }
 }
 
+/// The first batch of a resumed save; panics on a fallback or error.
+pub(crate) fn must_resume(
+    result: Result<recite_adapter::RestoreOutcome<Vec<ReciteOutput>>, AdapterError>,
+) -> Vec<ReciteOutput> {
+    match result {
+        Ok(recite_adapter::RestoreOutcome::Resumed { output, .. }) => output,
+        Ok(other) => panic!("expected a resumed save, got {other:?}"),
+        Err(error) => panic!("restore should succeed: {error}"),
+    }
+}
+
 pub(crate) fn must_ok(result: Result<Vec<ReciteOutput>, AdapterError>) -> Vec<ReciteOutput> {
     match result {
         Ok(outputs) => outputs,

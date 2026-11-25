@@ -2,14 +2,10 @@
 //! git revision such as the last release tag.
 //!
 //! Removing or renaming a shipped ID breaks translations and saves keyed on it.
-//! The baseline is read from git rather than a sidecar so source stays the only
-//! authority; a missing revision (for example, a shallow clone without tags)
-//! is an error rather than an empty baseline.
 
 use std::collections::BTreeSet;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 use recite_core::DiagnosticCategory;
 use recite_core::ast::{SourceFile, Statement};
@@ -19,6 +15,7 @@ use crate::args::CheckIdsArgs;
 use crate::diagnostics::{InputDiagnostics, report_diagnostics, report_targeted_diagnostics};
 use crate::error::CliError;
 use crate::fs::{collect_input_files, validate_inputs};
+use crate::git;
 use crate::i18n::{Messages, MsgId};
 
 pub(super) fn run(
@@ -121,52 +118,23 @@ fn baseline_ids(paths: &[PathBuf], reference: &str) -> Result<BTreeSet<String>, 
             }
         })
         .unwrap_or_default();
-    let root = git(&anchor, &["rev-parse", "--show-toplevel"], None)
-        .map_err(baseline_error)?
-        .trim_end()
-        .to_owned();
-    let root = PathBuf::from(root);
-    git(
-        &root,
-        &[
-            "rev-parse",
-            "--verify",
-            "--quiet",
-            &format!("{reference}^{{commit}}"),
-        ],
-        None,
-    )
-    .map_err(|_| {
-        baseline_error(
-            "the revision is not available; fetch it (and its tags) before checking".to_owned(),
-        )
-    })?;
-
-    let mut pathspecs = Vec::new();
-    for path in paths {
-        let absolute =
-            std::path::absolute(path).map_err(|error| baseline_error(error.to_string()))?;
-        let relative = absolute.strip_prefix(&root).map_err(|_| {
-            baseline_error(format!("{} is outside the git repository", path.display()))
-        })?;
-        pathspecs.push(relative.to_string_lossy().into_owned());
-    }
-    let mut listing_args = vec!["ls-tree", "-r", "-z", "--name-only", reference, "--"];
-    listing_args.extend(pathspecs.iter().map(String::as_str));
-    let listing = git(&root, &listing_args, None).map_err(baseline_error)?;
-    let files = listing
-        .split('\0')
-        .filter(|file| file.ends_with(".recite"))
-        .collect::<Vec<_>>();
-
-    let requests = files
+    let root = git::repository_at(&anchor, reference).map_err(baseline_error)?;
+    let pathspecs = paths
         .iter()
-        .map(|file| format!("{reference}:{file}\n"))
-        .collect::<String>();
-    let blobs = git(&root, &["cat-file", "--batch"], Some(&requests)).map_err(baseline_error)?;
+        .map(|path| git::pathspec(&root, path))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(baseline_error)?;
     let mut ids = BTreeSet::new();
-    for source in batch_contents(&blobs).map_err(baseline_error)? {
-        collect_ids(&parse("", source).lower_source_file().source_file, &mut ids);
+    for (file, contents) in git::files_at(&root, reference, &pathspecs).map_err(baseline_error)? {
+        if !file.ends_with(".recite") {
+            continue;
+        }
+        let source = String::from_utf8(contents)
+            .map_err(|_| baseline_error(format!("{file} is not valid UTF-8")))?;
+        collect_ids(
+            &parse("", &source).lower_source_file().source_file,
+            &mut ids,
+        );
     }
     Ok(ids)
 }
@@ -175,66 +143,4 @@ fn parent(path: &Path) -> PathBuf {
     path.parent()
         .filter(|parent| !parent.as_os_str().is_empty())
         .map_or_else(|| PathBuf::from("."), Path::to_owned)
-}
-
-/// Splits `git cat-file --batch` output: `<oid> <type> <size>\n<content>\n`.
-fn batch_contents(output: &str) -> Result<Vec<&str>, String> {
-    let mut contents = Vec::new();
-    let mut rest = output;
-    while !rest.is_empty() {
-        let (header, after) = rest
-            .split_once('\n')
-            .ok_or_else(|| "truncated git object listing".to_owned())?;
-        let size = header
-            .rsplit(' ')
-            .next()
-            .and_then(|size| size.parse::<usize>().ok())
-            .ok_or_else(|| format!("unexpected git object header `{header}`"))?;
-        let content = after
-            .get(..size)
-            .ok_or_else(|| "truncated git object".to_owned())?;
-        contents.push(content);
-        rest = after.get(size + 1..).unwrap_or_default();
-    }
-    Ok(contents)
-}
-
-fn git(directory: &Path, args: &[&str], input: Option<&str>) -> Result<String, String> {
-    let mut child = Command::new("git")
-        .arg("-C")
-        .arg(directory)
-        .args(args)
-        .stdin(if input.is_some() {
-            Stdio::piped()
-        } else {
-            Stdio::null()
-        })
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| format!("could not run git: {error}"))?;
-    // Feed stdin from its own thread so a large batch cannot fill both pipes.
-    let writer = input.zip(child.stdin.take()).map(|(input, mut stdin)| {
-        let input = input.to_owned();
-        std::thread::spawn(move || stdin.write_all(input.as_bytes()))
-    });
-    let mut stdout = String::new();
-    if let Some(mut out) = child.stdout.take() {
-        out.read_to_string(&mut stdout)
-            .map_err(|error| format!("could not read git output: {error}"))?;
-    }
-    if let Some(writer) = writer {
-        writer
-            .join()
-            .map_err(|_| "git input writer panicked".to_owned())?
-            .map_err(|error| format!("could not write to git: {error}"))?;
-    }
-    let output = child
-        .wait_with_output()
-        .map_err(|error| format!("could not run git: {error}"))?;
-    if output.status.success() {
-        Ok(stdout)
-    } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_owned())
-    }
 }

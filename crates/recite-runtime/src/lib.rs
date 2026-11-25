@@ -69,6 +69,7 @@ mod event;
 mod locale;
 pub mod localisation;
 pub mod preview;
+pub mod resume;
 mod session;
 mod session_serialization;
 mod session_snapshot;

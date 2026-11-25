@@ -871,3 +871,104 @@ mode = "string"
 
 [arguments."run-effect-mode"]
 mode = "string"
+
+[arguments."cli-save-impact-identical"]
+asset = "string"
+total = "integer"
+
+[arguments."cli-save-impact-summary"]
+asset = "string"
+total = "integer"
+exact = "integer"
+unchanged = "integer"
+text = "integer"
+relocated = "integer"
+fallback = "integer"
+
+[arguments."cli-save-impact-prompts"]
+count = "integer"
+
+[arguments."cli-save-impact-fallback"]
+location = "string"
+block = "string"
+point = "string"
+reason = "string"
+
+[arguments."cli-save-impact-acknowledged"]
+block = "string"
+
+[arguments."cli-save-impact-unacknowledged"]
+count = "integer"
+
+[arguments."cli-save-point-after-line"]
+line = "string"
+
+[arguments."cli-save-point-prompt"]
+prompt = "string"
+
+[arguments."cli-save-point-blocking-effect"]
+function = "string"
+
+[arguments."cli-save-point-after-effect"]
+function = "string"
+
+[arguments."cli-save-reason-landmark-removed"]
+landmark = "string"
+
+[arguments."cli-save-reason-landmark-moved"]
+landmark = "string"
+
+[arguments."cli-save-reason-landmark-ambiguous"]
+landmark = "string"
+
+[arguments."cli-save-reason-statements-changed"]
+landmark = "string"
+
+[arguments."cli-save-reason-level-refused"]
+required = "string"
+allowed = "string"
+
+[arguments."cli-save-inspect-summary"]
+asset = "string"
+block = "string"
+position = "string"
+format = "string"
+compiler = "string"
+
+[arguments."cli-save-inspect-position-after"]
+landmark = "string"
+
+[arguments."cli-save-inspect-pending-prompt"]
+choices = "string"
+
+[arguments."cli-save-inspect-pending-effect"]
+function = "string"
+id = "string"
+
+[arguments."cli-save-inspect-deferred"]
+functions = "string"
+
+[arguments."cli-save-inspect-resumes"]
+asset = "string"
+level = "string"
+
+[arguments."cli-save-inspect-fallback"]
+asset = "string"
+reason = "string"
+
+[arguments."cli-error-save-baseline"]
+reference = "string"
+detail = "string"
+
+[arguments."cli-error-save-since-needs-project"]
+candidate = "string"
+
+[arguments."cli-error-save-missing-asset"]
+asset = "string"
+
+[arguments."cli-error-save-build"]
+detail = "string"
+
+[arguments."cli-error-save-snapshot"]
+path = "string"
+detail = "string"

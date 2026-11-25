@@ -2,9 +2,9 @@ use bevy_asset::{AssetId, Handle};
 use bevy_ecs::message::{Message, MessageCursor, Messages};
 use bevy_ecs::resource::Resource;
 use bevy_ecs::world::World;
-use recite_adapter::{AdapterError, AdapterErrorKind, SessionDriver, StartRequest};
+use recite_adapter::{AdapterError, AdapterErrorKind, RestoreOutcome, SessionDriver, StartRequest};
 use recite_core::{ChoiceId, EffectId, LocaleId};
-use recite_runtime::{DialogueSessionOptions, EffectAck, LocaleResolution};
+use recite_runtime::{DialogueSessionOptions, EffectAck, LocaleResolution, resume::ResumeOptions};
 
 use crate::ReciteDialogueAsset;
 use crate::asset::{AssetCache, CachedRevision, ReciteRevision};
@@ -26,10 +26,14 @@ pub enum ReciteRequest {
         ack: EffectAck,
     },
     Snapshot,
+    /// Restores a save against the asset's current revision, which may be a
+    /// patched revision of the one it was saved against. Emits
+    /// [`ReciteOutputValue::Resumed`] or [`ReciteOutputValue::ResumeFallback`].
     Restore {
         asset: Handle<ReciteDialogueAsset>,
         snapshot: Vec<u8>,
         variant: Option<String>,
+        options: ResumeOptions,
     },
     End,
 }
@@ -148,6 +152,7 @@ fn apply_request(
             asset,
             snapshot,
             variant,
+            options,
         } => {
             if owner.driver.has_active_session() {
                 return Err(AdapterError::new(AdapterErrorKind::SessionAlreadyActive));
@@ -155,13 +160,29 @@ fn apply_request(
             let current = current_asset(world, asset.id())?;
             let context = WorldContext { world };
             let resolution = resolution(world, variant.as_deref());
-            let events =
-                owner
-                    .driver
-                    .restore(&current.dialogue, &snapshot, &context, resolution)?;
-            owner.active_revision = Some(current.revision);
-            owner.variant = variant;
-            Ok(ReciteOutputValue::Dialogue(events))
+            match owner.driver.restore(
+                &current.dialogue,
+                &snapshot,
+                &options,
+                &context,
+                resolution,
+            )? {
+                RestoreOutcome::Resumed { report, output } => {
+                    owner.active_revision = Some(current.revision);
+                    owner.variant = variant;
+                    Ok(ReciteOutputValue::Resumed {
+                        report,
+                        events: output,
+                    })
+                }
+                RestoreOutcome::Fallback(fallback) => {
+                    Ok(ReciteOutputValue::ResumeFallback(fallback))
+                }
+                _ => Err(AdapterError::with_detail(
+                    AdapterErrorKind::SaveLoadIncompatibility,
+                    "unsupported restore outcome",
+                )),
+            }
         }
         ReciteRequest::End => {
             owner.driver.end_session()?;

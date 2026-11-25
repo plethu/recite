@@ -23,6 +23,8 @@ pub enum DialogueSessionSnapshotConversionError {
         #[source]
         source: CoreValueError,
     },
+    #[error("invalid saved effect request `{id}`: {reason}")]
+    InvalidEffectRequest { id: String, reason: String },
 }
 
 pub(crate) fn availability_snapshot(

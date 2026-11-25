@@ -52,7 +52,7 @@ pub(crate) fn execute_runtime_fixture(
     let mut session = PreviewSession::new(asset, Some(block), preview_options)?;
     let prompt_cardinality = PromptCardinality::new(asset)?;
     let mut metrics = options.metrics.then(RuntimeMetricsCollector::default);
-    record_session_size(metrics.as_mut(), session.session())?;
+    record_session_size(metrics.as_mut(), asset, session.session())?;
     let metrics_started_at = options.metrics.then(metrics_now);
     let mut run = RunTranscript::default();
     let mut trace_events = Vec::new();
@@ -63,7 +63,7 @@ pub(crate) fn execute_runtime_fixture(
 
     while !ended {
         let output = session.step(inputs);
-        record_session_size(metrics.as_mut(), session.session())?;
+        record_session_size(metrics.as_mut(), asset, session.session())?;
         let mut pending = VecDeque::from(output.events().to_vec());
         while let Some(event) = pending.pop_front() {
             if let PreviewEvent::Error(error) = &event {
@@ -96,7 +96,7 @@ pub(crate) fn execute_runtime_fixture(
                         ));
                     }
                     let output = session.answer(request.id(), answer, inputs);
-                    record_session_size(metrics.as_mut(), session.session())?;
+                    record_session_size(metrics.as_mut(), asset, session.session())?;
                     pending.extend(output.events().iter().cloned());
                 }
                 PreviewEvent::Prompt(prompt) => {
@@ -111,7 +111,7 @@ pub(crate) fn execute_runtime_fixture(
                     )?;
                     let output = session.choose(choice_id, inputs);
                     choice_in_flight = true;
-                    record_session_size(metrics.as_mut(), session.session())?;
+                    record_session_size(metrics.as_mut(), asset, session.session())?;
                     pending.extend(output.events().iter().cloned());
                 }
                 PreviewEvent::EffectRequested(effect)
@@ -124,7 +124,7 @@ pub(crate) fn execute_runtime_fixture(
                     }
                     let output = session
                         .acknowledge(effect.id.clone(), recite_runtime::EffectAck::Completed);
-                    record_session_size(metrics.as_mut(), session.session())?;
+                    record_session_size(metrics.as_mut(), asset, session.session())?;
                     pending.extend(output.events().iter().cloned());
                 }
                 PreviewEvent::End { deferred_effects } => {

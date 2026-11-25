@@ -60,7 +60,11 @@ impl SessionWorkload {
 
     pub(super) fn restore_adapter(&self, checkpoint: &[u8]) -> SessionResult<SessionDriver> {
         let mut driver = SessionDriver::new();
-        driver.prepare_restore(&self.asset, checkpoint)?;
+        driver.prepare_restore(
+            &self.asset,
+            checkpoint,
+            &recite_runtime::resume::ResumeOptions::new(),
+        )?;
         driver.begin(&ready, LocaleResolution::new())?;
         Ok(driver)
     }

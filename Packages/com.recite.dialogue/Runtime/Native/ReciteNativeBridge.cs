@@ -9,7 +9,7 @@ namespace Recite.Unity.Native
     internal static class ReciteNativeBridge
     {
         internal const uint AbiMajor = 0;
-        internal const uint AbiMinor = 7;
+        internal const uint AbiMinor = 8;
         internal const uint AbiPatch = 0;
         private const string LibraryName = "recite_ffi";
 
@@ -219,6 +219,10 @@ namespace Recite.Unity.Native
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_prepare_restore")]
         internal static extern ReciteStatus SessionPrepareRestore(ulong assetHandle, byte[] snapshotBytes,
             UIntPtr snapshotLen, out ulong sessionHandle);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_prepare_resume")]
+        internal static extern ReciteStatus SessionPrepareResume(ulong assetHandle, byte[] snapshotBytes,
+            UIntPtr snapshotLen, uint maxLevel, out ulong sessionHandle, out ReciteBuffer report);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_begin")]
         internal static extern ReciteStatus SessionBegin(ulong sessionHandle, out ReciteBuffer batch);

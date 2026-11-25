@@ -15,7 +15,7 @@ fn malformed_pending_prompt_snapshot_is_rejected_before_choice_selection() {
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits prompt");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot
         .pending_prompt
         .as_mut()
@@ -42,7 +42,7 @@ fn out_of_range_current_block_snapshot_is_rejected_as_snapshot_error() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.current_block = 99;
 
     let error = restore_session(&asset, snapshot).expect_err("out-of-range block is invalid");
@@ -69,7 +69,7 @@ fn out_of_range_active_statement_range_snapshot_is_rejected_as_snapshot_error() 
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.current_range.start = 99;
     snapshot.current_range.len = 1;
     snapshot.next_statement = 99;
@@ -101,7 +101,7 @@ fn out_of_range_continuation_frame_range_snapshot_is_rejected_as_snapshot_error(
     };
     let mut session = start_scene(&asset, None).expect("starts");
     runtime_next(&asset, &mut session, &context).expect("emits branch line");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.continuation_stack[0].range.start = 99;
     snapshot.continuation_stack[0].range.len = 1;
     snapshot.continuation_stack[0].next_statement = 99;
@@ -127,7 +127,7 @@ fn out_of_range_pending_prompt_statement_snapshot_is_rejected_as_snapshot_error(
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits prompt");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot
         .pending_prompt
         .as_mut()
@@ -156,7 +156,7 @@ fn forged_cross_block_active_range_is_rejected() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.current_range.start = asset.blocks[1].statements.start.as_u32();
     snapshot.current_range.len = asset.blocks[1].statements.len;
     snapshot.next_statement = asset.blocks[1].statements.start.as_u32();
@@ -187,7 +187,7 @@ fn unreachable_pending_prompt_statement_is_rejected() {
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits first prompt");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     let second_prompt_statement = snapshot.next_statement;
     let pending_prompt = snapshot
         .pending_prompt
@@ -208,7 +208,7 @@ fn out_of_range_pending_effect_statement_snapshot_is_rejected_as_snapshot_error(
     let asset = blocking_effect_asset();
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits blocking effect");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot
         .pending_effect
         .as_mut()
@@ -226,7 +226,7 @@ fn pending_effect_statement_must_be_immediately_before_next_statement() {
     let asset = blocking_effect_asset();
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits blocking effect");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.next_statement = snapshot
         .pending_effect
         .as_ref()
@@ -252,10 +252,13 @@ fn pending_effect_statement_must_reference_an_effect_statement() {
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits line");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
         statement: 0,
-        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+        request: forged_effect_request(
+            "effect:dialogue/start.recite:2:1#1",
+            DialogueEffectModeSnapshot::Blocking,
+        ),
     });
 
     assert!(matches!(
@@ -276,10 +279,13 @@ fn pending_effect_statement_must_reference_a_blocking_effect() {
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits immediate effect");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
         statement: 0,
-        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+        request: forged_effect_request(
+            "effect:dialogue/start.recite:2:1#1",
+            DialogueEffectModeSnapshot::Blocking,
+        ),
     });
 
     assert!(matches!(
@@ -301,12 +307,15 @@ fn pending_effect_rejects_forged_deferred_effect_statement() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.next_statement = 1;
     snapshot.trace_counter = 1;
     snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
         statement: 0,
-        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+        request: forged_effect_request(
+            "effect:dialogue/start.recite:2:1#1",
+            DialogueEffectModeSnapshot::Blocking,
+        ),
     });
 
     assert!(matches!(
@@ -320,8 +329,13 @@ fn forged_pending_effect_id_is_rejected_as_snapshot_error() {
     let asset = blocking_effect_asset();
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits blocking effect");
-    let mut snapshot = snapshot_session(&session);
-    snapshot.pending_effect.as_mut().expect("pending effect").id = "effect:forged#1".to_owned();
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+    snapshot
+        .pending_effect
+        .as_mut()
+        .expect("pending effect")
+        .request
+        .id = "effect:forged#1".to_owned();
 
     assert!(matches!(
         restore_session(&asset, snapshot),
@@ -334,7 +348,7 @@ fn ended_session_with_pending_effect_is_rejected_as_snapshot_error() {
     let asset = blocking_effect_asset();
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits blocking effect");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.ended = true;
 
     assert!(matches!(
@@ -358,10 +372,13 @@ fn snapshot_cannot_have_both_pending_prompt_and_pending_effect() {
     );
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits prompt");
-    let mut snapshot = snapshot_session(&session);
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
     snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
         statement: 0,
-        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+        request: forged_effect_request(
+            "effect:dialogue/start.recite:2:1#1",
+            DialogueEffectModeSnapshot::Blocking,
+        ),
     });
 
     assert!(matches!(
@@ -381,4 +398,38 @@ fn blocking_effect_asset() -> CompiledDialogue {
             "-> END\n",
         ),
     )
+}
+
+#[test]
+fn exact_restore_rejects_revision_fields_that_disagree_with_the_position() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> @ke0dtg1\n",
+            "  Start.\n",
+            "> @tkmsp5e\n",
+            "  After.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits line");
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+
+    let mut forged_block = snapshot.clone();
+    forged_block.block_id = "elsewhere".to_owned();
+    let mut forged_anchor = snapshot.clone();
+    forged_anchor.resume_anchor.position.landmark =
+        Some(recite_runtime::snapshot::DialogueLandmarkSnapshot::Line {
+            id: "tkmsp5e".to_owned(),
+        });
+    let mut forged_digest = snapshot;
+    forged_digest.block_digests.content.digest[0] ^= 1;
+    for forged in [forged_block, forged_anchor, forged_digest] {
+        assert!(matches!(
+            restore_session(&asset, forged),
+            Err(DialogueError::InvalidSessionSnapshot { .. })
+        ));
+    }
 }

@@ -23,9 +23,12 @@ fn restores_deferred_effects_collected_before_save_and_continues_in_order() {
     };
     assert_effect_functions(session.deferred_effects(), ["entered_start"]);
 
-    assert_snapshot_encoding(&session);
-    let mut restored =
-        restore_session(&asset, snapshot_session(&session)).expect("restores deferred state");
+    assert_snapshot_encoding(&asset, &session);
+    let mut restored = restore_session(
+        &asset,
+        snapshot_session(&asset, &session).expect("session snapshots"),
+    )
+    .expect("restores deferred state");
     let effects = assert_end_effects(
         choose(
             &asset,
@@ -59,10 +62,11 @@ fn forged_deferred_effect_snapshot_must_reference_a_compiled_deferred_effect() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut snapshot = snapshot_session(&session);
-    snapshot.deferred_effects = vec![DialogueDeferredEffectSnapshot {
-        id: "effect:dialogue/start.recite:2:1".to_owned(),
-    }];
+    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+    snapshot.deferred_effects = vec![forged_effect_request(
+        "effect:dialogue/start.recite:2:1",
+        DialogueEffectModeSnapshot::Deferred,
+    )];
 
     assert!(matches!(
         restore_session(&asset, snapshot),

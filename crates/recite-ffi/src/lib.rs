@@ -34,9 +34,11 @@ pub use locale::{
     recite_locale_validate_plural_rule, recite_locale_validate_translation_placeholders,
 };
 pub use session::{
-    recite_session_acknowledge_effect, recite_session_begin, recite_session_choose,
-    recite_session_clear_locale_provider, recite_session_create, recite_session_free,
-    recite_session_prepare_restore, recite_session_register_condition, recite_session_restore,
+    RECITE_RESUME_LEVEL_EXACT, RECITE_RESUME_LEVEL_RELOCATED, RECITE_RESUME_LEVEL_TEXT_EDITED,
+    RECITE_RESUME_LEVEL_UNCHANGED_BLOCK, recite_session_acknowledge_effect, recite_session_begin,
+    recite_session_choose, recite_session_clear_locale_provider, recite_session_create,
+    recite_session_free, recite_session_prepare_restore, recite_session_prepare_resume,
+    recite_session_register_condition, recite_session_restore, recite_session_resume,
     recite_session_set_interpolation_values, recite_session_set_locale_provider,
     recite_session_set_locale_variant, recite_session_snapshot, recite_session_start,
 };
@@ -47,6 +49,6 @@ pub use session::{
 /// unreleased 0.x family versions interface changes through its minor revision.
 pub const RECITE_FFI_VERSION_MAJOR: u32 = 0;
 /// Pre-release ABI revision; hosts must ship matching headers and libraries.
-pub const RECITE_FFI_VERSION_MINOR: u32 = 7;
+pub const RECITE_FFI_VERSION_MINOR: u32 = 8;
 /// ABI patch version for documentation-only or implementation-only releases.
 pub const RECITE_FFI_VERSION_PATCH: u32 = 0;
