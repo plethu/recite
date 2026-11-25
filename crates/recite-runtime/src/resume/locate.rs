@@ -50,6 +50,9 @@ pub(super) fn locate_session(
     let anchor = &snapshot.resume_anchor;
     let mut range = block.statements;
     let mut frames = Vec::with_capacity(anchor.frames.len());
+    // The nearest line or prompt before the current range, which names a
+    // change in a branch that has no line of its own before the saved point.
+    let mut enclosing = None;
     for frame in &anchor.frames {
         if frame.position.trail.is_empty() {
             return Err(invalid_snapshot(
@@ -58,8 +61,9 @@ pub(super) fn locate_session(
         }
         let next = match locate(view, range, &frame.position)? {
             Ok(next) => next,
-            Err(reason) => return Ok(Err(reason)),
+            Err(reason) => return Ok(Err(name_enclosing(reason, enclosing)?)),
         };
+        enclosing = frame.position.landmark.as_ref().or(enclosing);
         let child = match select_branch(view, previous(next)?, &frame.branch)? {
             Some(child) => child,
             None => return Ok(Err(ResumeFallbackReason::BranchRemoved)),
@@ -72,7 +76,7 @@ pub(super) fn locate_session(
     }
     let next = match locate(view, range, &anchor.position)? {
         Ok(next) => next,
-        Err(reason) => return Ok(Err(reason)),
+        Err(reason) => return Ok(Err(name_enclosing(reason, enclosing)?)),
     };
 
     let (next_statement, phase, prompt) = if let Some(pending) = &snapshot.pending_prompt {
@@ -261,6 +265,20 @@ fn locate(
         }
     }
     Ok(Ok(StatementIndex::new(base + anchor.trail.len() as u32)))
+}
+
+fn name_enclosing(
+    reason: ResumeFallbackReason,
+    enclosing: Option<&DialogueLandmarkSnapshot>,
+) -> Result<ResumeFallbackReason, DialogueError> {
+    Ok(match (reason, enclosing) {
+        (ResumeFallbackReason::StatementsChanged { landmark: None }, Some(enclosing)) => {
+            ResumeFallbackReason::StatementsChanged {
+                landmark: Some(landmark_from_snapshot(enclosing)?),
+            }
+        }
+        (reason, _) => reason,
+    })
 }
 
 fn select_branch(

@@ -63,3 +63,30 @@ fn a_structural_change_in_the_block_evaluates_a_waiting_prompt_again() {
     assert_eq!(report.prompt, PromptResume::Kept);
     assert_eq!(report.level, ResumeLevel::TextEdited);
 }
+
+#[test]
+fn a_change_in_a_branch_without_lines_names_the_line_before_the_branch() {
+    let source = concat!(
+        ":: start default\n",
+        "> @l_a\n  A.\n",
+        ":if trusts(player)\n",
+        "  ! immediate fx(one)\n",
+        "  > @l_b\n    B.\n",
+        "-> END\n",
+    );
+    let base = compile(source);
+    let mut session = recite_runtime::start_scene(&base, None).expect("starts");
+    step(&base, &mut session);
+    assert!(matches!(
+        step(&base, &mut session),
+        DialogueEvent::Effect(_)
+    ));
+    let saved = recite_runtime::snapshot::snapshot_session(&base, &session).expect("saves");
+    let patched = compile(&source.replace("fx(one)", "fx(two)"));
+    assert_eq!(
+        fallback(resume(&patched, saved)).reason,
+        ResumeFallbackReason::StatementsChanged {
+            landmark: Some(ResumeLandmark::Line(LineId::new("l_a").expect("id"))),
+        }
+    );
+}

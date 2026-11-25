@@ -5,7 +5,7 @@
 //! authority. A missing revision (for example, a shallow clone without tags) is
 //! an error rather than an empty baseline.
 
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -58,6 +58,24 @@ pub(crate) fn files_at(
     pathspecs: &[String],
     keep: impl Fn(&str) -> bool,
 ) -> Result<Vec<(String, Vec<u8>)>, String> {
+    let mut files = Vec::new();
+    for_each_file_at(root, reference, pathspecs, keep, |path, contents| {
+        files.push((path.to_owned(), contents.to_vec()));
+        Ok(())
+    })?;
+    Ok(files)
+}
+
+/// Passes each file under `pathspecs` at `reference` whose repository path
+/// `keep` accepts to `each`, one at a time, so only one file is held in
+/// memory. Returns how many files were passed.
+pub(crate) fn for_each_file_at(
+    root: &Path,
+    reference: &str,
+    pathspecs: &[String],
+    keep: impl Fn(&str) -> bool,
+    mut each: impl FnMut(&str, &[u8]) -> Result<(), String>,
+) -> Result<usize, String> {
     let mut listing_args = vec!["ls-tree", "-r", "-z", reference, "--"];
     listing_args.extend(pathspecs.iter().map(String::as_str));
     let listing = git_text(root, &listing_args, None)?;
@@ -71,46 +89,57 @@ pub(crate) fn files_at(
         })
         .collect::<Vec<_>>();
     if files.is_empty() {
-        return Ok(Vec::new());
+        return Ok(0);
     }
     let requests = files
         .iter()
         .map(|file| format!("{reference}:{file}\n"))
         .collect::<String>();
-    let blobs = git(root, &["cat-file", "--batch"], Some(requests.as_bytes()))?;
-    let contents = batch_contents(&blobs)?;
-    if contents.len() != files.len() {
-        return Err("git returned a different number of files than it listed".to_owned());
-    }
-    Ok(files
-        .into_iter()
-        .zip(contents.into_iter().map(<[u8]>::to_vec))
-        .collect())
+    git_streaming(
+        root,
+        &["cat-file", "--batch"],
+        Some(requests.as_bytes()),
+        |output| {
+            let mut contents = Vec::new();
+            for file in &files {
+                read_batch_object(output, &mut contents)?;
+                each(file, &contents)?;
+            }
+            let mut rest = [0; 1];
+            if output
+                .read(&mut rest)
+                .map_err(|error| format!("could not read git output: {error}"))?
+                != 0
+            {
+                return Err("git returned more files than it listed".to_owned());
+            }
+            Ok(())
+        },
+    )?;
+    Ok(files.len())
 }
 
-/// Splits `git cat-file --batch` output: `<oid> <type> <size>\n<content>\n`.
-fn batch_contents(output: &[u8]) -> Result<Vec<&[u8]>, String> {
-    let mut contents = Vec::new();
-    let mut rest = output;
-    while !rest.is_empty() {
-        let newline = rest
-            .iter()
-            .position(|byte| *byte == b'\n')
-            .ok_or_else(|| "truncated git object listing".to_owned())?;
-        let header = String::from_utf8_lossy(&rest[..newline]);
-        let size = header
-            .rsplit(' ')
-            .next()
-            .and_then(|size| size.parse::<usize>().ok())
-            .ok_or_else(|| format!("unexpected git object header `{header}`"))?;
-        let after = &rest[newline + 1..];
-        let content = after
-            .get(..size)
-            .ok_or_else(|| "truncated git object".to_owned())?;
-        contents.push(content);
-        rest = after.get(size + 1..).unwrap_or_default();
+/// Reads one `git cat-file --batch` object, `<oid> <type> <size>\n<content>\n`,
+/// into `contents`.
+fn read_batch_object(output: &mut dyn BufRead, contents: &mut Vec<u8>) -> Result<(), String> {
+    let read_error = |error: std::io::Error| format!("could not read git output: {error}");
+    let mut header = String::new();
+    if output.read_line(&mut header).map_err(read_error)? == 0 {
+        return Err("git returned fewer files than it listed".to_owned());
     }
-    Ok(contents)
+    let header = header.trim_end();
+    let size = header
+        .rsplit(' ')
+        .next()
+        .and_then(|size| size.parse::<usize>().ok())
+        .ok_or_else(|| format!("unexpected git object header `{header}`"))?;
+    contents.clear();
+    contents.resize(size + 1, 0);
+    output
+        .read_exact(contents)
+        .map_err(|_| "truncated git object".to_owned())?;
+    contents.truncate(size);
+    Ok(())
 }
 
 pub(crate) fn git_text(
@@ -127,6 +156,23 @@ pub(crate) fn git(
     args: &[&str],
     input: Option<&[u8]>,
 ) -> Result<Vec<u8>, String> {
+    let mut stdout = Vec::new();
+    git_streaming(directory, args, input, |output| {
+        output
+            .read_to_end(&mut stdout)
+            .map(|_| ())
+            .map_err(|error| format!("could not read git output: {error}"))
+    })?;
+    Ok(stdout)
+}
+
+/// Runs git, passing its output to `read` as it arrives.
+fn git_streaming(
+    directory: &Path,
+    args: &[&str],
+    input: Option<&[u8]>,
+    read: impl FnOnce(&mut dyn BufRead) -> Result<(), String>,
+) -> Result<(), String> {
     let mut child = Command::new("git")
         .arg("-C")
         .arg(directory)
@@ -145,22 +191,28 @@ pub(crate) fn git(
         let input = input.to_owned();
         std::thread::spawn(move || stdin.write_all(&input))
     });
-    let mut stdout = Vec::new();
-    if let Some(mut out) = child.stdout.take() {
-        out.read_to_end(&mut stdout)
-            .map_err(|error| format!("could not read git output: {error}"))?;
+    let read_result = match child.stdout.take() {
+        Some(stdout) => read(&mut BufReader::new(stdout)),
+        None => Ok(()),
+    };
+    if read_result.is_err() {
+        // Stop git so the writer thread and the wait below cannot block.
+        let _ = child.kill();
     }
-    if let Some(writer) = writer {
+    let written = writer.map(|writer| {
         writer
             .join()
-            .map_err(|_| "git input writer panicked".to_owned())?
-            .map_err(|error| format!("could not write to git: {error}"))?;
-    }
+            .map_err(|_| "git input writer panicked".to_owned())
+    });
     let output = child
         .wait_with_output()
         .map_err(|error| format!("could not run git: {error}"))?;
+    read_result?;
+    if let Some(written) = written {
+        written?.map_err(|error| format!("could not write to git: {error}"))?;
+    }
     if output.status.success() {
-        Ok(stdout)
+        Ok(())
     } else {
         Err(String::from_utf8_lossy(&output.stderr).trim().to_owned())
     }

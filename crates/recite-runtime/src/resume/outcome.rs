@@ -165,7 +165,9 @@ pub enum ResumeFallbackReason {
     LandmarkAmbiguous { landmark: ResumeLandmark },
     /// Statements between the locating line or prompt and the saved point
     /// changed: a line, effect, condition, divert or prompt was added, removed
-    /// or edited there.
+    /// or edited there. The landmark is the nearest line or prompt before the
+    /// change, possibly outside the branch it is in, or `None` when the
+    /// block has none before it.
     StatementsChanged { landmark: Option<ResumeLandmark> },
     /// The `if` or `match` branch the session was inside no longer exists.
     BranchRemoved,

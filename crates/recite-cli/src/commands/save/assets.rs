@@ -70,24 +70,25 @@ pub(super) fn project_at_revision(
     let root = git::repository_at(&manifest_directory, reference).map_err(baseline_error)?;
     let project_spec = git::pathspec(&root, &manifest_directory).map_err(baseline_error)?;
     // The manifest may declare schema, settings and catalogue files under any
-    // name, so the whole project directory is checked out.
-    let files = git::files_at(
+    // name, so the whole project directory is checked out. Files are written
+    // as git streams them, so only one is held in memory.
+    let checkout = tempfile::tempdir().map_err(CliError::Io)?;
+    let written = git::for_each_file_at(
         &root,
         reference,
         std::slice::from_ref(&project_spec),
         |_| true,
+        |file, contents| {
+            let destination = checkout.path().join(file);
+            if let Some(parent) = destination.parent() {
+                std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+            }
+            std::fs::write(&destination, contents).map_err(|error| error.to_string())
+        },
     )
     .map_err(baseline_error)?;
-    if files.is_empty() {
+    if written == 0 {
         return Err(baseline_error("the project did not exist at that revision".to_owned()).into());
-    }
-    let checkout = tempfile::tempdir().map_err(CliError::Io)?;
-    for (file, contents) in files {
-        let destination = checkout.path().join(&file);
-        if let Some(parent) = destination.parent() {
-            std::fs::create_dir_all(parent).map_err(CliError::Io)?;
-        }
-        std::fs::write(&destination, contents).map_err(CliError::Io)?;
     }
     let project_root = if project_spec == "." {
         checkout.path().to_owned()
