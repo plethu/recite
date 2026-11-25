@@ -49,17 +49,9 @@ pub fn restore_session(
         current_range,
         &continuation_stack,
     )?;
-    let previous_prompt_choices = restore_choice_ids(
-        asset_view,
-        "previous prompt choices",
-        &snapshot.previous_prompt_choices,
-    )?;
-    let selected_choice_history = restore_choice_ids(
-        asset_view,
-        "selected choice history",
-        &snapshot.selected_choice_history,
-    )?;
-    let mut deferred_effects = restore_effects(asset_view, &snapshot.deferred_effects)?;
+    let previous_prompt_choices = restore_choice_ids(&snapshot.previous_prompt_choices)?;
+    let selected_choice_history = restore_choice_ids(&snapshot.selected_choice_history)?;
+    let mut deferred_effects = restore_effects(&snapshot.deferred_effects)?;
     // Restored histories stay shared until an append; retain only their rows.
     deferred_effects.shrink_to_fit();
     let locale = restore_locale(snapshot.locale.as_deref())?;

@@ -50,7 +50,7 @@ fn restores_deferred_effects_collected_before_save_and_continues_in_order() {
 }
 
 #[test]
-fn forged_deferred_effect_snapshot_must_reference_a_compiled_deferred_effect() {
+fn saved_deferred_effects_are_self_contained_but_must_be_deferred() {
     let asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -62,14 +62,28 @@ fn forged_deferred_effect_snapshot_must_reference_a_compiled_deferred_effect() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
-    snapshot.deferred_effects = vec![forged_effect_request(
-        "effect:dialogue/start.recite:2:1",
+    let snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+
+    // A request collected before a patch keeps its saved ID and span, even
+    // though no compiled effect has that positional ID any more.
+    let mut carried = snapshot.clone();
+    carried.deferred_effects = vec![forged_effect_request(
+        "effect:dialogue/start.recite:9:1",
         DialogueEffectModeSnapshot::Deferred,
     )];
+    let restored = restore_session(&asset, carried).expect("restores carried request");
+    assert_eq!(
+        restored.deferred_effects()[0].id.as_str(),
+        "effect:dialogue/start.recite:9:1"
+    );
 
+    let mut immediate = snapshot;
+    immediate.deferred_effects = vec![forged_effect_request(
+        "effect:dialogue/start.recite:2:1",
+        DialogueEffectModeSnapshot::Immediate,
+    )];
     assert!(matches!(
-        restore_session(&asset, snapshot),
+        restore_session(&asset, immediate),
         Err(DialogueError::InvalidSessionSnapshot { .. })
     ));
 }

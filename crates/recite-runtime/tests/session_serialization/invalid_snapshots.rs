@@ -325,18 +325,33 @@ fn pending_effect_rejects_forged_deferred_effect_statement() {
 }
 
 #[test]
-fn forged_pending_effect_id_is_rejected_as_snapshot_error() {
+fn pending_effect_must_ask_for_its_compiled_effect() {
     let asset = blocking_effect_asset();
     let mut session = start_scene(&asset, None).expect("starts");
     next(&asset, &mut session).expect("emits blocking effect");
     let mut snapshot = snapshot_session(&asset, &session).expect("session snapshots");
+    // The saved request ID is what the host acknowledges; a patch may have
+    // moved the effect, so the ID is kept as saved.
+    let mut moved = snapshot.clone();
+    moved
+        .pending_effect
+        .as_mut()
+        .expect("pending effect")
+        .request
+        .id = "effect:dialogue/start.recite:9:1#1".to_owned();
+    let restored = restore_session(&asset, moved).expect("restores moved request");
+    assert_eq!(
+        restored.pending_effect().expect("pending").id.as_str(),
+        "effect:dialogue/start.recite:9:1#1"
+    );
+
+    // What the request asks for must still be the compiled blocking effect.
     snapshot
         .pending_effect
         .as_mut()
         .expect("pending effect")
         .request
-        .id = "effect:forged#1".to_owned();
-
+        .function = "forged".to_owned();
     assert!(matches!(
         restore_session(&asset, snapshot),
         Err(DialogueError::InvalidSessionSnapshot { .. })

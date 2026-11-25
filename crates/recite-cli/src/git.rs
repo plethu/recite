@@ -15,7 +15,9 @@ pub(crate) fn repository_at(anchor: &Path, reference: &str) -> Result<PathBuf, S
     let root = git_text(anchor, &["rev-parse", "--show-toplevel"], None)?
         .trim_end()
         .to_owned();
-    let root = PathBuf::from(root);
+    // `--show-toplevel` resolves symbolic links; resolve the same way so
+    // `pathspec` can strip this prefix from canonical paths.
+    let root = std::fs::canonicalize(&root).unwrap_or_else(|_| PathBuf::from(root));
     git(
         &root,
         &[
@@ -32,12 +34,19 @@ pub(crate) fn repository_at(anchor: &Path, reference: &str) -> Result<PathBuf, S
     Ok(root)
 }
 
-/// `path` relative to the repository `root`, for use as a git pathspec.
+/// `path` relative to the repository `root`, for use as a git pathspec and as
+/// a path inside a checkout of the repository. The root itself is `.`.
 pub(crate) fn pathspec(root: &Path, path: &Path) -> Result<String, String> {
-    let absolute = std::path::absolute(path).map_err(|error| error.to_string())?;
-    let relative = absolute
+    // Canonical paths have no `..` or symbolic links, so the relative path is
+    // also valid inside a checkout that contains only the listed files.
+    let canonical = std::fs::canonicalize(path)
+        .map_err(|error| format!("cannot resolve {}: {error}", path.display()))?;
+    let relative = canonical
         .strip_prefix(root)
         .map_err(|_| format!("{} is outside the git repository", path.display()))?;
+    if relative.as_os_str().is_empty() {
+        return Ok(".".to_owned());
+    }
     Ok(relative.to_string_lossy().into_owned())
 }
 
@@ -47,13 +56,17 @@ pub(crate) fn files_at(
     reference: &str,
     pathspecs: &[String],
 ) -> Result<Vec<(String, Vec<u8>)>, String> {
-    let mut listing_args = vec!["ls-tree", "-r", "-z", "--name-only", reference, "--"];
+    let mut listing_args = vec!["ls-tree", "-r", "-z", reference, "--"];
     listing_args.extend(pathspecs.iter().map(String::as_str));
     let listing = git_text(root, &listing_args, None)?;
+    // Entries are `<mode> <type> <object>\t<path>`. Only blobs have contents;
+    // submodule gitlinks are not part of this repository's tree.
     let files = listing
         .split('\0')
-        .filter(|file| !file.is_empty())
-        .map(str::to_owned)
+        .filter_map(|entry| {
+            let (header, path) = entry.split_once('\t')?;
+            (header.split(' ').nth(1) == Some("blob")).then(|| path.to_owned())
+        })
         .collect::<Vec<_>>();
     if files.is_empty() {
         return Ok(Vec::new());

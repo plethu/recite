@@ -10,7 +10,9 @@ use recite_core::{
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueError, DialogueEvent,
     DialogueSession, EffectAck, acknowledge_effect, choose, next,
-    resume::{ResumeFallback, ResumeOptions, ResumeReport, SessionResume, resume_session},
+    resume::{
+        ResumeFallback, ResumeLevel, ResumeOptions, ResumeReport, SessionResume, resume_session,
+    },
     snapshot::{DialogueSessionSnapshot, snapshot_session},
     start_scene,
 };
@@ -318,11 +320,28 @@ pub(super) fn normalize(event: DialogueEvent) -> DialogueEvent {
 /// A resumed session continues like a fresh traversal of the patched asset
 /// driven to the same point, apart from deferred effects collected before the
 /// save, which keep their saved request.
+/// A resumed session saved again on the patched asset restores exactly, even
+/// though it carries effects and choice history from the older revision.
+pub(super) fn assert_saves_again(
+    patched: &CompiledDialogue,
+    session: DialogueSession,
+) -> DialogueSession {
+    let snapshot = snapshot_session(patched, &session).expect("resumed session saves");
+    let (restored, report) = resumed(resume(patched, snapshot.clone()));
+    assert_eq!(report.level, ResumeLevel::Exact);
+    assert_eq!(
+        snapshot_session(patched, &restored).expect("snapshots again"),
+        snapshot
+    );
+    restored
+}
+
 pub(super) fn assert_continues_like_fresh(
     patched: &CompiledDialogue,
     point: SavePoint,
-    mut session: DialogueSession,
+    session: DialogueSession,
 ) {
+    let mut session = assert_saves_again(patched, session);
     let mut fresh = drive(patched, point);
     if matches!(point, SavePoint::PendingPrompt) {
         // A restored prompt, kept or evaluated again, is presented on the

@@ -65,13 +65,16 @@ requests in full, because compiled effect IDs are derived from source positions.
 Exact restore (`restore_session`) validates the snapshot before constructing a live session. The
 runtime and preview snapshot formats are versioned; both currently use v1. Unknown versions and
 missing or mismatched compiled payload fingerprints are rejected, even when asset headers and source
-metadata match. The resume anchor, block digests and saved effect requests must equal what the
-restored position derives from the asset. Prepared assets are immutable, so advancing reuses their
-validated identity. Live session source identity is bound by start or validated restore. A matching
-full-payload fingerprint covers that immutable identity without rescanning source rows; independent
-equal assets remain equivalent, and snapshot validation and structured mismatch errors remain
-unchanged. [Serialization compatibility](../serialization-compatibility.md) governs unpublished
-snapshots and future format changes.
+metadata match. The resume anchor and block digests must equal what the restored position derives
+from the asset. Saved effect requests and choice history are self-contained: they may come from an
+older revision through an earlier resume, so deferred requests need only be deferred, and a pending
+request must match the mode, function and arguments of the blocking effect it waits on. Prepared
+assets are immutable, so advancing reuses their validated identity. Live session source identity is
+bound by start or validated restore. A matching full-payload fingerprint covers that immutable
+identity without rescanning source rows; independent equal assets remain equivalent, and snapshot
+validation and structured mismatch errors remain unchanged.
+[Serialization compatibility](../serialization-compatibility.md) governs unpublished snapshots and
+future format changes.
 
 #### Restoring a save in a patched asset
 

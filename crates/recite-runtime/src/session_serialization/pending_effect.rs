@@ -5,9 +5,7 @@ use recite_core::compiled::{
 use crate::DialogueError;
 use crate::session::PendingEffect;
 use crate::session_snapshot::DialogueSessionPendingEffectSnapshot;
-use crate::traversal::{
-    AssetView, dialogue_effect_request, runtime_effect_request_for_trace_counter,
-};
+use crate::traversal::{AssetView, dialogue_effect_request};
 
 use super::pending_position::validate_pending_statement_position;
 use super::references::{invalid_snapshot, invalid_snapshot_with_source, snapshot_reference};
@@ -62,19 +60,15 @@ pub(super) fn restore_pending_effect(
         )));
     }
 
+    // The saved request keeps the ID and source span the host saw, which a
+    // patch may have moved; what it asks for must still be this effect.
     let saved =
         effect_request_from_snapshot(&snapshot.request).map_err(invalid_snapshot_with_source)?;
-    let request = runtime_effect_request_for_trace_counter(
-        dialogue_effect_request(asset, effect)?,
-        trace_counter,
-    )?;
-    if request.id != saved.id {
-        return Err(invalid_snapshot(format!(
-            "pending effect id `{}` does not match restored effect `{}`",
-            saved.id, request.id
-        )));
-    }
-    if request != saved {
+    let compiled = dialogue_effect_request(asset, effect)?;
+    if saved.mode != compiled.mode
+        || saved.function != compiled.function
+        || saved.args != compiled.args
+    {
         return Err(invalid_snapshot(format!(
             "pending effect request `{}` differs from its compiled effect",
             saved.id
@@ -83,7 +77,7 @@ pub(super) fn restore_pending_effect(
 
     Ok(Some(PendingEffect {
         statement: statement_index,
-        request,
+        request: saved,
         reemit_on_next: true,
     }))
 }

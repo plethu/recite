@@ -77,7 +77,12 @@ pub(super) fn project_at_revision(
         }
         std::fs::write(&destination, contents).map_err(CliError::Io)?;
     }
-    build_project(&checkout.path().join(&project_spec), stderr, messages)
+    let project_root = if project_spec == "." {
+        checkout.path().to_owned()
+    } else {
+        checkout.path().join(&project_spec)
+    };
+    build_project(&project_root, stderr, messages)
 }
 
 /// Builds every scene asset of a project in memory without writing output.

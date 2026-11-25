@@ -1,32 +1,16 @@
 use recite_core::{ChoiceId, LocaleId};
 
 use crate::DialogueError;
-use crate::event::DialogueEffectRequest;
+use crate::event::{DialogueEffectMode, DialogueEffectRequest};
 use crate::session_snapshot::{
     DialogueEffectRequestSnapshot, DialogueSessionSnapshotConversionError,
     effect_request_from_snapshot,
 };
-use crate::traversal::{AssetView, dialogue_effect_request};
 
-pub(super) fn restore_choice_ids(
-    asset: AssetView<'_>,
-    field: &'static str,
-    values: &[String],
-) -> Result<Vec<ChoiceId>, DialogueError> {
-    values
-        .iter()
-        .map(|value| {
-            let choice_id = choice_id(value)?;
-            asset.choice_by_id(&choice_id)?;
-            Ok(choice_id)
-        })
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| match error {
-            DialogueError::MalformedCompiledAsset { reason } => invalid_snapshot(format!(
-                "{field} reference invalid compiled choice: {reason}"
-            )),
-            other => other,
-        })
+/// Choice IDs in saved history are authored identifiers, kept even when a
+/// patch has since removed the choice.
+pub(super) fn restore_choice_ids(values: &[String]) -> Result<Vec<ChoiceId>, DialogueError> {
+    values.iter().map(|value| choice_id(value)).collect()
 }
 
 pub(super) fn snapshot_reference<T>(
@@ -41,39 +25,26 @@ pub(super) fn snapshot_reference<T>(
     })
 }
 
+/// Saved deferred effects are self-contained requests. They are delivered as
+/// saved, so a session resumed in a patched asset, and saved again, still
+/// restores: compiled effect IDs are positional and need not exist any more.
 pub(super) fn restore_effects(
-    asset: AssetView<'_>,
     snapshots: &[DialogueEffectRequestSnapshot],
 ) -> Result<Vec<DialogueEffectRequest>, DialogueError> {
     snapshots
         .iter()
-        .map(|snapshot| restore_effect(asset, snapshot))
-        .collect()
-}
-
-fn restore_effect(
-    asset: AssetView<'_>,
-    snapshot: &DialogueEffectRequestSnapshot,
-) -> Result<DialogueEffectRequest, DialogueError> {
-    let saved = effect_request_from_snapshot(snapshot).map_err(invalid_snapshot_with_source)?;
-    let effect_id = saved.id.clone();
-    let effect = asset
-        .deferred_effect_by_id(&effect_id)
-        .map_err(|error| match error {
-            DialogueError::MalformedCompiledAsset { reason } => {
-                invalid_snapshot(format!("deferred effect reference is invalid: {reason}"))
+        .map(|snapshot| {
+            let request =
+                effect_request_from_snapshot(snapshot).map_err(invalid_snapshot_with_source)?;
+            if request.mode != DialogueEffectMode::Deferred {
+                return Err(invalid_snapshot(format!(
+                    "deferred effect request `{}` is not a deferred effect",
+                    request.id
+                )));
             }
-            other => other,
-        })?;
-
-    let request = dialogue_effect_request(asset, effect)?;
-    if request != saved {
-        return Err(invalid_snapshot(format!(
-            "deferred effect request `{}` differs from its compiled effect",
-            saved.id
-        )));
-    }
-    Ok(request)
+            Ok(request)
+        })
+        .collect()
 }
 
 pub(crate) fn restore_locale(value: Option<&str>) -> Result<Option<LocaleId>, DialogueError> {

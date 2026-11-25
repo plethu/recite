@@ -90,7 +90,7 @@ pub(crate) fn run_watch_command(
         Ok(BuildStatus::Fresh { .. } | BuildStatus::Stale { .. })
     );
     status.report(stderr, result, messages)?;
-    report_save_impact(&state, save_baseline.as_ref(), published, stderr, messages)?;
+    report_save_impact(&state, save_baseline.as_ref(), published, stderr, messages);
 
     loop {
         let event = receiver.recv().map_err(|_| CliError::Watch {
@@ -119,24 +119,30 @@ pub(crate) fn run_watch_command(
             Ok(BuildStatus::Fresh { .. } | BuildStatus::Stale { .. })
         );
         status.report(stderr, result, messages)?;
-        report_save_impact(&state, save_baseline.as_ref(), published, stderr, messages)?;
+        report_save_impact(&state, save_baseline.as_ref(), published, stderr, messages);
     }
 }
 
-/// After a published build, report where saves from the baseline resume.
+/// After a published build, report where saves from the baseline resume. A
+/// report that cannot be made (a baseline asset no scene builds any more, an
+/// unreadable published asset) is printed and watching continues.
 fn report_save_impact(
     state: &WatchState,
     baseline: Option<&save::Assets>,
     published: bool,
     stderr: &mut dyn Write,
     messages: &Messages,
-) -> Result<(), CliError> {
+) {
     let (Some(baseline), true, Some(manifest)) = (baseline, published, state.manifest.as_ref())
     else {
-        return Ok(());
+        return;
     };
-    let candidates = save::published_assets(&state.project_root, manifest)?;
-    save::write_impact(stderr, messages, baseline, &candidates)
+    let report = save::published_assets(&state.project_root, manifest)
+        .and_then(|candidates| save::write_impact(stderr, messages, baseline, &candidates));
+    if let Err(error) = report {
+        // Watch output goes to the terminal; a closed stderr has nowhere to report.
+        let _ = writeln!(stderr, "{}", error.to_user_message(messages));
+    }
 }
 
 /// The project path as typed relative to the working directory, or `.` when it is the directory.

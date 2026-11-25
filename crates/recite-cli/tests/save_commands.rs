@@ -272,3 +272,36 @@ fn inspect_reads_a_save_and_predicts_its_restore() {
         stderr(&output)
     );
 }
+
+#[test]
+fn since_builds_a_project_at_the_repository_root_or_through_a_relative_path() {
+    let temp = TempDir::new().expect("tempdir");
+    git(temp.path(), &["init", "-q", "-b", "main"]);
+    std::fs::write(temp.path().join("recite.project.toml"), MANIFEST).expect("manifest");
+    write_recite(temp.path(), "main.recite", RELEASED);
+    git(temp.path(), &["add", "."]);
+    git(temp.path(), &["commit", "-q", "-m", "release"]);
+    git(temp.path(), &["tag", "v1"]);
+    let output = recite()
+        .args(["save", "impact", "--since", "v1", "--check", "."])
+        .current_dir(temp.path())
+        .assert_success();
+    assert!(
+        stdout(&output).contains("unchanged; all 7 save points"),
+        "{}",
+        stdout(&output)
+    );
+
+    let nested = released_project();
+    let sibling = nested.path().join("tools");
+    std::fs::create_dir_all(&sibling).expect("sibling directory");
+    let output = recite()
+        .args(["save", "impact", "--since", "v1", "--check", "../dialogue"])
+        .current_dir(&sibling)
+        .assert_success();
+    assert!(
+        stdout(&output).contains("unchanged; all 7 save points"),
+        "{}",
+        stdout(&output)
+    );
+}
