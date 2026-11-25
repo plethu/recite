@@ -32,6 +32,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliSaveInspectSummary => Some("cli-save-inspect-summary"),
         super::MsgId::CliSaveInspectPositionStart => Some("cli-save-inspect-position-start"),
         super::MsgId::CliSaveInspectPositionAfter => Some("cli-save-inspect-position-after"),
+        super::MsgId::CliSaveInspectPositionEnded => Some("cli-save-inspect-position-ended"),
         super::MsgId::CliSaveInspectPendingPrompt => Some("cli-save-inspect-pending-prompt"),
         super::MsgId::CliSaveInspectPendingEffect => Some("cli-save-inspect-pending-effect"),
         super::MsgId::CliSaveInspectDeferred => Some("cli-save-inspect-deferred"),

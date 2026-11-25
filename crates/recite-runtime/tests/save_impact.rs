@@ -210,3 +210,33 @@ fn statements_after_a_branch_that_always_leaves_are_not_save_points() {
         analyze_save_impact(&compile(falls_through), &compile(falls_through)).expect("analyses");
     assert_eq!(report.summary().total, 2);
 }
+
+#[test]
+fn match_arms_traversal_can_never_select_are_not_save_points() {
+    let selectable = concat!(
+        ":: start default\n",
+        ":match mood()\n",
+        "  :case tired\n",
+        "    > @l_tired\n",
+        "      Tired.\n",
+        "  :case _\n",
+        "    > @l_other\n",
+        "      Other.\n",
+        "> @l_after\n",
+        "  After.\n",
+        "-> END\n",
+    );
+    let with_repeats = selectable.replace(
+        "  :case _\n",
+        "  :case tired\n    > @l_again\n      Again.\n  :case _\n",
+    );
+    let with_repeats = with_repeats.replace(
+        "> @l_after\n",
+        "  :case _\n    > @l_second\n      Second.\n> @l_after\n",
+    );
+    let report =
+        analyze_save_impact(&compile(&with_repeats), &compile(selectable)).expect("analyses");
+    // A block start and three lines: the repeated arms are never entered.
+    assert_eq!(report.summary().total, 4);
+    assert_eq!(report.fallbacks().count(), 0);
+}

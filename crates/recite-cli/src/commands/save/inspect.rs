@@ -67,6 +67,7 @@ fn write_text(
     snapshot: &DialogueSessionSnapshot,
 ) -> Result<(), CliError> {
     let position = match nearest_landmark(snapshot) {
+        _ if snapshot.ended => messages.text(MsgId::CliSaveInspectPositionEnded),
         Some(landmark) => messages.format(
             MsgId::CliSaveInspectPositionAfter,
             [("landmark", landmark_name(landmark))],
@@ -194,6 +195,11 @@ fn write_prediction(
 /// The last line or prompt before the saved point: in the innermost range,
 /// or else in the ranges around the branch it is inside.
 fn nearest_landmark(snapshot: &DialogueSessionSnapshot) -> Option<&DialogueLandmarkSnapshot> {
+    // An ended save is anchored at the end of its block, not where the
+    // conversation ended, so it names no line.
+    if snapshot.ended {
+        return None;
+    }
     let anchor = &snapshot.resume_anchor;
     std::iter::once(&anchor.position)
         .chain(anchor.frames.iter().rev().map(|frame| &frame.position))

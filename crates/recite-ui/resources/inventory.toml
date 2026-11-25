@@ -791,6 +791,7 @@ resource_ids = [
     "cli-save-inspect-summary",
     "cli-save-inspect-position-start",
     "cli-save-inspect-position-after",
+    "cli-save-inspect-position-ended",
     "cli-save-inspect-pending-prompt",
     "cli-save-inspect-pending-effect",
     "cli-save-inspect-deferred",

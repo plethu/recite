@@ -1,12 +1,13 @@
 //! Walk a baseline asset's reachable save points and classify each one.
 
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use recite_core::{
     ChoiceId, SourceSpan,
     compiled::{
-        BlockIndex, CompiledDialogue, CompiledEffectMode, CompiledStatementKind,
-        ContentFingerprint, StatementIndex, StatementRange,
+        BlockIndex, CompiledDialogue, CompiledEffectMode, CompiledMatchPattern,
+        CompiledStatementKind, ContentFingerprint, StatementIndex, StatementRange,
     },
 };
 
@@ -196,10 +197,22 @@ impl Walker<'_> {
                 }
                 CompiledStatementKind::Match { arms, .. } => {
                     // A match always selects an arm, so it leaves when every
-                    // arm does.
+                    // arm it can select does. Like traversal, it selects the
+                    // first arm for a variant and the first wildcard, so a
+                    // repeated arm never runs.
                     let mut every_arm_leaves = true;
+                    let mut variants = BTreeSet::new();
+                    let mut wildcard = false;
                     for arm in self.view.match_arms(*arms)? {
-                        every_arm_leaves &= self.nested(block, range, next, arm.statements)?;
+                        let first = match &arm.pattern {
+                            CompiledMatchPattern::Variant(variant) => variants.insert(variant),
+                            CompiledMatchPattern::Wildcard => {
+                                !std::mem::replace(&mut wildcard, true)
+                            }
+                        };
+                        if first {
+                            every_arm_leaves &= self.nested(block, range, next, arm.statements)?;
+                        }
                     }
                     if every_arm_leaves {
                         return Ok(true);

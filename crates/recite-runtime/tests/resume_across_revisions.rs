@@ -375,6 +375,10 @@ fn ended_saves_stay_ended_and_other_assets_are_rejected() {
     assert_eq!(removed.reason, ResumeFallbackReason::BlockRemoved);
     for fell_back in [refused, removed] {
         assert!(fell_back.ended);
+        assert!(
+            fell_back.landmark.is_none(),
+            "an ended save has no position"
+        );
         assert!(fell_back.deferred_effects.is_empty());
         assert!(fell_back.pending_effect.is_none());
     }

@@ -511,6 +511,7 @@ cli-save-reason-level-refused = it needs `{$required}` but the host allows at mo
 cli-save-inspect-summary = {$asset}: saved in block `{$block}` {$position} (snapshot format {$format}, compiler {$compiler})
 cli-save-inspect-position-start = before its first line
 cli-save-inspect-position-after = after {$landmark}
+cli-save-inspect-position-ended = at its end
 cli-save-inspect-pending-prompt = waiting at a prompt with choices {$choices}
 cli-save-inspect-pending-effect = waiting for blocking effect `{$function}` ({$id})
 cli-save-inspect-deferred = deferred effects the game still receives: {$functions}

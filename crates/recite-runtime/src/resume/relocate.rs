@@ -173,11 +173,17 @@ impl SavedState {
             return Err(invalid_snapshot("session phase fields conflict"));
         }
         let anchor = &snapshot.resume_anchor;
-        let landmark = std::iter::once(&anchor.position)
-            .chain(anchor.frames.iter().rev().map(|frame| &frame.position))
-            .find_map(|position| position.landmark.as_ref())
-            .map(landmark_from_snapshot)
-            .transpose()?;
+        // An ended save is anchored at the end of its block rather than where
+        // the conversation ended, so it names no landmark.
+        let landmark = if snapshot.ended {
+            None
+        } else {
+            std::iter::once(&anchor.position)
+                .chain(anchor.frames.iter().rev().map(|frame| &frame.position))
+                .find_map(|position| position.landmark.as_ref())
+                .map(landmark_from_snapshot)
+                .transpose()?
+        };
         Ok(Self {
             block_id,
             landmark,

@@ -103,8 +103,10 @@ pub enum PromptResume {
     /// The prompt keeps its saved choices and availability. It is presented
     /// again on the next advance.
     Kept,
-    /// The patch changed the prompt's choices. The prompt is evaluated again
-    /// from the patched content on the next advance, querying conditions.
+    /// The patch changed the saved block's structure, such as the prompt's
+    /// choices or their requirements, so saved availability may not hold. The
+    /// prompt is evaluated again from the patched content on the next advance,
+    /// querying conditions.
     Reevaluated,
 }
 

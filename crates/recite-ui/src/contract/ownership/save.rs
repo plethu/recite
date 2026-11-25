@@ -32,6 +32,7 @@ macro_rules! save_message_ids {
         | MsgId::CliSaveInspectSummary
         | MsgId::CliSaveInspectPositionStart
         | MsgId::CliSaveInspectPositionAfter
+        | MsgId::CliSaveInspectPositionEnded
         | MsgId::CliSaveInspectPendingPrompt
         | MsgId::CliSaveInspectPendingEffect
         | MsgId::CliSaveInspectDeferred

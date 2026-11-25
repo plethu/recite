@@ -323,6 +323,10 @@ fn inspect_reports_that_an_ended_save_restores_no_session() {
         );
         assert!(!report.contains("deferred effects"), "{report}");
         assert!(
+            report.contains("saved in block `start` at its end"),
+            "{report}"
+        );
+        assert!(
             report.contains(": restores no session, because the conversation had ended\n"),
             "{report}"
         );
@@ -335,6 +339,7 @@ fn inspect_reports_that_an_ended_save_restores_no_session() {
         let document: serde_json::Value = serde_json::from_str(&stdout(&output)).expect("JSON");
         assert_eq!(document["prediction"]["outcome"], "ended");
         assert_eq!(document["deferred_effects"], serde_json::json!([]));
+        assert!(document["position"]["landmark"].is_null());
     }
 }
 

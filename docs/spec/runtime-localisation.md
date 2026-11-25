@@ -46,7 +46,8 @@ presentation choice is outside runtime conformance output. `availability.reason_
 only for unavailable choices when the compiler and schema can resolve detailed structured reason
 data. Available choices have neither a primary reason nor a reason tree; restoration rejects
 contradictory saved availability rather than requerying the host. A flat display string does not
-replace this data. The only requery after a save is a prompt that a patch changed (§8.6).
+replace this data. The only requery after a save is a waiting prompt whose block a patch changed in
+structure (§8.6).
 
 ### 8.6 Session State
 
