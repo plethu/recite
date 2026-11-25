@@ -42,8 +42,11 @@ second traversal implementation merely to reproduce the reference driver's call 
 Some misuse operations are absent by construction. An owner that captures its asset cannot receive a
 different asset on `advance`. Test that ownership invariant and incompatible restore through its
 public API, and report this as an invariant check rather than claiming to execute the unavailable
-operation. Capability-gated and non-selected refresh-policy scenarios remain explicitly not
-applicable; an unavailable engine host is an unrun check.
+operation. `load_session` accepts an optional `max_resume_level`; its expectation names the
+`resume_level` of a resumed save or the `fallback_reason` of a save that fell back, using the names
+in `recite_adapter::resume_names`. A fallback is never an error and must always be expected.
+Capability-gated and non-selected refresh-policy scenarios remain explicitly not applicable; an
+unavailable engine host is an unrun check.
 
 The mandatory `adapter_runner_required` scenarios must run through the actual adapter surface and
 assert their structured fields. Passing the reference suite does not cover those scenarios. A

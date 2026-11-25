@@ -46,7 +46,7 @@ presentation choice is outside runtime conformance output. `availability.reason_
 only for unavailable choices when the compiler and schema can resolve detailed structured reason
 data. Available choices have neither a primary reason nor a reason tree; restoration rejects
 contradictory saved availability rather than requerying the host. A flat display string does not
-replace this data.
+replace this data. The only requery after a save is a prompt that a patch changed (§8.6).
 
 ### 8.6 Session State
 
@@ -54,15 +54,63 @@ Session snapshots retain asset identity, traversal position, choices, effects, l
 needed for exact resumption. They never contain game state. The runtime's versioned snapshot types
 own the field layout; hosts round-trip them as an opaque unit.
 
-Restore validates the snapshot before constructing a live session. The runtime and preview snapshot
-formats are versioned; both currently use v1. Unknown versions and missing or mismatched compiled
-payload fingerprints are rejected, even when asset headers and source metadata match. Prepared
-assets are immutable, so advancing reuses their validated identity. Live session source identity is
-bound by start or validated restore. A matching full-payload fingerprint covers that immutable
-identity without rescanning source rows; independent equal assets remain equivalent, and snapshot
-validation and structured mismatch errors remain unchanged.
-[Serialization compatibility](../serialization-compatibility.md) governs unpublished snapshots and
-future format changes.
+A snapshot identifies its position twice. Table indices are valid only for the exact compiled
+payload it was saved against. The resume anchor holds the authored block ID, the latest line or
+prompt before the position (its landmark) and the signatures of the statements after it, for the
+active range and each entered `if` or `match` branch. Signatures cover an effect's mode, function
+and arguments, a condition, a match scrutinee or a divert target, never positional IDs. The snapshot
+also stores content and structure digests of the saved block, and deferred and pending effect
+requests in full, because compiled effect IDs are derived from source positions.
+
+Exact restore (`restore_session`) validates the snapshot before constructing a live session. The
+runtime and preview snapshot formats are versioned; both currently use v1. Unknown versions and
+missing or mismatched compiled payload fingerprints are rejected, even when asset headers and source
+metadata match. The resume anchor, block digests and saved effect requests must equal what the
+restored position derives from the asset. Prepared assets are immutable, so advancing reuses their
+validated identity. Live session source identity is bound by start or validated restore. A matching
+full-payload fingerprint covers that immutable identity without rescanning source rows; independent
+equal assets remain equivalent, and snapshot validation and structured mismatch errors remain
+unchanged. [Serialization compatibility](../serialization-compatibility.md) governs unpublished
+snapshots and future format changes.
+
+#### Restoring a save in a patched asset
+
+`resume_session` restores a snapshot against an asset that may be a patched revision of the one it
+was saved against. The result is a deterministic function of the snapshot, the asset and the host's
+options:
+
+- **Exact:** the payload fingerprint matches; exact restore applies.
+- **Unchanged block, text edited or relocated:** the payload differs, the saved block exists by ID
+  and every step of the anchor relocates. A landmark is found by line ID, or for a prompt by its
+  line or any saved choice ID; the statements after it must match their saved signatures in order;
+  an entered branch is selected by `then`, `else` or match pattern. The level comes from the block
+  digests: equal content, equal structure, or neither.
+- **Fallback:** no session. The host receives the saved block ID, whether it still exists, the
+  latest landmark, a typed reason, the saved deferred effects, the pending blocking effect, the
+  selected-choice history and the locale. Reasons are `block_removed`, `landmark_removed`,
+  `landmark_moved`, `landmark_ambiguous`, `statements_changed`, `branch_removed` and
+  `level_refused`.
+- **Errors:** unsupported or malformed snapshots and a different asset ID.
+
+Resume never chooses between ambiguous landmarks and never swaps an asset under a live session. A
+host bounds the accepted level (exact, unchanged block, text edited, relocated); a save that needs
+more falls back with `level_refused`. Schema and compiler changes are reported, not refused.
+
+A resumed pending prompt keeps its saved choice availability when the patched prompt has the same
+choice IDs in the same order, and is otherwise evaluated again from the patched content on the next
+advance. Saved deferred effects are delivered as saved, and a pending blocking effect keeps its
+saved request and ID. The trace counter continues from the save.
+
+`analyze_save_impact` saves a session at every host-observable boundary of a baseline asset (block
+starts, after lines and immediate effects, at prompts and blocking effects, inside every branch) and
+resumes each against a candidate through `resume_session`. `recite save impact` and `recite watch
+--save-baseline` render that report.
+
+#### Presenting restored work
+
+After restore, the next advance presents a pending prompt again with its saved availability, as it
+re-emits a pending blocking effect. Neither advances the trace counter. Preview sessions keep their
+own prompt projection and do not present a restored prompt twice.
 
 #### Save/load while waiting on a blocking effect
 

@@ -81,9 +81,10 @@ Check the watch result first, then the engine's import result. A failed build do
 compiled file. A rejected engine import may retain its last valid revision and report an error. A
 successful import still leaves a running session on its original revision.
 
-Restore saved sessions against the revision they were saved from. Stable line and choice IDs survive
-a text edit, but they do not make an old snapshot compatible with changed compiled content. Keep the
-previous asset when you need to finish an old session; otherwise start a new one.
+A saved session restores against the revision you have now. A text edit resumes in place, and most
+other edits resume through the save's stable IDs. The rest fall back with a structured reason, so
+your game can restart the conversation. [Patching a shipped game](/guides/patching-saves/) lists
+which edits do what and how to check a patch with `recite save impact`.
 
 The
 [workflow evidence](https://github.com/plethu/recite/blob/main/docs/engine-authoring-workflows.md)

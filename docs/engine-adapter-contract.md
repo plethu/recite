@@ -220,8 +220,19 @@ structured request or move game-side mutation into traversal.
 
 Round-trip the runtime snapshot as one opaque unit. Hand-picking or reconstructing fields loses
 identity, history or pending work needed for deterministic resume. Host game state stays separate.
-Restore validates against the supplied compiled asset; stable line IDs alone do not establish
-compatibility.
+
+Restore runs against the compiled asset the host has now, which may be a patched revision of the one
+the save was taken against. Adapters expose the runtime's restore outcome
+([spec §8.6](spec/runtime-localisation.md#86-session-state)) rather than a single success or error:
+a resumed save reports its level (`exact`, `unchanged_block`, `text_edited`, `relocated`), its
+prompt handling and whether the schema or compiler changed; a fallback leaves no active session and
+returns the saved block, whether it still exists, the typed reason, the deferred effects and the
+pending blocking effect. Hosts choose the most change a save may absorb. Names follow
+`recite_adapter::resume_names` in every engine. Malformed snapshots and a different asset ID remain
+`save_load_incompatibility_error`.
+
+The first batch after a restore presents a pending prompt again with its saved availability, or
+re-emits a pending blocking effect, so hosts need not cache presentation in their own saves.
 
 A restored blocking request retains its ID. The game decides whether its operation already happened,
 should replay or should fast-forward, then acknowledges that same request. The runtime cannot
@@ -281,7 +292,8 @@ replay/test traces.
 
 Adapters may explore richer mid-session patch reload after v1, but that feature requires a separate
 design covering identity migration, pending prompts, blocking effects, save/load, localization, and
-deterministic replay.
+deterministic replay. Restoring a saved session against a newer revision is not mid-session reload:
+the save resumes into a new session on the newer asset under §9.
 
 ## 12. Error Categories
 

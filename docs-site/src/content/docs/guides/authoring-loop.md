@@ -25,5 +25,7 @@ covers dividing a project between writers, translators and programmers.
 ## Watch and restart
 
 The [engine authoring walkthrough](/adapters/authoring/) covers rebuild failure/recovery, accepted
-imports, active versus next-session revisions and compatible saves. Game state remains host-owned.
-Headless checks do not establish interactive editor or native accessibility acceptance.
+imports, and active versus next-session revisions.
+[Patching a shipped game](/guides/patching-saves/) covers what happens to players' saves when the
+dialogue changes. Game state remains host-owned. Headless checks do not establish interactive editor
+or native accessibility acceptance.

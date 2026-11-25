@@ -5,7 +5,10 @@ description: Install the Godot 4 addon and run dialogue through native Resources
 
 Recite's Godot addon imports compiled `.recitec` files as `ReciteDialogueResource` and runs sessions
 through `ReciteDialogueNode`. The Node returns structured operation results and emits ordered output
-and error signals. Runtime effects are requests for game code to handle.
+and error signals. Runtime effects are requests for game code to handle. `snapshot()` returns save
+bytes; `restore()` and `restore_with_options()` resume them against the current asset, and
+`restore_outcome()` on the result reports `resumed` or `fallback`. See
+[Patching a shipped game](/guides/patching-saves/).
 
 Build the installable addon from the repository with `scripts/engines/package-godot-addon.sh`. It
 creates a release GDExtension archive containing `addons/recite` and `examples/basic-dialogue`; copy

@@ -26,6 +26,7 @@ exists where a thing has two or more operations of its own, so related work sits
 | `recording`        | `status`, `export`, `import`                                                                    |
 | `schema`           | `inspect`, `export`, `check-fresh`                                                              |
 | `project`          | `validate`, `check-fresh`                                                                       |
+| `save`             | `impact`, `inspect`                                                                             |
 | Top-level commands | `validate`, `compile`, `extract`, `watch`, `run`, `trace`, `play`, `bench`, `import`, `explain` |
 
 `recite <group>` lists its commands, and `recite <group> <command> --help` documents one.
@@ -145,10 +146,31 @@ Validates `recite.project.toml` and the compiled assets it references.
 Checks whether the project's compiled assets are fresh relative to current source fingerprints,
 schema fingerprint, and compiler compatibility version. Wire this into CI to catch stale assets.
 
-### `recite watch <PROJECT_ROOT>`
+### `recite watch [--save-baseline <REF|ASSET>] <PROJECT_ROOT>`
 
 Watches project inputs and rebuilds manifest assets on change. This is the authoring loop companion
-to editor diagnostics.
+to editor diagnostics. With `--save-baseline`, each successful rebuild also prints the `save impact`
+report against a git revision or compiled asset. That report is readable output only.
+
+## Saves
+
+[Patching a shipped game](/guides/patching-saves/) explains how saves resume after a patch.
+
+### `recite save impact [--baseline <ASSET> | --since <REF>] [--check] [--allow-fallback <BLOCK>]... [--format text|json] [CANDIDATE]`
+
+Saves a session at every point a player could save in the baseline and restores each one against the
+candidate, using the runtime's own restore. The candidate is a compiled asset or a project root
+(default `.`), built in memory. `--baseline` names a compiled asset; `--since` builds the project as
+it was at a git revision, such as the last release tag. Assets are paired by asset ID. The report
+counts save points that restore exactly, in unchanged blocks, with edited text, relocated, or fall
+back, and lists each fallback with its source location and reason. `--check` fails while a fallback
+is outside the blocks named by `--allow-fallback`. `--format json` lists every save point.
+
+### `recite save inspect [--asset <ASSET>] [--format text|json] <SAVE>`
+
+Decodes a saved session without the game: its asset, block, position, waiting prompt or blocking
+effect, and deferred effects. With `--asset`, it also reports how the save restores against that
+compiled asset. The output names stable IDs and effect functions, not line text.
 
 ## Localisation
 
@@ -256,6 +278,7 @@ recite prose check dialogue/
 recite validate dialogue/ --only metadata --schema schema/recite.schema.json
 recite compile dialogue/ -o build/scenes.recitec --schema schema/recite.schema.json
 recite project check-fresh .
+recite save impact --since v1.2.0 --check .
 recite catalog status --check
 recite trace build/scenes.recitec --block main --fixture tests/golden.toml
 ```
