@@ -36,7 +36,7 @@ pub(crate) fn match_case_after_wildcard(
 ) -> Diagnostic {
     compiler_diagnostic(
         diagnostic_contract(&CASE_AFTER_WILDCARD, "diagnostic-validate-053"),
-        format!("`:case {pattern}` after the wildcard arm is never selected"),
+        format!("`:case {pattern}` follows the wildcard arm; `:case _` must be the last arm"),
         span,
         vec![("pattern".to_owned(), string_argument(pattern))],
     )

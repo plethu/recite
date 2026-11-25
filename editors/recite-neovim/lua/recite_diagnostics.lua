@@ -628,7 +628,7 @@ return {
   ["diagnostic-validate-052-meaning"] = { arguments = {  } },
   ["diagnostic-validate-052-related"] = { arguments = {  } },
   ["diagnostic-validate-052-remediation-001"] = { arguments = {  } },
-  ["diagnostic-validate-053"] = { arguments = { { name = "pattern", type = "string" } }, template = "`:case {$pattern}` after the wildcard arm is never selected" },
+  ["diagnostic-validate-053"] = { arguments = { { name = "pattern", type = "string" } }, template = "`:case {$pattern}` follows the wildcard arm; `:case _` must be the last arm" },
   ["diagnostic-validate-053-cause-001"] = { arguments = {  } },
   ["diagnostic-validate-053-help"] = { arguments = {  } },
   ["diagnostic-validate-053-meaning"] = { arguments = {  } },

@@ -117,7 +117,7 @@ diagnostic-validate-051-help-suggestion = did you mean `{$suggestion}`?
 diagnostic-validate-052 = duplicate `:case {$pattern}` arm is never selected
 diagnostic-validate-052-related = the first `:case` arm for this variant is here
 diagnostic-validate-052-help = merge the arms, or change this one to the variant it was meant for
-diagnostic-validate-053 = `:case {$pattern}` after the wildcard arm is never selected
+diagnostic-validate-053 = `:case {$pattern}` follows the wildcard arm; `:case _` must be the last arm
 diagnostic-validate-053-related = the wildcard arm is here
 diagnostic-validate-053-help = move `:case _` to the end of the match and keep only one wildcard arm
 

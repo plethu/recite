@@ -10,8 +10,10 @@ use super::super::state::Validator;
 use crate::diagnostics;
 
 impl Validator<'_> {
-    /// Traversal selects the first arm for a variant, or else the wildcard,
-    /// so a repeated variant and any arm after `:case _` never run.
+    /// Traversal selects the first arm for a variant, so a repeated variant
+    /// never runs. The wildcard must be the last arm, as the spec requires:
+    /// a second wildcard never runs, and a variant arm after it reads as if
+    /// the wildcard would catch it first.
     pub(super) fn validate_match_arm_patterns(&mut self, branch: &MatchBranch) {
         if self.participation.ast_structure() != ValidationCompleteness::Complete {
             return;
