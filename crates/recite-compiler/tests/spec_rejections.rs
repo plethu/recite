@@ -101,6 +101,8 @@ rejects! {
     choice_without_id: block("?\n  Go.\n  -> END\n") => ["RECITE_ID002"];
     malformed_id: block("> @Bad\n  Hi.\n") => ["RECITE_ID007"];
     duplicate_line_id: block("> @l_a\n  One.\n> @l_a\n  Two.\n") => ["RECITE_ID003"];
+    choices_share_id: block("? @c_a\n  Go.\n  -> END\n? @c_a\n  Stop.\n  -> END\n")
+        => ["RECITE_ID004"];
     line_and_choice_share_id: block("> @l_a\n  One.\n? @l_a\n  Go.\n  -> END\n")
         => ["RECITE_ID004"];
 }
@@ -155,6 +157,20 @@ rejects! {
     undeclared_placeholder: block("> @l_a\n  Hi {name}.\n") => ["RECITE_VALIDATE045"];
     unused_binding: block("> bind=(count:int=$count) @l_a\n  Hi.\n") => ["RECITE_VALIDATE045"];
     plural_without_count: block("> @l_a\n  One.\n  | Many.\n") => ["RECITE_VALIDATE046"];
+    placeholder_with_whitespace: block("> bind=(count:int=$count) @l_a\n  Hi { count }.\n")
+        => ["RECITE_VALIDATE045"];
+    placeholder_spanning_markup: block(
+        "> bind=(count:int=$count) @l_a\n  [slow]Hi {co[/slow]unt}.\n"
+    ) => ["RECITE_VALIDATE045"];
+    third_plural_form: block(
+        "> bind=(count:int=$count) @l_a\n  One.\n  | Many {count}.\n  | More {count}.\n"
+    ) => ["RECITE_VALIDATE046"];
+}
+
+// §5.1: one indent width per body.
+rejects! {
+    mixed_indent_widths: block(":if ready()\n  > @l_a\n    A.\n   > @l_b\n     B.\n")
+        => ["RECITE_PARSE007", "RECITE_PARSE007"];
 }
 
 // §5.7: balanced, known and correctly nested inline markup, with source spans.

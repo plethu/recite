@@ -34,6 +34,8 @@ pub enum PatchOp {
         position: usize,
     },
     Retarget(usize, usize),
+    /// Moves a choice to a different block or to `END`.
+    RetargetChoice(usize, usize),
     AddChoice(usize),
     RemoveChoice(usize),
     RenameLine(usize),
@@ -59,6 +61,8 @@ pub fn patch() -> impl Strategy<Value = Vec<PatchOp>> {
             .prop_map(|(list, position)| PatchOp::WrapInIf { list, position }),
         1 => (site.clone(), any::<u8>())
             .prop_map(|(site, target)| PatchOp::Retarget(site, usize::from(target))),
+        1 => (site.clone(), any::<u8>())
+            .prop_map(|(site, target)| PatchOp::RetargetChoice(site, usize::from(target))),
         1 => site.clone().prop_map(PatchOp::AddChoice),
         1 => site.clone().prop_map(PatchOp::RemoveChoice),
         1 => site.clone().prop_map(PatchOp::RenameLine),
@@ -165,16 +169,38 @@ impl Program {
                 }
             }),
             PatchOp::Retarget(site, target) => {
-                let target = Target::Block {
+                // Moves a divert: from `END` to a later block, or from a block
+                // to `END` or to another later block.
+                let later = Target::Block {
                     file: RAW_FILE,
                     block: *target,
                 };
                 self.edit_nth(*site, &mut |statement| match statement {
                     Stmt::Divert(divert) => {
-                        *divert = target;
+                        *divert = match divert {
+                            Target::Block { .. } if target % 2 == 0 => Target::End,
+                            _ => later,
+                        };
                         true
                     }
                     _ => false,
+                });
+            }
+            PatchOp::RetargetChoice(site, target) => {
+                let targets: Vec<_> = self
+                    .block_positions()
+                    .into_iter()
+                    .map(|(file, block)| Target::Block { file, block })
+                    .chain([Target::End])
+                    .collect();
+                self.edit_nth_choice(*site, &mut |choice| {
+                    let others: Vec<_> = targets
+                        .iter()
+                        .filter(|candidate| **candidate != choice.target)
+                        .collect();
+                    if let Some(next) = others.get(target % others.len().max(1)) {
+                        choice.target = **next;
+                    }
                 });
             }
             PatchOp::AddChoice(site) => {

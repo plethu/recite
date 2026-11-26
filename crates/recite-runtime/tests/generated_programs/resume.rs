@@ -6,8 +6,8 @@ use recite_core::{LocaleId, compiled::CompiledDialogue};
 use recite_runtime::{
     DialogueEffectRequest, DialogueEvent, DialogueSessionOptions, EffectAck, acknowledge_effect,
     resume::{
-        PromptResume, ResumeFallback, ResumeLandmark, ResumeLevel, ResumeOptions, SessionResume,
-        resume_session,
+        PromptResume, ResumeFallback, ResumeFallbackReason, ResumeLandmark, ResumeLevel,
+        ResumeOptions, SessionResume, resume_session,
     },
     snapshot::{
         DialogueSessionSnapshot, decode_session_messagepack, effect_request_from_snapshot,
@@ -108,9 +108,29 @@ fn check_fallback(
     fallback: &ResumeFallback,
     saved: &DialogueSessionSnapshot,
     baseline: &Revision,
+    candidate: &Revision,
 ) -> Result<(), TestCaseError> {
     prop_assert_eq!(fallback.ended, saved.ended);
     prop_assert_eq!(fallback.block_id.as_str(), saved.block_id.as_str());
+    // The reason names a missing block exactly when the block is gone, and
+    // default options accept every level, so none is refused.
+    let available = candidate
+        .asset
+        .blocks
+        .iter()
+        .any(|block| block.id.as_str() == saved.block_id);
+    prop_assert_eq!(fallback.block_available, available);
+    prop_assert_eq!(
+        fallback.reason == ResumeFallbackReason::BlockRemoved,
+        !available,
+        "{:?}",
+        fallback.reason
+    );
+    prop_assert!(
+        !matches!(fallback.reason, ResumeFallbackReason::LevelRefused { .. }),
+        "{:?}",
+        fallback.reason
+    );
     prop_assert_eq!(
         fallback.locale.as_ref().map(ToString::to_string),
         saved.locale.clone()
@@ -178,7 +198,7 @@ fn check_resume(
         resume_session(&candidate.asset, saved.clone(), &ResumeOptions::new()).map_err(failure)?;
     let (mut session, report) = match resumed {
         SessionResume::Fallback(fallback) => {
-            check_fallback(&fallback, saved, baseline)?;
+            check_fallback(&fallback, saved, baseline, candidate)?;
             return Ok(None);
         }
         SessionResume::Resumed { session, report } => (session, report),
