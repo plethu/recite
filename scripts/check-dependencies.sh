@@ -14,3 +14,5 @@ cargo deny --locked --manifest-path editors/zed/Cargo.toml --all-features \
   check --allow advisory-not-detected advisories bans licenses sources
 cargo deny --locked --manifest-path apps/writer/Cargo.toml --all-features \
   check --allow advisory-not-detected advisories bans licenses sources
+cargo deny --locked --manifest-path fuzz/Cargo.toml --all-features \
+  check --allow advisory-not-detected advisories bans licenses sources

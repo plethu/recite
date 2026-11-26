@@ -29,7 +29,10 @@ reference interpreter together, so the differential, resume and save-impact prop
 `crates/recite-runtime/tests/generated_programs.rs` cover it. When it adds a validation rule, add a
 case naming its specification section to `crates/recite-compiler/tests/spec_rejections.rs` and, if a
 generated program can break the rule, a `Breakage` in its `generated_programs/rejections.rs`. Run
-`just fuzz properties` for deep runs and `just fuzz seed` after changing a binary format.
+`just fuzz properties` for deep runs and `just fuzz seed` after changing a binary format. `fuzz/`
+keeps its own `Cargo.lock`, which `just fuzz check` and the dependency gate read with `--locked`:
+refresh it with `cargo update --manifest-path fuzz/Cargo.toml --workspace` when a workspace crate's
+dependencies change.
 
 ## Fixtures and snapshots
 

@@ -86,6 +86,11 @@ exceptions = [
     { crate = "dtoa-short", allow = [
         "MPL-2.0",
     ] },
+    # The fuzz crate alone links libFuzzer, under the permissive NCSA licence; it is a test
+    # harness outside the workspace and is never distributed (#330).
+    { crate = "libfuzzer-sys", allow = [
+        "NCSA",
+    ] },
 ]
 
 [sources]

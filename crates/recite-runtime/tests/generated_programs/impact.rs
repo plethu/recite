@@ -113,6 +113,10 @@ proptest! {
         prop_assert_eq!(reported, reference.save_points());
 
         for save in saves(&baseline, &answers)? {
+            // Save impact classifies a blocking effect while it is pending.
+            if save.acknowledged {
+                continue;
+            }
             let Some(saved_at) = observed_key(save.after.as_ref()) else {
                 continue;
             };

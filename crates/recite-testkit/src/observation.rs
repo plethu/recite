@@ -115,7 +115,9 @@ pub struct Step {
 /// Plays `dialogue` until it ends, is refused, offers no available choice, or
 /// `max_steps` operations have run. At each prompt the driver first checks
 /// that advancing is refused and that an unavailable choice is refused,
-/// then takes the policy's choice; it acknowledges every blocking effect.
+/// then takes the policy's choice. At a blocking effect it checks that
+/// advancing and choosing are refused, then acknowledges it. After the end
+/// it checks that advancing, choosing and acknowledging are refused.
 pub fn drive(dialogue: &mut dyn Dialogue, answers: &Answers, max_steps: usize) -> Vec<Step> {
     let mut steps = Vec::new();
     let mut action = Action::Next;
@@ -164,12 +166,43 @@ pub fn drive(dialogue: &mut dyn Dialogue, answers: &Answers, max_steps: usize) -
             Ok(Observation::Effect(EffectObservation {
                 mode: EffectMode::Blocking,
                 ..
-            })) => Action::Acknowledge,
+            })) => {
+                // A pending blocking effect refuses advancing and choosing.
+                probe(dialogue, &mut steps, false);
+                Action::Acknowledge
+            }
             Ok(Observation::Line(_) | Observation::Effect(_)) => Action::Next,
-            Ok(Observation::End { .. }) | Err(_) => break,
+            Ok(Observation::End { .. }) => {
+                // An ended session refuses every operation.
+                probe(dialogue, &mut steps, true);
+                break;
+            }
+            Err(_) => break,
         };
     }
     steps
+}
+
+/// A choice ID no generated program uses.
+const PROBE_CHOICE: &str = "zprobe";
+
+/// Records the refusals of advancing, choosing and, when `acknowledging`,
+/// acknowledging an effect.
+fn probe(dialogue: &mut dyn Dialogue, steps: &mut Vec<Step>, acknowledging: bool) {
+    steps.push(Step {
+        action: Action::Next,
+        outcome: dialogue.next().map(Some),
+    });
+    steps.push(Step {
+        action: Action::Choose(PROBE_CHOICE.to_owned()),
+        outcome: dialogue.choose(PROBE_CHOICE).map(Some),
+    });
+    if acknowledging {
+        steps.push(Step {
+            action: Action::Acknowledge,
+            outcome: dialogue.acknowledge().map(|()| None),
+        });
+    }
 }
 
 /// The observations in a driven run, without refusals and acknowledgements.

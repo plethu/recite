@@ -4,7 +4,7 @@
 use proptest::prelude::*;
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs_with_schema};
 use recite_core::{
-    ChoiceId, ScalarValue,
+    ChoiceId, EffectId, ScalarValue,
     compiled::{CompiledAssetId, CompiledDialogue, CompilerVersion, SourceMapId},
     schema::{ProjectSchema, load_schema_manifest_str},
 };
@@ -108,6 +108,8 @@ pub(super) struct RuntimeDialogue<'a> {
 pub(super) struct Save {
     pub(super) snapshot: DialogueSessionSnapshot,
     pub(super) after: Option<Observation>,
+    /// Taken after acknowledging the blocking effect `after` names.
+    pub(super) acknowledged: bool,
 }
 
 impl<'a> RuntimeDialogue<'a> {
@@ -148,6 +150,7 @@ impl<'a> RuntimeDialogue<'a> {
             Ok(snapshot) => saves.push(Save {
                 snapshot,
                 after: None,
+                acknowledged: false,
             }),
             Err(error) => self.failure = Some(format!("{error:?}")),
         }
@@ -230,6 +233,7 @@ impl<'a> RuntimeDialogue<'a> {
                         Ok(snapshot) => saves.push(Save {
                             snapshot,
                             after: Some(observation.clone()),
+                            acknowledged: false,
                         }),
                         Err(error) => self.failure = Some(format!("{error:?}")),
                     }
@@ -269,11 +273,25 @@ impl Dialogue for RuntimeDialogue<'_> {
 
     fn acknowledge(&mut self) -> Result<(), Rejection> {
         self.checkpoint()?;
-        let Some(DialogueEvent::Effect(request)) = &self.last_event else {
-            return Err(Rejection::NoEffectPending);
+        // Acknowledge the latest effect request, or a probe ID when there is
+        // none, so the runtime itself decides whether anything is pending.
+        let id = match &self.last_event {
+            Some(DialogueEvent::Effect(request)) => request.id.clone(),
+            _ => EffectId::new("effect:probe#0")
+                .map_err(|error| Rejection::Other(format!("{error:?}")))?,
         };
-        acknowledge_effect(&mut self.session, request.id.clone(), EffectAck::Completed)
-            .map_err(rejection)
+        acknowledge_effect(&mut self.session, id, EffectAck::Completed).map_err(rejection)?;
+        if let Some(saves) = &mut self.saves {
+            match snapshot_session(self.asset, &self.session) {
+                Ok(snapshot) => saves.push(Save {
+                    snapshot,
+                    after: self.last_event.as_ref().map(observe),
+                    acknowledged: true,
+                }),
+                Err(error) => self.failure = Some(format!("{error:?}")),
+            }
+        }
+        Ok(())
     }
 }
 

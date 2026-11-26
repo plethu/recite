@@ -13,12 +13,26 @@ use crate::strategy::{RAW_FILE, body, cond};
 pub enum PatchOp {
     EditLineText(usize),
     EditChoiceText(usize),
-    InsertLine { list: usize, position: usize },
-    RemoveStatement { list: usize, position: usize },
-    SwapStatements { list: usize, position: usize },
+    InsertLine {
+        list: usize,
+        position: usize,
+    },
+    RemoveStatement {
+        list: usize,
+        position: usize,
+    },
+    SwapStatements {
+        list: usize,
+        position: usize,
+    },
     ChangeEffect(usize),
     ChangeCondition(usize, Cond),
-    WrapInIf { list: usize, position: usize },
+    /// Sets, replaces or removes a choice's `requires=`.
+    ChangeRequirement(usize, Option<Cond>),
+    WrapInIf {
+        list: usize,
+        position: usize,
+    },
     Retarget(usize, usize),
     AddChoice(usize),
     RemoveChoice(usize),
@@ -49,7 +63,9 @@ pub fn patch() -> impl Strategy<Value = Vec<PatchOp>> {
         1 => site.clone().prop_map(PatchOp::RemoveChoice),
         1 => site.clone().prop_map(PatchOp::RenameLine),
         1 => body(1).prop_map(PatchOp::AddBlock),
-        1 => site.prop_map(PatchOp::RemoveBlock),
+        1 => site.clone().prop_map(PatchOp::RemoveBlock),
+        2 => (site, proptest::option::of(cond()))
+            .prop_map(|(site, cond)| PatchOp::ChangeRequirement(site, cond)),
     ];
     vec(op, 1..=2)
 }
@@ -122,6 +138,9 @@ impl Program {
                 }
                 _ => false,
             }),
+            PatchOp::ChangeRequirement(site, requirement) => {
+                self.edit_nth_choice(*site, &mut |choice| choice.requires.clone_from(requirement));
+            }
             PatchOp::ChangeCondition(site, replacement) => {
                 self.edit_nth(*site, &mut |statement| match statement {
                     Stmt::If { condition, .. } => {

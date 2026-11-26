@@ -9,12 +9,36 @@ use recite_core::{
 };
 use recite_testkit::{SCHEMA_JSON, SCHEMA_PATH};
 
-/// Compiles `main` (and `side`, when given) against the generated schema and
-/// returns the diagnostic codes in report order.
+/// The generated schema with two markup tags: `slow` must close and nests,
+/// `shake` must close and does not nest.
+fn markup_schema() -> String {
+    SCHEMA_JSON.replacen(
+        "\"schema_version\": 1,",
+        concat!(
+            "\"schema_version\": 1,\n",
+            "  \"markup\": {",
+            "\"slow\": {\"requires_closing\": true, \"translatable\": true}, ",
+            "\"shake\": {\"requires_closing\": true, \"translatable\": true, \"allows_nesting\": false}",
+            "},"
+        ),
+        1,
+    )
+}
+
+/// Compiles `main` (and `side`, when given) against the generated schema,
+/// extended with markup tags, and returns the diagnostic codes in report
+/// order.
 fn codes(main: &str, side: Option<&str>) -> Vec<String> {
-    let schema = load_schema_manifest_str(SCHEMA_PATH, SCHEMA_JSON)
+    diagnostics(main, side)
+        .iter()
+        .map(|diagnostic| diagnostic.code.as_str().to_owned())
+        .collect()
+}
+
+fn diagnostics(main: &str, side: Option<&str>) -> Vec<recite_core::Diagnostic> {
+    let schema = load_schema_manifest_str(SCHEMA_PATH, &markup_schema())
         .schema
-        .unwrap_or_else(|| panic!("generated schema is valid"));
+        .unwrap_or_else(|| panic!("generated schema with markup is valid"));
     let mut inputs = vec![CompileInput::new("dialogue/main.recite", main)];
     if let Some(side) = side {
         inputs.push(CompileInput::new("dialogue/side.recite", side));
@@ -30,11 +54,7 @@ fn codes(main: &str, side: Option<&str>) -> Vec<String> {
         &schema,
     )
     .unwrap_or_else(|error| panic!("compile does not hard fail: {error}"));
-    report
-        .diagnostics
-        .iter()
-        .map(|diagnostic| diagnostic.code.as_str().to_owned())
-        .collect()
+    report.diagnostics
 }
 
 /// Wraps `body` in a default block.
@@ -137,6 +157,26 @@ rejects! {
     plural_without_count: block("> @l_a\n  One.\n  | Many.\n") => ["RECITE_VALIDATE046"];
 }
 
+// §5.7: balanced, known and correctly nested inline markup, with source spans.
+rejects! {
+    unknown_markup_tag: block("> @l_a\n  [loud]Hi.[/loud]\n")
+        => ["RECITE_VALIDATE022", "RECITE_VALIDATE022"];
+    closing_tag_without_opening: block("> @l_a\n  Hi.[/slow]\n") => ["RECITE_VALIDATE023"];
+    missing_closing_tag: block("> @l_a\n  [slow]Hi.\n") => ["RECITE_VALIDATE024"];
+    nesting_a_tag_that_forbids_it: block("> @l_a\n  [shake][shake]Hi.[/shake][/shake]\n")
+        => ["RECITE_VALIDATE025"];
+}
+
+#[test]
+fn invalid_markup_is_reported_at_its_tag() {
+    // Each unknown tag, opening and closing, is reported at its name.
+    let starts: Vec<_> = diagnostics(&block("> @l_a\n  Well [loud]hi[/loud].\n"), None)
+        .iter()
+        .map(|diagnostic| (diagnostic.span.start.line(), diagnostic.span.start.column()))
+        .collect();
+    assert_eq!(starts, [(3, 9), (3, 18)]);
+}
+
 // §9.2: a translation must keep its source's placeholders.
 #[test]
 fn translations_with_missing_renamed_or_extra_placeholders() {
@@ -158,4 +198,26 @@ fn translations_with_missing_renamed_or_extra_placeholders() {
             error.kind()
         );
     }
+}
+
+// §5.7: a translation must keep its source's markup tags.
+#[test]
+fn translations_that_drop_or_add_markup() {
+    use recite_core::po::{PoDiagnosticKind, PoDocument};
+
+    let rejected = |translation: &str| {
+        let catalogue =
+            format!("msgctxt \"l_a\"\nmsgid \"[slow]Hello.[/slow]\"\nmsgstr \"{translation}\"\n");
+        PoDocument::parse(&catalogue)
+            .err()
+            .map(|error| error.kind().clone())
+            .unwrap_or_else(|| panic!("`{translation}` must be rejected"))
+    };
+    assert!(
+        matches!(rejected("Bonjour."), PoDiagnosticKind::MarkupMissingTag(tag) if tag == "slow")
+    );
+    assert!(matches!(
+        rejected("[slow]Bonjour.[/slow] [shake]!"),
+        PoDiagnosticKind::MarkupUnknownTag(tag) if tag == "shake"
+    ));
 }

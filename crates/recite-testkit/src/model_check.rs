@@ -6,11 +6,13 @@
 //! the wrong program. This compares the AST against the model it came from.
 
 use recite_core::ast::{
-    Argument, ConditionCall, ConditionExpression, DivertTarget, MatchPattern, Statement,
+    Argument, ConditionCall, ConditionExpression, DivertTarget, InterpolationType, MatchPattern,
+    Statement,
 };
 
 use crate::oracle::{ReferenceProgram, effect_observation};
 use crate::program::{ChoiceSpec, Cond, Program, Stmt, Target};
+use crate::render::line_text;
 
 impl ReferenceProgram {
     /// Whether the lowered AST has the model's blocks, statements, nesting,
@@ -105,6 +107,31 @@ impl Checker<'_> {
                     line.id.as_ref().map(|id| id.as_str()),
                     Some(spec.id.as_str()),
                 )?;
+                same(
+                    "speaker",
+                    line.speaker
+                        .as_ref()
+                        .map(|speaker| speaker.as_str().to_owned()),
+                    spec.speaker.map(|speaker| format!("s{speaker}")),
+                )?;
+                same("line text", line.source_text.text.clone(), line_text(spec))?;
+                let bindings: Vec<_> = line
+                    .interpolation_bindings
+                    .iter()
+                    .map(|binding| {
+                        (
+                            binding.name.as_str(),
+                            binding.value.trim_start_matches('$'),
+                            binding.value_type,
+                        )
+                    })
+                    .collect();
+                let expected: Vec<_> = spec
+                    .count
+                    .then_some(("count", "count", InterpolationType::Integer))
+                    .into_iter()
+                    .collect();
+                same("bindings", bindings, expected)?;
                 let choices: Vec<_> = line
                     .statements
                     .iter()
@@ -175,6 +202,11 @@ impl Checker<'_> {
             "choice id",
             choice.id.as_ref().map(|id| id.as_str()),
             Some(spec.id.as_str()),
+        )?;
+        same(
+            "choice text",
+            choice.source_text.text.as_str(),
+            spec.text.as_str(),
         )?;
         same(
             "choice requirement",

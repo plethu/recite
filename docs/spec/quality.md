@@ -106,12 +106,12 @@ compiler and nothing with the runtime. Generated programs must:
 - report from save impact exactly the reference interpreter's reachable save points, with the
   outcome a real save there gets.
 
-Each rule this specification says validation must reject has a test that names its section.
-`cargo-fuzz` targets outside the workspace cover the untrusted inputs: compiled-asset bytes,
-session-snapshot bytes and source text. Their seed corpora are checked in, and `just fuzz seed`
-regenerates them. `just fuzz check` lints the fuzz crate on stable in every core-lane run.
-Scheduled, manual and release verification runs the properties with 8192 cases and fuzzes each
-target for five minutes, with `just fuzz properties` and `just fuzz run`.
+Each source, schema and catalogue rule that §5, §6.3, §7.6 and §9.2 say validation must reject has a
+test that names its section. `cargo-fuzz` targets outside the workspace cover the untrusted inputs:
+compiled-asset bytes, session-snapshot bytes and source text. Their seed corpora are checked in, and
+`just fuzz seed` regenerates them. `just fuzz check` lints the fuzz crate on stable in every
+core-lane run. Scheduled, manual and release verification runs the properties with 8192 cases and
+fuzzes each target for five minutes, with `just fuzz properties` and `just fuzz run`.
 
 `just mutants` runs cargo-mutants over the source-position index, LSP freshness fences, document
 close transitions, runtime choice selection and restored pending positions selected in `Cargo.toml`
