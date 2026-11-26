@@ -5,10 +5,12 @@
 //! before it or splitting a prompt at a comment, would make them agree on
 //! the wrong program. This compares the AST against the model it came from.
 
-use recite_core::ast::{DivertTarget, MatchPattern, Statement};
+use recite_core::ast::{
+    Argument, ConditionCall, ConditionExpression, DivertTarget, MatchPattern, Statement,
+};
 
 use crate::oracle::{ReferenceProgram, effect_observation};
-use crate::program::{ChoiceSpec, Program, Stmt, Target};
+use crate::program::{ChoiceSpec, Cond, Program, Stmt, Target};
 
 impl ReferenceProgram {
     /// Whether the lowered AST has the model's blocks, statements, nesting,
@@ -131,20 +133,24 @@ impl Checker<'_> {
             (
                 Statement::If(branch),
                 Stmt::If {
-                    then, otherwise, ..
+                    condition,
+                    then,
+                    otherwise,
                 },
             ) => {
+                same(
+                    "condition",
+                    lowered_condition(&branch.condition),
+                    model_condition(condition),
+                )?;
                 self.list(&branch.then_statements, then)?;
                 self.list(&branch.else_statements, otherwise)
             }
             (Statement::Match(branch), Stmt::Match { scrutinee, arms }) => {
                 same(
                     "scrutinee",
-                    branch.scrutinee.function.as_str(),
-                    crate::render::scrutinee_call(*scrutinee)
-                        .split('(')
-                        .next()
-                        .unwrap_or_default(),
+                    lowered_call(&branch.scrutinee),
+                    crate::render::scrutinee_call(*scrutinee),
                 )?;
                 same("arms", branch.arms.len(), arms.len())?;
                 for (arm, spec) in branch.arms.iter().zip(arms) {
@@ -172,8 +178,11 @@ impl Checker<'_> {
         )?;
         same(
             "choice requirement",
-            choice.availability_requirement.is_some(),
-            spec.requires.is_some(),
+            choice
+                .availability_requirement
+                .as_ref()
+                .map(|requirement| lowered_condition(&requirement.condition)),
+            spec.requires.as_ref().map(model_condition),
         )?;
         let target = choice
             .target
@@ -200,6 +209,49 @@ impl Checker<'_> {
             }
         };
         same("target", actual, expected)
+    }
+}
+
+/// A lowered condition's structure: calls with their arguments, `and`, `or`
+/// and `not`, without spans or grouping parentheses.
+fn lowered_condition(condition: &ConditionExpression) -> String {
+    let group = |operator: &str, operands: &[ConditionExpression]| {
+        let operands: Vec<_> = operands.iter().map(lowered_condition).collect();
+        format!("{operator}({})", operands.join(", "))
+    };
+    match condition {
+        ConditionExpression::Call(call) => lowered_call(call),
+        ConditionExpression::And(operands) => group("and", &operands.expressions),
+        ConditionExpression::Or(operands) => group("or", &operands.expressions),
+        ConditionExpression::Not(unary) => format!("not({})", lowered_condition(&unary.expression)),
+        ConditionExpression::Grouped(unary) => lowered_condition(&unary.expression),
+    }
+}
+
+fn lowered_call(call: &ConditionCall) -> String {
+    let args: Vec<_> = call
+        .args
+        .iter()
+        .map(|argument| match argument {
+            Argument::Identifier(value) => value.clone(),
+            Argument::Value(value) => format!("{value:?}"),
+        })
+        .collect();
+    format!("{}({})", call.function, args.join(", "))
+}
+
+/// The model condition in the form of [`lowered_condition`].
+fn model_condition(condition: &Cond) -> String {
+    let group = |operator: &str, operands: &[Cond]| {
+        let operands: Vec<_> = operands.iter().map(model_condition).collect();
+        format!("{operator}({})", operands.join(", "))
+    };
+    match condition {
+        Cond::Flag(actor) => format!("flag({})", actor.name()),
+        Cond::Ready => "ready()".to_owned(),
+        Cond::Not(operand) => format!("not({})", model_condition(operand)),
+        Cond::And(operands) => group("and", operands),
+        Cond::Or(operands) => group("or", operands),
     }
 }
 

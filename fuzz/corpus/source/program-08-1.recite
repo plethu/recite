@@ -1,8 +1,0 @@
-:: s0
-# generated comment
-! blocking grant(player)
-! immediate note(player)
-
-:: s1
-> @l7
-  Fresh l7.

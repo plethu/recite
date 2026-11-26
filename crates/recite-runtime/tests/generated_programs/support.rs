@@ -98,6 +98,8 @@ pub(super) struct RuntimeDialogue<'a> {
     last_event: Option<DialogueEvent>,
     pub(super) events: Vec<DialogueEvent>,
     pub(super) failure: Option<String>,
+    /// The next advance presents a prompt with its saved availability.
+    saved_prompt: bool,
     /// Saves after every observation, when enabled.
     pub(super) saves: Option<Vec<Save>>,
 }
@@ -127,8 +129,16 @@ impl<'a> RuntimeDialogue<'a> {
             last_event: None,
             events: Vec::new(),
             failure: None,
+            saved_prompt: false,
             saves: None,
         }
+    }
+
+    /// Expects the next advance to present a resumed prompt with its saved
+    /// availability, without querying conditions.
+    pub(super) fn presenting_saved_prompt(mut self) -> Self {
+        self.saved_prompt = true;
+        self
     }
 
     /// Records a save before the first operation and after every observation.
@@ -174,7 +184,9 @@ impl<'a> RuntimeDialogue<'a> {
         }
         if saved.pending_prompt.is_some() || saved.pending_effect.is_some() {
             // A restored prompt or blocking effect is presented once more.
+            self.saved_prompt = saved.pending_prompt.is_some();
             let presented = self.advance(&mut restored);
+            self.saved_prompt = false;
             if presented.as_ref().ok() != self.last_event.as_ref() {
                 return Err(format!(
                     "restored session presented {presented:?}, expected {:?}",
@@ -186,9 +198,20 @@ impl<'a> RuntimeDialogue<'a> {
         Ok(())
     }
 
+    /// Advances `session`. A restored prompt is presented with its saved
+    /// availability, so while `saved_prompt` holds the host refuses every
+    /// condition query.
     fn advance(&self, session: &mut DialogueSession) -> Result<DialogueEvent, DialogueError> {
         let answers = self.answers;
-        let context = move |query: ConditionQuery<'_>| evaluate(answers, query);
+        let saved_prompt = self.saved_prompt;
+        let context = move |query: ConditionQuery<'_>| {
+            if saved_prompt {
+                return Err(ConditionEvaluationError::new(
+                    "a restored prompt is presented without querying conditions",
+                ));
+            }
+            evaluate(answers, query)
+        };
         next_with(
             self.asset,
             session,
@@ -224,6 +247,7 @@ impl Dialogue for RuntimeDialogue<'_> {
         self.checkpoint()?;
         let mut session = self.session.clone();
         let result = self.advance(&mut session);
+        self.saved_prompt = false;
         self.session = session;
         self.record(result)
     }

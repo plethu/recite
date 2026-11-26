@@ -7,6 +7,11 @@ set default-list
 nightly := "nightly-2026-11-01"
 targets := "compiled_asset session_snapshot source"
 
+# Check and lint the fuzz crate on stable, so workspace API changes cannot break it unseen.
+check:
+    cargo fmt --manifest-path fuzz/Cargo.toml -- --check
+    cargo clippy --locked --manifest-path fuzz/Cargo.toml --target-dir target/fuzz-check --bins -- -D warnings
+
 # Install the pinned nightly toolchain the fuzz targets build with.
 toolchain:
     rustup toolchain install {{ nightly }} --profile minimal

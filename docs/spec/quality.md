@@ -99,17 +99,19 @@ compiler and nothing with the runtime. Generated programs must:
 - report exactly the matching diagnostic when one specification rule is broken;
 - traverse as the reference interpreter does for any condition answers and choices, restore exactly
   from a save at any boundary, and never fail at runtime once validated;
-- resume each save exactly in its own asset; in a patched asset, either fall back with what was
-  saved, never with an ended save's effects, or resume after the same history and continue as the
-  reference interpreter does from that point;
+- resume each save exactly in its own asset; in a patched asset, resume whenever the saved block is
+  unchanged or the patch only edits text, and otherwise either fall back with what was saved, never
+  with an ended save's effects, or resume after the same history, present a kept prompt without
+  querying conditions, and continue as the reference interpreter does from that point;
 - report from save impact exactly the reference interpreter's reachable save points, with the
   outcome a real save there gets.
 
 Each rule this specification says validation must reject has a test that names its section.
 `cargo-fuzz` targets outside the workspace cover the untrusted inputs: compiled-asset bytes,
 session-snapshot bytes and source text. Their seed corpora are checked in, and `just fuzz seed`
-regenerates them. Scheduled, manual and release verification runs these properties with 8192 cases
-(`just fuzz properties`) and fuzzes each target for five minutes (`just fuzz run`).
+regenerates them. `just fuzz check` lints the fuzz crate on stable in every core-lane run.
+Scheduled, manual and release verification runs the properties with 8192 cases and fuzzes each
+target for five minutes, with `just fuzz properties` and `just fuzz run`.
 
 `just mutants` runs cargo-mutants over the source-position index, LSP freshness fences, document
 close transitions, runtime choice selection and restored pending positions selected in `Cargo.toml`

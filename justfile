@@ -57,6 +57,7 @@ core-check:
     just test
     just test-doc
     just _clippy-rust
+    just fuzz check
     RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 
 # Real host conformance and clean package consumers remain correctness checks.

@@ -36,6 +36,24 @@ impl Program {
             })
             .collect()
     }
+
+    /// The source of the block with `id`, without its header's default
+    /// marker, or `None` when the program has no such block. Equal text
+    /// means the block was not changed between two revisions.
+    #[must_use]
+    pub fn block_source(&self, id: &str) -> Option<String> {
+        self.files.iter().enumerate().find_map(|(file, spec)| {
+            let block = spec.blocks.iter().find(|block| block.id == id)?;
+            let mut out = format!("{} :: {}\n", spec.path, block.id);
+            Renderer {
+                program: self,
+                file,
+                out: &mut out,
+            }
+            .statements(0, &block.body);
+            Some(out)
+        })
+    }
 }
 
 struct Renderer<'a> {

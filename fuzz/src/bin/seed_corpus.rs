@@ -39,13 +39,13 @@ fn main() {
     }
 
     for (index, sources) in programs.iter().enumerate() {
-        for (file, (_, source)) in sources.iter().enumerate() {
-            write(
-                "source",
-                format!("program-{index:02}-{file}.recite"),
-                source.as_bytes(),
-            );
-        }
+        // The source target reads one input as up to two files split at a NUL.
+        let joined: Vec<&str> = sources.iter().map(|(_, source)| source.as_str()).collect();
+        write(
+            "source",
+            format!("program-{index:02}.recite"),
+            joined.join("\0").as_bytes(),
+        );
         let Some(output) = compile_output(sources) else {
             panic!("seed program {index} compiles");
         };

@@ -13,8 +13,8 @@ use recite_runtime::{
     start_scene,
 };
 use recite_testkit::{
-    Answers, Dialogue, EffectObservation, HistoryItem, ReferenceProgram, Rejection, answers,
-    apply_patch, drive, patch, program,
+    Answers, Dialogue, EffectObservation, HistoryItem, PatchOp, ReferenceProgram, Rejection,
+    answers, apply_patch, drive, patch, program,
 };
 
 use super::support::{MAX_STEPS, RuntimeDialogue, Save, compile, effect, failure, levels};
@@ -167,6 +167,9 @@ fn check_resume(
         .map_err(failure)?;
     let expected = drive(&mut oracle, answers, MAX_STEPS);
     let mut dialogue = RuntimeDialogue::new(&candidate.asset, session.clone(), answers, Vec::new());
+    if report.prompt == PromptResume::Kept {
+        dialogue = dialogue.presenting_saved_prompt();
+    }
     let actual = drive(&mut dialogue, answers, MAX_STEPS);
     prop_assert_eq!(
         actual,
@@ -198,12 +201,35 @@ proptest! {
         ops in patch(),
         answers in answers(),
     ) {
+        let patched = apply_patch(&program, &ops);
         let baseline = Revision::new(&program)?;
-        let candidate = Revision::new(&apply_patch(&program, &ops))?;
+        let candidate = Revision::new(&patched)?;
+        let text_only = ops
+            .iter()
+            .all(|op| matches!(op, PatchOp::EditLineText(_) | PatchOp::EditChoiceText(_)));
         for save in saves(&baseline.asset, &answers)? {
             let level = check_resume(&save, &baseline, &baseline, &answers)?;
             prop_assert_eq!(level, Some(ResumeLevel::Exact));
-            check_resume(&save, &baseline, &candidate, &answers)?;
+            let level = check_resume(&save, &baseline, &candidate, &answers)?;
+            if save.snapshot.ended {
+                continue;
+            }
+            // A save must resume where the specification says it does: in an
+            // unchanged block, and after a patch that only edits text.
+            let block = save.snapshot.block_id.as_str();
+            if program.block_source(block).is_some()
+                && program.block_source(block) == patched.block_source(block)
+            {
+                prop_assert!(
+                    matches!(level, Some(ResumeLevel::Exact | ResumeLevel::UnchangedBlock)),
+                    "a save in unchanged block `{block}` resumed at {level:?}"
+                );
+            } else if text_only {
+                prop_assert!(
+                    level.is_some_and(|level| level <= ResumeLevel::TextEdited),
+                    "a save in text-edited block `{block}` resumed at {level:?}"
+                );
+            }
         }
     }
 }
