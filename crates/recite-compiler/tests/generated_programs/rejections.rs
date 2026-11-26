@@ -2,7 +2,7 @@
 //! that rule's diagnostic, wherever the broken statement is nested.
 
 use proptest::prelude::*;
-use recite_testkit::{ArmSpec, Program, Stmt, Target, program};
+use recite_testkit::{Actor, ArmSpec, Program, Scrutinee, Stmt, Target, program};
 
 use super::{compile_sources, schema};
 
@@ -39,10 +39,12 @@ impl Breakage {
         }
     }
 
-    /// Breaks the rule at the `site`-th applicable statement, or returns
-    /// `None` when the program has none.
+    /// Breaks the rule at the `site`-th applicable statement. A program
+    /// without one first gains a valid statement to break, so every case
+    /// checks a rule.
     fn apply(self, program: &Program, site: usize) -> Option<Program> {
         let mut broken = program.clone();
+        ensure_site(&mut broken, self, site);
         if let Self::DuplicateLineId = self {
             let mut first = None;
             let mut lines = 0;
@@ -127,6 +129,51 @@ impl Breakage {
     }
 }
 
+/// Adds two lines, or an exhaustive `:match`, to a statement list chosen by
+/// `site` when the program has nothing for `breakage` to break.
+fn ensure_site(program: &mut Program, breakage: Breakage, site: usize) {
+    let mut lines = 0;
+    let mut matches = 0;
+    program.visit(&mut |statement| match statement {
+        Stmt::Line(_) => lines += 1,
+        Stmt::Match { .. } => matches += 1,
+        _ => {}
+    });
+    let added = match breakage {
+        Breakage::DuplicateLineId if lines < 2 => {
+            vec![
+                Stmt::Line(program.fresh_line()),
+                Stmt::Line(program.fresh_line()),
+            ]
+        }
+        Breakage::DuplicateLineId => return,
+        _ if matches > 0 => return,
+        _ => {
+            let arms = Scrutinee::STAGES
+                .iter()
+                .map(|variant| ArmSpec {
+                    pattern: Some(variant),
+                    body: vec![Stmt::Line(program.fresh_line())],
+                })
+                .collect();
+            vec![Stmt::Match {
+                scrutinee: Scrutinee::Stage(Actor::Player),
+                arms,
+            }]
+        }
+    };
+    let mut lists = 0;
+    program.visit_lists_mut(&mut |_| lists += 1);
+    let chosen = site % lists.max(1);
+    let mut seen = 0;
+    program.visit_lists_mut(&mut |statements| {
+        if seen == chosen {
+            statements.splice(0..0, added.iter().cloned());
+        }
+        seen += 1;
+    });
+}
+
 proptest! {
     #[test]
     fn breaking_one_rule_reports_exactly_its_diagnostic(
@@ -134,9 +181,9 @@ proptest! {
         breakage in prop::sample::select(Breakage::ALL.to_vec()),
         site in any::<usize>(),
     ) {
-        let Some(broken) = breakage.apply(&program, site) else {
-            return Ok(());
-        };
+        let broken = breakage
+            .apply(&program, site)
+            .ok_or_else(|| TestCaseError::fail("every program gains a site to break"))?;
         let report = compile_sources(&broken.sources(), &schema());
         let codes: Vec<_> = report
             .diagnostics

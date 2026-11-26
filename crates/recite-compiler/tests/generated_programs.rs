@@ -10,7 +10,9 @@ use recite_core::{
     compiled::{CompiledAssetId, CompilerVersion, SourceMapId},
     schema::{ProjectSchema, load_schema_manifest_str},
 };
-use recite_testkit::{ASSET_ID, Program, SCHEMA_JSON, SCHEMA_PATH, apply_patch, patch, program};
+use recite_testkit::{
+    ASSET_ID, Program, ReferenceProgram, SCHEMA_JSON, SCHEMA_PATH, apply_patch, patch, program,
+};
 
 #[path = "generated_programs/rejections.rs"]
 mod rejections;
@@ -65,13 +67,18 @@ fn render(sources: &[(String, String)]) -> String {
 
 proptest! {
     #[test]
-    fn generated_programs_and_their_patches_compile_cleanly(
+    fn generated_programs_and_their_patches_compile_and_lower_as_generated(
         program in program(),
         ops in patch(),
     ) {
         let schema = schema();
-        assert_compiles(&program, &schema)?;
-        assert_compiles(&apply_patch(&program, &ops), &schema)?;
+        for program in [program.clone(), apply_patch(&program, &ops)] {
+            assert_compiles(&program, &schema)?;
+            // The reference interpreter reads the same parser output as the
+            // compiler, so lowering must keep the generated structure.
+            let reference = ReferenceProgram::lower(&program.sources()).map_err(TestCaseError::fail)?;
+            reference.check_model(&program).map_err(TestCaseError::fail)?;
+        }
     }
 
     #[test]

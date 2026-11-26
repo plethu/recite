@@ -9,9 +9,9 @@ use recite_core::{
     schema::{ProjectSchema, load_schema_manifest_str},
 };
 use recite_runtime::{
-    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueEvent, DialogueSession,
-    EffectAck, LocaleResolution, acknowledge_effect, choose, localisation::InterpolationValues,
-    next_with,
+    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueEffectMode, DialogueEvent,
+    DialogueSession, EffectAck, LocaleResolution, acknowledge_effect, choose_with,
+    localisation::InterpolationValues, next_with,
 };
 
 /// The asset every session-snapshot input is restored and resumed against.
@@ -103,44 +103,56 @@ fn answer(query: ConditionQuery<'_>) -> Result<ConditionValue, ConditionEvaluati
     Ok(match query.function() {
         "mood" => ConditionValue::EnumVariant("calm".to_owned()),
         "stage" => ConditionValue::EnumVariant("late".to_owned()),
+        "ready" => ConditionValue::Bool(false),
         _ => ConditionValue::Bool(true),
     })
 }
 
-/// Advances at most `steps` times, taking the first choice of each prompt
-/// and acknowledging blocking effects. Errors end play; they must never
-/// panic.
+/// Advances at most `steps` times, taking the first available choice of each
+/// prompt and acknowledging blocking effects. Errors end play; they must
+/// never panic.
 pub fn play(asset: &CompiledDialogue, session: &mut DialogueSession, steps: usize) {
+    play_with(asset, session, steps, &mut |_| {});
+}
+
+/// [`play`], visiting the session before the first advance and after every
+/// event, where a host could save it.
+pub fn play_with(
+    asset: &CompiledDialogue,
+    session: &mut DialogueSession,
+    steps: usize,
+    visit: &mut dyn FnMut(&DialogueSession),
+) {
     let mut values = InterpolationValues::new();
     values.insert("count".to_owned(), recite_core::ScalarValue::Integer(2));
-    let mut event = next_with(
-        asset,
-        session,
-        &answer,
-        LocaleResolution::new().with_values(&values),
-    );
+    let resolution = || LocaleResolution::new().with_values(&values);
+    visit(session);
+    let mut event = next_with(asset, session, &answer, resolution());
     for _ in 0..steps {
-        event = match event {
-            Ok(DialogueEvent::Prompt { choices, .. }) => match choices.first() {
-                Some(choice) => choose(asset, session, choice.id.clone(), &answer),
-                None => return,
-            },
-            Ok(DialogueEvent::Effect(request)) => {
-                let _ = acknowledge_effect(session, request.id, EffectAck::Completed);
-                next_with(
-                    asset,
-                    session,
-                    &answer,
-                    LocaleResolution::new().with_values(&values),
-                )
+        let Ok(current) = event else {
+            return;
+        };
+        visit(session);
+        event = match current {
+            DialogueEvent::Prompt { choices, .. } => {
+                let Some(choice) = choices
+                    .iter()
+                    .find(|choice| choice.availability.is_available)
+                else {
+                    return;
+                };
+                choose_with(asset, session, choice.id.clone(), &answer, resolution())
             }
-            Ok(DialogueEvent::Line(_)) => next_with(
-                asset,
-                session,
-                &answer,
-                LocaleResolution::new().with_values(&values),
-            ),
-            Ok(DialogueEvent::End { .. }) | Err(_) => return,
+            DialogueEvent::Effect(request) if request.mode == DialogueEffectMode::Blocking => {
+                if acknowledge_effect(session, request.id, EffectAck::Completed).is_err() {
+                    return;
+                }
+                next_with(asset, session, &answer, resolution())
+            }
+            DialogueEvent::Effect(_) | DialogueEvent::Line(_) => {
+                next_with(asset, session, &answer, resolution())
+            }
+            DialogueEvent::End { .. } => return,
         };
     }
 }

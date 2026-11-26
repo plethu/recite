@@ -1,17 +1,19 @@
 //! Save impact against the reference save points and against real saves.
 
 use proptest::prelude::*;
+use recite_core::{SourceSpan, compiled::CompiledDialogue};
 use recite_runtime::resume::{
     ResumeOptions, SavePointKind, SavePointOutcome, SessionResume, analyze_save_impact,
     resume_session,
 };
+use recite_runtime::snapshot::DialogueSessionSnapshot;
 use recite_testkit::{
     EffectMode, EffectObservation, Observation, ReferenceProgram, SavePointKey, answers,
     apply_patch, patch, program,
 };
 
 use super::resume::saves;
-use super::support::{compile, failure};
+use super::support::{compile, failure, levels};
 
 fn key(kind: &SavePointKind) -> Result<SavePointKey, TestCaseError> {
     let ids = |ids: &[recite_core::ChoiceId]| ids.iter().map(|id| id.as_str().to_owned()).collect();
@@ -47,6 +49,29 @@ fn observed_key(after: Option<&Observation>) -> Option<SavePointKey> {
         },
         Some(Observation::End { .. }) => return None,
     })
+}
+
+/// The source span of the statement a save was taken after, or of its
+/// block's header for a save at the block start, which save impact reports
+/// as the point's baseline span.
+fn saved_span(
+    asset: &CompiledDialogue,
+    snapshot: &DialogueSessionSnapshot,
+) -> Result<SourceSpan, TestCaseError> {
+    let level = levels(asset, snapshot)
+        .pop()
+        .ok_or_else(|| TestCaseError::fail("a save has a position"))?;
+    if level.next == 0 && snapshot.continuation_stack.is_empty() {
+        let block = &asset.blocks[snapshot.current_block as usize];
+        return Ok(asset.source_maps[block.source_map.as_u32() as usize]
+            .span
+            .clone());
+    }
+    level
+        .spans
+        .get(level.next.wrapping_sub(1))
+        .cloned()
+        .ok_or_else(|| TestCaseError::fail("a save follows a statement in its range"))
 }
 
 fn same_outcome(reported: &SavePointOutcome, resumed: &SessionResume) -> bool {
@@ -94,8 +119,10 @@ proptest! {
             let resumed = resume_session(&candidate, save.snapshot.clone(), &ResumeOptions::new())
                 .map_err(failure)?;
             let block = save.snapshot.block_id.as_str();
+            let span = saved_span(&baseline, &save.snapshot)?;
             let reported = report.points.iter().any(|point| {
                 point.block_id.as_str() == block
+                    && point.baseline_span == span
                     && key(&point.kind).ok().as_ref() == Some(&saved_at)
                     && same_outcome(&point.outcome, &resumed)
             });

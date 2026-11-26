@@ -11,11 +11,7 @@ use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs_with_schema};
 use recite_core::compiled::{CompiledAssetId, CompilerVersion, SourceMapId};
-use recite_runtime::{
-    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueEvent, EffectAck,
-    LocaleResolution, acknowledge_effect, choose, localisation::InterpolationValues, next_with,
-    snapshot::encode_session_messagepack, start_scene,
-};
+use recite_runtime::{snapshot::encode_session_messagepack, start_scene};
 
 const PROGRAMS: usize = 12;
 
@@ -63,42 +59,17 @@ fn main() {
         let Ok(mut session) = start_scene(&asset, None) else {
             continue;
         };
-        let mut values = InterpolationValues::new();
-        values.insert("count".to_owned(), recite_core::ScalarValue::Integer(2));
-        for step in 0..24 {
-            if let Ok(bytes) = encode_session_messagepack(&asset, &session) {
+        let mut step = 0;
+        recite_fuzz::play_with(&asset, &mut session, 24, &mut |session| {
+            if let Ok(bytes) = encode_session_messagepack(&asset, session) {
                 write(
                     "session_snapshot",
                     format!("program-{index:02}-save-{step:02}.bin"),
                     &bytes,
                 );
             }
-            let event = next_with(
-                &asset,
-                &mut session,
-                &answer,
-                LocaleResolution::new().with_values(&values),
-            );
-            let result = match event {
-                Ok(DialogueEvent::Prompt { choices, .. }) => match choices
-                    .iter()
-                    .find(|choice| choice.availability.is_available)
-                {
-                    Some(choice) => {
-                        choose(&asset, &mut session, choice.id.clone(), &answer).map(|_| ())
-                    }
-                    None => break,
-                },
-                Ok(DialogueEvent::Effect(request)) => {
-                    acknowledge_effect(&mut session, request.id, EffectAck::Completed)
-                }
-                Ok(DialogueEvent::Line(_)) => Ok(()),
-                Ok(DialogueEvent::End { .. }) | Err(_) => break,
-            };
-            if result.is_err() {
-                break;
-            }
-        }
+            step += 1;
+        });
     }
 }
 
@@ -120,13 +91,4 @@ fn compile_output(
     )
     .ok()?
     .asset
-}
-
-fn answer(query: ConditionQuery<'_>) -> Result<ConditionValue, ConditionEvaluationError> {
-    Ok(match query.function() {
-        "mood" => ConditionValue::EnumVariant("tired".to_owned()),
-        "stage" => ConditionValue::EnumVariant("early".to_owned()),
-        "ready" => ConditionValue::Bool(false),
-        _ => ConditionValue::Bool(true),
-    })
 }

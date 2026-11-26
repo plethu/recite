@@ -91,10 +91,11 @@ failure using its persisted seed and keep a focused regression when correcting p
 The unpublished `recite-testkit` crate generates valid programs with a matching schema: several
 blocks across files, nested `:if` and `:match`, prompts with and without lines, gated choices, every
 effect mode, diverts and interpolation. It also generates the patches a release makes to them, and
-runs their lowered source AST in a reference interpreter that shares no code with the compiler or
-runtime. Generated programs must:
+runs their lowered source AST in a reference interpreter that shares only the parser with the
+compiler and nothing with the runtime. Generated programs must:
 
 - compile without diagnostics, and byte-identically twice;
+- lower to the statements, nesting, prompts, IDs and targets the generator produced;
 - report exactly the matching diagnostic when one specification rule is broken;
 - traverse as the reference interpreter does for any condition answers and choices, restore exactly
   from a save at any boundary, and never fail at runtime once validated;

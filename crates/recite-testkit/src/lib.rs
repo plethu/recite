@@ -9,6 +9,7 @@
 //! This crate is not published.
 
 mod answers;
+mod model_check;
 mod normalize;
 mod observation;
 mod oracle;
