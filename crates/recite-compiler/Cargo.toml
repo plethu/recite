@@ -19,6 +19,8 @@ thiserror.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+proptest.workspace = true
+recite-testkit.workspace = true
 recite-ui.workspace = true
 rmp-serde.workspace = true
 serde-value.workspace = true
