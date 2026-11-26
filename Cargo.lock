@@ -5729,8 +5729,10 @@ version = "0.1.0"
 dependencies = [
  "insta",
  "language-tags",
+ "proptest",
  "recite-core",
  "recite-parser",
+ "recite-testkit",
  "recite-ui",
  "rmp-serde",
  "rpds",
@@ -5937,11 +5939,21 @@ dependencies = [
  "proptest",
  "recite-compiler",
  "recite-core",
+ "recite-testkit",
  "rmp-serde",
  "serde",
  "serde-value",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "recite-testkit"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "recite-core",
+ "recite-parser",
 ]
 
 [[package]]
