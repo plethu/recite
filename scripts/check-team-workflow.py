@@ -294,7 +294,8 @@ def broken_reference(team, writer_a, writer_b):
 def removed_frozen_id(team, writer_b):
     """Deleting a published line is reported against the frozen release and needs consent."""
     text = (writer_b / "scenes/office.recite").read_text()
-    removed = re.sub(r"  :case wary\n(    .*\n)+", "", text)
+    # Keep the arm so the match stays exhaustive; only the published line goes.
+    removed = re.sub(r"(  :case wary\n)(    .*\n)+", r"\1", text)
     (writer_b / "scenes/office.recite").write_text(removed)
     team.recite(writer_b, "validate", "scenes", "--schema", SCHEMA)
     output = team.recite(writer_b, "id", "check", "scenes", "--since", "v1", success=False)
