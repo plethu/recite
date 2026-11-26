@@ -40,41 +40,6 @@ pub enum Observation {
     },
 }
 
-impl Observation {
-    /// The observation without authored text, for comparing runs of a
-    /// program before and after a text edit.
-    #[must_use]
-    pub fn without_text(&self) -> Self {
-        let line = |line: &LineObservation| LineObservation {
-            text: String::new(),
-            ..line.clone()
-        };
-        match self {
-            Self::Line(observation) => Self::Line(line(observation)),
-            Self::Prompt {
-                line: text,
-                choices,
-            } => Self::Prompt {
-                line: text.as_ref().map(line),
-                choices: choices
-                    .iter()
-                    .map(|choice| ChoiceObservation {
-                        text: String::new(),
-                        ..choice.clone()
-                    })
-                    .collect(),
-            },
-            other => other.clone(),
-        }
-    }
-
-    /// Whether a save taken after this observation names it as its landmark.
-    #[must_use]
-    pub fn is_landmark(&self) -> bool {
-        matches!(self, Self::Line(_) | Self::Prompt { .. })
-    }
-}
-
 /// Why an operation was refused.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Rejection {
@@ -203,13 +168,4 @@ fn probe(dialogue: &mut dyn Dialogue, steps: &mut Vec<Step>, acknowledging: bool
             outcome: dialogue.acknowledge().map(|()| None),
         });
     }
-}
-
-/// The observations in a driven run, without refusals and acknowledgements.
-#[must_use]
-pub fn observations(steps: &[Step]) -> Vec<Observation> {
-    steps
-        .iter()
-        .filter_map(|step| step.outcome.clone().ok().flatten())
-        .collect()
 }

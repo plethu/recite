@@ -100,9 +100,11 @@ compiler and nothing with the runtime. Generated programs must:
 - traverse as the reference interpreter does for any condition answers and choices, restore exactly
   from a save at any boundary, and never fail at runtime once validated;
 - resume each save exactly in its own asset; in a patched asset, resume whenever the saved block is
-  unchanged or the patch only edits text, and otherwise either fall back with what was saved, never
-  with an ended save's effects, or resume after the same history, present a kept prompt without
-  querying conditions, and continue as the reference interpreter does from that point;
+  unchanged or the patch only edits text, and otherwise either fall back with exactly what was
+  saved, never with an ended save's effects, or resume after the same history, keep a waiting
+  prompt's saved availability unless its block changed in structure, present it without querying
+  conditions, deliver saved deferred effects as saved, and continue as the reference interpreter
+  does from that point;
 - report from save impact exactly the reference interpreter's reachable save points, with the
   outcome a real save there gets.
 

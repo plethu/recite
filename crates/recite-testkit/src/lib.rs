@@ -23,7 +23,7 @@ mod strategy;
 pub use answers::{Answer, Answers, answers};
 pub use observation::{
     Action, ChoiceObservation, Dialogue, EffectObservation, LineObservation, Observation, Outcome,
-    Rejection, Step, drive, observations,
+    Rejection, Step, drive,
 };
 pub use oracle::{OracleSession, ReferenceProgram};
 pub use patch::{PatchOp, apply_patch, patch};

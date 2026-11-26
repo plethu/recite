@@ -2,15 +2,18 @@
 //! and in a patched revision.
 
 use proptest::prelude::*;
-use recite_core::compiled::CompiledDialogue;
+use recite_core::{LocaleId, compiled::CompiledDialogue};
 use recite_runtime::{
-    EffectAck, acknowledge_effect,
-    resume::{PromptResume, ResumeLevel, ResumeOptions, SessionResume, resume_session},
+    DialogueEffectRequest, DialogueEvent, DialogueSessionOptions, EffectAck, acknowledge_effect,
+    resume::{
+        PromptResume, ResumeFallback, ResumeLandmark, ResumeLevel, ResumeOptions, SessionResume,
+        resume_session,
+    },
     snapshot::{
         DialogueSessionSnapshot, decode_session_messagepack, effect_request_from_snapshot,
         encode_session_messagepack, snapshot_session,
     },
-    start_scene,
+    start_scene_with_options,
 };
 use recite_testkit::{
     Answers, Dialogue, EffectObservation, HistoryItem, PatchOp, ReferenceProgram, Rejection,
@@ -39,7 +42,10 @@ pub(super) fn saves(
     asset: &CompiledDialogue,
     answers: &Answers,
 ) -> Result<Vec<Save>, TestCaseError> {
-    let session = start_scene(asset, None).map_err(failure)?;
+    // A locale, so fallbacks and resumes must carry the saved one.
+    let locale = LocaleId::new("fr-FR").map_err(failure)?;
+    let options = DialogueSessionOptions::new().with_locale(locale);
+    let session = start_scene_with_options(asset, None, options).map_err(failure)?;
     let mut dialogue = RuntimeDialogue::new(asset, session, answers, Vec::new()).saving();
     drive(&mut dialogue, answers, MAX_STEPS);
     prop_assert_eq!(dialogue.failure, None);
@@ -55,6 +61,89 @@ fn saved_effects(
         .map(|saved| effect_request_from_snapshot(saved).map(|request| effect(&request)))
         .collect::<Result<_, _>>()
         .map_err(failure)
+}
+
+/// The deferred effects a save holds, exactly as saved.
+fn saved_requests(
+    snapshot: &DialogueSessionSnapshot,
+) -> Result<Vec<DialogueEffectRequest>, TestCaseError> {
+    snapshot
+        .deferred_effects
+        .iter()
+        .map(effect_request_from_snapshot)
+        .collect::<Result<_, _>>()
+        .map_err(failure)
+}
+
+/// A landmark as `(line, choices, is_prompt)`, from resume or from the
+/// reference history, whose last item names the landmark or the block start.
+type LandmarkKey = Option<(Option<String>, Vec<String>, bool)>;
+
+fn history_landmark(history: &[HistoryItem]) -> LandmarkKey {
+    match history.last()? {
+        HistoryItem::Line(id) => Some((Some(id.clone()), Vec::new(), false)),
+        HistoryItem::Prompt { line, choices } => Some((line.clone(), choices.clone(), true)),
+        _ => None,
+    }
+}
+
+fn resume_landmark(landmark: Option<&ResumeLandmark>) -> Result<LandmarkKey, TestCaseError> {
+    let ids = |ids: &[recite_core::ChoiceId]| ids.iter().map(|id| id.as_str().to_owned()).collect();
+    Ok(match landmark {
+        None => None,
+        Some(ResumeLandmark::Line(id)) => Some((Some(id.as_str().to_owned()), Vec::new(), false)),
+        Some(ResumeLandmark::Prompt { line, choices }) => Some((
+            line.as_ref().map(|line| line.as_str().to_owned()),
+            ids(choices),
+            true,
+        )),
+        Some(other) => return Err(failure(other)),
+    })
+}
+
+/// A fallback hands the host exactly what was saved: block, landmark,
+/// locale, choice history, deferred effects and pending effect, with their
+/// request IDs. An ended save carries no effects, as its end delivered them.
+fn check_fallback(
+    fallback: &ResumeFallback,
+    saved: &DialogueSessionSnapshot,
+    baseline: &Revision,
+) -> Result<(), TestCaseError> {
+    prop_assert_eq!(fallback.ended, saved.ended);
+    prop_assert_eq!(fallback.block_id.as_str(), saved.block_id.as_str());
+    prop_assert_eq!(
+        fallback.locale.as_ref().map(ToString::to_string),
+        saved.locale.clone()
+    );
+    let history: Vec<_> = fallback
+        .selected_choice_history
+        .iter()
+        .map(|id| id.as_str().to_owned())
+        .collect();
+    prop_assert_eq!(&history, &saved.selected_choice_history);
+    if saved.ended {
+        prop_assert!(fallback.deferred_effects.is_empty(), "{fallback:?}");
+        prop_assert!(fallback.pending_effect.is_none(), "{fallback:?}");
+        prop_assert!(fallback.landmark.is_none(), "{fallback:?}");
+        return Ok(());
+    }
+    prop_assert_eq!(&fallback.deferred_effects, &saved_requests(saved)?);
+    let pending = saved
+        .pending_effect
+        .as_ref()
+        .map(|pending| effect_request_from_snapshot(&pending.request))
+        .transpose()
+        .map_err(failure)?;
+    prop_assert_eq!(&fallback.pending_effect, &pending);
+    let saved_history = baseline
+        .reference
+        .history(&saved.block_id, &levels(&baseline.asset, saved))
+        .map_err(failure)?;
+    prop_assert_eq!(
+        resume_landmark(fallback.landmark.as_ref())?,
+        history_landmark(&saved_history)
+    );
+    Ok(())
 }
 
 /// Prompts match when they share their line or any choice, as resume
@@ -89,25 +178,7 @@ fn check_resume(
         resume_session(&candidate.asset, saved.clone(), &ResumeOptions::new()).map_err(failure)?;
     let (mut session, report) = match resumed {
         SessionResume::Fallback(fallback) => {
-            prop_assert_eq!(fallback.ended, saved.ended);
-            if saved.ended {
-                // The end already delivered every effect.
-                prop_assert!(fallback.deferred_effects.is_empty(), "{fallback:?}");
-                prop_assert!(fallback.pending_effect.is_none(), "{fallback:?}");
-            } else {
-                let deferred: Vec<_> = fallback.deferred_effects.iter().map(effect).collect();
-                prop_assert_eq!(deferred, saved_effects(saved)?);
-                prop_assert_eq!(
-                    fallback.pending_effect.is_some(),
-                    saved.pending_effect.is_some()
-                );
-                let history: Vec<_> = fallback
-                    .selected_choice_history
-                    .iter()
-                    .map(|id| id.as_str().to_owned())
-                    .collect();
-                prop_assert_eq!(&history, &saved.selected_choice_history);
-            }
+            check_fallback(&fallback, saved, baseline)?;
             return Ok(None);
         }
         SessionResume::Resumed { session, report } => (session, report),
@@ -166,6 +237,16 @@ fn check_resume(
         )
         .map_err(failure)?;
     let expected = drive(&mut oracle, answers, MAX_STEPS);
+    // A waiting prompt keeps its saved availability unless its block
+    // changed in structure, when it is evaluated again.
+    if saved.pending_prompt.is_some() {
+        let expected = if report.level <= ResumeLevel::TextEdited {
+            PromptResume::Kept
+        } else {
+            PromptResume::Reevaluated
+        };
+        prop_assert_eq!(report.prompt, expected, "at {:?}", report.level);
+    }
     let mut dialogue = RuntimeDialogue::new(&candidate.asset, session.clone(), answers, Vec::new());
     if report.prompt == PromptResume::Kept {
         dialogue = dialogue.presenting_saved_prompt();
@@ -178,6 +259,18 @@ fn check_resume(
         report,
         resaved.block_id
     );
+    // Saved deferred effects are delivered as saved, request IDs included.
+    let ended = dialogue.events.iter().find_map(|event| match event {
+        DialogueEvent::End { deferred_effects } => Some(deferred_effects),
+        _ => None,
+    });
+    if let Some(delivered) = ended {
+        let saved_deferred = saved_requests(saved)?;
+        prop_assert!(
+            delivered.starts_with(&saved_deferred),
+            "delivered {delivered:?}, saved {saved_deferred:?}"
+        );
+    }
 
     // A pending effect is acknowledged by its saved request ID.
     if let Some(pending) = &saved.pending_effect {
