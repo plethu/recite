@@ -28,7 +28,10 @@ pub fn program() -> impl Strategy<Value = Program> {
         if !side.is_empty() {
             files.push(file("dialogue/side.recite", 's', side));
         }
-        let mut program = Program { files, next_id: 0 };
+        let mut program = Program {
+            files,
+            ids_issued: 0,
+        };
         program.normalize();
         program
     })

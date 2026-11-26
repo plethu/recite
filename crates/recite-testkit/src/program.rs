@@ -230,8 +230,9 @@ pub struct FileSpec {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Program {
     pub files: Vec<FileSpec>,
-    /// The next unused line or choice number, so patches add fresh IDs.
-    pub next_id: u32,
+    /// How many line and choice IDs have been issued; the next fresh ID is
+    /// numbered after them, so patches never reuse one.
+    pub ids_issued: u32,
 }
 
 impl Program {
@@ -258,8 +259,8 @@ impl Program {
 
     /// Takes the next fresh line or choice ID with `prefix`.
     pub fn fresh_id(&mut self, prefix: char) -> String {
-        let id = format!("{prefix}{}", self.next_id);
-        self.next_id += 1;
+        let id = format!("{prefix}{}", self.ids_issued);
+        self.ids_issued += 1;
         id
     }
 }
