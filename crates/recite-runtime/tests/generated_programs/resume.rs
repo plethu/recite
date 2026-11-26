@@ -166,6 +166,25 @@ fn check_fallback(
     Ok(())
 }
 
+/// Resumes every ended save outside the default block against a revision
+/// without that block, so the ended-save fallback is checked on every run
+/// that ends elsewhere: it must carry no effects, as the end delivered them.
+fn check_ended_saves_without_their_block(
+    program: &recite_testkit::Program,
+    saves: &[Save],
+    baseline: &Revision,
+    answers: &Answers,
+) -> Result<(), TestCaseError> {
+    for save in saves.iter().filter(|save| save.snapshot.ended) {
+        let Some(removed) = program.without_block(&save.snapshot.block_id) else {
+            continue;
+        };
+        let candidate = Revision::new(&removed)?;
+        prop_assert_eq!(check_resume(save, baseline, &candidate, answers)?, None);
+    }
+    Ok(())
+}
+
 /// Prompts match when they share their line or any choice, as resume
 /// locates a prompt that gained or lost choices.
 fn same_history(saved: &[HistoryItem], resumed: &[HistoryItem]) -> bool {
@@ -320,7 +339,9 @@ proptest! {
         let text_only = ops
             .iter()
             .all(|op| matches!(op, PatchOp::EditLineText(_) | PatchOp::EditChoiceText(_)));
-        for save in saves(&baseline.asset, &answers)? {
+        let saves = saves(&baseline.asset, &answers)?;
+        check_ended_saves_without_their_block(&program, &saves, &baseline, &answers)?;
+        for save in saves {
             let level = check_resume(&save, &baseline, &baseline, &answers)?;
             prop_assert_eq!(level, Some(ResumeLevel::Exact));
             let level = check_resume(&save, &baseline, &candidate, &answers)?;

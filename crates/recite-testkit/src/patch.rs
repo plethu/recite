@@ -310,6 +310,21 @@ impl Program {
         });
     }
 
+    /// A copy without the block named `id`, with its references sent to
+    /// `END`, or `None` for the default block or an unknown ID.
+    #[must_use]
+    pub fn without_block(&self, id: &str) -> Option<Self> {
+        let index = self
+            .block_positions()
+            .iter()
+            .position(|&(file, block)| self.files[file].blocks[block].id == id)?;
+        let site = index.checked_sub(1)?;
+        let mut removed = self.clone();
+        removed.remove_block(site);
+        removed.normalize();
+        Some(removed)
+    }
+
     /// Removes a block other than the default, sending its references to
     /// `END`.
     fn remove_block(&mut self, site: usize) {

@@ -9,9 +9,11 @@ use recite_core::{
 };
 use recite_testkit::{SCHEMA_JSON, SCHEMA_PATH};
 
-/// The generated schema with two markup tags: `slow` must close and nests,
-/// `shake` must close and does not nest.
-fn markup_schema() -> String {
+/// The generated schema, extended with what the rules below need: two
+/// markup tags (`slow` nests, `shake` does not), availability reasons with
+/// and without a parameter, and an `item` registry used by a condition and
+/// an effect.
+fn spec_schema() -> String {
     SCHEMA_JSON.replacen(
         "\"schema_version\": 1,",
         concat!(
@@ -19,15 +21,29 @@ fn markup_schema() -> String {
             "  \"markup\": {",
             "\"slow\": {\"requires_closing\": true, \"translatable\": true}, ",
             "\"shake\": {\"requires_closing\": true, \"translatable\": true, \"allows_nesting\": false}",
-            "},"
+            "},\n",
+            "  \"availability_reasons\": {",
+            "\"not_yet\": {\"template\": \"Not yet.\"}, ",
+            "\"needs\": {\"template\": \"Needs {who}.\", \"params\": [{\"name\": \"who\", \"type\": \"enum:actor\"}]}",
+            "},\n",
+            "  \"registries\": {\"item\": {\"values\": [\"brass_key\"]}},",
         ),
+        1,
+    )
+    .replacen(
+        "\"ready\": {\"params\": []},",
+        "\"ready\": {\"params\": []},\n    \"holds\": {\"params\": [{\"name\": \"item\", \"type\": \"registry:item\"}]},",
+        1,
+    )
+    .replacen(
+        "\"ping\": {\"modes\": [\"immediate\"], \"params\": []},",
+        "\"ping\": {\"modes\": [\"immediate\"], \"params\": []},\n    \"give\": {\"modes\": [\"immediate\"], \"params\": [{\"name\": \"item\", \"type\": \"registry:item\"}]},",
         1,
     )
 }
 
-/// Compiles `main` (and `side`, when given) against the generated schema,
-/// extended with markup tags, and returns the diagnostic codes in report
-/// order.
+/// Compiles `main` (and `side`, when given) against [`spec_schema`] and
+/// returns the diagnostic codes in report order.
 fn codes(main: &str, side: Option<&str>) -> Vec<String> {
     diagnostics(main, side)
         .iter()
@@ -36,9 +52,9 @@ fn codes(main: &str, side: Option<&str>) -> Vec<String> {
 }
 
 fn diagnostics(main: &str, side: Option<&str>) -> Vec<recite_core::Diagnostic> {
-    let schema = load_schema_manifest_str(SCHEMA_PATH, &markup_schema())
+    let schema = load_schema_manifest_str(SCHEMA_PATH, &spec_schema())
         .schema
-        .unwrap_or_else(|| panic!("generated schema with markup is valid"));
+        .unwrap_or_else(|| panic!("the extended generated schema is valid"));
     let mut inputs = vec![CompileInput::new("dialogue/main.recite", main)];
     if let Some(side) = side {
         inputs.push(CompileInput::new("dialogue/side.recite", side));
@@ -67,7 +83,7 @@ macro_rules! rejects {
         $(
             #[test]
             fn $name() {
-                assert_eq!(codes(&$source, None), [$($code),+]);
+                assert_eq!(codes(AsRef::<str>::as_ref(&$source), None), [$($code),+]);
             }
         )+
     };
@@ -109,6 +125,7 @@ rejects! {
 
 // §5.1 and §5.8: one default block, and no unknown divert targets.
 rejects! {
+    no_default_block: ":: start\n> @l_a\n  A.\n" => ["RECITE_VALIDATE005"];
     two_default_blocks: format!("{}:: again default\n> @l_b\n  B.\n", block("> @l_a\n  A.\n"))
         => ["RECITE_VALIDATE006"];
     unknown_block_target: block("-> nowhere\n") => ["RECITE_VALIDATE007"];
@@ -236,4 +253,27 @@ fn translations_that_drop_or_add_markup() {
         rejected("[slow]Bonjour.[/slow] [shake]!"),
         PoDiagnosticKind::MarkupUnknownTag(tag) if tag == "shake"
     ));
+}
+
+// §5.4 and §5.4.1: choice clauses.
+rejects! {
+    trailing_choice_if: block("? @c_a if ready()\n  Go.\n  -> END\n") => ["RECITE_PARSE018"];
+    undeclared_reason: block("? requires=(ready()) reason=missing @c_a\n  Go.\n  -> END\n")
+        => ["RECITE_VALIDATE039"];
+    parameterised_reason: block("? requires=(ready()) reason=needs @c_a\n  Go.\n  -> END\n")
+        => ["RECITE_VALIDATE040"];
+}
+
+// §5.6, §5.10 and §5.11: metadata values and interpolation bindings.
+rejects! {
+    runtime_bound_metadata_value: block("> tone=$mood @l_a\n  Hi.\n") => ["RECITE_PARSE008"];
+    unknown_binding_type: block("> bind=(count:char=$count) @l_a\n  Hi {count}.\n") => ["RECITE_PARSE008"];
+    plural_count_not_int: block("> bind=(count:string=$count) @l_a\n  One.\n  | Many {count}.\n")
+        => ["RECITE_VALIDATE046"];
+}
+
+// §6.3 and §7.6: registry values.
+rejects! {
+    condition_invalid_registry_value: block(":if holds(sword)\n  -> END\n") => ["RECITE_VALIDATE037"];
+    effect_invalid_registry_value: block("! immediate give(sword)\n") => ["RECITE_VALIDATE021"];
 }
