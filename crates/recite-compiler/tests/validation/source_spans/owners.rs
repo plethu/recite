@@ -42,15 +42,16 @@ fn relocated_ast_reports_every_span_owner_at_its_original_position() {
         (21, "match-branch"),
         (22, "condition-call"),
         (23, "match-arm"),
-        (24, "effect"),
-        (25, "effect-mode"),
-        (26, "effect-function"),
-        (27, "effect-call"),
-        (28, "effect-argument"),
-        (29, "plural-source-text"),
-        (30, "metadata-entry"),
-        (31, "metadata-key"),
-        (32, "metadata-value"),
+        (24, "match-arm-pattern"),
+        (25, "effect"),
+        (26, "effect-mode"),
+        (27, "effect-function"),
+        (28, "effect-call"),
+        (29, "effect-argument"),
+        (30, "plural-source-text"),
+        (31, "metadata-entry"),
+        (32, "metadata-key"),
+        (33, "metadata-value"),
     ];
     assert_eq!(report.diagnostics.len(), expected.len() + 1);
     let span_diagnostics = report
@@ -115,7 +116,7 @@ fn nested_source() -> SourceFile {
         SourceText::new("One item.", at(4)),
         at(3),
     )
-    .with_plural_source_text(SourceText::new("{count} items.", at(29)))
+    .with_plural_source_text(SourceText::new("{count} items.", at(30)))
     .with_interpolation_bindings(vec![InterpolationBinding::new(
         "count",
         "remaining",
@@ -126,9 +127,9 @@ fn nested_source() -> SourceFile {
         EffectMode::Immediate,
         "record",
         vec![Argument::identifier("player")],
-        at(24),
+        at(25),
     )
-    .with_source_spans(at(25), at(27), at(26), vec![at(28)]);
+    .with_source_spans(at(26), at(28), at(27), vec![at(29)]);
     let branch = IfBranch::new(
         ConditionExpression::and(
             vec![ConditionExpression::call("ready", Vec::new(), at(20))],
@@ -136,11 +137,14 @@ fn nested_source() -> SourceFile {
         ),
         vec![Statement::Match(MatchBranch::new(
             ConditionCall::new("phase", Vec::new(), at(22)),
-            vec![MatchArm::new(
-                MatchPattern::Wildcard,
-                vec![Statement::Effect(effect)],
-                at(23),
-            )],
+            vec![
+                MatchArm::new(
+                    MatchPattern::Wildcard,
+                    vec![Statement::Effect(effect)],
+                    at(23),
+                )
+                .with_pattern_span(at(24)),
+            ],
             at(21),
         ))],
         at(18),
@@ -164,8 +168,8 @@ fn nested_source() -> SourceFile {
             .with_default(true)
             .with_metadata(SourceMetadata::from_entries(vec![
                 SourceMetadataEntry::new("mood", SourceMetadataScalar::Symbol("calm".to_owned()))
-                    .with_source_span(at(30))
-                    .with_key_value_spans(at(31), Some(at(32))),
+                    .with_source_span(at(31))
+                    .with_key_value_spans(at(32), Some(at(33))),
             ])),
         ],
     )

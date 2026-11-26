@@ -297,6 +297,9 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_match_arm(&mut self, source_file: &'a SourceFile, arm: &'a MatchArm) {
         if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &arm.span, O::MatchArm);
+            if let Some(span) = &arm.pattern_span {
+                self.validate_span(source_file, span, O::MatchArmPattern);
+            }
         }
     }
     pub(super) fn validate_effect(&mut self, source_file: &'a SourceFile, effect: &'a Effect) {

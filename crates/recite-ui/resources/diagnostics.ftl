@@ -174,6 +174,7 @@ diagnostic-validate-008-file = invalid source span for { $owner ->
     [if-branch] if branch
     [match-branch] match branch
     [match-arm] match arm
+    [match-arm-pattern] match arm pattern
     [effect] effect
     [effect-mode] effect mode
     [effect-function] effect function
@@ -205,6 +206,7 @@ diagnostic-validate-008-order = invalid source span for { $owner ->
     [if-branch] if branch
     [match-branch] match branch
     [match-arm] match arm
+    [match-arm-pattern] match arm pattern
     [effect] effect
     [effect-mode] effect mode
     [effect-function] effect function

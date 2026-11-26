@@ -114,3 +114,38 @@ fn removing_an_arm_in_an_edit_reports_the_uncovered_variant() {
         .expect("edit accepted");
     assert_eq!(codes(&kernel), ["RECITE_VALIDATE055"]);
 }
+
+#[test]
+fn a_one_character_variant_suggestion_is_also_applicable() {
+    let source = MATCH.replace(":case tird", ":case w");
+    let mut kernel = AuthoringKernel::with_schema(
+        load_schema_manifest_str(
+            "schema/arrow.schema.json",
+            r#"{
+  "schema_version": 1,
+  "types": {"mood_kind": {"kind": "enum", "values": ["wa", "calm"]}},
+  "conditions": {"mood": {"params": [], "returns": "enum:mood_kind"}}
+}"#,
+        )
+        .schema
+        .expect("valid schema"),
+    )
+    .expect("schema accepted");
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key("main.recite"), source.as_str())],
+            [],
+        ))
+        .expect("source accepted");
+    assert_eq!(codes(&kernel), ["RECITE_VALIDATE054"]);
+    let plan = kernel
+        .snapshot()
+        .plan_apply_suggestion_in_range(&key("main.recite"), SourceRange::point(position(3, 9)))
+        .expect("a one-character variant is applicable");
+    let applied = apply_plan(&plan, &saved_sources(&[("main.recite", source.as_str())]));
+    assert_eq!(
+        applied.get(&key("main.recite")).map(String::as_str),
+        Some(MATCH.replace(":case tird", ":case wa").as_str())
+    );
+}
