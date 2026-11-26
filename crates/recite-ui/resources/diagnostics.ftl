@@ -120,6 +120,11 @@ diagnostic-validate-052-help = merge the arms, or change this one to the variant
 diagnostic-validate-053 = `:case {$pattern}` follows the wildcard arm; `:case _` must be the last arm
 diagnostic-validate-053-related = the wildcard arm is here
 diagnostic-validate-053-help = move `:case _` to the end of the match and keep only one wildcard arm
+diagnostic-validate-054 = `:case {$pattern}` is not a variant of enum `{$enum}`
+diagnostic-validate-054-help = use a variant the enum declares, or add this one to the schema
+diagnostic-validate-054-help-suggestion = did you mean `{$suggestion}`?
+diagnostic-validate-055 = match on enum `{$enum}` has no arm for {$missing}
+diagnostic-validate-055-help = add an arm for each missing variant, or add `:case _` as the last arm
 
 # Compiler diagnostic primary presentations. These resources are deliberately
 # kept beside the parser presentations; their exact arguments come from the
@@ -169,6 +174,7 @@ diagnostic-validate-008-file = invalid source span for { $owner ->
     [if-branch] if branch
     [match-branch] match branch
     [match-arm] match arm
+    [match-arm-pattern] match arm pattern
     [effect] effect
     [effect-mode] effect mode
     [effect-function] effect function
@@ -200,6 +206,7 @@ diagnostic-validate-008-order = invalid source span for { $owner ->
     [if-branch] if branch
     [match-branch] match branch
     [match-arm] match arm
+    [match-arm-pattern] match arm pattern
     [effect] effect
     [effect-mode] effect mode
     [effect-function] effect function
@@ -993,6 +1000,16 @@ diagnostic-validate-052-remediation-001 = Merge the two arms, or change the seco
 diagnostic-validate-053-meaning = A `:case` arm follows the wildcard arm `:case _`.
 diagnostic-validate-053-cause-001 = The wildcard is not the last arm, or a `:match` has two wildcard arms.
 diagnostic-validate-053-remediation-001 = Move `:case _` to the end of the match and keep only one wildcard arm.
+
+# RECITE_VALIDATE054
+diagnostic-validate-054-meaning = A `:case` arm names a variant that the scrutinee's schema enum does not declare.
+diagnostic-validate-054-cause-001 = The variant is misspelled, or it was renamed or removed from the schema enum.
+diagnostic-validate-054-remediation-001 = Use a variant the enum declares, or add the variant to the schema enum.
+
+# RECITE_VALIDATE055
+diagnostic-validate-055-meaning = A `:match` has no `:case _` and leaves variants of the scrutinee's enum without an arm.
+diagnostic-validate-055-cause-001 = A variant was added to the schema enum, or an arm was never written for it.
+diagnostic-validate-055-remediation-001 = Add an arm for each missing variant, or add `:case _` as the last arm.
 
 diagnostic-import-001 = Invalid import input: {$detail}
 diagnostic-import-002 = Unsupported import construct: {$detail}

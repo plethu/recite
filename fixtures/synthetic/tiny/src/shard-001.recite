@@ -41,6 +41,7 @@
       ? sfx=chime @choice_00006_003
         choice 00006 003 ember xenial ripple yonder xenial velvet circuit ember fable.
         -> block_00007
+  :case _
 > speaker=speaker_06 portrait="portrait_06" @line_00006_001
   line 00006 001 meadow harbor prairie quartz harbor garden zenith orbit circuit.
 > speaker=speaker_06 portrait="portrait_06" @line_00006_002
@@ -128,6 +129,7 @@
   :case active
     > speaker=speaker_01 portrait="portrait_01" @line_00009_000
       line 00009 000 umbra signal ripple willow signal meadow ripple lantern ember.
+  :case _
 > speaker=speaker_01 portrait="portrait_01" @line_00009_001
   line 00009 001 circuit willow prairie needle amber jasmine prairie orbit signal.
 > speaker=speaker_01 portrait="portrait_01" @line_00009_002

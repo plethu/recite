@@ -59,6 +59,8 @@ pub struct MatchArm {
     pub pattern: MatchPattern,
     pub statements: Vec<Statement>,
     pub span: SourceSpan,
+    /// The pattern token after `:case`, when the source records it.
+    pub pattern_span: Option<SourceSpan>,
 }
 
 impl MatchArm {
@@ -68,7 +70,15 @@ impl MatchArm {
             pattern,
             statements,
             span,
+            pattern_span: None,
         }
+    }
+
+    /// Records the span of the pattern token after `:case`.
+    #[must_use]
+    pub fn with_pattern_span(mut self, span: SourceSpan) -> Self {
+        self.pattern_span = Some(span);
+        self
     }
 }
 

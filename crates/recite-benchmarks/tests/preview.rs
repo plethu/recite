@@ -48,13 +48,13 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
                 PreviewTraversalShape {
                     event_count: 101,
                     output_count: 76,
-                    event_hash: "cda4113e6dbbafe39d75e7c3a58b94516e7ed35ff94314fc55641ff66306c696"
+                    event_hash: "9a88d21e630b1698e027ab2dcad34f024973a7585e0c75a5ad11a0c06747c9b8"
                         .to_owned(),
-                    state_hash: "fc8a639b66a90dd2aaf48221ec8b6cdc6af0e90c9916ebf1195e22e6fcd7f553"
+                    state_hash: "7b6f5c1631556fa0948122eb2aa886d7b3363c03c70e3daed093b0d2fb62cc01"
                         .to_owned(),
                 },
                 PreviewSnapshotShape {
-                    encoded_bytes: 4400,
+                    encoded_bytes: 4409,
                     selected_choice_count: 1,
                     deferred_effect_count: 1,
                 },

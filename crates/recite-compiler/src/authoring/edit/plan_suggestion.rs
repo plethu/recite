@@ -49,7 +49,7 @@ pub(super) fn plan_apply_suggestion_in_range(
     let characters = content.chars().collect::<Vec<_>>();
     let start = column_index(diagnostic.span.start.column());
     let (first, length) = match diagnostic.span.end.filter(|end| end.line() == line) {
-        Some(end) if column_index(end.column()) > start => {
+        Some(end) if column_index(end.column()) >= start => {
             (start, column_index(end.column()) - start + 1)
         }
         _ => {

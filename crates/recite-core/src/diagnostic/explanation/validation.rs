@@ -379,4 +379,18 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         &["The wildcard is not the last arm, or a `:match` has two wildcard arms."],
         &["Move `:case _` to the end of the match and keep only one wildcard arm."],
     ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE054",
+        DiagnosticCategory::Validation,
+        "A `:case` arm names a variant that the scrutinee's schema enum does not declare.",
+        &["The variant is misspelled, or it was renamed or removed from the schema enum."],
+        &["Use a variant the enum declares, or add the variant to the schema enum."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE055",
+        DiagnosticCategory::Validation,
+        "A `:match` has no `:case _` and leaves variants of the scrutinee's enum without an arm.",
+        &["A variant was added to the schema enum, or an arm was never written for it."],
+        &["Add an arm for each missing variant, or add `:case _` as the last arm."],
+    ),
 ];

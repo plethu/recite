@@ -119,6 +119,10 @@ diagnostic-validate-025	child	string
 diagnostic-validate-025	parent	string
 diagnostic-validate-052	pattern	string
 diagnostic-validate-053	pattern	string
+diagnostic-validate-054	enum	string
+diagnostic-validate-054	pattern	string
+diagnostic-validate-055	enum	string
+diagnostic-validate-055	missing	string
 diagnostic-validate-026	key	string
 diagnostic-validate-027	key	string
 diagnostic-validate-027	target	string
@@ -483,6 +487,9 @@ diagnostic-validate-052-related
 diagnostic-validate-052-help
 diagnostic-validate-053-related
 diagnostic-validate-053-help
+diagnostic-validate-054-help
+diagnostic-validate-054-help-suggestion	suggestion	string
+diagnostic-validate-055-help
 diagnostic-validate-026-help
 diagnostic-validate-027-help
 diagnostic-validate-028-help
@@ -812,4 +819,10 @@ diagnostic-validate-052-remediation-001
 diagnostic-validate-053-meaning
 diagnostic-validate-053-cause-001
 diagnostic-validate-053-remediation-001
+diagnostic-validate-054-meaning
+diagnostic-validate-054-cause-001
+diagnostic-validate-054-remediation-001
+diagnostic-validate-055-meaning
+diagnostic-validate-055-cause-001
+diagnostic-validate-055-remediation-001
 diagnostic-legacy-message	message	string
