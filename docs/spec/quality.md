@@ -88,6 +88,34 @@ property. State and format properties must compare independent expected values o
 round-trip equality alone cannot prove that both endpoints preserve the contract. Reproduce a
 failure using its persisted seed and keep a focused regression when correcting production behavior.
 
+The unpublished `recite-testkit` crate generates valid programs with a matching schema: several
+blocks across files, nested `:if` and `:match`, prompts with and without lines, gated choices, every
+effect mode, diverts and interpolation. It also generates the patches a release makes to them, and
+runs their lowered source AST in a reference interpreter that shares only the parser with the
+compiler and nothing with the runtime. Generated programs must:
+
+- compile without diagnostics, and byte-identically twice;
+- lower to the statements, nesting, prompts, IDs and targets the generator produced;
+- report exactly the matching diagnostic when one specification rule is broken;
+- traverse as the reference interpreter does for any condition answers and choices, restore exactly
+  from a save at any boundary, and never fail at runtime once validated;
+- resume each save exactly in its own asset; in a patched asset, resume whenever the saved block is
+  unchanged or the patch only edits text, and otherwise either fall back with exactly what was
+  saved, never with an ended save's effects, or resume after the same history, keep a waiting
+  prompt's saved availability unless its block changed in structure, present it without querying
+  conditions, deliver saved deferred effects as saved, and continue as the reference interpreter
+  does from that point;
+- report from save impact exactly the reference interpreter's reachable save points, with the
+  outcome a real save there gets.
+
+Each source, schema and catalogue rule that §5, §6.3, §7.6 and §9.2 say validation must reject has a
+test that names its section; multi-line prose on a plural line is not yet rejected (#333).
+`cargo-fuzz` targets outside the workspace cover the untrusted inputs: compiled-asset bytes,
+session-snapshot bytes and source text. Their seed corpora are checked in, and `just fuzz seed`
+regenerates them. `just fuzz check` lints the fuzz crate on stable in every core-lane run.
+Scheduled, manual and release verification runs the properties with 8192 cases and fuzzes each
+target for five minutes, with `just fuzz properties` and `just fuzz run`.
+
 `just mutants` runs cargo-mutants over the source-position index, LSP freshness fences, document
 close transitions, runtime choice selection and restored pending positions selected in `Cargo.toml`
 workspace metadata. The preflight requires mutation candidates from every named file, so an empty

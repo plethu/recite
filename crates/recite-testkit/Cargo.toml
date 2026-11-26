@@ -1,0 +1,21 @@
+[package]
+name = "recite-testkit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Generated Recite programs, patches and a reference interpreter for property tests."
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[package.metadata.dist]
+dist = false
+
+[dependencies]
+proptest.workspace = true
+recite-core.workspace = true
+recite-parser.workspace = true
+
+[lints]
+workspace = true

@@ -21,6 +21,19 @@ conventions.
 - Keep shared cross-crate fixtures under top-level `tests/support`.
 - Run `scripts/quality/check-test-organization.sh` when test files move or new tests are added.
 
+## Generated programs and fuzzing
+
+`crates/recite-testkit` generates programs and patches and runs a reference interpreter
+(`docs/spec/quality.md` §17.5). When a change adds source syntax, extend the generator, renderer and
+reference interpreter together, so the differential, resume and save-impact properties in
+`crates/recite-runtime/tests/generated_programs.rs` cover it. When it adds a validation rule, add a
+case naming its specification section to `crates/recite-compiler/tests/spec_rejections.rs` and, if a
+generated program can break the rule, a `Breakage` in its `generated_programs/rejections.rs`. Run
+`just fuzz properties` for deep runs and `just fuzz seed` after changing a binary format. `fuzz/`
+keeps its own `Cargo.lock`, which `just fuzz check` and the dependency gate read with `--locked`:
+refresh it with `cargo update --manifest-path fuzz/Cargo.toml --workspace` when a workspace crate's
+dependencies change.
+
 ## Fixtures and snapshots
 
 Keep shared `.recite` inputs under `fixtures/recite/`, split into `valid/` and `invalid/`; keep

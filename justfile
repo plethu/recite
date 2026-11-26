@@ -11,6 +11,8 @@ mod editor 'editors/justfile'
 mod engines '.config/just/engines.just'
 # Expensive CLI stress checks.
 mod stress '.config/just/stress.just'
+# Deep generated-program properties and fuzzing of untrusted inputs.
+mod fuzz '.config/just/fuzz.just'
 # Criterion, LSP process measurements and tooling checks.
 mod perf '.config/just/perf.just'
 # Formatting and linting across maintained source languages.
@@ -55,6 +57,7 @@ core-check:
     just test
     just test-doc
     just _clippy-rust
+    just fuzz check
     RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 
 # Real host conformance and clean package consumers remain correctness checks.

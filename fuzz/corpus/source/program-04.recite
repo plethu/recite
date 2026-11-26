@@ -1,0 +1,101 @@
+:: m0 default
+> @l0
+  Fresh l0.
+
+:: m1
+:match mood()
+  :case tired
+    :match stage(player)
+      :case late
+        ! immediate ping()
+        ! deferred note(player)
+        > speaker=s0 @l1
+          Maybe rain.
+          ? requires=(flag(player) or flag(player)) @c2
+            Rain quiet.
+            -> m0
+          ? requires=(not ready()) @c3
+            Tomorrow hello.
+            -> m0
+          ? requires=(flag(player) and ready() and (ready() or ready() or ready())) @c4
+            Quiet onward.
+            -> END
+      :case _
+        ! deferred note(rhea)
+        ! blocking grant(rhea)
+        > speaker=s1 @l5
+          Hello maybe.
+        -> m2
+    :match stage(player)
+      :case early
+        > bind=(count:int=$count) @l6
+          Count {count}, Onward tomorrow.
+        > speaker=s1 bind=(count:int=$count) @l7
+          Count {count}, Rain tomorrow.
+        ! deferred note(player)
+        -> m2
+      :case late
+        # generated comment
+        ! blocking grant(player)
+        ! deferred note(player)
+      :case _
+        > @l8
+          Onward sure.
+        > bind=(count:int=$count) @l9
+          Count {count}, Hello sure.
+          ? @c10
+            Onward rain.
+            -> m1
+    > speaker=s0 @l11
+      Onward hello.
+      ? requires=(not flag(rhea)) @c12
+        Tomorrow maybe.
+        -> m1
+      ? requires=(flag(rhea) or ready() or flag(rhea)) @c13
+        Onward hello.
+        -> m2
+  :case calm
+    ? @c14
+      Maybe hello.
+      -> END
+  :case _
+    ! blocking note(rhea)
+    :match mood()
+      :case tired
+        > @l15
+          Rain tomorrow.
+      :case wary
+        > @l16
+          Sure sure.
+      :case calm
+        # generated comment
+        > speaker=s1 @l17
+          Rain rain.
+        -> m2
+      :case _
+        > speaker=s1 bind=(count:int=$count) @l18
+          Count {count}, Wait sure.
+        ? @c19
+          Sure hello.
+          -> END
+    # generated comment
+> speaker=s0 @l20
+  Quiet hello.
+
+:: m2
+! deferred note(player)
+! blocking note(player)
+:match stage(player)
+  :case early
+    -> END
+  :case _
+    ! blocking grant(rhea)
+    ! deferred note(rhea)
+    ? @c21
+      Hello maybe.
+      -> m2
+    # between choices
+    ? requires=(not flag(player)) @c22
+      Wait sure.
+      -> m2
+-> END

@@ -1,0 +1,52 @@
+[package]
+name = "recite-fuzz"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.96"
+description = "Fuzz targets for Recite's untrusted inputs: compiled assets, session snapshots and source."
+license = "MIT OR Apache-2.0"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+# Kept outside the workspace: libFuzzer instrumentation needs a nightly
+# toolchain, and stable workspace builds must not depend on it.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+proptest = "1.11.0"
+recite-compiler = { path = "../crates/recite-compiler" }
+recite-core = { path = "../crates/recite-core" }
+recite-parser = { path = "../crates/recite-parser" }
+recite-runtime = { path = "../crates/recite-runtime" }
+recite-testkit = { path = "../crates/recite-testkit" }
+
+[[bin]]
+name = "compiled_asset"
+path = "fuzz_targets/compiled_asset.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "session_snapshot"
+path = "fuzz_targets/session_snapshot.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "source"
+path = "fuzz_targets/source.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "seed-corpus"
+path = "src/bin/seed_corpus.rs"
+test = false
+doc = false
+bench = false

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-exclude = ["apps/writer", "apps/writer/crates/*"]
+exclude = ["apps/writer", "apps/writer/crates/*", "fuzz"]
 members = [
     "crates/recite-adapter",
     "crates/recite-benchmarks",
@@ -19,6 +19,7 @@ members = [
     "crates/recite-playground",
     "crates/recite-prose",
     "crates/recite-runtime",
+    "crates/recite-testkit",
     "crates/recite-ui",
     "tools/recite-perf",
     "tools/recite-release",
@@ -119,6 +120,7 @@ recite-lsp = { path = "crates/recite-lsp", version = "0.1.0" }
 recite-parser = { path = "crates/recite-parser", version = "0.1.0" }
 recite-prose = { path = "crates/recite-prose", version = "0.1.0", default-features = false }
 recite-runtime = { path = "crates/recite-runtime", version = "0.1.0" }
+recite-testkit = { path = "crates/recite-testkit" }
 recite-ui = { path = "crates/recite-ui", version = "0.1.0" }
 rmp-serde = "1.3.1"
 rpds = "1.2.1"
