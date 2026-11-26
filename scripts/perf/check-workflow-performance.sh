@@ -70,7 +70,8 @@ fi
 cp "$control/Cargo.lock" "$evidence/control-original-Cargo.lock"
 cargo fetch --locked --manifest-path "$control/Cargo.toml"
 cargo fetch --locked --manifest-path "$repo_root/Cargo.toml"
-harness=(tools/recite-perf crates/recite-benchmarks fixtures
+# The generator travels with the fixture summaries it must reproduce.
+harness=(tools/recite-perf crates/recite-benchmarks crates/recite-fixturegen fixtures
   crates/recite-lsp/src/bench_support/driver.rs
   crates/recite-compiler/src/bench_support.rs)
 for path in "${harness[@]}"; do
