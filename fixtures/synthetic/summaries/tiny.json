@@ -40,14 +40,14 @@
     },
     {
       "path": "src/shard-000.recite",
-      "bytes": 9675,
-      "blake3": "822fe6c87e1b1fbf366d610a85bbafcb68838af2fb892bb4fc221a6c910cebf0"
+      "bytes": 9695,
+      "blake3": "0eaafae77766c5883c3e9a53edc4c5bfc4d2175464ae0915d959493a8f78f060"
     },
     {
       "path": "src/shard-001.recite",
-      "bytes": 8886,
-      "blake3": "bed4421e9f036872e5c09fdb1fe66c7221c443bef9233e187fc952129709bacc"
+      "bytes": 8906,
+      "blake3": "5dc141fb74049250e42b8e933b9ac0e787807bfa13f9e4a0c20f82827c8f9257"
     }
   ],
-  "summary_hash": "adc811f0dbae1308923acf29901dca9a25ffa927599d97f82f6ce9f2635053d0"
+  "summary_hash": "4a2741d52d3f4b94f4d15d506434e84a6a874148b103fd15ceb782acdd1f6f99"
 }

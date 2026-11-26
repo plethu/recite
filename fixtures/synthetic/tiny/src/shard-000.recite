@@ -19,6 +19,7 @@
       ? sfx=chime requires=(counter_gte("counter_00", 2)) @choice_00000_003
         choice 00000 003 umbra bridge ion circuit garden thicket umbra signal fable.
         -> block_00001
+  :case _
 > speaker=speaker_00 portrait="portrait_00" @line_00000_001
   line 00000 001 meadow jasmine ember amber circuit orbit circuit keystone yonder.
 > speaker=speaker_00 portrait="portrait_00" @line_00000_002
@@ -105,6 +106,7 @@
   :case active
     > speaker=speaker_03 portrait="portrait_03" @line_00003_000
       line 00003 000 willow ion velvet amber zenith fable yonder signal quartz.
+  :case _
 > speaker=speaker_03 portrait="portrait_03" @line_00003_001
   line 00003 001 orbit delta velvet yonder prairie umbra umbra ember ion.
 > speaker=speaker_03 portrait="portrait_03" @line_00003_002

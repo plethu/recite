@@ -12,6 +12,7 @@ use crate::diagnostics::{self, ArgumentOwner as A, SourceSpanOwner as O};
 
 mod interpolation;
 mod match_arms;
+mod match_variants;
 
 impl<'a> Validator<'a> {
     pub(super) fn validate_block(&mut self, source_file: &'a SourceFile, block: &'a Block) {
@@ -128,6 +129,7 @@ impl<'a> Validator<'a> {
             Statement::Match(branch) => {
                 self.validate_match_branch(source_file, branch);
                 self.validate_match_arm_patterns(branch);
+                self.validate_match_arm_variants(branch);
                 for arm in &branch.arms {
                     self.validate_match_arm(source_file, arm);
                     for statement in &arm.statements {

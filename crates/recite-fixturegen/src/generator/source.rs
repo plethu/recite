@@ -59,6 +59,9 @@ impl FixtureGenerator {
                 );
                 append_line(source, format_args!("  :case active"));
                 self.emit_line(block, line, speaker, 4, source)?;
+                // The schema enum declares more variants than `active`, and a
+                // match must cover each one or end with a wildcard arm.
+                append_line(source, format_args!("  :case _"));
             } else {
                 self.emit_line(block, line, speaker, 0, source)?;
             }

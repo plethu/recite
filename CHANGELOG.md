@@ -39,3 +39,7 @@ companions. [The README](README.md) introduces the current toolchain.
   (`RECITE_VALIDATE053`): the wildcard must be the last arm. A `recite save impact --since` or
   `recite watch --save-baseline` release that contains such arms now fails to build; the report
   names that revision, and the shipped compiled asset still works as the baseline.
+- With a schema, validation checks every `:match` against its scrutinee's enum: a `:case` for an
+  undeclared variant is `RECITE_VALIDATE054`, with a suggestion when one is close, and a match
+  without `:case _` that leaves declared variants uncovered is `RECITE_VALIDATE055`. The synthetic
+  fixture generator now ends its matches with `:case _`.

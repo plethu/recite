@@ -1100,6 +1100,8 @@ diagnostic_presentation_ids = [
     "diagnostic-validate-051",
     "diagnostic-validate-052",
     "diagnostic-validate-053",
+    "diagnostic-validate-054",
+    "diagnostic-validate-055",
 ]
 
 [clients.cli]

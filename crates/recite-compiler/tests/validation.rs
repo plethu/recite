@@ -28,6 +28,8 @@ mod interpolation;
 mod markup;
 #[path = "validation/match_arms.rs"]
 mod match_arms;
+#[path = "validation/match_variants.rs"]
+mod match_variants;
 #[path = "validation/metadata_schema/mod.rs"]
 mod metadata_schema;
 #[path = "validation/ordering.rs"]
