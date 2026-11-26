@@ -45,10 +45,12 @@ impl Validator<'_> {
                         variant,
                         definition.values.iter().map(String::as_str),
                     );
+                    // The variant's own span lets an editor replace it with
+                    // the suggestion.
                     self.diagnostics.push(diagnostics::unknown_match_variant(
                         variant,
                         enum_name,
-                        arm.span.clone(),
+                        arm.pattern_span.clone().unwrap_or_else(|| arm.span.clone()),
                         suggestion,
                     ));
                 }

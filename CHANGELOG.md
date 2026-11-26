@@ -42,4 +42,6 @@ companions. [The README](README.md) introduces the current toolchain.
 - With a schema, validation checks every `:match` against its scrutinee's enum: a `:case` for an
   undeclared variant is `RECITE_VALIDATE054`, with a suggestion when one is close, and a match
   without `:case _` that leaves declared variants uncovered is `RECITE_VALIDATE055`. The synthetic
-  fixture generator now ends its matches with `:case _`.
+  fixture generator now ends its matches with `:case _`. A release built before this check can
+  contain such matches; its `recite save impact --since` or `recite watch --save-baseline` build now
+  fails and names that revision, so compare against its shipped compiled asset instead.

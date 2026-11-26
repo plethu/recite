@@ -395,6 +395,8 @@ fn edit_plans_refuse_stale_generation_collisions_and_partial_recovery() {
     ));
 }
 
+#[path = "authoring_edits/match_variants.rs"]
+mod match_variants;
 #[path = "authoring_edits/noop.rs"]
 mod noop;
 

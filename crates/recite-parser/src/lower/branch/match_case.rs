@@ -110,11 +110,14 @@ impl Lowerer<'_, '_> {
         };
 
         (
-            Some(MatchArm::new(
-                pattern,
-                statements,
-                span_for_line(self.path, line.number, base_column),
-            )),
+            Some(
+                MatchArm::new(
+                    pattern,
+                    statements,
+                    span_for_line(self.path, line.number, base_column),
+                )
+                .with_pattern_span(pattern_field.span(self.path)),
+            ),
             next_index,
         )
     }
