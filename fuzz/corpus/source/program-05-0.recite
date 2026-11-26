@@ -1,0 +1,9 @@
+:: m0 default
+> speaker=s0 @l0
+  Maybe maybe.
+  ? requires=(flag(player) and ready() and ready()) @c1
+    Tomorrow hello.
+    -> m0
+  ? @c2
+    Tomorrow rain.
+    -> m0

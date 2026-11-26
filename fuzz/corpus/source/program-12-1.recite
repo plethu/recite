@@ -1,0 +1,24 @@
+:: s0
+:if not flag(player)
+  > @l15
+    Onward tomorrow.
+  :if ready() or ready() or ready()
+    > @l16
+      Fresh l16.
+  > speaker=s0 bind=(count:int=$count) @l17
+    Count {count}, Sure sure.
+
+:: s1
+> speaker=s0 bind=(count:int=$count) @l18
+  Count {count}, Rain tomorrow.
+? @c19
+  Quiet maybe.
+  -> dialogue/main.recite::m1
+# between choices
+? requires=(flag(player) or flag(rhea) or flag(player)) @c20
+  Rain maybe.
+  -> END
+# between choices
+? requires=(ready() and flag(rhea)) @c21
+  Rain sure.
+  -> dialogue/main.recite::m0

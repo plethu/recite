@@ -88,6 +88,28 @@ property. State and format properties must compare independent expected values o
 round-trip equality alone cannot prove that both endpoints preserve the contract. Reproduce a
 failure using its persisted seed and keep a focused regression when correcting production behavior.
 
+The unpublished `recite-testkit` crate generates valid programs with a matching schema: several
+blocks across files, nested `:if` and `:match`, prompts with and without lines, gated choices, every
+effect mode, diverts and interpolation. It also generates the patches a release makes to them, and
+runs their lowered source AST in a reference interpreter that shares no code with the compiler or
+runtime. Generated programs must:
+
+- compile without diagnostics, and byte-identically twice;
+- report exactly the matching diagnostic when one specification rule is broken;
+- traverse as the reference interpreter does for any condition answers and choices, restore exactly
+  from a save at any boundary, and never fail at runtime once validated;
+- resume each save exactly in its own asset; in a patched asset, either fall back with what was
+  saved, never with an ended save's effects, or resume after the same history and continue as the
+  reference interpreter does from that point;
+- report from save impact exactly the reference interpreter's reachable save points, with the
+  outcome a real save there gets.
+
+Each rule this specification says validation must reject has a test that names its section.
+`cargo-fuzz` targets outside the workspace cover the untrusted inputs: compiled-asset bytes,
+session-snapshot bytes and source text. Their seed corpora are checked in, and `just fuzz seed`
+regenerates them. Scheduled, manual and release verification runs these properties with 8192 cases
+(`just fuzz properties`) and fuzzes each target for five minutes (`just fuzz run`).
+
 `just mutants` runs cargo-mutants over the source-position index, LSP freshness fences, document
 close transitions, runtime choice selection and restored pending positions selected in `Cargo.toml`
 workspace metadata. The preflight requires mutation candidates from every named file, so an empty

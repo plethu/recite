@@ -1,0 +1,39 @@
+:: m0 default
+> speaker=s0 @l0
+  Hello.
+! immediate note(player)
+! deferred note(rhea)
+:if flag(player) and not ready()
+  > bind=(count:int=$count) @l1
+    Count {count}.
+  ! blocking grant(rhea)
+:else
+  :match stage(rhea)
+    :case early
+      > @l2
+        Early.
+    :case _
+      -> m1
+> @l3
+  Where now?
+  ? requires=(ready()) @c4
+    Onward.
+    -> m1
+  ? @c5
+    Stop.
+    -> END
+
+:: m1
+:match mood()
+  :case calm
+    > @l6
+      Calm.
+  :case _
+    ! immediate ping()
+? @c7
+  Again.
+  -> m0
+# between choices
+? @c8
+  Leave.
+  -> END

@@ -1,0 +1,30 @@
+:: m0 default
+:match mood()
+  :case wary
+    > bind=(count:int=$count) @l0
+      Count {count}, Onward hello.
+    ! immediate note(rhea)
+    > @l1
+      Hello onward.
+  :case calm
+    > bind=(count:int=$count) @l2
+      Count {count}, Sure quiet.
+    ! immediate ping()
+    ! blocking grant(player)
+  :case tired
+    ! deferred note(player)
+    ? requires=((not ready()) and flag(player) and ready()) @c3
+      Rain hello.
+      -> dialogue/side.recite::s1
+:if flag(player)
+  > @l4
+    Quiet onward.
+  > speaker=s0 @l5
+    Quiet wait.
+:if flag(rhea) or ready() or ready()
+  > @l6
+    Fresh l6.
+-> END
+
+:: m1
+! immediate ping()

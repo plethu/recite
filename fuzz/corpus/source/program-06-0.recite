@@ -1,0 +1,21 @@
+:: m0 default
+-> m2
+
+:: m1
+> speaker=s1 bind=(count:int=$count) @l0
+  Count {count}, Rain hello.
+> bind=(count:int=$count) @l1
+  Count {count}, Quiet wait.
+> @l2
+  Hello tomorrow.
+-> m2
+
+:: m2
+> speaker=s0 @l3
+  Onward wait.
+? requires=(flag(rhea) and flag(player) and ready()) @c4
+  Quiet quiet.
+  -> m0
+? requires=(ready()) @c5
+  Hello quiet.
+  -> m0

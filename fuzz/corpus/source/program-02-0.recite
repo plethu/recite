@@ -1,0 +1,9 @@
+:: m0 default
+> speaker=s0 @l0
+  Quiet rain.
+? requires=((ready() and ready() and flag(player)) or (not flag(player)) or flag(rhea)) @c1
+  Quiet maybe.
+  -> dialogue/side.recite::s0
+? @c2
+  Onward tomorrow.
+  -> END

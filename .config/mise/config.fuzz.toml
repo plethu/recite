@@ -1,0 +1,3 @@
+[tools]
+# cargo-fuzz drives the nightly-only libFuzzer targets in fuzz/ (`just fuzz`).
+"cargo:cargo-fuzz" = "0.13.2"

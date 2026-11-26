@@ -1,0 +1,41 @@
+:: m0 default
+! immediate ping()
+> speaker=s1 @l0
+  Quiet onward.
+! immediate note(player)
+> speaker=s1 @l1
+  Onward maybe.
+  ? requires=(flag(rhea) or (ready() and ready())) @c2
+    Sure maybe.
+    -> END
+
+:: m1
+! immediate note(player)
+! deferred note(rhea)
+:if ready() or flag(player) or flag(player)
+  > speaker=s0 @l3
+    Hello hello.
+  > @l4
+    Quiet rain.
+  ! blocking grant(player)
+  -> END
+? @c5
+  Onward tomorrow.
+  -> m2
+
+:: m2
+> @l6
+  Fresh l6.
+# generated comment
+
+:: m3
+:if flag(rhea) or (ready() or ready() or flag(player)) or ready()
+  ? @c7
+    Sure rain.
+    -> m2
+  ? @c8
+    Sure rain.
+    -> m2
+:else
+  ! blocking note(player)
+  # generated comment

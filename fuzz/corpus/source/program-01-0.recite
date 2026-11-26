@@ -1,0 +1,16 @@
+:: m0 default
+> speaker=s0 @l0
+  Wait sure.
+> @l1
+  Tomorrow rain.
+# generated comment
+? requires=(flag(player) or flag(player)) @c2
+  Maybe sure.
+  -> m0
+? @c3
+  Sure onward.
+  -> m0
+# between choices
+? @c4
+  Hello rain.
+  -> m0

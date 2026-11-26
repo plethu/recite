@@ -139,6 +139,45 @@ jobs:
             target/writer-native/large-project*
           retention-days: 14
 
+  # Many more generated programs, and fuzzing from the checked-in corpora, on scheduled, manual and
+  # release verification (#330). Pull requests run the same properties at 256 cases in the core lane.
+  deep-properties:
+    name: Deep properties and fuzzing
+    if: inputs.lane == 'core' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.ref != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      MISE_ENV: fuzz
+      MISE_EXEC_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust just cargo:cargo-nextest cargo:cargo-fuzz
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: deep-properties
+          workspaces: |
+            . -> target
+            fuzz -> target
+      - name: Check generated-program properties with 8192 cases
+        run: just fuzz properties 8192
+      - name: Fuzz compiled assets, saves and source for five minutes each
+        run: |
+          just fuzz toolchain
+          just fuzz run 300
+      - name: Retain crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts/
+          if-no-files-found: ignore
+          retention-days: 30
+
   mutations:
     name: Critical mutations ${{ matrix.shard }}/2
     if: inputs.lane == 'core'
